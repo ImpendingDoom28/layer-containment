@@ -35,7 +35,6 @@ type GameSceneProps = {
   shouldStopMovement: boolean;
   gameStatus: GameStatus;
   waveSystem: WaveSystem;
-  currentWave: number;
   money: number;
   timeUntilNextWave: number | null;
   onTileClick: (gridX: number, gridZ: number) => void;
@@ -61,7 +60,6 @@ export const GameScene: React.FC<GameSceneProps> = ({
   shouldDisableControls,
   shouldStopMovement,
   waveSystem,
-  currentWave,
   timeUntilNextWave,
   onTileClick,
   onTowerClick,
@@ -102,7 +100,6 @@ export const GameScene: React.FC<GameSceneProps> = ({
       {pathWaypoints.map((_, index) => (
         <Path
           key={index}
-          currentWave={currentWave}
           timeUntilNextWave={timeUntilNextWave}
           pathIndex={index}
         />

@@ -146,7 +146,6 @@ export const App: FC = () => {
               activeEffects={activeEffects}
               gameStatus={gameStatus}
               waveSystem={waveSystem}
-              currentWave={currentWave}
               timeUntilNextWave={timeUntilNextWave}
               onTileClick={onTileClick}
               onTowerClick={onTowerClick}

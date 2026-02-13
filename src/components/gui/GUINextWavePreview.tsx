@@ -4,6 +4,7 @@ import { UICard, UICardContent, UICardHeader } from "../ui/UICard";
 import { UITypography } from "../ui/UITypography";
 import { GUIWrapper } from "./GUIWrapper";
 import {
+  currentWaveSelector,
   pathWaypointsSelector,
   totalWavesSelector,
   useLevelStore,
@@ -42,19 +43,20 @@ const EnemyPreviewModel: FC<EnemyPreviewModelProps> = ({
 };
 
 type GUINextWavePreviewProps = {
-  currentWave: number;
   timeUntilNextWave: number | null;
 };
 
 export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
-  currentWave,
   timeUntilNextWave,
 }) => {
   const pathWaypoints = useLevelStore(pathWaypointsSelector);
   const totalWaves = useLevelStore(totalWavesSelector);
   const waveConfigs = useLevelStore(waveConfigsSelector);
+  const currentWave = useLevelStore(currentWaveSelector);
+
   const enemyTypes = useGameStore(enemyTypesSelector);
   const enemyUpgrades = useGameStore(enemyUpgradesSelector);
+
   const selectedUpgrades = useUpgradeStore(selectedUpgradesSelector);
 
   const totalRewardMultiplier = useMemo(() => {
@@ -84,16 +86,19 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
     return waveConfigs[nextWaveIndex];
   }, [shouldShow, currentWave, waveConfigs]);
 
-  if (!shouldShow || !nextWaveConfig) return null;
-
   // TODO: Adjust to support multiple paths with enemies in each spawn
-  const startPosition = pathWaypoints[0][0];
-  const yOffset = 1.5;
-  const worldPosition: [number, number, number] = [
-    startPosition.x,
-    yOffset,
-    startPosition.z,
-  ];
+  const worldPosition = useMemo(() => {
+    const startPosition = pathWaypoints[0][0];
+    const yOffset = 1.5;
+
+    return [startPosition.x, yOffset, startPosition.z] as [
+      number,
+      number,
+      number,
+    ];
+  }, [pathWaypoints]);
+
+  if (!shouldShow || !nextWaveConfig) return null;
 
   return (
     <group position={worldPosition}>

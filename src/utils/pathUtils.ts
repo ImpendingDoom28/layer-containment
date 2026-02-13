@@ -162,10 +162,10 @@ export function isGridTileOnPath(
   ];
 
   // Check each path segment (narrower path within tiles)
-  for (let i = 0; i < pathWaypoints.length - 1; i++) {
-    for (let j = 0; j < pathWaypoints[i].length - 1; j++) {
-      const p1 = pathWaypoints[i][j];
-      const p2 = pathWaypoints[i][j + 1];
+  for (const element of pathWaypoints) {
+    for (let i = 0; i < element.length - 1; i++) {
+      const p1 = element[i];
+      const p2 = element[i + 1];
 
       // Check if any tile corner or center is within PATH_WIDTH/2 of the path segment
       for (const corner of tileCorners) {

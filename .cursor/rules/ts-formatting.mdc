@@ -1,21 +1,21 @@
 ---
-globs: *.ts,*.tsx
-alwaysApply: false
+alwaysApply: true
 ---
 
 When writting js/ts code, use the following rules:
 
-- Always write typescript code until specified otherwise
-- Prefer arrow functions over function declarations if possible (including react components)
-- Use named exports instead of default exports
-- Don't leave file extensions then importing to another file
-- Separate imports in different groups by using new line (first group is library imports, second group is relative imports)
+- DO NOT run build commands (assume dev-server is running).
+- Always write typescript code until specified otherwise.
+- Prefer arrow functions over function declarations if possible (including react components).
+- Use named exports instead of default exports.
+- Don't leave file extensions then importing to another file.
+- Separate imports in different groups by using new line (first group is library imports, second group is relative imports).
 - Don't leave single-line comments if their meaning is useless, for example:
   ```ts
     // Tower Configuration` --> this is not okay
     export interface TowerConfig { ... }
   ```
-- When writing types, prefer using type declaration instead of interfaces
+- When writing types, prefer using type declaration instead of interfaces.
 - When defining event handlers custom function (for on click event, for example), use the naming convention starting with `on` example:
 
   ```tsx
@@ -29,6 +29,6 @@ When writting js/ts code, use the following rules:
   />;
   ```
 
-- Always create a separate type for components props
-- Remove unused imports if after your changes there are any
-- Don't use barrel files (a.k.a. `index.js/index.ts` files)
+- Always create a separate type for components props.
+- Remove unused imports if after your changes there are any.
+- Don't use barrel files (a.k.a. `index.js/index.ts` files).

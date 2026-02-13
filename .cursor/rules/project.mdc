@@ -2,4 +2,4 @@
 alwaysApply: true
 ---
 
-After creating a new feature for the project, don't forget to document only important information about it in `README.md` file
+After creating a new feature for the project, don't forget to document only important information about it in `README.md` file. Include only features, not bugfixes or "best practices" info. Make it concise and short.

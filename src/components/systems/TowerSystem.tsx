@@ -37,6 +37,7 @@ type TowerSystemProps = {
   hoveredTile: TileData | null;
   isOccupiedByBuilding: boolean;
   isOccupiedByTower: boolean;
+  isHoveredTileOnPath: boolean;
   selectedTowerType: TowerType | null;
 };
 
@@ -50,6 +51,7 @@ export const TowerSystem: FC<TowerSystemProps> = ({
   selectedTowerType,
   isOccupiedByBuilding,
   isOccupiedByTower,
+  isHoveredTileOnPath,
 }) => {
   const { towerTypes, tileSize, towerHeight, gameStatus } = useGameStore();
   const gridOffset = useLevelStore(gridOffsetSelector);
@@ -196,7 +198,12 @@ export const TowerSystem: FC<TowerSystemProps> = ({
       ))}
 
       {previewTower && (
-        <Tower key="preview" tower={previewTower} isPreview={true} />
+        <Tower
+          key="preview"
+          tower={previewTower}
+          isPreview={true}
+          isInvalidPlacement={isHoveredTileOnPath}
+        />
       )}
 
       {selectedTower && (

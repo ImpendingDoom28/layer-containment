@@ -7,8 +7,16 @@ import { useLevelSystem } from "../../core/hooks/useLevelSystem";
 import {
   buildingsSelector,
   enemiesSelector,
+  gridOffsetSelector,
+  pathWaypointsSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
+import {
+  pathWidthSelector,
+  tileSizeSelector,
+  useGameStore,
+} from "../../core/stores/useGameStore";
+import { isGridTileOnPath } from "../../utils/pathUtils";
 import type {
   Tower as TowerInstance,
   Enemy as EnemyInstance,
@@ -62,6 +70,10 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = ({
   const levelSystem = useLevelSystem();
   const buildings = useLevelStore(buildingsSelector);
   const enemies = useLevelStore(enemiesSelector);
+  const gridOffset = useLevelStore(gridOffsetSelector);
+  const pathWaypoints = useLevelStore(pathWaypointsSelector);
+  const tileSize = useGameStore(tileSizeSelector);
+  const pathWidth = useGameStore(pathWidthSelector);
   const { updateTower, isTileOccupiedByBuilding, isTileOccupiedByTower } =
     levelSystem;
 
@@ -93,6 +105,18 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = ({
     );
   }, [isTileOccupiedByBuilding, hoveredTile]);
 
+  const isHoveredTileOnPath = useMemo(() => {
+    if (!hoveredTile) return false;
+    return isGridTileOnPath(
+      hoveredTile.gridX,
+      hoveredTile.gridZ,
+      gridOffset,
+      tileSize,
+      pathWaypoints,
+      pathWidth
+    );
+  }, [hoveredTile, gridOffset, tileSize, pathWaypoints, pathWidth]);
+
   return (
     <>
       {buildings.map((building) => (
@@ -123,6 +147,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = ({
         selectedTowerType={selectedTowerType}
         isOccupiedByBuilding={isOccupiedByBuilding}
         isOccupiedByTower={isOccupiedByTower}
+        isHoveredTileOnPath={isHoveredTileOnPath}
       />
 
       {activeEffects.map((effect) => (

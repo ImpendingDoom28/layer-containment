@@ -6,6 +6,7 @@ import { CylinderGeometry, MeshStandardMaterial } from "three";
 import type { Tower as TowerInstance } from "../../core/types/game";
 import { GUIDebugInfo } from "../gui/GUIDebugInfo";
 import { Vector3D } from "../../core/types/utils";
+import { getCssColorValue } from "../ui/lib/cssUtils";
 import { useGameStore } from "../../core/stores/useGameStore";
 
 // Shared base material (gray color for all tower bases)
@@ -21,6 +22,7 @@ type TowerProps = {
   isSelected?: boolean;
   onClick?: () => void;
   isPreview?: boolean;
+  isInvalidPlacement?: boolean;
 };
 
 export const Tower: FC<TowerProps> = ({
@@ -28,6 +30,7 @@ export const Tower: FC<TowerProps> = ({
   onClick,
   isSelected = false,
   isPreview = false,
+  isInvalidPlacement = false,
 }) => {
   const { towerBaseRadius, towerHeight } = useGameStore();
   const towerBasePosition: Vector3D = [0, towerBaseRadius, 0];
@@ -53,6 +56,8 @@ export const Tower: FC<TowerProps> = ({
 
   if (!tower) return null;
 
+  const towerColor =
+    isPreview && isInvalidPlacement ? getCssColorValue("destructive") : tower.color;
   const previewOpacity = isPreview ? 0.5 : 1;
   let previewEmissiveIntensity: number;
   if (isPreview) {
@@ -162,8 +167,8 @@ export const Tower: FC<TowerProps> = ({
           args={[bodyRadius, bodyRadius, towerHeight * 0.7, 16]}
         />
         <meshStandardMaterial
-          color={tower.color}
-          emissive={tower.color}
+          color={towerColor}
+          emissive={towerColor}
           emissiveIntensity={previewEmissiveIntensity}
           transparent={isPreview}
           opacity={previewOpacity}
@@ -174,7 +179,7 @@ export const Tower: FC<TowerProps> = ({
       <mesh position={[0, topY, 0]}>
         {towerTop}
         <meshStandardMaterial
-          color={tower.color}
+          color={towerColor}
           transparent={isPreview}
           opacity={previewOpacity}
         />

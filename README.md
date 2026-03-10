@@ -4,7 +4,7 @@ A 3D tower defense game built with React, Tailwind CSS, and React Three Fiber.
 
 ## Features
 
-- **Tile-based tower placement system** - Click tiles on the grid to place towers
+- **Tile-based tower placement system** - Click tiles on the grid to place towers; invalid path placement shows red tower preview
 - **Four tower types**:
   - Basic Tower: Fast firing, single target damage (targets nearest enemy)
   - Slow Tower: Slows enemies on hit with debuff effects

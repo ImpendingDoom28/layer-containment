@@ -1,0 +1,14 @@
+---
+description: Reuse known browser smoke-test flow and findings before re-exploring; update handoff note after meaningful tests
+alwaysApply: true
+---
+
+# Smoke Test Handoff
+
+Before doing browser exploration for this repo:
+
+1. Read `.cursor/smoke-test-handoff.md` to reuse the known app URL, UI flow, and prior findings.
+2. Use the documented smoke-test sequence instead of rediscovering it.
+3. Only gather info that is not already in the handoff note.
+4. After a meaningful smoke test, update the handoff note with concise findings (what was verified, what failed, what remains unverified).
+5. If you discover something new or something changed (e.g., app flow, HUD elements, test steps), update this rule and/or the handoff note so future agents have accurate guidance.

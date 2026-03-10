@@ -53,6 +53,17 @@ The game will be available at `http://localhost:5173`
 npm run build
 ```
 
+### Live Browser Checks (for AI agents)
+
+Agents can verify the app in a browser using Cursor’s built-in browser MCP (no extra install needed):
+
+1. Assume the dev server is already started
+2. Open `http://localhost:5173`
+3. Wait for the main menu or game HUD to render
+4. Perform smoke checks (e.g. click Play, place a tower, start a wave)
+
+The dev server uses a fixed port (`5173`) and `strictPort: true`, so the URL is always predictable.
+
 ## How to Play
 
 1. **Start the game**: Click "Play" on the main menu to enter the game

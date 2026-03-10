@@ -25,6 +25,7 @@ import {
   useLevelStore,
 } from "../../core/stores/useLevelStore";
 import { GameEvent } from "../../core/types/enums/events";
+import type { TilePlacementState } from "../../utils/tilePlacement";
 
 type TowerSystemProps = {
   fireProjectile: (
@@ -35,9 +36,7 @@ type TowerSystemProps = {
   onTowerClick: ((tower: TowerInstance) => void) | null;
   onSellTower: ((towerId: number) => void) | null;
   hoveredTile: TileData | null;
-  isOccupiedByBuilding: boolean;
-  isOccupiedByTower: boolean;
-  isHoveredTileOnPath: boolean;
+  hoveredTilePlacementState: TilePlacementState | null;
   selectedTowerType: TowerType | null;
 };
 
@@ -49,9 +48,7 @@ export const TowerSystem: FC<TowerSystemProps> = ({
   onSellTower,
   hoveredTile,
   selectedTowerType,
-  isOccupiedByBuilding,
-  isOccupiedByTower,
-  isHoveredTileOnPath,
+  hoveredTilePlacementState,
 }) => {
   const { towerTypes, tileSize, towerHeight, gameStatus } = useGameStore();
   const gridOffset = useLevelStore(gridOffsetSelector);
@@ -64,7 +61,11 @@ export const TowerSystem: FC<TowerSystemProps> = ({
     const towerConfig = towerTypes?.[selectedTowerType];
     if (!towerConfig) return null;
 
-    if (isOccupiedByTower || isOccupiedByBuilding) return null;
+    if (
+      hoveredTilePlacementState?.isOccupiedByTower ||
+      hoveredTilePlacementState?.isOccupiedByBuilding
+    )
+      return null;
 
     const worldX = gridOffset + hoveredTile.gridX + tileSize / 2;
     const worldZ = gridOffset + hoveredTile.gridZ + tileSize / 2;
@@ -85,8 +86,7 @@ export const TowerSystem: FC<TowerSystemProps> = ({
     selectedTowerType,
     hoveredTile,
     towerTypes,
-    isOccupiedByTower,
-    isOccupiedByBuilding,
+    hoveredTilePlacementState,
     gridOffset,
     tileSize,
   ]);
@@ -202,7 +202,7 @@ export const TowerSystem: FC<TowerSystemProps> = ({
           key="preview"
           tower={previewTower}
           isPreview={true}
-          isInvalidPlacement={isHoveredTileOnPath}
+          isInvalidPlacement={hoveredTilePlacementState?.isOnPath ?? false}
         />
       )}
 

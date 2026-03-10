@@ -4,19 +4,7 @@ import { TowerSystem } from "./TowerSystem";
 import { Building } from "../entities/Building";
 import { Enemy } from "../entities/Enemy";
 import { useLevelSystem } from "../../core/hooks/useLevelSystem";
-import {
-  buildingsSelector,
-  enemiesSelector,
-  gridOffsetSelector,
-  pathWaypointsSelector,
-  useLevelStore,
-} from "../../core/stores/useLevelStore";
-import {
-  pathWidthSelector,
-  tileSizeSelector,
-  useGameStore,
-} from "../../core/stores/useGameStore";
-import { isGridTileOnPath } from "../../utils/pathUtils";
+import { buildingsSelector, enemiesSelector, useLevelStore } from "../../core/stores/useLevelStore";
 import type {
   Tower as TowerInstance,
   Enemy as EnemyInstance,
@@ -25,6 +13,7 @@ import type {
   ActiveEffect,
 } from "../../core/types/game";
 import type { TileData } from "../../core/types/utils";
+import type { TilePlacementState } from "../../utils/tilePlacement";
 import { Effect } from "../entities/Effect";
 import { useInstancedProjectiles } from "../../core/hooks/useInstancedProjectiles";
 
@@ -70,12 +59,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = ({
   const levelSystem = useLevelSystem();
   const buildings = useLevelStore(buildingsSelector);
   const enemies = useLevelStore(enemiesSelector);
-  const gridOffset = useLevelStore(gridOffsetSelector);
-  const pathWaypoints = useLevelStore(pathWaypointsSelector);
-  const tileSize = useGameStore(tileSizeSelector);
-  const pathWidth = useGameStore(pathWidthSelector);
-  const { updateTower, isTileOccupiedByBuilding, isTileOccupiedByTower } =
-    levelSystem;
+  const { getTilePlacementState, updateTower } = levelSystem;
 
   const { InstancedProjectiles, fireProjectile } = useInstancedProjectiles({
     maxProjectiles: 500,
@@ -91,31 +75,11 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = ({
     return enemies.filter((enemy) => enemy.health > 0);
   }, [enemies]);
 
-  const isOccupiedByTower = useMemo(() => {
-    return isTileOccupiedByTower(
-      hoveredTile?.gridX ?? 0,
-      hoveredTile?.gridZ ?? 0
-    );
-  }, [isTileOccupiedByTower, hoveredTile]);
+  const hoveredTilePlacementState = useMemo<TilePlacementState | null>(() => {
+    if (!hoveredTile) return null;
 
-  const isOccupiedByBuilding = useMemo(() => {
-    return isTileOccupiedByBuilding(
-      hoveredTile?.gridX ?? 0,
-      hoveredTile?.gridZ ?? 0
-    );
-  }, [isTileOccupiedByBuilding, hoveredTile]);
-
-  const isHoveredTileOnPath = useMemo(() => {
-    if (!hoveredTile) return false;
-    return isGridTileOnPath(
-      hoveredTile.gridX,
-      hoveredTile.gridZ,
-      gridOffset,
-      tileSize,
-      pathWaypoints,
-      pathWidth
-    );
-  }, [hoveredTile, gridOffset, tileSize, pathWaypoints, pathWidth]);
+    return getTilePlacementState(hoveredTile.gridX, hoveredTile.gridZ);
+  }, [getTilePlacementState, hoveredTile]);
 
   return (
     <>
@@ -145,9 +109,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = ({
         fireProjectile={fireProjectile}
         selectedTower={selectedTower}
         selectedTowerType={selectedTowerType}
-        isOccupiedByBuilding={isOccupiedByBuilding}
-        isOccupiedByTower={isOccupiedByTower}
-        isHoveredTileOnPath={isHoveredTileOnPath}
+        hoveredTilePlacementState={hoveredTilePlacementState}
       />
 
       {activeEffects.map((effect) => (

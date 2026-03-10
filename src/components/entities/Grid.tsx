@@ -1,11 +1,10 @@
 import { Dispatch, SetStateAction, useCallback, useMemo } from "react";
 
 import { Tile } from "./Tile";
-import { isGridTileOnPath } from "../../utils/pathUtils";
 import type { TowerType } from "../../core/types/game";
 import type { TileData } from "../../core/types/utils";
 import { useLevelStore } from "../../core/stores/useLevelStore";
-import { useGameStore } from "../../core/stores/useGameStore";
+import { useLevelSystem } from "../../core/hooks/useLevelSystem";
 
 type GridProps = {
   hoveredTile: TileData | null;
@@ -22,9 +21,8 @@ export const Grid: React.FC<GridProps> = ({
   selectedTowerType,
   onTileClick,
 }) => {
-  const { tileSize, pathWidth } = useGameStore();
-  const { gridSize, towers, buildings, gridOffset, pathWaypoints } =
-    useLevelStore();
+  const { gridSize } = useLevelStore();
+  const { getTilePlacementState } = useLevelSystem();
 
   const tiles = useMemo<TileData[]>(() => {
     const tileArray: TileData[] = [];
@@ -36,41 +34,10 @@ export const Grid: React.FC<GridProps> = ({
     return tileArray;
   }, [gridSize]);
 
-  // TODO: Move this to reusable function
-  const isTileOccupied = useCallback(
-    (gridX: number, gridZ: number) => {
-      const occupiedByTower = towers.some(
-        (tower) => tower.gridX === gridX && tower.gridZ === gridZ
-      );
-      if (occupiedByTower) return true;
-
-      const occupiedByBuilding = buildings.some(
-        (building) => building.gridX === gridX && building.gridZ === gridZ
-      );
-      if (occupiedByBuilding) return true;
-
-      // Check if tile is on the path
-      if (
-        isGridTileOnPath(
-          gridX,
-          gridZ,
-          gridOffset,
-          tileSize,
-          pathWaypoints,
-          pathWidth
-        )
-      )
-        return true;
-
-      return false;
-    },
-    [towers, buildings, gridOffset, tileSize, pathWaypoints, pathWidth]
-  );
-
   const canPlaceTower = useCallback(
-    (occupied: boolean) => {
+    (isBlocked: boolean) => {
       if (!selectedTowerType) return false;
-      if (occupied) return false;
+      if (isBlocked) return false;
       return true;
     },
     [selectedTowerType]
@@ -90,8 +57,8 @@ export const Grid: React.FC<GridProps> = ({
   return (
     <group>
       {tiles.map(({ gridX, gridZ }) => {
-        const occupied = isTileOccupied(gridX, gridZ);
-        const canPlace = canPlaceTower(occupied);
+        const placementState = getTilePlacementState(gridX, gridZ);
+        const canPlace = canPlaceTower(placementState.isBlocked);
         const isHovered =
           hoveredTile?.gridX === gridX &&
           hoveredTile?.gridZ === gridZ &&

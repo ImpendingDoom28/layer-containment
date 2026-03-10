@@ -12,8 +12,8 @@ import {
 } from "../types/game";
 import {
   getPositionAlongMultiplePaths,
-  isGridTileOnPath,
 } from "../../utils/pathUtils";
+import { getTilePlacementState as getSharedTilePlacementState } from "../../utils/tilePlacement";
 import { useNextId } from "./utils/useNextId";
 import { gameEvents } from "../../utils/eventEmitter";
 import { GameEvent } from "../types/enums/events";
@@ -55,20 +55,20 @@ export const useLevelSystem = () => {
     return Math.floor(Math.random() * pathWaypoints.length);
   }, [pathWaypoints]);
 
-  const isTileOccupiedByBuilding = useCallback(
-    (gridX: number, gridZ: number): boolean => {
-      return buildings.some(
-        (building) => building.gridX === gridX && building.gridZ === gridZ
-      );
+  const getTilePlacementState = useCallback(
+    (gridX: number, gridZ: number) => {
+      return getSharedTilePlacementState({
+        gridX,
+        gridZ,
+        towers,
+        buildings,
+        gridOffset,
+        tileSize,
+        pathWaypoints,
+        pathWidth,
+      });
     },
-    [buildings]
-  );
-
-  const isTileOccupiedByTower = useCallback(
-    (gridX: number, gridZ: number): boolean => {
-      return towers.some((t) => t.gridX === gridX && t.gridZ === gridZ);
-    },
-    [towers]
+    [towers, buildings, gridOffset, tileSize, pathWaypoints, pathWidth]
   );
 
   // Towers
@@ -80,21 +80,8 @@ export const useLevelSystem = () => {
       // Check if can afford
       if (money < towerConfig.cost) return false;
 
-      if (isTileOccupiedByTower(gridX, gridZ)) return false;
-
-      if (isTileOccupiedByBuilding(gridX, gridZ)) return false;
-
-      if (
-        isGridTileOnPath(
-          gridX,
-          gridZ,
-          gridOffset,
-          tileSize,
-          pathWaypoints,
-          pathWidth
-        )
-      )
-        return false;
+      const placementState = getTilePlacementState(gridX, gridZ);
+      if (placementState.isBlocked) return false;
 
       // Calculate world position
       const worldX = gridOffset + gridX + tileSize / 2;
@@ -125,12 +112,9 @@ export const useLevelSystem = () => {
     [
       towerTypes,
       money,
-      isTileOccupiedByTower,
-      isTileOccupiedByBuilding,
+      getTilePlacementState,
       gridOffset,
       tileSize,
-      pathWaypoints,
-      pathWidth,
       getNextTowerId,
       setTowers,
       spendMoney,
@@ -389,8 +373,7 @@ export const useLevelSystem = () => {
     money,
     currentWave,
     isLevelConfigLoaded,
-    isTileOccupiedByBuilding,
-    isTileOccupiedByTower,
+    getTilePlacementState,
   };
 };
 

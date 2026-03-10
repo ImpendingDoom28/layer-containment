@@ -21,6 +21,9 @@
 ## Verified Findings (Latest Run)
 - Game loads and enters gameplay
 - Tower placement works
+- Shared tile occupancy refactor still allows valid off-path placement
+- Re-clicking an occupied tile keeps selection active and does not spend money
+- Clicking a path tile keeps selection active and does not spend money
 - Waves start and enemies spawn
 - Money changes consistent with kills (increases when enemies die)
 - Health drops when enemies reach the end

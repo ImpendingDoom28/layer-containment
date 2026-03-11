@@ -36,7 +36,7 @@ export const Path: FC<PathProps> = ({ timeUntilNextWave, pathIndex }) => {
         const nextWp = path[index + 1];
         const dx = nextWp.x - wp.x;
         const dz = nextWp.z - wp.z;
-        const length = Math.sqrt(dx * dx + dz * dz);
+        const length = Math.hypot(dx, dz);
         const angle = Math.atan2(dz, dx);
 
         // Calculate the center position for the segment
@@ -91,7 +91,10 @@ export const Path: FC<PathProps> = ({ timeUntilNextWave, pathIndex }) => {
       />
 
       {/* Next wave preview */}
-      <GUINextWavePreview timeUntilNextWave={timeUntilNextWave} />
+      <GUINextWavePreview
+        timeUntilNextWave={timeUntilNextWave}
+        pathIndex={pathIndex}
+      />
     </group>
   );
 };

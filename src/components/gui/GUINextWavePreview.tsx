@@ -31,23 +31,37 @@ const EnemyPreviewModel: FC<EnemyPreviewModelProps> = ({
   count,
 }) => {
   return (
-    <div className="flex flex-row items-center gap-1 p-1.5 bg-gray-800 rounded shadow-lg bg-opacity-90">
-      <span className="w-4 text-xs font-semibold text-white">x{count}</span>
-      <span
-        className="w-4 h-4 rounded-full"
-        style={{ backgroundColor: enemyConfig.color }}
-      ></span>
-      <span className="text-xs font-normal text-white">{enemyConfig.name}</span>
+    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border border-border/70 bg-muted/35 px-2 py-1.5">
+      <UITypography
+        variant="verySmall"
+        className="min-w-9 text-muted-foreground uppercase tracking-[0.16em]"
+      >
+        x{count}
+      </UITypography>
+      <div className="flex min-w-0 items-center gap-2">
+        <span
+          className="h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-white/15"
+          style={{ backgroundColor: enemyConfig.color }}
+        />
+        <UITypography variant="small" className="truncate font-medium">
+          {enemyConfig.name}
+        </UITypography>
+      </div>
+      <UITypography variant="verySmall" className="text-muted-foreground">
+        unit{count > 1 ? "s" : ""}
+      </UITypography>
     </div>
   );
 };
 
 type GUINextWavePreviewProps = {
   timeUntilNextWave: number | null;
+  pathIndex: number;
 };
 
 export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
   timeUntilNextWave,
+  pathIndex,
 }) => {
   const pathWaypoints = useLevelStore(pathWaypointsSelector);
   const totalWaves = useLevelStore(totalWavesSelector);
@@ -86,29 +100,62 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
     return waveConfigs[nextWaveIndex];
   }, [shouldShow, currentWave, waveConfigs]);
 
-  // TODO: Adjust to support multiple paths with enemies in each spawn
   const worldPosition = useMemo(() => {
-    const startPosition = pathWaypoints[0][0];
-    const yOffset = 1.5;
+    const path = pathWaypoints[pathIndex];
+    const startPosition = path?.[0];
+    const nextPosition = path?.[1];
 
-    return [startPosition.x, yOffset, startPosition.z] as [
+    if (!startPosition) {
+      return [0, 0, 0] as [number, number, number];
+    }
+
+    const directionX = (nextPosition?.x ?? startPosition.x + 1) - startPosition.x;
+    const directionZ = (nextPosition?.z ?? startPosition.z) - startPosition.z;
+    const directionLength = Math.hypot(directionX, directionZ) || 1;
+    const sideOffsetX = (-directionZ / directionLength) * 1.1;
+    const sideOffsetZ = (directionX / directionLength) * 1.1;
+
+    return [
+      startPosition.x + sideOffsetX,
+      startPosition.y + 1.25,
+      startPosition.z + sideOffsetZ,
+    ] as [
       number,
       number,
       number,
     ];
-  }, [pathWaypoints]);
+  }, [pathIndex, pathWaypoints]);
 
   if (!shouldShow || !nextWaveConfig) return null;
 
   return (
     <group position={worldPosition}>
-      <GUIWrapper position={[0, 0.4, 0]} distanceFactor={0.15 * 100}>
-        <UICard className="w-36">
-          <UICardHeader>
-            <UITypography variant="small">Incoming...</UITypography>
+      <GUIWrapper position={[0, 0.45, 0]} distanceFactor={12}>
+        <UICard
+          size="sm"
+          className="w-52 border border-border/80 bg-card/95 shadow-[0_14px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm"
+        >
+          <UICardHeader className="gap-1 border-b border-border/70">
+            <UITypography
+              variant="verySmall"
+              className="text-primary uppercase tracking-[0.22em]"
+            >
+              Path Entrance
+            </UITypography>
+            <div className="flex items-center justify-between gap-3">
+              <UITypography variant="medium" className="font-semibold">
+                Next Wave
+              </UITypography>
+              <UITypography
+                variant="verySmall"
+                className="shrink-0 text-muted-foreground uppercase tracking-[0.16em]"
+              >
+                {Math.ceil(timeUntilNextWave / 1000)}s
+              </UITypography>
+            </div>
           </UICardHeader>
-          <UICardContent className="gap-1">
-            <div className="flex flex-col">
+          <UICardContent className="gap-2">
+            <div className="flex flex-col gap-1.5">
               {nextWaveConfig.enemies.map((enemyGroup, index) => {
                 const enemyConfig = enemyTypes?.[enemyGroup.type];
                 if (!enemyConfig) return null;
@@ -124,33 +171,39 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
             </div>
 
             {selectedUpgrades.length > 0 && enemyUpgrades && (
-              <div className="pt-2 mt-2 border-t border-gray-600">
-                <UITypography variant="small" className="mb-1 text-yellow-400">
-                  Empowered
-                </UITypography>
-                <div className="flex flex-wrap gap-1">
+              <div className="border-t border-border/70 pt-2">
+                <div className="flex items-center justify-between gap-2">
+                  <UITypography
+                    variant="verySmall"
+                    className="text-primary uppercase tracking-[0.16em]"
+                  >
+                    Empowered
+                  </UITypography>
+                  {bonusPercentage > 0 && (
+                    <UITypography variant="verySmall" className="text-green-400">
+                      +{bonusPercentage}% gold
+                    </UITypography>
+                  )}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
                   {selectedUpgrades.map((upgradeId) => {
                     const upgrade = enemyUpgrades[upgradeId];
                     if (!upgrade) return null;
                     return (
-                      <span
+                      <UITypography
                         key={upgradeId}
-                        className="px-1.5 py-0.5 text-xs rounded"
+                        variant="verySmall"
+                        className="px-1.5 py-1 font-medium uppercase tracking-[0.14em]"
                         style={{
                           backgroundColor: upgrade.indicatorColor,
                           color: "#000",
                         }}
                       >
                         {upgrade.name}
-                      </span>
+                      </UITypography>
                     );
                   })}
                 </div>
-                {bonusPercentage > 0 && (
-                  <UITypography variant="small" className="mt-1 text-green-400">
-                    +{bonusPercentage}% gold
-                  </UITypography>
-                )}
               </div>
             )}
           </UICardContent>

@@ -14,9 +14,13 @@ import { HUDSidePanel } from "./HUDSidePanel";
 
 type HUDMainMenuProps = {
   onPlay: () => void | Promise<void>;
+  onOpenLevelEditor: () => void;
 };
 
-export const HUDMainMenu: FC<HUDMainMenuProps> = ({ onPlay }) => {
+export const HUDMainMenu: FC<HUDMainMenuProps> = ({
+  onPlay,
+  onOpenLevelEditor,
+}) => {
   const [hasInteracted, setHasInteracted] = useState(false);
   const [showAlmanac, setShowAlmanac] = useState(false);
   const showAudioSettings = useGameStore(showAudioSettingsSelector);
@@ -29,14 +33,14 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = ({ onPlay }) => {
       }
     };
 
-    window.addEventListener("mousedown", onInteraction, { once: true });
-    window.addEventListener("keydown", onInteraction, { once: true });
-    window.addEventListener("touchstart", onInteraction, { once: true });
+    globalThis.addEventListener("mousedown", onInteraction, { once: true });
+    globalThis.addEventListener("keydown", onInteraction, { once: true });
+    globalThis.addEventListener("touchstart", onInteraction, { once: true });
 
     return () => {
-      window.removeEventListener("mousedown", onInteraction);
-      window.removeEventListener("keydown", onInteraction);
-      window.removeEventListener("touchstart", onInteraction);
+      globalThis.removeEventListener("mousedown", onInteraction);
+      globalThis.removeEventListener("keydown", onInteraction);
+      globalThis.removeEventListener("touchstart", onInteraction);
     };
   }, [hasInteracted]);
 
@@ -58,6 +62,9 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = ({ onPlay }) => {
 
         <div className="flex flex-col justify-center flex-1 gap-2">
           <UIButton onClick={onPlay}>Play</UIButton>
+          <UIButton onClick={onOpenLevelEditor} variant="outline">
+            Level Creator
+          </UIButton>
           <UIButton onClick={() => setShowAlmanac(true)} variant="outline">
             Enemy Almanac
           </UIButton>
@@ -68,7 +75,13 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = ({ onPlay }) => {
         </UIButton>
       </div>
     );
-  }, [showAudioSettings, showAlmanac, onPlay, setShowAudioSettings]);
+  }, [
+    showAudioSettings,
+    showAlmanac,
+    onPlay,
+    onOpenLevelEditor,
+    setShowAudioSettings,
+  ]);
 
   return (
     <HUDSidePanel side="right">

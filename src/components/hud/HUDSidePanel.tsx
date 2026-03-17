@@ -18,11 +18,11 @@ export const HUDSidePanel: FC<HUDSidePanelProps> = ({
     <HUDWrapper className={cn("px-4 py-4 md:py-6", className)}>
       <div
         className={cn(
-          "pointer-events-auto relative z-10 flex h-full w-full",
+          "pointer-events-none relative z-10 flex h-full w-full",
           side === "right" ? "justify-end" : "justify-start"
         )}
       >
-        <div className="flex w-full h-full max-w-md md:max-w-lg">
+        <div className="flex w-full h-full max-w-md pointer-events-auto md:max-w-lg">
           {children}
         </div>
       </div>

@@ -106,6 +106,7 @@ const projectileSchema: z.ZodType<Projectile> = z.object({
 export type LevelConfigFiles = "level_main" | "level_1" | "level_2";
 
 export const levelConfigSchema = z.object({
+  name: z.string().min(1),
   startingMoney: z.number(),
   gridSize: z.number(),
   pathWaypoints: z.array(z.array(pathWaypointSchema)),
@@ -119,13 +120,17 @@ export const levelConfigSchema = z.object({
 
 export type LevelConfigData = z.infer<typeof levelConfigSchema>;
 
+export const parseLevelConfigData = (data: unknown) => {
+  return levelConfigSchema.safeParse(data);
+};
+
 export const loadLevelConfigFile = async (levelName: LevelConfigFiles) => {
   const data = await loadFile(`/configs/levels/${levelName}`);
   if (!data) {
     throw new Error(`Failed to load level configuration file: ${levelName}`);
   }
 
-  const result = levelConfigSchema.safeParse(data);
+  const result = parseLevelConfigData(data);
   if (!result.success) {
     throw new Error(
       `Level configuration validation failed for ${levelName}: ${result.error.message}`

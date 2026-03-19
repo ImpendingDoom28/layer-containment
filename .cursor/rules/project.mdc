@@ -2,6 +2,6 @@
 alwaysApply: true
 ---
 
-Before you start planning, you can have a look at the `README.md` file inside of project so you can have a brief picture of functionality it already has
-After finishing a task, run a smoke test in a browser using Cursor tools.
-After creating a new feature for the project, don't forget to document only important information about it in `README.md` file. Include only features, not bugfixes or "best practices" info. Make it concise and short.
+- Before you start planning, you can have a look at the `README.md` file inside of project so you can have a brief picture of functionality it already has
+- After finishing a task, run a smoke test in a browser using playwright. Find more information inside [smoke-test-handoff.mdc](./smoke-test-handoff.mdc)
+- After creating a new feature for the project, don't forget to document only important information about it in `README.md` file. Include only features, not bugfixes or "best practices" info. Make it concise and short.

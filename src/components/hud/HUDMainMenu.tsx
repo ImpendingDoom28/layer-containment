@@ -1,104 +1,103 @@
-import { FC, useEffect, useMemo, useState } from "react";
+import { FC } from "react";
+import { ArrowRight } from "lucide-react";
 
 import { UIButton } from "../ui/UIButton";
-import { UICard, UICardContent, UICardHeader, UICardTitle } from "../ui/UICard";
 import { UITypography } from "../ui/UITypography";
-import {
-  setShowAudioSettingsSelector,
-  showAudioSettingsSelector,
-  useGameStore,
-} from "../../core/stores/useGameStore";
 import { HUDAudioControls } from "./HUDAudioControls";
 import { HUDAlmanac } from "./HUDAlmanac";
+import { HUDWrapper } from "./HUDWrapper";
 import { HUDSidePanel } from "./HUDSidePanel";
+import { useMenuState } from "./useMenuState";
+import type { MenuActions } from "../../core/types/menu";
 
-type HUDMainMenuProps = {
-  onPlay: () => void | Promise<void>;
-  onOpenLevelEditor: () => void;
-};
+type HUDMainMenuProps = MenuActions;
 
 export const HUDMainMenu: FC<HUDMainMenuProps> = ({
   onPlay,
   onOpenLevelEditor,
 }) => {
-  const [hasInteracted, setHasInteracted] = useState(false);
-  const [showAlmanac, setShowAlmanac] = useState(false);
-  const showAudioSettings = useGameStore(showAudioSettingsSelector);
-  const setShowAudioSettings = useGameStore(setShowAudioSettingsSelector);
-
-  useEffect(() => {
-    const onInteraction = () => {
-      if (!hasInteracted) {
-        setHasInteracted(true);
-      }
-    };
-
-    globalThis.addEventListener("mousedown", onInteraction, { once: true });
-    globalThis.addEventListener("keydown", onInteraction, { once: true });
-    globalThis.addEventListener("touchstart", onInteraction, { once: true });
-
-    return () => {
-      globalThis.removeEventListener("mousedown", onInteraction);
-      globalThis.removeEventListener("keydown", onInteraction);
-      globalThis.removeEventListener("touchstart", onInteraction);
-    };
-  }, [hasInteracted]);
-
-  const mainMenuContent = useMemo(() => {
-    if (showAudioSettings) {
-      return <HUDAudioControls className="ring-0" />;
-    }
-
-    if (showAlmanac) {
-      return <HUDAlmanac onBack={() => setShowAlmanac(false)} />;
-    }
-
-    return (
-      <div className="flex flex-col justify-center flex-1 gap-8">
-        <UITypography variant="body">
-          Defend your base against waves of enemies. Build towers strategically
-          to survive!
-        </UITypography>
-
-        <div className="flex flex-col justify-center flex-1 gap-2">
-          <UIButton onClick={onPlay}>Play</UIButton>
-          <UIButton onClick={onOpenLevelEditor} variant="outline">
-            Level Creator
-          </UIButton>
-          <UIButton onClick={() => setShowAlmanac(true)} variant="outline">
-            Enemy Almanac
-          </UIButton>
-        </div>
-
-        <UIButton onClick={() => setShowAudioSettings(true)} variant="outline">
-          Audio Settings
-        </UIButton>
-      </div>
-    );
-  }, [
-    showAudioSettings,
-    showAlmanac,
-    onPlay,
-    onOpenLevelEditor,
+  const {
+    hasInteracted,
+    activeView,
+    setShowAlmanac,
     setShowAudioSettings,
-  ]);
+  } = useMenuState();
+
+  if (activeView === "audio") {
+    return (
+      <HUDSidePanel side="left">
+        <div
+          className={`w-full transition-all duration-700 ${hasInteracted ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-12"}`}
+        >
+          <HUDAudioControls />
+        </div>
+      </HUDSidePanel>
+    );
+  }
+
+  if (activeView === "almanac") {
+    return (
+      <HUDSidePanel side="left">
+        <div
+          className={`w-full transition-all duration-700 ${hasInteracted ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-12"}`}
+        >
+          <HUDAlmanac onBack={() => setShowAlmanac(false)} />
+        </div>
+      </HUDSidePanel>
+    );
+  }
 
   return (
-    <HUDSidePanel side="right">
-      <UICard
-        className={`relative z-10 flex h-full w-full flex-col shadow-2xl transition-transform duration-1000 ease-out ${
-          hasInteracted ? "translate-x-0" : "translate-x-full"
+    <HUDWrapper className="pointer-events-none">
+      <div
+        className={`pointer-events-auto flex h-full w-full transition-all duration-1000 ease-out ${
+          hasInteracted ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-16"
         }`}
       >
-        <UICardHeader>
-          <UICardTitle className="justify-center">
-            <UITypography variant="h1" className="text-center">
-              Tower defense
+        <div className="flex h-full w-[45%] max-w-xl flex-col justify-between bg-gradient-to-r from-black/80 via-black/60 to-transparent p-8 md:p-12">
+          <div>
+            <div className="mb-2 h-0.5 w-12 bg-primary" />
+            <UITypography variant="small" className="uppercase tracking-[0.5em] text-primary">
+              Strategy Game
             </UITypography>
-          </UICardTitle>
-        </UICardHeader>
-        <UICardContent className="flex-1">{mainMenuContent}</UICardContent>
-      </UICard>
-    </HUDSidePanel>
+          </div>
+
+          <div className="flex flex-col gap-6">
+            <div>
+              <UITypography variant="h1" className="text-5xl md:text-7xl font-black leading-[0.9] tracking-tight">
+                Tower
+              </UITypography>
+              <UITypography variant="h1" className="text-5xl md:text-7xl font-extralight leading-[0.9] tracking-tight text-primary">
+                Defense
+              </UITypography>
+            </div>
+
+            <UITypography variant="body" className="max-w-xs text-muted-foreground leading-relaxed">
+              Defend your base against waves of enemies. Build towers
+              strategically to survive.
+            </UITypography>
+          </div>
+
+          <nav className="flex flex-col gap-1">
+            {[
+              { label: "Play", action: onPlay },
+              { label: "Level Creator", action: onOpenLevelEditor },
+              { label: "Enemy Almanac", action: () => setShowAlmanac(true) },
+              { label: "Audio Settings", action: () => setShowAudioSettings(true) },
+            ].map(({ label, action }) => (
+              <UIButton
+                key={label}
+                onClick={action}
+                variant="ghost"
+                className="group justify-between border-b border-white/5 px-0 text-left text-sm font-light tracking-wide text-foreground hover:border-primary/30"
+              >
+                {label}
+                <ArrowRight className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+              </UIButton>
+            ))}
+          </nav>
+        </div>
+      </div>
+    </HUDWrapper>
   );
 };

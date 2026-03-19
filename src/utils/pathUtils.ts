@@ -7,6 +7,42 @@ export type PathSegment = {
   startProgress: number;
 };
 
+export type RenderPathSegment = {
+  start: PathWaypoint;
+  end: PathWaypoint;
+  dx: number;
+  dz: number;
+  length: number;
+  centerX: number;
+  centerZ: number;
+  yaw: number;
+};
+
+const getPathSegmentYaw = (dx: number, dz: number) => {
+  return Math.atan2(-dz, dx);
+};
+
+export const getPathRenderSegments = (
+  pathWaypoints: PathWaypoint[]
+): RenderPathSegment[] => {
+  return pathWaypoints.slice(0, -1).map((waypoint, index) => {
+    const nextWaypoint = pathWaypoints[index + 1];
+    const dx = nextWaypoint.x - waypoint.x;
+    const dz = nextWaypoint.z - waypoint.z;
+
+    return {
+      start: waypoint,
+      end: nextWaypoint,
+      dx,
+      dz,
+      length: Math.hypot(dx, dz),
+      centerX: waypoint.x + dx / 2,
+      centerZ: waypoint.z + dz / 2,
+      yaw: getPathSegmentYaw(dx, dz),
+    };
+  });
+};
+
 /**
  * Check if position is at the end of the path
  */

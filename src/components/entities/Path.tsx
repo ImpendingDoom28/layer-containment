@@ -11,6 +11,7 @@ import {
   tileSizeSelector,
   useGameStore,
 } from "../../core/stores/useGameStore";
+import { getPathRenderSegments } from "../../utils/pathUtils";
 import { Portal } from "./Portal";
 import { EndBuilding } from "./EndBuilding";
 
@@ -28,37 +29,43 @@ export const Path: FC<PathProps> = ({ timeUntilNextWave, pathIndex }) => {
   const path = pathWaypoints[pathIndex];
   if (!path) return null;
 
+  const segments = getPathRenderSegments(path ?? []);
+
   return (
     <group>
       {/* Draw path segments (narrower, within tiles) */}
-      {path.map((wp, index) => {
-        if (index === path.length - 1) return null;
-        const nextWp = path[index + 1];
-        const dx = nextWp.x - wp.x;
-        const dz = nextWp.z - wp.z;
-        const length = Math.hypot(dx, dz);
-        const angle = Math.atan2(dz, dx);
-
-        // Calculate the center position for the segment
-        const centerX = wp.x + dx / 2;
-        const centerZ = wp.z + dz / 2;
+      {segments.map((segment) => {
+        const segmentKey = [
+          segment.start.x,
+          segment.start.z,
+          segment.end.x,
+          segment.end.z,
+        ].join(":");
 
         return (
-          <group key={`path-${pathIndex}-segment-${index}`}>
+          <group key={`path-${pathIndex}-segment-${segmentKey}`}>
             {/* Path line */}
             <mesh
-              position={[centerX, wp.y + pathYOffset, centerZ]}
-              rotation={[0, angle, 0]}
+              position={[
+                segment.centerX,
+                segment.start.y + pathYOffset,
+                segment.centerZ,
+              ]}
+              rotation={[0, segment.yaw, 0]}
             >
-              <boxGeometry args={[length, 0.02, pathWidth]} />
+              <boxGeometry args={[segment.length, 0.02, pathWidth]} />
               <meshStandardMaterial color="#6b7280" />
             </mesh>
 
             <mesh
-              position={[centerX, wp.y + pathYOffset, centerZ]}
-              rotation={[0, angle, 0]}
+              position={[
+                segment.centerX,
+                segment.start.y + pathYOffset,
+                segment.centerZ,
+              ]}
+              rotation={[0, segment.yaw, 0]}
             >
-              <boxGeometry args={[length, 0.01, pathWidth + 0.05]} />
+              <boxGeometry args={[segment.length, 0.01, pathWidth + 0.05]} />
               <meshStandardMaterial color="#4b5563" />
             </mesh>
           </group>

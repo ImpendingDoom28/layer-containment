@@ -12,6 +12,7 @@ import {
   useGameStore,
 } from "../../../core/stores/useGameStore";
 import { useLevelEditorStore } from "../../../core/stores/useLevelEditorStore";
+import { getPathRenderSegments } from "../../../utils/pathUtils";
 import { getTilePlacementState } from "../../../utils/tilePlacement";
 import { getLevelGridOffset } from "../../../utils/levelEditor";
 import { LevelEditorCamera } from "./LevelEditorCamera";
@@ -180,40 +181,36 @@ export const LevelEditorScene = () => {
             selectedPathIndex === pathIndex ||
             (selected?.type === "path" && selected.pathIndex === pathIndex) ||
             (selected?.type === "waypoint" && selected.pathIndex === pathIndex);
+          const segments = getPathRenderSegments(path);
 
           return (
             <group key={`editor-path-${pathIndex}`}>
-              {path.map((waypoint, waypointIndex) => {
-                if (waypointIndex === path.length - 1) {
-                  return null;
-                }
-
-                const nextWaypoint = path[waypointIndex + 1];
-                const dx = nextWaypoint.x - waypoint.x;
-                const dz = nextWaypoint.z - waypoint.z;
-                const length = Math.hypot(dx, dz);
-                const angle = Math.atan2(dz, dx);
-                const centerX = waypoint.x + dx / 2;
-                const centerZ = waypoint.z + dz / 2;
+              {segments.map((segment) => {
+                const segmentKey = [
+                  segment.start.x,
+                  segment.start.z,
+                  segment.end.x,
+                  segment.end.z,
+                ].join(":");
 
                 return (
                   <group
-                    key={`editor-path-${pathIndex}-segment-${waypointIndex}`}
+                    key={`editor-path-${pathIndex}-segment-${segmentKey}`}
                   >
                     <mesh
-                      position={[centerX, 0.03, centerZ]}
-                      rotation={[0, angle, 0]}
+                      position={[segment.centerX, 0.03, segment.centerZ]}
+                      rotation={[0, segment.yaw, 0]}
                     >
-                      <boxGeometry args={[length, 0.025, pathWidth]} />
+                      <boxGeometry args={[segment.length, 0.025, pathWidth]} />
                       <meshStandardMaterial
                         color={isSelectedPath ? "#a855f7" : "#6b7280"}
                       />
                     </mesh>
                     <mesh
-                      position={[centerX, 0.02, centerZ]}
-                      rotation={[0, angle, 0]}
+                      position={[segment.centerX, 0.02, segment.centerZ]}
+                      rotation={[0, segment.yaw, 0]}
                     >
-                      <boxGeometry args={[length, 0.01, pathWidth + 0.06]} />
+                      <boxGeometry args={[segment.length, 0.01, pathWidth + 0.06]} />
                       <meshStandardMaterial
                         color={isSelectedPath ? "#7e22ce" : "#4b5563"}
                       />

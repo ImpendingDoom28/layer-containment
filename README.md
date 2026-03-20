@@ -138,3 +138,11 @@ The dev server uses a fixed port (`5173`) and `strictPort: true`, so the URL is 
   - `HUDOverlay` for centered modal-style overlays (game menu, game over).
   - `HUDSidePanel` for right-side panels (main menu, enemy almanac) with responsive widths and scrollable content.
 - **Best practices**: Prefer these primitives and layout components when adding new HUD elements to keep visuals consistent, responsive, and easy to extend.
+
+## Other
+
+Here are documentation links:
+
+- [threejs](https://threejs.org/docs/)
+- [react-three-fiber](https://r3f.docs.pmnd.rs/)
+- [react-three-drei](https://drei.docs.pmnd.rs/)

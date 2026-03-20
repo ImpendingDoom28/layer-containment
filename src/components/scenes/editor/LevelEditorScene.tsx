@@ -15,38 +15,34 @@ import { useLevelEditorStore } from "../../../core/stores/useLevelEditorStore";
 import { getPathRenderSegments } from "../../../utils/pathUtils";
 import { getTilePlacementState } from "../../../utils/tilePlacement";
 import { getLevelGridOffset } from "../../../utils/levelEditor";
+import { getCssColorValue, type ColorToken } from "../../ui/lib/cssUtils";
+import type { LevelEditorTool } from "../../../core/types/editor";
 import { LevelEditorCamera } from "./LevelEditorCamera";
 
 const TILE_HEIGHT = 0.02;
 const BUILDING_OUTLINE_SCALE = 1.06;
 
-const toolPreviewColors = {
-  select: "#374151",
-  placeBuilding: "#1d4ed8",
-  drawPath: "#7c3aed",
-  setSpawn: "#15803d",
-  setBase: "#b45309",
-  erase: "#b91c1c",
-} as const;
+const toolTokenMap: Record<LevelEditorTool, ColorToken> = {
+  select: "editor-tool-select",
+  placeBuilding: "editor-tool-place-building",
+  drawPath: "editor-tool-draw-path",
+  setSpawn: "editor-tool-set-spawn",
+  setBase: "editor-tool-set-base",
+  erase: "editor-tool-erase",
+};
+
+const getToolPreviewColor = (tool: LevelEditorTool): string =>
+  getCssColorValue(toolTokenMap[tool]);
 
 const getWaypointColor = (
   isSelected: boolean,
   isEdgeWaypoint: boolean,
   isInSelectedPath: boolean
 ) => {
-  if (isSelected) {
-    return "#facc15";
-  }
-
-  if (isEdgeWaypoint) {
-    return "#22c55e";
-  }
-
-  if (isInSelectedPath) {
-    return "#a855f7";
-  }
-
-  return "#d1d5db";
+  if (isSelected) return getCssColorValue("editor-indicator-selected");
+  if (isEdgeWaypoint) return getCssColorValue("editor-indicator-edge");
+  if (isInSelectedPath) return getCssColorValue("editor-indicator-path");
+  return getCssColorValue("editor-indicator-idle");
 };
 
 export const LevelEditorScene = () => {
@@ -116,7 +112,7 @@ export const LevelEditorScene = () => {
             draftLevel.gridSize * tileSize,
           ]}
         />
-        <meshStandardMaterial color="#3f3f46" />
+        <meshStandardMaterial color={draftLevel.groundColor ?? getCssColorValue("editor-default-ground")} />
       </mesh>
 
       <group>
@@ -135,14 +131,15 @@ export const LevelEditorScene = () => {
             hoveredTile?.gridX === gridX && hoveredTile?.gridZ === gridZ;
           const canPlaceBuilding =
             activeTool === "placeBuilding" && !placementState.isBlocked;
+          const baseTileColor = draftLevel.tileColor ?? getCssColorValue("editor-default-tile");
           const color = isHovered
             ? canPlaceBuilding
-              ? "#3b82f6"
-              : toolPreviewColors[activeTool]
+              ? getCssColorValue("editor-can-place")
+              : getToolPreviewColor(activeTool)
             : placementState.isOnPath
-              ? "#1f2937"
-              : "#111827";
-          const emissive = isHovered ? color : "#000000";
+              ? getCssColorValue("scene-gray-800")
+              : baseTileColor;
+          const emissive = isHovered ? color : getCssColorValue("scene-black");
 
           return (
             <mesh
@@ -194,25 +191,25 @@ export const LevelEditorScene = () => {
                 ].join(":");
 
                 return (
-                  <group
-                    key={`editor-path-${pathIndex}-segment-${segmentKey}`}
-                  >
+                  <group key={`editor-path-${pathIndex}-segment-${segmentKey}`}>
                     <mesh
                       position={[segment.centerX, 0.03, segment.centerZ]}
                       rotation={[0, segment.yaw, 0]}
                     >
                       <boxGeometry args={[segment.length, 0.025, pathWidth]} />
                       <meshStandardMaterial
-                        color={isSelectedPath ? "#a855f7" : "#6b7280"}
+                        color={isSelectedPath ? getCssColorValue("editor-path-active") : getCssColorValue("scene-gray-500")}
                       />
                     </mesh>
                     <mesh
                       position={[segment.centerX, 0.02, segment.centerZ]}
                       rotation={[0, segment.yaw, 0]}
                     >
-                      <boxGeometry args={[segment.length, 0.01, pathWidth + 0.06]} />
+                      <boxGeometry
+                        args={[segment.length, 0.01, pathWidth + 0.06]}
+                      />
                       <meshStandardMaterial
-                        color={isSelectedPath ? "#7e22ce" : "#4b5563"}
+                        color={isSelectedPath ? getCssColorValue("editor-path-active-border") : getCssColorValue("scene-gray-600")}
                       />
                     </mesh>
                   </group>
@@ -304,7 +301,7 @@ export const LevelEditorScene = () => {
                         ]}
                       />
                       <meshStandardMaterial
-                        color="#facc15"
+                        color={getCssColorValue("editor-indicator-selected")}
                         wireframe
                         transparent
                         opacity={0.8}
@@ -336,7 +333,7 @@ export const LevelEditorScene = () => {
                         ]}
                       />
                       <meshStandardMaterial
-                        color="#facc15"
+                        color={getCssColorValue("editor-indicator-selected")}
                         wireframe
                         transparent
                         opacity={0.8}

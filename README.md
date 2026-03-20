@@ -15,7 +15,7 @@ A 3D tower defense game built with React, Tailwind CSS, and React Three Fiber.
   - Fastero: Fast-moving enemy with lower health
   - Tankee: Slow but heavily armored enemy that causes more health loss
 - **Enemy wave system** - 7 waves of increasing difficulty with configurable enemy compositions
-- **Level creator** - Dedicated `/editor` route for placing buildings, drawing paths, configuring waves, validating level data, and exporting schema-compatible level JSON files
+- **Level creator** - Dedicated `/editor` route with a mode rail, contextual inspector, and unified publish flow for placing buildings, drawing paths, configuring waves, and exporting schema-compatible level JSON files
 - **Enemy upgrade system** - Optional risk/reward mechanic to empower waves for bonus gold:
   - Armored: +50% health, +40% gold reward
   - Swift: +30% speed, +30% gold reward

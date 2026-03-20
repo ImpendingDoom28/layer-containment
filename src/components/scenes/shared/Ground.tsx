@@ -8,6 +8,7 @@ import {
   tileSizeSelector,
   useGameStore,
 } from "../../../core/stores/useGameStore";
+import { getCssColorValue } from "../../ui/lib/cssUtils";
 
 export const Ground: FC = memo(() => {
   const gridSize = useLevelStore(gridSizeSelector);
@@ -17,7 +18,7 @@ export const Ground: FC = memo(() => {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
       <planeGeometry args={[groundSize, groundSize]} />
-      <meshStandardMaterial color="gray" />
+      <meshStandardMaterial color={getCssColorValue("scene-gray-600")} />
     </mesh>
   );
 });

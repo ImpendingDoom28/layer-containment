@@ -16,6 +16,7 @@ import {
   InstancedPoolRef,
   InstancedPoolStats,
 } from "../../utils/InstancedPool";
+import { getCssColorValue } from "../../components/ui/lib/cssUtils";
 import type { Projectile, Enemy } from "../types/game";
 import { distance2D } from "../../utils/mathUtils";
 import { useNextId } from "./utils/useNextId";
@@ -75,7 +76,7 @@ export const useInstancedProjectiles = (
     maxProjectiles = 500,
     maxBeams = 50,
     projectileSize = 0.1,
-    defaultColor = "#ffffff",
+    defaultColor = getCssColorValue("scene-white"),
     emissiveIntensity = 0.8,
     beamEmissiveIntensity = 1.5,
     hitThreshold = 0.3,

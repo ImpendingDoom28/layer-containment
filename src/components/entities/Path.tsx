@@ -1,5 +1,6 @@
 import { FC } from "react";
 
+import { getCssColorValue } from "../ui/lib/cssUtils";
 import { GUINextWavePreview } from "../gui/GUINextWavePreview";
 import {
   pathWaypointsSelector,
@@ -54,7 +55,7 @@ export const Path: FC<PathProps> = ({ timeUntilNextWave, pathIndex }) => {
               rotation={[0, segment.yaw, 0]}
             >
               <boxGeometry args={[segment.length, 0.02, pathWidth]} />
-              <meshStandardMaterial color="#6b7280" />
+              <meshStandardMaterial color={getCssColorValue("scene-gray-500")} />
             </mesh>
 
             <mesh
@@ -66,7 +67,7 @@ export const Path: FC<PathProps> = ({ timeUntilNextWave, pathIndex }) => {
               rotation={[0, segment.yaw, 0]}
             >
               <boxGeometry args={[segment.length, 0.01, pathWidth + 0.05]} />
-              <meshStandardMaterial color="#4b5563" />
+              <meshStandardMaterial color={getCssColorValue("scene-gray-600")} />
             </mesh>
           </group>
         );
@@ -76,12 +77,12 @@ export const Path: FC<PathProps> = ({ timeUntilNextWave, pathIndex }) => {
         <group key={`path-${pathIndex}-corner-${index}`}>
           <mesh position={[wp.x, wp.y + pathYOffset, wp.z]}>
             <boxGeometry args={[tileSize + 0.05, 0.01, tileSize + 0.05]} />
-            <meshStandardMaterial color="#4b5563" />
+            <meshStandardMaterial color={getCssColorValue("scene-gray-600")} />
           </mesh>
 
           <mesh position={[wp.x, wp.y + pathYOffset + 0.001, wp.z]}>
             <boxGeometry args={[tileSize, 0.02, tileSize]} />
-            <meshStandardMaterial color="#6b7280" />
+            <meshStandardMaterial color={getCssColorValue("scene-gray-500")} />
           </mesh>
         </group>
       ))}

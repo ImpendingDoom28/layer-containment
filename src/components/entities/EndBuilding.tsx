@@ -1,13 +1,15 @@
 import { FC } from "react";
 
+import { getCssColorValue } from "../ui/lib/cssUtils";
+
 type EndBuildingProps = {
   position: [number, number, number];
 };
 
 export const EndBuilding: FC<EndBuildingProps> = ({ position }) => {
-  const buildingColor = "#ffffff"; // White color for defensive building
-  const buildingAccent = "#e5e7eb"; // Light gray accent
-  const roofColor = "#d1d5db"; // Slightly darker gray for roof
+  const buildingColor = getCssColorValue("scene-white");
+  const buildingAccent = getCssColorValue("scene-gray-200");
+  const roofColor = getCssColorValue("scene-gray-300");
 
   return (
     <group position={position}>
@@ -62,8 +64,8 @@ export const EndBuilding: FC<EndBuildingProps> = ({ position }) => {
       <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.4, 0.4, 0.1, 16]} />
         <meshStandardMaterial
-          color="#374151"
-          emissive="#1f2937"
+          color={getCssColorValue("scene-gray-700")}
+          emissive={getCssColorValue("scene-gray-800")}
           emissiveIntensity={0.1}
         />
       </mesh>
@@ -72,8 +74,8 @@ export const EndBuilding: FC<EndBuildingProps> = ({ position }) => {
       <mesh position={[0, 1.25, 0]}>
         <sphereGeometry args={[0.05, 8, 8]} />
         <meshStandardMaterial
-          color="#fbbf24"
-          emissive="#fbbf24"
+          color={getCssColorValue("scene-building-warning")}
+          emissive={getCssColorValue("scene-building-warning")}
           emissiveIntensity={0.8}
         />
       </mesh>

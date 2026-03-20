@@ -2,6 +2,8 @@ import { FC, useRef, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Mesh, Group } from "three";
 
+import { getCssColorValue } from "../ui/lib/cssUtils";
+
 type PortalProps = {
   position: [number, number, number];
 };
@@ -61,8 +63,8 @@ export const Portal: FC<PortalProps> = ({ position }) => {
     }
   });
 
-  const portalColor = "#22c55e"; // Green color matching spawn effects
-  const portalGlow = "#4ade80";
+  const portalColor = getCssColorValue("scene-portal");
+  const portalGlow = getCssColorValue("scene-portal-glow");
 
   return (
     <group ref={groupRef} position={position}>
@@ -137,8 +139,8 @@ export const Portal: FC<PortalProps> = ({ position }) => {
       <mesh position={[0, -0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.45, 0.45, 0.05, 16]} />
         <meshStandardMaterial
-          color="#374151"
-          emissive="#1f2937"
+          color={getCssColorValue("scene-gray-700")}
+          emissive={getCssColorValue("scene-gray-800")}
           emissiveIntensity={0.1}
         />
       </mesh>

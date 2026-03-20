@@ -1,7 +1,12 @@
 import { create } from "zustand";
 
+import { getCssColorValue } from "../../components/ui/lib/cssUtils";
 import { levelConfigSchema, type LevelConfigData } from "../levelConfig";
-import type { LevelEditorSelection, LevelEditorTool, LevelEditorValidationIssue } from "../types/editor";
+import type {
+  LevelEditorSelection,
+  LevelEditorTool,
+  LevelEditorValidationIssue,
+} from "../types/editor";
 import type { EnemyType, PathWaypoint, WaveConfig } from "../types/game";
 import type { TileData } from "../types/utils";
 import { getTilePlacementState } from "../../utils/tilePlacement";
@@ -35,6 +40,8 @@ type LevelEditorStoreActions = {
   setStartingMoney: (value: number) => void;
   setGridSize: (gridSize: number, tileSize: number) => void;
   setEnemyWeight: (enemyType: EnemyType, value: number | null) => void;
+  setTileColor: (color: string) => void;
+  setGroundColor: (color: string) => void;
   addPath: () => void;
   selectPath: (pathIndex: number) => void;
   removeSelectedPath: () => void;
@@ -131,7 +138,11 @@ const getWaypointSelectionForTile = (
   tile: TileData,
   tileSize: number
 ) => {
-  for (let pathIndex = 0; pathIndex < level.pathWaypoints.length; pathIndex += 1) {
+  for (
+    let pathIndex = 0;
+    pathIndex < level.pathWaypoints.length;
+    pathIndex += 1
+  ) {
     const path = level.pathWaypoints[pathIndex];
 
     for (
@@ -139,7 +150,11 @@ const getWaypointSelectionForTile = (
       waypointIndex < path.length;
       waypointIndex += 1
     ) {
-      const waypointTile = waypointToTile(path[waypointIndex], level.gridSize, tileSize);
+      const waypointTile = waypointToTile(
+        path[waypointIndex],
+        level.gridSize,
+        tileSize
+      );
 
       if (
         waypointTile.gridX === tile.gridX &&
@@ -186,7 +201,7 @@ const createBuildingDefaults = (
       width: 0.8,
       depth: 0.8,
       height: 1.8,
-      color: "#8b7355",
+      color: getCssColorValue("editor-default-building"),
     },
     level.gridSize,
     tileSize
@@ -304,6 +319,20 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
     });
   },
 
+  setTileColor: (color) => {
+    set((state) => ({
+      draftLevel: { ...state.draftLevel, tileColor: color },
+      hasUnsavedChanges: true,
+    }));
+  },
+
+  setGroundColor: (color) => {
+    set((state) => ({
+      draftLevel: { ...state.draftLevel, groundColor: color },
+      hasUnsavedChanges: true,
+    }));
+  },
+
   addPath: () => {
     set((state) => ({
       draftLevel: {
@@ -383,11 +412,17 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
             gridX:
               updates.gridX === undefined
                 ? building.gridX
-                : Math.max(0, Math.min(state.draftLevel.gridSize - 1, updates.gridX)),
+                : Math.max(
+                    0,
+                    Math.min(state.draftLevel.gridSize - 1, updates.gridX)
+                  ),
             gridZ:
               updates.gridZ === undefined
                 ? building.gridZ
-                : Math.max(0, Math.min(state.draftLevel.gridSize - 1, updates.gridZ)),
+                : Math.max(
+                    0,
+                    Math.min(state.draftLevel.gridSize - 1, updates.gridZ)
+                  ),
           },
           state.draftLevel.gridSize,
           tileSize
@@ -442,8 +477,10 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
         return state;
       }
 
-      const { pathIndex: selectedPathIndex, waypointIndex: selectedWaypointIndex } =
-        state.selected;
+      const {
+        pathIndex: selectedPathIndex,
+        waypointIndex: selectedWaypointIndex,
+      } = state.selected;
 
       const nextWaypoint = tileToWaypoint(
         tile,
@@ -451,15 +488,17 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
         tileSize
       );
 
-      const nextPaths = state.draftLevel.pathWaypoints.map((path, pathIndex) => {
-        if (pathIndex !== selectedPathIndex) {
-          return path;
-        }
+      const nextPaths = state.draftLevel.pathWaypoints.map(
+        (path, pathIndex) => {
+          if (pathIndex !== selectedPathIndex) {
+            return path;
+          }
 
-        return path.map((waypoint, waypointIndex) =>
-          waypointIndex === selectedWaypointIndex ? nextWaypoint : waypoint
-        );
-      });
+          return path.map((waypoint, waypointIndex) =>
+            waypointIndex === selectedWaypointIndex ? nextWaypoint : waypoint
+          );
+        }
+      );
 
       return {
         draftLevel: {
@@ -477,18 +516,23 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
         return state;
       }
 
-      const { pathIndex: selectedPathIndex, waypointIndex: selectedWaypointIndex } =
-        state.selected;
+      const {
+        pathIndex: selectedPathIndex,
+        waypointIndex: selectedWaypointIndex,
+      } = state.selected;
 
-      const nextPaths = state.draftLevel.pathWaypoints.map((path, pathIndex) => {
-        if (pathIndex !== selectedPathIndex) {
-          return path;
+      const nextPaths = state.draftLevel.pathWaypoints.map(
+        (path, pathIndex) => {
+          if (pathIndex !== selectedPathIndex) {
+            return path;
+          }
+
+          return path.filter(
+            (_waypoint, waypointIndex) =>
+              waypointIndex !== selectedWaypointIndex
+          );
         }
-
-        return path.filter(
-          (_waypoint, waypointIndex) => waypointIndex !== selectedWaypointIndex
-        );
-      });
+      );
 
       return {
         draftLevel: {
@@ -649,7 +693,9 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
 
       if (activeTool === "setSpawn") {
         const nextPath =
-          currentPath.length === 0 ? [nextWaypoint] : [nextWaypoint, ...currentPath.slice(1)];
+          currentPath.length === 0
+            ? [nextWaypoint]
+            : [nextWaypoint, ...currentPath.slice(1)];
 
         const nextPaths = ensuredPaths.map((path, pathIndex) =>
           pathIndex === selectedPathIndex ? nextPath : path
@@ -729,28 +775,30 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
 
   addWaveEnemyGroup: (waveIndex) => {
     set((state) => {
-      const nextWaveConfigs = state.draftLevel.waveConfigs.map((wave, index) => {
-        if (index !== waveIndex) {
-          return wave;
+      const nextWaveConfigs = state.draftLevel.waveConfigs.map(
+        (wave, index) => {
+          if (index !== waveIndex) {
+            return wave;
+          }
+
+          const nextWave = {
+            ...wave,
+            enemies: [
+              ...wave.enemies,
+              {
+                type: "basic" as EnemyType,
+                count: 1,
+                spawnInterval: 1,
+              },
+            ],
+          };
+
+          return {
+            ...nextWave,
+            totalEnemies: computeWaveTotalEnemies(nextWave),
+          };
         }
-
-        const nextWave = {
-          ...wave,
-          enemies: [
-            ...wave.enemies,
-            {
-              type: "basic" as EnemyType,
-              count: 1,
-              spawnInterval: 1,
-            },
-          ],
-        };
-
-        return {
-          ...nextWave,
-          totalEnemies: computeWaveTotalEnemies(nextWave),
-        };
-      });
+      );
 
       return {
         draftLevel: {
@@ -764,36 +812,38 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
 
   updateWaveEnemyGroup: (waveIndex, enemyGroupIndex, updates) => {
     set((state) => {
-      const nextWaveConfigs = state.draftLevel.waveConfigs.map((wave, index) => {
-        if (index !== waveIndex) {
-          return wave;
+      const nextWaveConfigs = state.draftLevel.waveConfigs.map(
+        (wave, index) => {
+          if (index !== waveIndex) {
+            return wave;
+          }
+
+          const nextWave = {
+            ...wave,
+            enemies: wave.enemies.map((enemyGroup, indexInWave) =>
+              indexInWave === enemyGroupIndex
+                ? {
+                    ...enemyGroup,
+                    ...updates,
+                    count:
+                      updates.count === undefined
+                        ? enemyGroup.count
+                        : Math.max(0, updates.count),
+                    spawnInterval:
+                      updates.spawnInterval === undefined
+                        ? enemyGroup.spawnInterval
+                        : Math.max(0.1, updates.spawnInterval),
+                  }
+                : enemyGroup
+            ),
+          };
+
+          return {
+            ...nextWave,
+            totalEnemies: computeWaveTotalEnemies(nextWave),
+          };
         }
-
-        const nextWave = {
-          ...wave,
-          enemies: wave.enemies.map((enemyGroup, indexInWave) =>
-            indexInWave === enemyGroupIndex
-              ? {
-                  ...enemyGroup,
-                  ...updates,
-                  count:
-                    updates.count === undefined
-                      ? enemyGroup.count
-                      : Math.max(0, updates.count),
-                  spawnInterval:
-                    updates.spawnInterval === undefined
-                      ? enemyGroup.spawnInterval
-                      : Math.max(0.1, updates.spawnInterval),
-                }
-              : enemyGroup
-          ),
-        };
-
-        return {
-          ...nextWave,
-          totalEnemies: computeWaveTotalEnemies(nextWave),
-        };
-      });
+      );
 
       return {
         draftLevel: {
@@ -807,23 +857,25 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
 
   removeWaveEnemyGroup: (waveIndex, enemyGroupIndex) => {
     set((state) => {
-      const nextWaveConfigs = state.draftLevel.waveConfigs.map((wave, index) => {
-        if (index !== waveIndex) {
-          return wave;
+      const nextWaveConfigs = state.draftLevel.waveConfigs.map(
+        (wave, index) => {
+          if (index !== waveIndex) {
+            return wave;
+          }
+
+          const nextWave = {
+            ...wave,
+            enemies: wave.enemies.filter(
+              (_enemyGroup, indexInWave) => indexInWave !== enemyGroupIndex
+            ),
+          };
+
+          return {
+            ...nextWave,
+            totalEnemies: computeWaveTotalEnemies(nextWave),
+          };
         }
-
-        const nextWave = {
-          ...wave,
-          enemies: wave.enemies.filter(
-            (_enemyGroup, indexInWave) => indexInWave !== enemyGroupIndex
-          ),
-        };
-
-        return {
-          ...nextWave,
-          totalEnemies: computeWaveTotalEnemies(nextWave),
-        };
-      });
+      );
 
       return {
         draftLevel: {

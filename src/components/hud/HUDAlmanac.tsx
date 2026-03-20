@@ -44,12 +44,12 @@ const AlmanacEnemyCard: FC<AlmanacEnemyCardProps> = ({
         >
           {/* Enemy color indicator / silhouette */}
           <div
-            className="relative flex items-center justify-center w-8 h-8 rounded-full"
+            className={`relative flex items-center justify-center w-8 h-8 rounded-full ${!isDiscovered ? "bg-muted" : ""}`}
             style={{
-              backgroundColor: isDiscovered ? enemyConfig.color : "#333",
+              backgroundColor: isDiscovered ? enemyConfig.color : undefined,
               boxShadow: isDiscovered
                 ? `0 0 12px ${enemyConfig.color}40`
-                : "none",
+                : undefined,
             }}
           >
             {!isDiscovered && (

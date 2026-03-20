@@ -57,7 +57,7 @@ export const Tile: React.FC<TileProps> = ({
   const getColor = (): string => {
     if (isHovered && canPlace) return getCssColorValue("primary");
     if (isHovered && !canPlace) return getCssColorValue("destructive");
-    return "#1f2937";
+    return getCssColorValue("scene-gray-800");
   };
 
   const opacity = isHovered ? 0.8 : 0.5;

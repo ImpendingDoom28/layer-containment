@@ -109,7 +109,8 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
       return [0, 0, 0] as [number, number, number];
     }
 
-    const directionX = (nextPosition?.x ?? startPosition.x + 1) - startPosition.x;
+    const directionX =
+      (nextPosition?.x ?? startPosition.x + 1) - startPosition.x;
     const directionZ = (nextPosition?.z ?? startPosition.z) - startPosition.z;
     const directionLength = Math.hypot(directionX, directionZ) || 1;
     const sideOffsetX = (-directionZ / directionLength) * 1.1;
@@ -119,11 +120,7 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
       startPosition.x + sideOffsetX,
       startPosition.y + 1.25,
       startPosition.z + sideOffsetZ,
-    ] as [
-      number,
-      number,
-      number,
-    ];
+    ] as [number, number, number];
   }, [pathIndex, pathWaypoints]);
 
   if (!shouldShow || !nextWaveConfig) return null;
@@ -133,7 +130,7 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
       <GUIWrapper position={[0, 0.45, 0]} distanceFactor={12}>
         <UICard
           size="sm"
-          className="w-52 border border-border/80 bg-card/95 shadow-[0_14px_34px_rgba(0,0,0,0.35)] backdrop-blur-sm"
+          className="w-52 border border-border/80 bg-card/95 shadow-panel backdrop-blur-sm"
         >
           <UICardHeader className="gap-1 border-b border-border/70">
             <UITypography
@@ -180,7 +177,10 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
                     Empowered
                   </UITypography>
                   {bonusPercentage > 0 && (
-                    <UITypography variant="verySmall" className="text-green-400">
+                    <UITypography
+                      variant="verySmall"
+                      className="text-green-400"
+                    >
                       +{bonusPercentage}% gold
                     </UITypography>
                   )}
@@ -193,10 +193,9 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
                       <UITypography
                         key={upgradeId}
                         variant="verySmall"
-                        className="px-1.5 py-1 font-medium uppercase tracking-[0.14em]"
+                        className="px-1.5 py-1 font-medium uppercase tracking-[0.14em] text-black"
                         style={{
                           backgroundColor: upgrade.indicatorColor,
-                          color: "#000",
                         }}
                       >
                         {upgrade.name}

@@ -72,7 +72,7 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
         >
           <UICard
             size="sm"
-            className="border border-border/80 bg-card/95 shadow-[0_12px_32px_rgba(0,0,0,0.35)] backdrop-blur-sm"
+            className="border border-border/80 bg-card/95 shadow-panel backdrop-blur-sm"
           >
             <UICardHeader className="border-b border-border/70">
               <UICardTitle className="flex items-start justify-between gap-3">
@@ -113,7 +113,10 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
                     >
                       {stat.label}
                     </UITypography>
-                    <UITypography variant="small" className="mt-1 font-semibold">
+                    <UITypography
+                      variant="small"
+                      className="mt-1 font-semibold"
+                    >
                       {stat.value}
                     </UITypography>
                   </div>

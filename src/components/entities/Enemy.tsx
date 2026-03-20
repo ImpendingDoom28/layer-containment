@@ -7,6 +7,7 @@ import {
   getPositionAlongMultiplePaths,
   isAtPathEnd,
 } from "../../utils/pathUtils";
+import { getCssColorValue } from "../ui/lib/cssUtils";
 import type {
   Enemy as EnemyInstance,
   EnemyUpgradeId,
@@ -50,7 +51,7 @@ const UpgradeIndicator: FC<UpgradeIndicatorProps> = ({
 
   // Get the primary upgrade color (first upgrade)
   const primaryUpgrade = enemyUpgrades[upgrades[0]];
-  const primaryColor = primaryUpgrade?.indicatorColor ?? "#ffffff";
+  const primaryColor = primaryUpgrade?.indicatorColor ?? getCssColorValue("scene-white");
 
   return (
     <group position={[0, enemySize * 0.3, 0]}>
@@ -127,7 +128,7 @@ const SlowEffect: FC<SlowEffectProps> = ({ enemySize, shouldStopMovement }) => {
     particlesRef.current = Array.from({ length: 6 }, () => null);
   }, []);
 
-  const slowColor = "#8b5cf6";
+  const slowColor = getCssColorValue("scene-slow");
 
   return (
     <group position={[0, enemySize / 2, 0]}>
@@ -403,17 +404,17 @@ export const Enemy: FC<EnemyProps> = ({
         <group>
           <mesh position={[0, 0, 0]}>
             <boxGeometry args={[enemy.size * 2, 0.1, 0.05]} />
-            <meshStandardMaterial color="#000000" />
+            <meshStandardMaterial color={getCssColorValue("scene-black")} />
           </mesh>
           <mesh position={[-(enemy.size * (1 - healthPercent)), 0, 0.01]}>
             <boxGeometry args={[enemy.size * 2 * healthPercent, 0.08, 0.06]} />
             <meshStandardMaterial
               color={
                 healthPercent > 0.5
-                  ? "#22c55e"
+                  ? getCssColorValue("scene-hp-high")
                   : healthPercent > 0.25
-                    ? "#f59e0b"
-                    : "#ef4444"
+                    ? getCssColorValue("scene-hp-medium")
+                    : getCssColorValue("scene-hp-low")
               }
             />
           </mesh>

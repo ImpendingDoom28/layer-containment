@@ -3,6 +3,7 @@ import { MeshStandardMaterialProps, useFrame } from "@react-three/fiber";
 import type { Mesh, Group } from "three";
 
 import { distance2D, normalize } from "../../utils/mathUtils";
+import { getCssColorValue } from "../ui/lib/cssUtils";
 import type {
   Projectile as ProjectileInstance,
   Enemy,
@@ -185,9 +186,10 @@ export const Projectile: FC<ProjectileProps> = ({
     projectile.startY,
     projectile.startZ,
   ];
+  const fallbackColor = getCssColorValue("scene-white");
   const projectileMaterialProps: MeshStandardMaterialProps = {
-    color: projectile.color || "#ffffff",
-    emissive: projectile.color || "#ffffff",
+    color: projectile.color || fallbackColor,
+    emissive: projectile.color || fallbackColor,
     emissiveIntensity: 0.8,
   };
   const debugInfoOffsetY = projectileSize + 0.3;

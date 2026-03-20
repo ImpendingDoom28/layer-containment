@@ -40,6 +40,42 @@
   /* Hex colors for dark theme */
   --primary-hex: #ff6900;
   --destructive-hex: #ff6467;
+
+  /* Scene palette — hex values for Three.js compatibility */
+  --scene-black: #000000;
+  --scene-white: #ffffff;
+  --scene-gray-200: #e5e7eb;
+  --scene-gray-300: #d1d5db;
+  --scene-gray-500: #6b7280;
+  --scene-gray-600: #4b5563;
+  --scene-gray-700: #374151;
+  --scene-gray-800: #1f2937;
+  --scene-portal: #22c55e; /* green-500 */
+  --scene-portal-glow: #4ade80; /* green-400 */
+  --scene-hp-high: #22c55e; /* green-500 */
+  --scene-hp-medium: #f59e0b; /* amber-500 */
+  --scene-hp-low: #ef4444; /* red-500 */
+  --scene-slow: #8b5cf6; /* violet-500 */
+  --scene-building-warning: #fbbf24; /* amber-400 */
+  --scene-sky-base: #0a0a0f;
+
+  /* Editor palette */
+  --editor-tool-select: #374151; /* gray-700 */
+  --editor-tool-place-building: #1d4ed8; /* blue-700 */
+  --editor-tool-draw-path: #7c3aed; /* violet-600 */
+  --editor-tool-set-spawn: #15803d; /* green-700 */
+  --editor-tool-set-base: #b45309; /* amber-700 */
+  --editor-tool-erase: #b91c1c; /* red-700 */
+  --editor-indicator-selected: #facc15; /* yellow-400 */
+  --editor-indicator-edge: #22c55e; /* green-500 */
+  --editor-indicator-path: #a855f7; /* purple-500 */
+  --editor-indicator-idle: #d1d5db; /* gray-300 */
+  --editor-path-active: #a855f7; /* purple-500 */
+  --editor-path-active-border: #7e22ce; /* purple-700 */
+  --editor-can-place: #3b82f6; /* blue-500 */
+  --editor-default-tile: #1f2937; /* gray-800 */
+  --editor-default-ground: #8f8f86; /* zinc-700 */
+  --editor-default-building: #8b7355;
 }
 
 @theme inline {
@@ -84,6 +120,7 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --shadow-panel: 0 14px 34px oklch(0 0 0 / 0.35);
 }
 
 @layer base {

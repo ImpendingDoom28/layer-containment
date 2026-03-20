@@ -1,5 +1,7 @@
 import { FC, useMemo } from "react";
 
+import { getCssColorValue } from "../../ui/lib/cssUtils";
+
 type SkyboxProps = {
   starCount?: number;
   baseColor?: string;
@@ -8,8 +10,8 @@ type SkyboxProps = {
 
 export const Skybox: FC<SkyboxProps> = ({
   starCount = 150,
-  baseColor = "#0a0a0f",
-  starColor = "#ffffff",
+  baseColor = getCssColorValue("scene-sky-base"),
+  starColor = getCssColorValue("scene-white"),
 }) => {
   const SKYBOX_RADIUS = 100;
   const STAR_MIN_SIZE = 0.02;

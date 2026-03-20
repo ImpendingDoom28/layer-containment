@@ -109,6 +109,8 @@ export const levelConfigSchema = z.object({
   name: z.string().min(1),
   startingMoney: z.number(),
   gridSize: z.number(),
+  tileColor: z.string().optional(),
+  groundColor: z.string().optional(),
   pathWaypoints: z.array(z.array(pathWaypointSchema)),
   waveConfigs: z.array(waveConfigSchema),
   buildings: z.array(buildingSchema),

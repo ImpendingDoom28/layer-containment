@@ -9,13 +9,21 @@ import { Vector3D } from "../../core/types/utils";
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import { useGameStore } from "../../core/stores/useGameStore";
 
-// Shared base material (gray color for all tower bases)
 const baseMaterial = new MeshStandardMaterial({ color: "#4b5563" });
 const basePreviewMaterial = new MeshStandardMaterial({
   color: "#4b5563",
   transparent: true,
   opacity: 0.5,
 });
+
+let materialsInitialized = false;
+const syncSharedMaterials = () => {
+  if (materialsInitialized) return;
+  const color = getCssColorValue("scene-gray-600");
+  baseMaterial.color.set(color);
+  basePreviewMaterial.color.set(color);
+  materialsInitialized = true;
+};
 
 type TowerProps = {
   tower: TowerInstance | null;
@@ -32,6 +40,7 @@ export const Tower: FC<TowerProps> = ({
   isPreview = false,
   isInvalidPlacement = false,
 }) => {
+  syncSharedMaterials();
   const { towerBaseRadius, towerHeight } = useGameStore();
   const towerBasePosition: Vector3D = [0, towerBaseRadius, 0];
   const towerBodyPosition: Vector3D = [
@@ -57,7 +66,9 @@ export const Tower: FC<TowerProps> = ({
   if (!tower) return null;
 
   const towerColor =
-    isPreview && isInvalidPlacement ? getCssColorValue("destructive") : tower.color;
+    isPreview && isInvalidPlacement
+      ? getCssColorValue("destructive")
+      : tower.color;
   const previewOpacity = isPreview ? 0.5 : 1;
   let previewEmissiveIntensity: number;
   if (isPreview) {

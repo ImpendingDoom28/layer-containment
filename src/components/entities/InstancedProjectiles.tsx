@@ -13,6 +13,7 @@ type InstancedProjectilesProps = {
   initializePools: () => void;
   updateProjectilesFrame: (elapsedTime: number, delta: number) => void;
 };
+
 export const InstancedProjectiles: FC<InstancedProjectilesProps> = memo(
   ({
     sphereMeshRef,

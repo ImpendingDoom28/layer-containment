@@ -1,4 +1,4 @@
-import { FC, useRef, useEffect } from "react";
+import { FC, useRef, useEffect, memo } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Mesh, Group } from "three";
 
@@ -8,7 +8,7 @@ type PortalProps = {
   position: [number, number, number];
 };
 
-export const Portal: FC<PortalProps> = ({ position }) => {
+export const Portal: FC<PortalProps> = memo(({ position }) => {
   const outerRingRef = useRef<Mesh>(null);
   const middleRingRef = useRef<Mesh>(null);
   const innerRingRef = useRef<Mesh>(null);
@@ -146,4 +146,6 @@ export const Portal: FC<PortalProps> = ({ position }) => {
       </mesh>
     </group>
   );
-};
+});
+
+Portal.displayName = "Portal";

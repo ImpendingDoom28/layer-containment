@@ -4,7 +4,11 @@ import { TowerSystem } from "./TowerSystem";
 import { Building } from "../entities/Building";
 import { Enemy } from "../entities/Enemy";
 import { useLevelSystem } from "../../core/hooks/useLevelSystem";
-import { buildingsSelector, enemiesSelector, useLevelStore } from "../../core/stores/useLevelStore";
+import {
+  buildingsSelector,
+  enemiesSelector,
+  useLevelStore,
+} from "../../core/stores/useLevelStore";
 import type {
   Tower as TowerInstance,
   Enemy as EnemyInstance,
@@ -14,7 +18,7 @@ import type {
 } from "../../core/types/game";
 import type { TileData } from "../../core/types/utils";
 import type { TilePlacementState } from "../../utils/tilePlacement";
-import { Effect } from "../entities/Effect";
+import { Effect } from "../entities/effects/Effect";
 import { useInstancedProjectiles } from "../../core/hooks/useInstancedProjectiles";
 
 type EntitiesSystemProps = {

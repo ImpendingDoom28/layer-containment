@@ -9,7 +9,7 @@ type SkyboxProps = {
 };
 
 export const Skybox: FC<SkyboxProps> = ({
-  starCount = 150,
+  starCount = 450,
   baseColor = getCssColorValue("scene-sky-base"),
   starColor = getCssColorValue("scene-white"),
 }) => {

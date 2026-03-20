@@ -1,4 +1,4 @@
-import { FC } from "react";
+import { FC, memo } from "react";
 
 import { getCssColorValue } from "../ui/lib/cssUtils";
 
@@ -6,7 +6,7 @@ type EndBuildingProps = {
   position: [number, number, number];
 };
 
-export const EndBuilding: FC<EndBuildingProps> = ({ position }) => {
+export const EndBuilding: FC<EndBuildingProps> = memo(({ position }) => {
   const buildingColor = getCssColorValue("scene-white");
   const buildingAccent = getCssColorValue("scene-gray-200");
   const roofColor = getCssColorValue("scene-gray-300");
@@ -81,4 +81,6 @@ export const EndBuilding: FC<EndBuildingProps> = ({ position }) => {
       </mesh>
     </group>
   );
-};
+});
+
+EndBuilding.displayName = "EndBuilding";

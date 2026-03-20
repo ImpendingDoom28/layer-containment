@@ -57,6 +57,14 @@ npm run test:e2e
 
 The Playwright config targets `http://localhost:5173`, reuses an existing local dev server when one is already running, and otherwise starts `npm run dev` automatically. Canvas interactions use a fixed `1280x720` viewport with shared coordinate fixtures from `tests/e2e/fixtures/canvasPoints.ts`.
 
+### Vitest + RTTR Unit Tests
+
+```bash
+npm run test:unit
+```
+
+Vitest runs React Three Fiber unit tests with `@react-three/test-renderer` without a real browser or WebGL context. Use these tests for focused scene-graph and `useFrame` behavior; keep Playwright for full app, routing, HUD, and canvas interaction flows.
+
 ### Build
 
 ```bash

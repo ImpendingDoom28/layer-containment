@@ -103,7 +103,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = ({
         />
       ))}
 
-      <InstancedProjectiles />
+      {InstancedProjectiles}
 
       <TowerSystem
         updateTower={updateTower}

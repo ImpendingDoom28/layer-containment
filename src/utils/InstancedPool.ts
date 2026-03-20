@@ -1,34 +1,21 @@
 /**
- * React Three Fiber Instanced Mesh Pool
+ * Drei Instance Slot Pool
  *
- * A high-performance object pool using R3F's instancedMesh for
- * single draw call rendering of many similar objects.
+ * A pool that manages acquire/release of Instance slots from
+ * @react-three/drei's <Instances>/<Instance> components.
  *
- * This version uses React Three Fiber idioms instead of raw Three.js.
- *
- * @example
- * const poolRef = useRef<InstancedPoolRef>(null);
- *
- * // In your component:
- * <InstancedPoolMesh
- *   ref={poolRef}
- *   maxInstances={500}
- *   geometry={<sphereGeometry args={[0.1, 8, 8]} />}
- * />
- *
- * // To use:
- * const index = poolRef.current?.acquire();
- * poolRef.current?.setPosition(index, 0, 1, 0);
- * poolRef.current?.release(index);
+ * Operates on PositionMesh transforms (position, quaternion, scale, color)
+ * and drei handles syncing to the GPU each frame.
  */
 
 import * as THREE from "three";
+
+export type InstanceSlot = THREE.Group & { color: THREE.Color };
 
 export type InstancedPoolStats = {
   available: number;
   inUse: number;
   maxInstances: number;
-  visibleCount: number;
 };
 
 export type InstancedPoolRef = {
@@ -48,47 +35,31 @@ export type InstancedPoolRef = {
   isInUse: (index: number) => boolean;
   getInUseIndices: () => ReadonlySet<number>;
   getStats: () => InstancedPoolStats;
-  getMesh: () => THREE.InstancedMesh | null;
 };
 
-const tempMatrix = new THREE.Matrix4();
-const tempPosition = new THREE.Vector3();
-const tempQuaternion = new THREE.Quaternion();
-const tempScale = new THREE.Vector3(1, 1, 1);
 const hiddenPosition = new THREE.Vector3(0, -10000, 0);
 
-type ProjectileMeshType = THREE.InstancedMesh<
-  THREE.CylinderGeometry | THREE.SphereGeometry,
-  THREE.MeshStandardMaterial
->;
-
 export const createPoolController = (
-  meshRef: React.RefObject<ProjectileMeshType | null>,
+  slotRefs: React.MutableRefObject<(InstanceSlot | null)[]>,
   maxInstances: number
 ): InstancedPoolRef => {
   const availableIndices: number[] = [];
   const inUseIndices = new Set<number>();
-
-  const hideInstance = (index: number) => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
-
-    tempMatrix.compose(
-      hiddenPosition,
-      tempQuaternion.identity(),
-      tempScale.set(0, 0, 0)
-    );
-    mesh.setMatrixAt(index, tempMatrix);
-    mesh.instanceMatrix.needsUpdate = true;
+  const syncSlotMatrix = (slot: InstanceSlot) => {
+    slot.updateMatrix();
+    slot.updateMatrixWorld();
   };
 
-  const updateVisibleCount = () => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
-    mesh.count = inUseIndices.size > 0 ? maxInstances : 0;
+  const hideSlot = (index: number) => {
+    const slot = slotRefs.current[index];
+    if (!slot) return;
+
+    slot.position.copy(hiddenPosition);
+    slot.scale.set(0, 0, 0);
+    slot.quaternion.identity();
+    syncSlotMatrix(slot);
   };
 
-  // Initialize available indices
   for (let i = maxInstances - 1; i >= 0; i--) {
     availableIndices.push(i);
   }
@@ -102,7 +73,6 @@ export const createPoolController = (
 
       const index = availableIndices.pop()!;
       inUseIndices.add(index);
-      updateVisibleCount();
       return index;
     },
 
@@ -114,31 +84,23 @@ export const createPoolController = (
 
       inUseIndices.delete(index);
       availableIndices.push(index);
-      hideInstance(index);
-      updateVisibleCount();
+      hideSlot(index);
     },
 
     releaseAll: () => {
       inUseIndices.forEach((index) => {
         availableIndices.push(index);
-        hideInstance(index);
+        hideSlot(index);
       });
       inUseIndices.clear();
-      if (meshRef.current) {
-        meshRef.current.count = 0;
-      }
     },
 
     setPosition: (index: number, x: number, y: number, z: number) => {
-      const mesh = meshRef.current;
-      if (!mesh || !inUseIndices.has(index)) return;
+      const slot = slotRefs.current[index];
+      if (!slot || !inUseIndices.has(index)) return;
 
-      mesh.getMatrixAt(index, tempMatrix);
-      tempMatrix.decompose(tempPosition, tempQuaternion, tempScale);
-      tempPosition.set(x, y, z);
-      tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
-      mesh.setMatrixAt(index, tempMatrix);
-      mesh.instanceMatrix.needsUpdate = true;
+      slot.position.set(x, y, z);
+      syncSlotMatrix(slot);
     },
 
     setTransform: (
@@ -147,47 +109,39 @@ export const createPoolController = (
       quaternion?: THREE.Quaternion,
       scale?: THREE.Vector3
     ) => {
-      const mesh = meshRef.current;
-      if (!mesh || !inUseIndices.has(index)) return;
+      const slot = slotRefs.current[index];
+      if (!slot || !inUseIndices.has(index)) return;
 
-      tempMatrix.compose(
-        position,
-        quaternion ?? tempQuaternion.identity(),
-        scale ?? tempScale.set(1, 1, 1)
-      );
-      mesh.setMatrixAt(index, tempMatrix);
-      mesh.instanceMatrix.needsUpdate = true;
+      slot.position.copy(position);
+      if (quaternion) slot.quaternion.copy(quaternion);
+      if (scale) slot.scale.copy(scale);
+      syncSlotMatrix(slot);
     },
 
     setScale: (index: number, x: number, y: number, z: number) => {
-      const mesh = meshRef.current;
-      if (!mesh || !inUseIndices.has(index)) return;
+      const slot = slotRefs.current[index];
+      if (!slot || !inUseIndices.has(index)) return;
 
-      mesh.getMatrixAt(index, tempMatrix);
-      tempMatrix.decompose(tempPosition, tempQuaternion, tempScale);
-      tempScale.set(x, y, z);
-      tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
-      mesh.setMatrixAt(index, tempMatrix);
-      mesh.instanceMatrix.needsUpdate = true;
+      slot.scale.set(x, y, z);
+      syncSlotMatrix(slot);
     },
 
     setColor: (index: number, color: THREE.Color | string | number) => {
-      const mesh = meshRef.current;
-      if (!mesh || !inUseIndices.has(index)) return;
+      const slot = slotRefs.current[index];
+      if (!slot || !inUseIndices.has(index)) return;
 
-      mesh.material.color.set(color);
-      mesh.material.emissive.set(color);
-
-      mesh.material.needsUpdate = true;
+      if (color instanceof THREE.Color) {
+        slot.color.copy(color);
+      } else {
+        slot.color.set(color as THREE.ColorRepresentation);
+      }
     },
 
     getPosition: (index: number) => {
-      const mesh = meshRef.current;
-      if (!mesh) return new THREE.Vector3();
+      const slot = slotRefs.current[index];
+      if (!slot) return new THREE.Vector3();
 
-      mesh.getMatrixAt(index, tempMatrix);
-      tempMatrix.decompose(tempPosition, tempQuaternion, tempScale);
-      return tempPosition.clone();
+      return slot.position.clone();
     },
 
     isInUse: (index: number) => inUseIndices.has(index),
@@ -198,9 +152,6 @@ export const createPoolController = (
       available: availableIndices.length,
       inUse: inUseIndices.size,
       maxInstances,
-      visibleCount: meshRef.current?.count ?? 0,
     }),
-
-    getMesh: () => meshRef.current,
   };
 };

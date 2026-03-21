@@ -5,6 +5,7 @@ import { UIButton, UIButtonProps } from "../ui/UIButton";
 import { UITypography } from "../ui/UITypography";
 import { HUDAudioControls } from "./HUDAudioControls";
 import { HUDAlmanac } from "./HUDAlmanac";
+import { HUDLevelPicker } from "./HUDLevelPicker";
 import { HUDWrapper } from "./HUDWrapper";
 import { HUDSidePanel } from "./HUDSidePanel";
 import { useMenuState } from "./useMenuState";
@@ -16,14 +17,23 @@ import { GAME_NAME } from "../../constants/game";
 type HUDMainMenuProps = MenuActions;
 
 export const HUDMainMenu: FC<HUDMainMenuProps> = ({
-  onPlay,
+  onStartGameWithLevel,
   onOpenLevelEditor,
 }) => {
-  const { hasInteracted, activeView, setShowAlmanac, setShowAudioSettings } =
-    useMenuState();
+  const {
+    hasInteracted,
+    activeView,
+    setShowAlmanac,
+    setShowAudioSettings,
+    setShowLevelPicker,
+  } = useMenuState();
 
   const actions: Partial<UIButtonProps>[] = [
-    { children: "Play", onClick: onPlay, variant: "default" },
+    {
+      children: "Play",
+      onClick: () => setShowLevelPicker(true),
+      variant: "default",
+    },
     { children: "Level Creator", onClick: onOpenLevelEditor },
     { children: "Enemy Almanac", onClick: () => setShowAlmanac(true) },
     {
@@ -51,6 +61,24 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = ({
           className={`w-full transition-all duration-700 ${hasInteracted ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-12"}`}
         >
           <HUDAlmanac onBack={() => setShowAlmanac(false)} />
+        </div>
+      </HUDSidePanel>
+    );
+  }
+
+  if (activeView === "levelPicker") {
+    return (
+      <HUDSidePanel side="left">
+        <div
+          className={`w-full transition-all duration-700 ${hasInteracted ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-12"}`}
+        >
+          <HUDLevelPicker
+            onBack={() => setShowLevelPicker(false)}
+            onSelectLevel={async (level) => {
+              setShowLevelPicker(false);
+              await onStartGameWithLevel(level);
+            }}
+          />
         </div>
       </HUDSidePanel>
     );

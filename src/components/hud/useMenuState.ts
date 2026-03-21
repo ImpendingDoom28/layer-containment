@@ -9,6 +9,7 @@ import {
 export const useMenuState = () => {
   const [hasInteracted, setHasInteracted] = useState(false);
   const [showAlmanac, setShowAlmanac] = useState(false);
+  const [showLevelPicker, setShowLevelPicker] = useState(false);
   const showAudioSettings = useGameStore(showAudioSettingsSelector);
   const setShowAudioSettings = useGameStore(setShowAudioSettingsSelector);
 
@@ -33,6 +34,7 @@ export const useMenuState = () => {
   const getActiveView = () => {
     if (showAudioSettings) return "audio" as const;
     if (showAlmanac) return "almanac" as const;
+    if (showLevelPicker) return "levelPicker" as const;
     return "menu" as const;
   };
 
@@ -42,6 +44,8 @@ export const useMenuState = () => {
     hasInteracted,
     showAlmanac,
     setShowAlmanac,
+    showLevelPicker,
+    setShowLevelPicker,
     showAudioSettings,
     setShowAudioSettings,
     activeView,

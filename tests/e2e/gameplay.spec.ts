@@ -5,6 +5,8 @@ import { gamePlacementPoints } from "./fixtures/canvasPoints";
 const onOpenGame = async (page: Page) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Play" }).click();
+  await expect(page.getByRole("heading", { name: "Deploy" })).toBeVisible();
+  await page.getByTestId("level-picker-level_1").click();
   await expect(page.getByRole("heading", { name: "Tower Shop" })).toBeVisible();
 };
 

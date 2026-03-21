@@ -1,4 +1,4 @@
-import { FC, Suspense, useCallback } from "react";
+import { FC, Suspense, useCallback, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Stats } from "@react-three/drei";
 
@@ -12,6 +12,10 @@ import { HUDGameMenu } from "../hud/HUDGameMenu";
 import { HUDUpgradePanel } from "../hud/HUDUpgradePanel";
 import { HUDLoading } from "../hud/HUDLoading";
 import { KeyboardHandlingSystem } from "../systems/KeyboardHandlingSystem";
+import {
+  PLAYABLE_LEVEL_IDS,
+  type PlayableLevelId,
+} from "../../constants/playableLevels";
 import { useGameSystem } from "../../core/hooks/useGameSystem";
 import { useEnemySystem } from "../../core/hooks/useEnemySystem";
 import { useProjectileSystem } from "../../core/hooks/useProjectileSystem";
@@ -28,6 +32,9 @@ const canvasStyle = { width: "100%", height: "100%" };
 const canvasGl = { antialias: true };
 
 export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
+  const [activePlayableLevel, setActivePlayableLevel] =
+    useState<PlayableLevelId>(PLAYABLE_LEVEL_IDS[0]);
+
   const gameSystem = useGameSystem();
   const levelSystem = useLevelSystem();
 
@@ -110,6 +117,14 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
     setSelectedTowerType(null);
   }, [setSelectedTowerType]);
 
+  const onStartGameWithLevel = useCallback(
+    async (level: PlayableLevelId) => {
+      setActivePlayableLevel(level);
+      await startGame();
+    },
+    [startGame]
+  );
+
   const onRestart = useCallback(() => {
     startGame();
     resetLevelState();
@@ -157,6 +172,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
               onSellTower={sellTower}
               shouldDisableControls={shouldDisableControls}
               shouldStopMovement={shouldStopMovement}
+              playableLevelId={activePlayableLevel}
             />
           )}
 
@@ -178,7 +194,10 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
       </Canvas>
 
       {isGameReady && isMenu && (
-        <HUDMainMenu onPlay={startGame} onOpenLevelEditor={onOpenLevelEditor} />
+        <HUDMainMenu
+          onStartGameWithLevel={onStartGameWithLevel}
+          onOpenLevelEditor={onOpenLevelEditor}
+        />
       )}
 
       {isGameReady && !isMenu && (

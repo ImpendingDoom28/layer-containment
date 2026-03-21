@@ -3,6 +3,8 @@ import { expect, test, type Page } from "@playwright/test";
 const onOpenGame = async (page: Page) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Play" }).click();
+  await expect(page.getByRole("heading", { name: "Deploy" })).toBeVisible();
+  await page.getByTestId("level-picker-level_1").click();
 };
 
 test("loads the main menu and enters gameplay HUD", async ({ page }) => {

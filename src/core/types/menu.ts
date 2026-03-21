@@ -1,4 +1,6 @@
+import type { PlayableLevelId } from "../../constants/playableLevels";
+
 export type MenuActions = {
-  onPlay: () => void | Promise<void>;
+  onStartGameWithLevel: (level: PlayableLevelId) => void | Promise<void>;
   onOpenLevelEditor: () => void;
 };

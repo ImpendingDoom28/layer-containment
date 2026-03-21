@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 
+import type { PlayableLevelId } from "../../../constants/playableLevels";
 import { Grid } from "../../entities/Grid";
 import { Path } from "../../entities/Path";
 import { GameCamera } from "./GameCamera";
@@ -48,6 +49,7 @@ type GameSceneProps = {
   ) => void;
   onProjectileRemove: (projectileId: number) => void;
   onSellTower: (towerId: number) => void;
+  playableLevelId: PlayableLevelId;
 };
 
 export const GameScene: React.FC<GameSceneProps> = ({
@@ -68,6 +70,7 @@ export const GameScene: React.FC<GameSceneProps> = ({
   onProjectileHit,
   onProjectileRemove,
   onSellTower,
+  playableLevelId,
 }) => {
   const pathWaypoints = useLevelStore(pathWaypointsSelector);
   const [hoveredTile, setHoveredTile] = useState<TileData | null>(null);
@@ -85,7 +88,7 @@ export const GameScene: React.FC<GameSceneProps> = ({
 
   return (
     <>
-      <LevelSystem levelName="level_1" />
+      <LevelSystem levelName={playableLevelId} />
 
       <Skybox />
       <Light />

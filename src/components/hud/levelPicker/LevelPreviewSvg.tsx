@@ -1,7 +1,7 @@
 import type { FC } from "react";
 
-import type { Building, PathWaypoint } from "../../core/types/game";
-import { cn } from "../ui/lib/twUtils";
+import type { Building, PathWaypoint } from "../../../core/types/game";
+import { cn } from "../../ui/lib/twUtils";
 
 type Bounds = {
   minX: number;
@@ -81,7 +81,7 @@ export const LevelPreviewSvg: FC<LevelPreviewSvgProps> = ({
     expandRect(b, c1.sx, c2.sx, c1.sy, c2.sy);
   }
 
-  const pad = Math.max((b.maxX - b.minX), (b.maxY - b.minY)) * 0.06 || 0.5;
+  const pad = Math.max(b.maxX - b.minX, b.maxY - b.minY) * 0.06 || 0.5;
   const vbX = b.minX - pad;
   const vbY = b.minY - pad;
   const vbW = b.maxX - b.minX + pad * 2;

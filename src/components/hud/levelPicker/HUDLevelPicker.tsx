@@ -1,20 +1,29 @@
 import { FC, useEffect, useState } from "react";
 import { ArrowLeft, Radio } from "lucide-react";
 
-import { PLAYABLE_LEVEL_IDS, type PlayableLevelId } from "../../constants/playableLevels";
-import { loadLevelConfigFile, type LevelConfigData } from "../../core/levelConfig";
-import { tileSizeSelector, useGameStore } from "../../core/stores/useGameStore";
-import { UIButton } from "../ui/UIButton";
+import {
+  PLAYABLE_LEVEL_IDS,
+  type PlayableLevelId,
+} from "../../../constants/playableLevels";
+import {
+  loadLevelConfigFile,
+  type LevelConfigData,
+} from "../../../core/levelConfig";
+import {
+  tileSizeSelector,
+  useGameStore,
+} from "../../../core/stores/useGameStore";
+import { UIButton } from "../../ui/UIButton";
 import {
   UICard,
   UICardContent,
   UICardDescription,
   UICardHeader,
   UICardTitle,
-} from "../ui/UICard";
-import { UITypography } from "../ui/UITypography";
+} from "../../ui/UICard";
+import { UITypography } from "../../ui/UITypography";
 import { LevelPreviewSvg } from "./LevelPreviewSvg";
-import { cn } from "../ui/lib/twUtils";
+import { cn } from "../../ui/lib/twUtils";
 
 type LevelPickerEntry = {
   id: PlayableLevelId;
@@ -66,7 +75,7 @@ export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
   }, []);
 
   return (
-    <UICard className="flex h-full w-full flex-col overflow-y-auto bg-card">
+    <UICard className="flex flex-col w-full h-full overflow-y-auto bg-card">
       <UICardHeader>
         <UICardTitle>
           <UIButton onClick={onBack} variant="ghost" size="icon">
@@ -131,7 +140,10 @@ export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
                         className="size-4 shrink-0 text-primary"
                         aria-hidden
                       />
-                      <UITypography variant="medium" className="truncate tracking-wide">
+                      <UITypography
+                        variant="medium"
+                        className="tracking-wide truncate"
+                      >
                         {title}
                       </UITypography>
                     </UICardTitle>

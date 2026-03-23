@@ -14,6 +14,11 @@ import {
   pathWaypointsSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
+import {
+  createPauseClock,
+  getEffectiveGameTime,
+  stepPauseClock,
+} from "../../utils/pauseClock";
 import { MedicHealBurstEffect } from "./effects/MedicHealBurstEffect";
 import { SlowEffect } from "./effects/SlowEffect";
 import { UpgradeEffect } from "./effects/UpgradeEffect";
@@ -49,8 +54,7 @@ export const Enemy: FC<EnemyProps> = memo(
     const hasReachedEnd = useRef(false);
     const [isSlowed, setIsSlowed] = useState(false);
     const isSlowedRef = useRef(false);
-    const pauseDurationRef = useRef<number>(0);
-    const lastPausedTimeRef = useRef<number | null>(null);
+    const pauseClockRef = useRef(createPauseClock());
     const previousShouldStopMovementRef = useRef<boolean>(shouldStopMovement);
 
     // Trigger spawn effect when enemy first appears
@@ -78,31 +82,15 @@ export const Enemy: FC<EnemyProps> = memo(
 
       const now = state.clock.elapsedTime;
 
-      // Track pause duration to adjust slow effect timing
       const wasPaused = previousShouldStopMovementRef.current;
       const isPaused = shouldStopMovement;
 
-      if (!wasPaused && isPaused) {
-        // Just paused - record the pause start time
-        lastPausedTimeRef.current = now;
-      } else if (wasPaused && !isPaused && lastPausedTimeRef.current !== null) {
-        // Just unpaused - add the pause duration to total
-        const pauseDuration = now - lastPausedTimeRef.current;
-        pauseDurationRef.current += pauseDuration;
-        lastPausedTimeRef.current = null;
-      }
-
+      stepPauseClock(pauseClockRef.current, now, isPaused, wasPaused);
       previousShouldStopMovementRef.current = isPaused;
 
+      const adjustedTime = getEffectiveGameTime(now, pauseClockRef.current);
+
       if (shouldStopMovement) {
-        // Still check slow effect even when paused, but don't update movement
-        // Account for current pause duration if still paused
-        const currentPauseDuration =
-          lastPausedTimeRef.current !== null
-            ? now - lastPausedTimeRef.current
-            : 0;
-        const adjustedTime =
-          now - pauseDurationRef.current - currentPauseDuration;
         const currentlySlowed =
           enemy.slowUntil > 0 &&
           enemy.slowUntil > adjustedTime &&
@@ -115,13 +103,8 @@ export const Enemy: FC<EnemyProps> = memo(
         return;
       }
 
-      // Calculate effective speed (accounting for slow debuff)
       let effectiveSpeed = enemy.speed;
 
-      // Check if slow debuff is still active
-      // slowUntil is stored as elapsed time when debuff expires
-      // Subtract pause duration to account for time spent paused
-      const adjustedTime = now - pauseDurationRef.current;
       const currentlySlowed =
         enemy.slowUntil > 0 &&
         enemy.slowUntil > adjustedTime &&

@@ -5,11 +5,13 @@ import { useLevelStore } from "../../core/stores/useLevelStore";
 import type { Enemy } from "../../core/types/game";
 import {
   computeHealPulseHealthUpdates,
+  getInitialNextHealPulseAt,
+} from "../../utils/enemyMedicPulse";
+import {
   createPauseClock,
   getEffectiveGameTime,
-  getInitialNextHealPulseAt,
   stepPauseClock,
-} from "../../utils/enemyMedicPulse";
+} from "../../utils/pauseClock";
 
 type MedicHealPulseSystemProps = {
   shouldStopMovement: boolean;

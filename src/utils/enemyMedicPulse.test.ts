@@ -4,12 +4,9 @@ import type { Enemy, HealPulseConfig } from "../core/types/game";
 
 import {
   computeHealPulseHealthUpdates,
-  createPauseClock,
   didHealPulseJustReschedule,
-  getEffectiveGameTime,
   getHealPulseTargetIds,
   getInitialNextHealPulseAt,
-  stepPauseClock,
 } from "./enemyMedicPulse";
 
 const baseEnemy = (overrides: Partial<Enemy> & Pick<Enemy, "id">): Enemy => ({
@@ -37,38 +34,6 @@ const healPulse: HealPulseConfig = {
   intervalSeconds: 2,
   radius: 2,
 };
-
-describe("getEffectiveGameTime + pause clock", () => {
-  it("matches raw time when never paused", () => {
-    const clock = createPauseClock();
-    expect(getEffectiveGameTime(10, clock)).toBe(10);
-  });
-
-  it("freezes effective time while paused", () => {
-    const clock = createPauseClock();
-    stepPauseClock(clock, 10, true, false);
-    expect(getEffectiveGameTime(10, clock)).toBe(10);
-    expect(getEffectiveGameTime(100, clock)).toBe(10);
-  });
-
-  it("excludes completed pause segments from effective time", () => {
-    const clock = createPauseClock();
-    stepPauseClock(clock, 10, true, false);
-    stepPauseClock(clock, 15, false, true);
-    expect(clock.pauseDurationTotal).toBe(5);
-    expect(getEffectiveGameTime(20, clock)).toBe(15);
-  });
-
-  it("accumulates multiple pause segments", () => {
-    const clock = createPauseClock();
-    stepPauseClock(clock, 0, true, false);
-    stepPauseClock(clock, 3, false, true);
-    stepPauseClock(clock, 10, true, false);
-    stepPauseClock(clock, 12, false, true);
-    expect(clock.pauseDurationTotal).toBe(5);
-    expect(getEffectiveGameTime(20, clock)).toBe(15);
-  });
-});
 
 describe("getHealPulseTargetIds", () => {
   it("excludes the medic", () => {

@@ -11,6 +11,7 @@ import {
   tileSizeSelector,
   useGameStore,
 } from "../../../core/stores/useGameStore";
+import { isPointerOverGameCameraBlock } from "../../../utils/isPointerOverGameCameraBlock";
 
 // Reusable vectors to avoid GC pressure in useFrame
 const forwardVector = new Vector3();
@@ -126,27 +127,36 @@ export const GameCamera = ({
     };
 
     const handleMouseDown = (e: MouseEvent) => {
-      if (e.button === 0) {
-        isDragging.current = true;
-        lastMousePosition.current = { x: e.clientX, y: e.clientY };
+      if (e.button !== 0) {
+        return;
       }
+      if (isPointerOverGameCameraBlock(e.clientX, e.clientY, document)) {
+        return;
+      }
+      isDragging.current = true;
+      lastMousePosition.current = { x: e.clientX, y: e.clientY };
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (isDragging.current) {
-        const deltaX = e.clientX - lastMousePosition.current.x;
-        const deltaY = e.clientY - lastMousePosition.current.y;
-
-        rotation.current.yaw -= deltaX * rotationSensitivity;
-        rotation.current.pitch -= deltaY * rotationSensitivity;
-
-        rotation.current.pitch = Math.max(
-          -Math.PI / 2,
-          Math.min(Math.PI / 2, rotation.current.pitch)
-        );
-
-        lastMousePosition.current = { x: e.clientX, y: e.clientY };
+      if (!isDragging.current) {
+        return;
       }
+      if (isPointerOverGameCameraBlock(e.clientX, e.clientY, document)) {
+        lastMousePosition.current = { x: e.clientX, y: e.clientY };
+        return;
+      }
+      const deltaX = e.clientX - lastMousePosition.current.x;
+      const deltaY = e.clientY - lastMousePosition.current.y;
+
+      rotation.current.yaw -= deltaX * rotationSensitivity;
+      rotation.current.pitch -= deltaY * rotationSensitivity;
+
+      rotation.current.pitch = Math.max(
+        -Math.PI / 2,
+        Math.min(Math.PI / 2, rotation.current.pitch)
+      );
+
+      lastMousePosition.current = { x: e.clientX, y: e.clientY };
     };
 
     const handleMouseUp = () => {

@@ -1,0 +1,1 @@
+- `game.json` is loading twice at the start of the app

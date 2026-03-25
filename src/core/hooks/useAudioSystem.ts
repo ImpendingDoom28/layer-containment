@@ -165,13 +165,13 @@ export const useAudioSystem = () => {
 
       let categoryVol = MAX_VOLUME;
       switch (category) {
-        case AudioCategory.SFX:
+        case "sfx":
           categoryVol = sfxVolume;
           break;
-        case AudioCategory.MUSIC:
+        case "music":
           categoryVol = musicVolume;
           break;
-        case AudioCategory.AMBIENT:
+        case "ambient":
           categoryVol = ambientVolume;
           break;
       }

@@ -47,8 +47,8 @@ export const SOUND_CONFIGS: Record<GameEvent, SoundConfig> = {
     category: "sfx",
     volume: 50,
     srces: {
-      laser: "public/assets/audio/laser-shot.wav",
-      basic: "public/assets/audio/basic-shot.mp3",
+      laser: "assets/audio/laser-shot.wav",
+      basic: "assets/audio/basic-shot.mp3",
     },
   },
   [GameEvent.ENEMY_KILLED]: {

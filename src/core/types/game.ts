@@ -113,6 +113,7 @@ export type Enemy = Omit<EnemyConfig, "id"> & {
   x: number;
   z: number;
   upgrades: EnemyUpgradeId[];
+  upgradeIndicatorColors?: string[];
   regeneration?: number;
   slowResistance?: number;
   nextHealPulseAt?: number;

@@ -84,6 +84,7 @@ const enemySchema: z.ZodType<Enemy> = z.object({
   x: z.number(),
   z: z.number(),
   upgrades: z.array(enemyUpgradeIdSchema),
+  upgradeIndicatorColors: z.array(z.string()).optional(),
   regeneration: z.number().optional(),
   slowResistance: z.number().optional(),
   healPulse: healPulseConfigSchema.optional(),

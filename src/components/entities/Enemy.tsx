@@ -1,7 +1,7 @@
 import { FC, useRef, useEffect, useState, useMemo, memo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Billboard } from "@react-three/drei";
-import type { Group } from "three";
+import type { Group, Mesh } from "three";
 
 import {
   getPositionAlongMultiplePaths,
@@ -50,6 +50,7 @@ export const Enemy: FC<EnemyProps> = memo(
     const pathWaypoints = useLevelStore(pathWaypointsSelector);
 
     const meshRef = useRef<Group>(null);
+    const upgradeFirstRingRef = useRef<Mesh>(null);
     const hasTriggeredSpawnEffect = useRef(false);
     const hasReachedEnd = useRef(false);
     const [isSlowed, setIsSlowed] = useState(false);
@@ -89,6 +90,18 @@ export const Enemy: FC<EnemyProps> = memo(
       previousShouldStopMovementRef.current = isPaused;
 
       const adjustedTime = getEffectiveGameTime(now, pauseClockRef.current);
+
+      if (
+        !shouldStopMovement &&
+        enemy.upgrades.length > 0 &&
+        upgradeFirstRingRef.current
+      ) {
+        const time = state.clock.elapsedTime;
+        upgradeFirstRingRef.current.rotation.y = time * 1.5;
+        const pulse = Math.sin(time * 2) * 0.05 + 1;
+        const baseRadius = enemy.size * 1.1;
+        upgradeFirstRingRef.current.scale.setScalar(baseRadius * pulse);
+      }
 
       if (shouldStopMovement) {
         const currentlySlowed =
@@ -209,13 +222,14 @@ export const Enemy: FC<EnemyProps> = memo(
         ]}
       >
         {/* Upgrade indicators */}
-        {enemy.upgrades && enemy.upgrades.length > 0 && (
-          <UpgradeEffect
-            enemySize={enemy.size}
-            upgrades={enemy.upgrades}
-            shouldStopMovement={shouldStopMovement}
-          />
-        )}
+        {enemy.upgrades.length > 0 &&
+          (enemy.upgradeIndicatorColors?.length ?? 0) > 0 && (
+            <UpgradeEffect
+              enemySize={enemy.size}
+              indicatorColors={enemy.upgradeIndicatorColors!}
+              firstRingRef={upgradeFirstRingRef}
+            />
+          )}
 
         {/* Slow effect indicator */}
         {isSlowed && (
@@ -236,7 +250,7 @@ export const Enemy: FC<EnemyProps> = memo(
 
         {/* Enemy body */}
         <mesh position={[0, enemy.size / 2, 0]}>
-          <sphereGeometry args={[enemy.size, 16, 16]} />
+          <sphereGeometry args={[enemy.size, 12, 12]} />
           <meshStandardMaterial
             color={enemy.color}
             emissive={enemy.color}

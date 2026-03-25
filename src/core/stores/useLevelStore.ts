@@ -10,10 +10,12 @@ import type {
   WaveConfig,
 } from "../types/game";
 import type { LevelConfigData } from "../../core/levelConfig";
+import { getCssColorValue } from "../../components/ui/lib/cssUtils";
 import {
   getLevelGridOffset,
   withRecalculatedBuildingCoordinates,
 } from "../../utils/levelEditor";
+import { getUpgradeIndicatorColors } from "../../utils/enemyUpgradeVisuals";
 import { useGameStore } from "./useGameStore";
 
 type LevelStoreState = {
@@ -81,15 +83,25 @@ export const useLevelStore = create<LevelStore>((set) => ({
   initializeLevelState: (levelData: LevelConfigData, tileSize: number) => {
     const towerTypes = useGameStore.getState().towerTypes;
     const enemyTypes = useGameStore.getState().enemyTypes;
+    const enemyUpgrades = useGameStore.getState().enemyUpgrades;
 
     const gridOffset = getLevelGridOffset(levelData.gridSize, tileSize);
 
     // Only used if we have defined enemies in the level config
-    const enemies = levelData.enemies.map((enemy) => ({
-      ...enemyTypes![enemy.type],
-      ...enemy,
-      pathIndex: enemy.pathIndex ?? 0,
-    }));
+    const enemies = levelData.enemies.map((enemy) => {
+      return {
+        ...enemyTypes![enemy.type],
+        ...enemy,
+        pathIndex: enemy.pathIndex ?? 0,
+        upgradeIndicatorColors:
+          enemy.upgradeIndicatorColors ??
+          getUpgradeIndicatorColors(
+            enemy.upgrades,
+            enemyUpgrades,
+            getCssColorValue("scene-white")
+          ),
+      };
+    });
 
     // Only used if we have defined towers in the level config
     const towers = levelData.towers.map((tower) => ({

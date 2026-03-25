@@ -11,6 +11,8 @@ import {
   TowerType,
 } from "../types/game";
 import { getPositionAlongMultiplePaths } from "../../utils/pathUtils";
+import { getCssColorValue } from "../../components/ui/lib/cssUtils";
+import { getUpgradeIndicatorColors } from "../../utils/enemyUpgradeVisuals";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import { getTilePlacementState as getSharedTilePlacementState } from "../../utils/tilePlacement";
 import { useNextId } from "./utils/useNextId";
@@ -220,6 +222,12 @@ export const useLevelSystem = () => {
         }
       }
 
+      const upgradeIndicatorColors = getUpgradeIndicatorColors(
+        applyUpgrades,
+        enemyUpgrades,
+        getCssColorValue("scene-white")
+      );
+
       const enemy: Enemy = {
         ...enemyConfig,
         id: getNextEnemyId(),
@@ -235,6 +243,7 @@ export const useLevelSystem = () => {
         x: startPosition.x,
         z: startPosition.z,
         upgrades: applyUpgrades,
+        upgradeIndicatorColors,
         regeneration,
         slowResistance,
       };

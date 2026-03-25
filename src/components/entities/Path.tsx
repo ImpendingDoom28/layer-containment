@@ -91,7 +91,10 @@ export const Path: FC<PathProps> = memo(({ timeUntilNextWave, pathIndex }) => {
         </group>
       ))}
       {/* Portal at start point */}
-      <Portal position={[path[0].x, path[0].y + 0.5, path[0].z]} />
+      <Portal
+        position={[path[0].x, path[0].y + 0.5, path[0].z]}
+        pathYaw={segments[0]?.yaw ?? 0}
+      />
 
       {/* End building at final waypoint */}
       <EndBuilding

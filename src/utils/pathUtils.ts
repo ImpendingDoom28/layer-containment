@@ -18,7 +18,7 @@ export type RenderPathSegment = {
   yaw: number;
 };
 
-const getPathSegmentYaw = (dx: number, dz: number) => {
+export const getPathSegmentYaw = (dx: number, dz: number) => {
   return Math.atan2(-dz, dx);
 };
 

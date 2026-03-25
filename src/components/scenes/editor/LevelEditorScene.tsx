@@ -12,7 +12,10 @@ import {
   useGameStore,
 } from "../../../core/stores/useGameStore";
 import { useLevelEditorStore } from "../../../core/stores/useLevelEditorStore";
-import { getPathRenderSegments } from "../../../utils/pathUtils";
+import {
+  getPathRenderSegments,
+  getPathSegmentYaw,
+} from "../../../utils/pathUtils";
 import { getTilePlacementState } from "../../../utils/tilePlacement";
 import { getLevelGridOffset, tileToWorldCoordinate } from "../../../utils/levelEditor";
 import { getCssColorValue, type ColorToken } from "../../ui/lib/cssUtils";
@@ -251,7 +254,17 @@ export const LevelEditorScene = () => {
               })}
 
               {path[0] ? (
-                <Portal position={[path[0].x, path[0].y + 0.2, path[0].z]} />
+                <Portal
+                  position={[path[0].x, path[0].y + 0.2, path[0].z]}
+                  pathYaw={
+                    path.length >= 2
+                      ? getPathSegmentYaw(
+                          path[1].x - path[0].x,
+                          path[1].z - path[0].z
+                        )
+                      : 0
+                  }
+                />
               ) : null}
 
               {path.length > 1 ? (

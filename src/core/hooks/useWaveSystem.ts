@@ -19,10 +19,7 @@ import {
 } from "../stores/useLevelStore";
 import { useGameStore, waveDelaySelector } from "../stores/useGameStore";
 import { useLevelSystem } from "./useLevelSystem";
-import {
-  selectedUpgradesSelector,
-  useUpgradeStore,
-} from "../stores/useUpgradeStore";
+import { useUpgradeStore } from "../stores/useUpgradeStore";
 import { GameEvent } from "../types/enums/events";
 import { gameEvents } from "../../utils/eventEmitter";
 
@@ -77,8 +74,6 @@ export const useWaveSystem = (gameState: GameState) => {
   const { addEnemy } = useLevelSystem();
 
   const { timeUntilNextWave, setTimeUntilNextWave } = useWaveStore();
-  const selectedUpgrades = useUpgradeStore(selectedUpgradesSelector);
-  const clearUpgrades = useUpgradeStore((state) => state.clearUpgrades);
 
   const spawnQueueRef = useRef<SpawnQueueItem[]>([]);
   const spawnQueueIndexRef = useRef<number>(0);
@@ -93,6 +88,7 @@ export const useWaveSystem = (gameState: GameState) => {
   const lastCountdownPlayingTimeRef = useRef<number>(0);
   const isCountingDownRef = useRef<boolean>(false);
   const timeUntilNextWaveRef = useRef<number | null>(null);
+  const pendingCountdownStartAfterUpgradeRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (currentWave === 0) {
@@ -118,8 +114,7 @@ export const useWaveSystem = (gameState: GameState) => {
     lastCountdownPlayingTimeRef.current = 0;
     timeUntilNextWaveRef.current = null;
 
-    const waveUpgrades = [...selectedUpgrades];
-    clearUpgrades();
+    const waveUpgrades = [...useUpgradeStore.getState().levelEnemyUpgradeStack];
 
     const currentWaveIndex = currentWave - 1;
     const waveConfig = waveConfigs[currentWaveIndex];
@@ -144,11 +139,7 @@ export const useWaveSystem = (gameState: GameState) => {
       remainingEnemyCount
     );
 
-    for (
-      let i = 0;
-      i < totalEnemiesToQueue && remainingEnemyCount > 0;
-      i++
-    ) {
+    for (let i = 0; i < totalEnemiesToQueue && remainingEnemyCount > 0; i++) {
       const chosenEnemy = selectWeightedEnemy(availableEnemyTypes);
       if (!chosenEnemy) break;
 
@@ -165,7 +156,7 @@ export const useWaveSystem = (gameState: GameState) => {
 
     spawnQueueRef.current = spawnQueue;
     totalPauseDurationRef.current = 0;
-  }, [currentWave, totalWaves, waveConfigs, selectedUpgrades, clearUpgrades]);
+  }, [currentWave, totalWaves, waveConfigs]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -211,6 +202,10 @@ export const useWaveSystem = (gameState: GameState) => {
     }
   }, [currentWave, startNextWave, totalWaves]);
 
+  const resumeCountdownAfterUpgradePick = useCallback(() => {
+    pendingCountdownStartAfterUpgradeRef.current = true;
+  }, []);
+
   const updateWaveSpawning = useCallback(
     (currentTime: number) => {
       const wasPaused =
@@ -221,6 +216,14 @@ export const useWaveSystem = (gameState: GameState) => {
       if (wasPaused && isPlaying && lastPlayingTimeRef.current > 0) {
         const pauseDuration = currentTime - lastPlayingTimeRef.current;
         totalPauseDurationRef.current += pauseDuration;
+      }
+
+      if (pendingCountdownStartAfterUpgradeRef.current && isPlaying) {
+        pendingCountdownStartAfterUpgradeRef.current = false;
+        isCountingDownRef.current = true;
+        waveEndTimeRef.current = currentTime;
+        countdownPauseDurationRef.current = 0;
+        lastCountdownPlayingTimeRef.current = currentTime;
       }
 
       if (isCountingDownRef.current) {
@@ -291,10 +294,16 @@ export const useWaveSystem = (gameState: GameState) => {
           waveStartedRef.current = false;
           if (currentTime - lastSpawnTimeRef.current > 300) {
             if (currentWave < totalWaves) {
-              isCountingDownRef.current = true;
-              waveEndTimeRef.current = currentTime;
-              countdownPauseDurationRef.current = 0;
-              lastCountdownPlayingTimeRef.current = currentTime;
+              const enemyUpgrades = useGameStore.getState().enemyUpgrades;
+              if (enemyUpgrades && Object.keys(enemyUpgrades).length > 0) {
+                const ids = Object.keys(enemyUpgrades) as EnemyUpgradeId[];
+                useUpgradeStore.getState().openEnemyUpgradeGate(ids);
+              } else {
+                isCountingDownRef.current = true;
+                waveEndTimeRef.current = currentTime;
+                countdownPauseDurationRef.current = 0;
+                lastCountdownPlayingTimeRef.current = currentTime;
+              }
             } else {
               winGame();
             }
@@ -343,6 +352,7 @@ export const useWaveSystem = (gameState: GameState) => {
     getRemainingEnemiesInWave,
     timeUntilNextWave,
     startNextWaveEarly,
+    resumeCountdownAfterUpgradePick,
   };
 };
 

@@ -1,12 +1,11 @@
 import { FC, useMemo } from "react";
-import { Zap, Shield, Wind, Heart, X, LucideProps } from "lucide-react";
+import { Zap, Shield, Wind, Heart, LucideProps } from "lucide-react";
 
 import type { EnemyUpgradeId } from "../../core/types/game";
 import { UIButton } from "@/components/ui/UIButton";
 import {
   UICard,
   UICardContent,
-  UICardFooter,
   UICardHeader,
   UICardTitle,
 } from "@/components/ui/UICard";
@@ -16,12 +15,11 @@ import {
   useGameStore,
 } from "../../core/stores/useGameStore";
 import {
-  availableUpgradesSelector,
-  maxUpgradesPerWaveSelector,
-  selectedUpgradesSelector,
+  levelEnemyUpgradeStackSelector,
+  upgradeChoiceOptionsSelector,
   useUpgradeStore,
 } from "../../core/stores/useUpgradeStore";
-import { HUDWrapper } from "./HUDWrapper";
+import { cn } from "../ui/lib/twUtils";
 
 type UpgradeIconProps = {
   upgradeId: EnemyUpgradeId;
@@ -67,94 +65,106 @@ const getTierColor = (tier: 1 | 2 | 3): string => {
 };
 
 type HUDUpgradePanelProps = {
-  onConfirm: () => void;
-  onSkip: () => void;
+  onEnemyUpgradePick: (id: EnemyUpgradeId) => void;
 };
 
 export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
-  onConfirm,
-  onSkip,
+  onEnemyUpgradePick,
 }) => {
   const enemyUpgrades = useGameStore(enemyUpgradesSelector);
-  const selectedUpgrades = useUpgradeStore(selectedUpgradesSelector);
-  const availableUpgrades = useUpgradeStore(availableUpgradesSelector);
-  const maxUpgradesPerWave = useUpgradeStore(maxUpgradesPerWaveSelector);
-  const toggleUpgrade = useUpgradeStore((state) => state.toggleUpgrade);
+  const levelEnemyUpgradeStack = useUpgradeStore(
+    levelEnemyUpgradeStackSelector
+  );
+  const upgradeChoiceOptions = useUpgradeStore(upgradeChoiceOptionsSelector);
 
   const totalRewardMultiplier = useMemo(() => {
     if (!enemyUpgrades) return 1;
-    return selectedUpgrades.reduce((acc, upgradeId) => {
+    return levelEnemyUpgradeStack.reduce((acc, upgradeId) => {
       const upgrade = enemyUpgrades[upgradeId];
       return acc * (upgrade?.rewardMultiplier ?? 1);
     }, 1);
-  }, [selectedUpgrades, enemyUpgrades]);
+  }, [levelEnemyUpgradeStack, enemyUpgrades]);
 
   const bonusPercentage = useMemo(() => {
     return Math.round((totalRewardMultiplier - 1) * 100);
   }, [totalRewardMultiplier]);
 
-  if (!enemyUpgrades || availableUpgrades.length === 0) {
+  if (!enemyUpgrades || upgradeChoiceOptions.length === 0) {
     return null;
   }
 
+  const onPickUpgrade = (id: EnemyUpgradeId) => {
+    onEnemyUpgradePick(id);
+  };
+
   return (
-    <HUDWrapper className="top-auto -translate-x-[calc(24rem /2)] left-1/2 right-1/2 bottom-4">
-      <UICard className="w-auto min-w-96">
-        <UICardHeader className="flex flex-row items-center justify-between">
-          <UICardTitle>
-            <Zap className="inline-block w-4 h-4 mr-2 text-yellow-400" />
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-auto p-4"
+      data-game-camera-block
+    >
+      <div
+        className="absolute inset-0 bg-black/75 backdrop-blur-xl"
+        aria-hidden
+      />
+      <UICard className="relative z-10 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        <UICardHeader>
+          <UICardTitle className="flex flex-row items-center gap-2">
+            <Zap className="w-5 h-5 text-yellow-400 shrink-0" />
             <UITypography variant="medium">Empower Next Wave</UITypography>
           </UICardTitle>
-          <UIButton variant="ghost" size="icon-xs" onClick={onSkip}>
-            <X className="w-4 h-4" />
-          </UIButton>
+          {bonusPercentage > 0 && (
+            <UITypography
+              variant="small"
+              className="text-green-400 font-semibold"
+            >
+              Stacked bonus: +{bonusPercentage}% gold
+            </UITypography>
+          )}
         </UICardHeader>
 
         <UICardContent>
-          <div className="flex flex-row gap-2">
-            {availableUpgrades.map((upgradeId) => {
+          <div className="flex flex-row flex-wrap gap-3 justify-center">
+            {upgradeChoiceOptions.map((upgradeId) => {
               const upgrade = enemyUpgrades[upgradeId];
               if (!upgrade) return null;
-
-              const isSelected = selectedUpgrades.includes(upgradeId);
-              const canSelect =
-                selectedUpgrades.length < maxUpgradesPerWave || isSelected;
 
               return (
                 <UIButton
                   key={upgradeId}
-                  onClick={() => toggleUpgrade(upgradeId)}
-                  disabled={!canSelect}
-                  variant={isSelected ? "default" : "outline"}
-                  className="relative flex flex-col items-start justify-start p-2.5 gap-1 h-28 w-28"
+                  onClick={() => onPickUpgrade(upgradeId)}
+                  variant="outline"
+                  className={cn(
+                    "relative flex flex-col items-start justify-start p-3 gap-1",
+                    "min-h-32 w-36 sm:w-40"
+                  )}
                 >
                   <UpgradeIcon
                     upgradeId={upgradeId}
                     className="absolute inset-0 w-full! h-full! opacity-[0.025]"
                     size={16}
                   />
-                  <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center justify-between w-full gap-1">
                     <UITypography variant="medium" className="font-semibold">
                       {upgrade.name}
                     </UITypography>
                     <UITypography
-                      className={`font-bold ${getTierColor(upgrade.tier)}`}
-                      variant={"medium"}
+                      className={`font-bold shrink-0 ${getTierColor(upgrade.tier)}`}
+                      variant="medium"
                     >
                       {getTierLabel(upgrade.tier)}
                     </UITypography>
                   </div>
 
                   <UITypography
-                    className="text-muted-foreground"
-                    variant={"small"}
+                    className="text-muted-foreground text-left"
+                    variant="small"
                   >
                     {upgrade.description}
                   </UITypography>
                   <UITypography
-                    className="mt-1"
+                    className="mt-auto"
                     style={{ color: upgrade.indicatorColor }}
-                    variant={"small"}
+                    variant="small"
                   >
                     +{Math.round((upgrade.rewardMultiplier - 1) * 100)}% gold
                   </UITypography>
@@ -162,29 +172,8 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
               );
             })}
           </div>
-
-          <div className="flex items-center justify-between mt-4 text-sm">
-            {bonusPercentage > 0 && (
-              <span className="font-semibold text-green-400">
-                Total Bonus: +{bonusPercentage}%
-              </span>
-            )}
-          </div>
         </UICardContent>
-
-        <UICardFooter className="gap-2">
-          <UIButton
-            onClick={onConfirm}
-            variant={selectedUpgrades.length > 0 ? "default" : "outline"}
-            className="flex-1"
-          >
-            {selectedUpgrades.length > 0 ? "Confirm Upgrades" : "Start Wave"}
-          </UIButton>
-          <UIButton onClick={onSkip} variant="ghost">
-            Skip
-          </UIButton>
-        </UICardFooter>
       </UICard>
-    </HUDWrapper>
+    </div>
   );
 };

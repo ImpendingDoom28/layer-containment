@@ -1,80 +1,61 @@
 import { create } from "zustand";
 
 import type { EnemyUpgradeId } from "../types/game";
+import { pickRandomDistinct } from "../../utils/pickRandomDistinct";
+
+const CHOICE_COUNT = 3;
 
 type UpgradeStoreState = {
-  selectedUpgrades: EnemyUpgradeId[];
-  availableUpgrades: EnemyUpgradeId[];
-  maxUpgradesPerWave: number;
+  levelEnemyUpgradeStack: EnemyUpgradeId[];
+  pendingEnemyUpgradeGate: boolean;
+  upgradeChoiceOptions: EnemyUpgradeId[];
 };
 
 type UpgradeStoreActions = {
-  selectUpgrade: (id: EnemyUpgradeId) => void;
-  deselectUpgrade: (id: EnemyUpgradeId) => void;
-  toggleUpgrade: (id: EnemyUpgradeId) => void;
-  clearUpgrades: () => void;
-  setAvailableUpgrades: (upgrades: EnemyUpgradeId[]) => void;
-  setMaxUpgradesPerWave: (max: number) => void;
+  openEnemyUpgradeGate: (allUpgradeIds: EnemyUpgradeId[]) => void;
+  confirmEnemyUpgradePick: (id: EnemyUpgradeId) => void;
+  resetLevelEnemyUpgrades: () => void;
 };
 
 type UpgradeStore = UpgradeStoreState & UpgradeStoreActions;
 
 const DEFAULT_STATE: UpgradeStoreState = {
-  selectedUpgrades: [],
-  availableUpgrades: [],
-  maxUpgradesPerWave: 0,
+  levelEnemyUpgradeStack: [],
+  pendingEnemyUpgradeGate: false,
+  upgradeChoiceOptions: [],
 };
 
 export const useUpgradeStore = create<UpgradeStore>((set, get) => ({
   ...DEFAULT_STATE,
 
-  selectUpgrade: (id) => {
-    const { selectedUpgrades, maxUpgradesPerWave } = get();
-    if (
-      selectedUpgrades.length < maxUpgradesPerWave &&
-      !selectedUpgrades.includes(id)
-    ) {
-      set({ selectedUpgrades: [...selectedUpgrades, id] });
-    }
+  openEnemyUpgradeGate: (allUpgradeIds) => {
+    if (allUpgradeIds.length === 0) return;
+    const upgradeChoiceOptions = pickRandomDistinct(
+      allUpgradeIds,
+      Math.min(CHOICE_COUNT, allUpgradeIds.length)
+    );
+    set({ pendingEnemyUpgradeGate: true, upgradeChoiceOptions });
   },
 
-  deselectUpgrade: (id) => {
-    set((state) => ({
-      selectedUpgrades: state.selectedUpgrades.filter((u) => u !== id),
-    }));
+  confirmEnemyUpgradePick: (id) => {
+    const { levelEnemyUpgradeStack } = get();
+    set({
+      levelEnemyUpgradeStack: [...levelEnemyUpgradeStack, id],
+      pendingEnemyUpgradeGate: false,
+      upgradeChoiceOptions: [],
+    });
   },
 
-  toggleUpgrade: (id) => {
-    const { selectedUpgrades, maxUpgradesPerWave } = get();
-    if (selectedUpgrades.includes(id)) {
-      set({ selectedUpgrades: selectedUpgrades.filter((u) => u !== id) });
-    } else if (selectedUpgrades.length < maxUpgradesPerWave) {
-      set({ selectedUpgrades: [...selectedUpgrades, id] });
-    }
-  },
-
-  clearUpgrades: () => {
-    set({ selectedUpgrades: [] });
-  },
-
-  setAvailableUpgrades: (upgrades) => {
-    set({ availableUpgrades: upgrades });
-  },
-
-  setMaxUpgradesPerWave: (max) => {
-    set({ maxUpgradesPerWave: max });
+  resetLevelEnemyUpgrades: () => {
+    set({ ...DEFAULT_STATE });
   },
 }));
 
-export const selectedUpgradesSelector = (state: UpgradeStore) =>
-  state.selectedUpgrades;
-export const availableUpgradesSelector = (state: UpgradeStore) =>
-  state.availableUpgrades;
-export const maxUpgradesPerWaveSelector = (state: UpgradeStore) =>
-  state.maxUpgradesPerWave;
-export const setAvailableUpgradesSelector = (state: UpgradeStore) =>
-  state.setAvailableUpgrades;
-export const setMaxUpgradesPerWaveSelector = (state: UpgradeStore) =>
-  state.setMaxUpgradesPerWave;
-export const clearUpgradesSelector = (state: UpgradeStore) =>
-  state.clearUpgrades;
+export const levelEnemyUpgradeStackSelector = (state: UpgradeStore) =>
+  state.levelEnemyUpgradeStack;
+export const pendingEnemyUpgradeGateSelector = (state: UpgradeStore) =>
+  state.pendingEnemyUpgradeGate;
+export const upgradeChoiceOptionsSelector = (state: UpgradeStore) =>
+  state.upgradeChoiceOptions;
+export const confirmEnemyUpgradePickSelector = (state: UpgradeStore) =>
+  state.confirmEnemyUpgradePick;

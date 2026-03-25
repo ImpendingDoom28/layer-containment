@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useGameStore } from "../stores/useGameStore";
 import { useLevelStore } from "../stores/useLevelStore";
+import { useUpgradeStore } from "../stores/useUpgradeStore";
 import { useAlmanacStore } from "../stores/useAlmanacStore";
 import {
   Enemy,
@@ -400,6 +401,7 @@ export const useLevelSystem = () => {
     getNextTowerId(true);
     getNextEnemyId(true);
     getNextProjectileId(true);
+    useUpgradeStore.getState().resetLevelEnemyUpgrades();
   }, [resetLevelState, getNextTowerId, getNextEnemyId, getNextProjectileId]);
 
   return {

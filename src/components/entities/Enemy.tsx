@@ -172,14 +172,18 @@ export const Enemy: FC<EnemyProps> = memo(
         );
       }
 
-      // Apply regeneration if enemy has it
+      const live = useLevelStore
+        .getState()
+        .enemies.find((e) => e.id === enemy.id);
+
       if (
         enemy.regeneration &&
         enemy.regeneration > 0 &&
-        enemy.health < enemy.maxHealth
+        live &&
+        live.health < live.maxHealth
       ) {
         const healAmount = enemy.regeneration * delta;
-        const newHealth = Math.min(enemy.maxHealth, enemy.health + healAmount);
+        const newHealth = Math.min(live.maxHealth, live.health + healAmount);
         onUpdate?.(enemy.id, {
           pathProgress: newProgress,
           x: position.x,

@@ -1,4 +1,6 @@
 import { FC, Suspense, useCallback, useState } from "react";
+
+import { cn } from "../ui/lib/twUtils";
 import { Canvas } from "@react-three/fiber";
 import { Stats } from "@react-three/drei";
 
@@ -75,8 +77,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
 
   const { onProjectileHit, onProjectileRemove } = projectileSystem;
 
-  const { showUpgradePanel, onConfirmUpgrades, onSkipUpgrades } =
-    upgradesSystem;
+  const { showUpgradePanel, onEnemyUpgradePick } = upgradesSystem;
 
   const {
     getRemainingEnemiesInWave,
@@ -206,29 +207,32 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
         <>
           {!shouldDisableControls && (
             <>
-              <HUDTowerShop
-                selectedTowerType={selectedTowerType}
-                money={money}
-                onSelectTower={setSelectedTowerType}
-                onDeselectTower={onDeselectTower}
-              />
+              <div
+                className={cn(
+                  showUpgradePanel && "pointer-events-none opacity-40"
+                )}
+              >
+                <HUDTowerShop
+                  selectedTowerType={selectedTowerType}
+                  money={money}
+                  onSelectTower={setSelectedTowerType}
+                  onDeselectTower={onDeselectTower}
+                />
 
-              <HUDGameStats
-                money={money}
-                health={health}
-                currentWave={currentWave}
-                remainingEnemies={remainingEnemies}
-                gameStatus={gameStatus}
-                timeUntilNextWave={timeUntilNextWave}
-                onStartWaveEarly={startNextWaveEarly}
-                onStartFirstWave={startFirstWave}
-              />
+                <HUDGameStats
+                  money={money}
+                  health={health}
+                  currentWave={currentWave}
+                  remainingEnemies={remainingEnemies}
+                  gameStatus={gameStatus}
+                  timeUntilNextWave={timeUntilNextWave}
+                  onStartWaveEarly={startNextWaveEarly}
+                  onStartFirstWave={startFirstWave}
+                />
+              </div>
 
               {showUpgradePanel && (
-                <HUDUpgradePanel
-                  onConfirm={onConfirmUpgrades}
-                  onSkip={onSkipUpgrades}
-                />
+                <HUDUpgradePanel onEnemyUpgradePick={onEnemyUpgradePick} />
               )}
             </>
           )}

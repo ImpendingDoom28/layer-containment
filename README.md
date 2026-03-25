@@ -17,11 +17,7 @@ A 3D tower defense game built with React, Tailwind CSS, and React Three Fiber.
   - Medic: Periodically heals nearby allies (not itself); pulse timing respects game pause; a short ring burst plays when the area heal fires
 - **Enemy wave system** - 7 waves of increasing difficulty with configurable enemy compositions
 - **Level creator** - Dedicated `/editor` route with a mode rail, contextual inspector, and unified publish flow for placing buildings, drawing paths, configuring waves, and exporting schema-compatible level JSON files
-- **Enemy upgrade system** - Optional risk/reward mechanic to empower waves for bonus gold:
-  - Armored: +50% health, +40% gold reward
-  - Swift: +30% speed, +30% gold reward
-  - Unstoppable: Immune to slow effects, +50% gold reward
-  - Regenerating: Heals 3 HP/sec, +60% gold reward
+- **Enemy upgrade system** - After each wave (except before wave 1), pick one of three random upgrades; choices stack for the rest of the level and apply to all spawns. Full-screen blur modal blocks other UI until you choose. Upgrades: Armored (+health), Swift (+speed), Unstoppable (slow immune), Regenerating (HP regen), each with higher gold rewards
 - **Economy system** - Earn money by killing enemies, spend it on towers
 - **Tower management** - Click on placed towers to view info and sell them (50% refund)
 - **Health system** - Lose health when enemies reach the end (varies by enemy type)

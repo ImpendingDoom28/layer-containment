@@ -16,7 +16,7 @@ import {
   useGameStore,
 } from "../../core/stores/useGameStore";
 import {
-  selectedUpgradesSelector,
+  levelEnemyUpgradeStackSelector,
   useUpgradeStore,
 } from "../../core/stores/useUpgradeStore";
 import { EnemyConfig } from "../../core/types/game";
@@ -71,15 +71,17 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
   const enemyTypes = useGameStore(enemyTypesSelector);
   const enemyUpgrades = useGameStore(enemyUpgradesSelector);
 
-  const selectedUpgrades = useUpgradeStore(selectedUpgradesSelector);
+  const levelEnemyUpgradeStack = useUpgradeStore(
+    levelEnemyUpgradeStackSelector
+  );
 
   const totalRewardMultiplier = useMemo(() => {
-    if (!enemyUpgrades || selectedUpgrades.length === 0) return 1;
-    return selectedUpgrades.reduce((acc, upgradeId) => {
+    if (!enemyUpgrades || levelEnemyUpgradeStack.length === 0) return 1;
+    return levelEnemyUpgradeStack.reduce((acc, upgradeId) => {
       const upgrade = enemyUpgrades[upgradeId];
       return acc * (upgrade?.rewardMultiplier ?? 1);
     }, 1);
-  }, [selectedUpgrades, enemyUpgrades]);
+  }, [levelEnemyUpgradeStack, enemyUpgrades]);
 
   const bonusPercentage = useMemo(() => {
     return Math.round((totalRewardMultiplier - 1) * 100);
@@ -167,7 +169,7 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
               })}
             </div>
 
-            {selectedUpgrades.length > 0 && enemyUpgrades && (
+            {levelEnemyUpgradeStack.length > 0 && enemyUpgrades && (
               <div className="border-t border-border/70 pt-2">
                 <div className="flex items-center justify-between gap-2">
                   <UITypography
@@ -186,7 +188,7 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
                   )}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {selectedUpgrades.map((upgradeId) => {
+                  {levelEnemyUpgradeStack.map((upgradeId) => {
                     const upgrade = enemyUpgrades[upgradeId];
                     if (!upgrade) return null;
                     return (

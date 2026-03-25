@@ -73,32 +73,11 @@ export const useEnemySystem = (levelSystem: LevelSystem) => {
     [enemyById, updateEnemy]
   );
 
-  // Apply regeneration to all enemies that have it
-  // Should be called each frame with delta time
-  const applyRegeneration = useCallback(
-    (deltaTime: number) => {
-      for (const enemy of enemies) {
-        if (enemy.regeneration && enemy.regeneration > 0) {
-          const healAmount = enemy.regeneration * deltaTime;
-          const newHealth = Math.min(
-            enemy.maxHealth,
-            enemy.health + healAmount
-          );
-          if (newHealth !== enemy.health) {
-            updateEnemy(enemy.id, { health: newHealth });
-          }
-        }
-      }
-    },
-    [enemies, updateEnemy]
-  );
-
   return {
     onEnemyReachEnd,
     onEnemyUpdate,
     damageEnemy,
     slowEnemy,
-    applyRegeneration,
   };
 };
 

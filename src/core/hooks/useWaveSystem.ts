@@ -15,6 +15,7 @@ import {
   enemiesSelector,
   setCurrentWaveSelector,
   currentWaveSelector,
+  pathWaypointsSelector,
 } from "../stores/useLevelStore";
 import { useGameStore, waveDelaySelector } from "../stores/useGameStore";
 import { useLevelSystem } from "./useLevelSystem";
@@ -72,6 +73,7 @@ export const useWaveSystem = (gameState: GameState) => {
   const enemies = useLevelStore(enemiesSelector);
   const setCurrentWave = useLevelStore(setCurrentWaveSelector);
   const currentWave = useLevelStore(currentWaveSelector);
+  const pathWaypoints = useLevelStore(pathWaypointsSelector);
   const { addEnemy } = useLevelSystem();
 
   const { timeUntilNextWave, setTimeUntilNextWave } = useWaveStore();
@@ -176,10 +178,17 @@ export const useWaveSystem = (gameState: GameState) => {
   const startNextWave = useCallback(() => {
     setCurrentWave((prev) => {
       const newWave = prev + 1;
-      gameEvents.emit(GameEvent.WAVE_STARTED, { wave: newWave });
+      const wp = pathWaypoints[0]?.[0];
+      const worldPosition = wp
+        ? { x: wp.x, y: wp.y, z: wp.z }
+        : { x: 0, y: 0, z: 0 };
+      gameEvents.emit(GameEvent.WAVE_STARTED, {
+        waveNumber: newWave,
+        worldPosition,
+      });
       return newWave;
     });
-  }, [setCurrentWave]);
+  }, [setCurrentWave, pathWaypoints]);
 
   const startFirstWave = useCallback(() => {
     if (currentWave === 0) {

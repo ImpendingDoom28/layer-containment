@@ -47,6 +47,7 @@ export const useLevelSystem = () => {
     pathWidth,
     gameStatus,
     enemyUpgrades,
+    towerHeight,
   } = useGameStore();
 
   const getNextTowerId = useNextId();
@@ -103,10 +104,18 @@ export const useLevelSystem = () => {
 
       spendMoney(towerConfig.cost);
       setSelectedTowerType(null);
+      const emitterY =
+        towerType === "laser" ? towerHeight * 0.5 : towerHeight * 0.7;
       gameEvents.emit(GameEvent.TOWER_PLACED, {
+        towerId: newTower.id,
         towerType,
         gridX,
         gridZ,
+        worldPosition: {
+          x: worldX,
+          y: emitterY,
+          z: worldZ,
+        },
       });
       return true;
     },
@@ -120,6 +129,7 @@ export const useLevelSystem = () => {
       setTowers,
       spendMoney,
       setSelectedTowerType,
+      towerHeight,
     ]
   );
 
@@ -150,12 +160,19 @@ export const useLevelSystem = () => {
       const sellPrice = Math.floor(tower.cost * towerSellPriceMultiplier);
       addMoney(sellPrice);
       removeTower(towerId);
+      const emitterY =
+        tower.type === "laser" ? towerHeight * 0.5 : towerHeight * 0.7;
       gameEvents.emit(GameEvent.TOWER_SOLD, {
         towerId,
         towerType: tower.type,
+        worldPosition: {
+          x: tower.x,
+          y: emitterY,
+          z: tower.z,
+        },
       });
     },
-    [addMoney, removeTower, towers, towerSellPriceMultiplier]
+    [addMoney, removeTower, towers, towerSellPriceMultiplier, towerHeight]
   );
 
   //Enemies
@@ -292,6 +309,11 @@ export const useLevelSystem = () => {
           gameEvents.emit(GameEvent.ENEMY_KILLED, {
             enemyId,
             enemyType: updatedEnemy.type,
+            worldPosition: {
+              x: updatedEnemy.x,
+              y: updatedEnemy.size / 2,
+              z: updatedEnemy.z,
+            },
           });
           return nextEnemies;
         }
@@ -314,6 +336,11 @@ export const useLevelSystem = () => {
           gameEvents.emit(GameEvent.ENEMY_REACHED_END, {
             enemyId,
             enemyType: enemy.type,
+            worldPosition: {
+              x: enemy.x,
+              y: enemy.size / 2,
+              z: enemy.z,
+            },
           });
         } else {
           addMoney(enemy.reward);
@@ -323,6 +350,11 @@ export const useLevelSystem = () => {
           gameEvents.emit(GameEvent.ENEMY_KILLED, {
             enemyId,
             enemyType: enemy.type,
+            worldPosition: {
+              x: enemy.x,
+              y: enemy.size / 2,
+              z: enemy.z,
+            },
           });
         }
 

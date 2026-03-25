@@ -180,9 +180,16 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
         };
 
         fireProjectile(projectileData);
+        const emitterY =
+          tower.type === "laser" ? towerHeight * 0.5 : towerHeight * 0.7;
         gameEvents.emit(GameEvent.TOWER_FIRE, {
           towerId: tower.id,
           towerType: tower.type,
+          worldPosition: {
+            x: tower.x,
+            y: emitterY,
+            z: tower.z,
+          },
         });
 
         updateTower(tower.id, { lastFireTime: currentTime });

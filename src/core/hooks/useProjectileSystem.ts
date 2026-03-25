@@ -46,8 +46,14 @@ export const useProjectileSystem = (enemySystem: EnemySystem) => {
       }
       gameEvents.emit(GameEvent.PROJECTILE_HIT, {
         projectileId: projectile.id,
+        enemyId: targetEnemy.id,
         projectileType: projectile.projectileType,
         towerType: projectile.towerType,
+        worldPosition: {
+          x: targetEnemy.x,
+          y: targetEnemy.size / 2,
+          z: targetEnemy.z,
+        },
       });
     },
     [enemies, damageEnemy, slowEnemy]

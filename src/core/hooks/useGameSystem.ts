@@ -57,23 +57,23 @@ export const useGameSystem = () => {
       gameStatus === "gameOver" &&
       previousGameStatusRef.current !== "gameOver"
     ) {
-      gameEvents.emit(GameEvent.GAME_OVER);
+      gameEvents.emit(GameEvent.GAME_OVER, { gameOverType: "loss" });
     }
     previousGameStatusRef.current = gameStatus;
   }, [health, gameStatus]);
 
   const winGame = useCallback(() => {
     setGameStatus("won");
-    gameEvents.emit(GameEvent.GAME_WON);
+    gameEvents.emit(GameEvent.GAME_WON, { gameWonType: "win" });
   }, [setGameStatus]);
 
   const pauseGame = useCallback(() => {
     if (gameStatus === "playing") {
       setGameStatus("paused");
-      gameEvents.emit(GameEvent.GAME_PAUSED);
+      gameEvents.emit(GameEvent.GAME_PAUSED, { gamePausedType: "pause" });
     } else if (gameStatus === "paused") {
       setGameStatus("playing");
-      gameEvents.emit(GameEvent.GAME_RESUMED);
+      gameEvents.emit(GameEvent.GAME_RESUMED, { gameResumedType: "resume" });
     }
   }, [setGameStatus, gameStatus]);
 

@@ -6,6 +6,7 @@ import {
   getPlaceholderSoundForEvent,
   AudioEventData,
 } from "../audioConfig";
+import { setGameAudioContext } from "../audio/gameAudioContext";
 import { GameEvent } from "../types/enums/events";
 import { MAX_VOLUME, MIN_VOLUME, useAudioStore } from "../stores/useAudioStore";
 
@@ -22,8 +23,32 @@ type SoundPool = {
 type PlayingSound = {
   source: AudioBufferSourceNode;
   gainNode: GainNode;
+  panner?: PannerNode;
   category: AudioCategory;
   baseVolume: number;
+};
+
+const SPATIAL_REF_DISTANCE = 4;
+const SPATIAL_MAX_DISTANCE = 90;
+const SPATIAL_ROLLOFF = 1.85;
+
+const getWorldPositionFromPayload = (
+  data: unknown
+): { x: number; y: number; z: number } | null => {
+  if (!data || typeof data !== "object" || !("worldPosition" in data)) {
+    return null;
+  }
+  const wp = (data as { worldPosition?: { x: number; y: number; z: number } })
+    .worldPosition;
+  if (
+    !wp ||
+    typeof wp.x !== "number" ||
+    typeof wp.y !== "number" ||
+    typeof wp.z !== "number"
+  ) {
+    return null;
+  }
+  return wp;
 };
 
 export const useAudioSystem = () => {
@@ -45,6 +70,7 @@ export const useAudioSystem = () => {
         ("webkitAudioContext" in window && window.webkitAudioContext)
       )();
       audioContextRef.current = audioContext;
+      setGameAudioContext(audioContext);
 
       // Try to resume context (some browsers require user interaction)
       if (audioContext.state === "suspended") {
@@ -81,12 +107,14 @@ export const useAudioSystem = () => {
             sound.source.stop();
             sound.source.disconnect();
             sound.gainNode.disconnect();
+            sound.panner?.disconnect();
           } catch (error) {
             // Ignore errors during cleanup
           }
         });
         playingSoundsRef.current.clear();
         soundPoolsRef.current.clear();
+        setGameAudioContext(null);
 
         if (audioContext.state !== "closed") {
           audioContext.close().catch(console.error);
@@ -184,9 +212,35 @@ export const useAudioSystem = () => {
         const categoryVolume = getCategoryVolume(config.category);
         gainNode.gain.value = baseVolume * categoryVolume;
 
-        // Connect nodes
-        source.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+        const worldPos = getWorldPositionFromPayload(data);
+        const useSpatial = config.spatial !== false && worldPos !== null;
+
+        let panner: PannerNode | undefined;
+
+        if (useSpatial && worldPos) {
+          panner = audioContext.createPanner();
+          panner.panningModel = "HRTF";
+          panner.distanceModel = "exponential";
+          panner.refDistance = SPATIAL_REF_DISTANCE;
+          panner.maxDistance = SPATIAL_MAX_DISTANCE;
+          panner.rolloffFactor = SPATIAL_ROLLOFF;
+          panner.coneInnerAngle = 360;
+          panner.positionX.value = worldPos.x;
+          panner.positionY.value = worldPos.y;
+          panner.positionZ.value = worldPos.z;
+
+          source.connect(gainNode);
+          gainNode.connect(panner);
+          panner.connect(audioContext.destination);
+        } else {
+          if (config.spatial !== false && !worldPos) {
+            console.warn(
+              `Spatial sound "${event}" missing worldPosition; playing non-spatial`
+            );
+          }
+          source.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+        }
 
         // Handle loop
         if (config.loop) {
@@ -198,6 +252,7 @@ export const useAudioSystem = () => {
         const playingSound: PlayingSound = {
           source,
           gainNode,
+          panner,
           category: config.category,
           baseVolume: baseVolume,
         };
@@ -208,6 +263,7 @@ export const useAudioSystem = () => {
           playingSoundsRef.current.delete(soundId);
           source.disconnect();
           gainNode.disconnect();
+          panner?.disconnect();
         };
 
         // Start playback

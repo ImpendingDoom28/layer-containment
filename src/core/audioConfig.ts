@@ -1,5 +1,11 @@
 import { GameEvent } from "./types/enums/events";
-import { TowerType } from "./types/game";
+import { EnemyType, ProjectileType, TowerType } from "./types/game";
+
+export type WorldPosition = {
+  x: number;
+  y: number;
+  z: number;
+};
 
 /**
  * Audio categories for volume control
@@ -15,6 +21,8 @@ export enum AudioCategory {
  */
 export type SoundConfig = {
   category: AudioCategory;
+  /** When false, sound is not spatialized (UI / screen feedback). Default true when omitted for world SFX. */
+  spatial?: boolean;
   volume?: number; // 0-1, relative to category volume
   loop?: boolean;
   fadeIn?: number; // seconds
@@ -65,22 +73,27 @@ export const SOUND_CONFIGS: Record<GameEvent, SoundConfig> = {
   [GameEvent.GAME_OVER]: {
     category: AudioCategory.SFX,
     volume: 100,
+    spatial: false,
   },
   [GameEvent.GAME_WON]: {
     category: AudioCategory.SFX,
     volume: 100,
+    spatial: false,
   },
   [GameEvent.GAME_PAUSED]: {
     category: AudioCategory.SFX,
     volume: 50,
+    spatial: false,
   },
   [GameEvent.GAME_RESUMED]: {
     category: AudioCategory.SFX,
     volume: 30,
+    spatial: false,
   },
   [GameEvent.UI_CLICK]: {
     category: AudioCategory.SFX,
     volume: 30,
+    spatial: false,
   },
 };
 
@@ -88,28 +101,37 @@ export type AudioEventDataMap = {
   [GameEvent.TOWER_FIRE]: {
     towerId: number;
     towerType: TowerType;
+    worldPosition: WorldPosition;
   };
   [GameEvent.ENEMY_KILLED]: {
     enemyId: number;
+    enemyType: EnemyType;
+    worldPosition: WorldPosition;
   };
   [GameEvent.ENEMY_REACHED_END]: {
     enemyId: number;
+    enemyType: EnemyType;
+    worldPosition: WorldPosition;
   };
   [GameEvent.PROJECTILE_HIT]: {
     projectileId: number;
     enemyId: number;
+    towerType: TowerType;
+    projectileType: ProjectileType;
+    worldPosition: WorldPosition;
   };
   [GameEvent.WAVE_STARTED]: {
     waveNumber: number;
+    worldPosition: WorldPosition;
   };
   [GameEvent.GAME_OVER]: {
     gameOverType: "loss" | "win";
   };
   [GameEvent.GAME_PAUSED]: {
-    gamePausedType: "pause" | "resume";
+    gamePausedType: "pause";
   };
   [GameEvent.UI_CLICK]: {
-    uiClickType: "click" | "hover" | "select";
+    uiClickType?: "click" | "hover" | "select";
   };
   [GameEvent.GAME_RESUMED]: {
     gameResumedType: "resume";
@@ -120,10 +142,14 @@ export type AudioEventDataMap = {
   [GameEvent.TOWER_PLACED]: {
     towerId: number;
     towerType: TowerType;
+    gridX: number;
+    gridZ: number;
+    worldPosition: WorldPosition;
   };
   [GameEvent.TOWER_SOLD]: {
     towerId: number;
     towerType: TowerType;
+    worldPosition: WorldPosition;
   };
 };
 

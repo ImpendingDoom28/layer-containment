@@ -3,6 +3,7 @@ import { useCallback, useState } from "react";
 import type { PlayableLevelId } from "../../../constants/playableLevels";
 import { Grid } from "../../entities/Grid";
 import { Path } from "../../entities/Path";
+import { GameAudioListenerSync } from "./GameAudioListenerSync";
 import { GameCamera } from "./GameCamera";
 import type {
   Tower as TowerInstance,
@@ -99,6 +100,8 @@ export const GameScene: React.FC<GameSceneProps> = ({
         rotationSensitivity={0.002}
         shouldDisableControls={shouldDisableControls}
       />
+
+      <GameAudioListenerSync />
 
       {pathWaypoints.map((_, index) => (
         <Path

@@ -8,13 +8,10 @@ export type WorldPosition = {
 };
 
 /**
+/**
  * Audio categories for volume control
  */
-export enum AudioCategory {
-  SFX = "sfx",
-  MUSIC = "music",
-  AMBIENT = "ambient",
-}
+export type AudioCategory = "sfx" | "music" | "ambient";
 
 /**
  * Sound configuration for each event
@@ -39,59 +36,59 @@ export type SoundConfig = {
  */
 export const SOUND_CONFIGS: Record<GameEvent, SoundConfig> = {
   [GameEvent.TOWER_PLACED]: {
-    category: AudioCategory.SFX,
+    category: "sfx",
     volume: 70,
   },
   [GameEvent.TOWER_SOLD]: {
-    category: AudioCategory.SFX,
+    category: "sfx",
     volume: 60,
   },
   [GameEvent.TOWER_FIRE]: {
-    category: AudioCategory.SFX,
+    category: "sfx",
     volume: 50,
     srces: {
-      laser: "/assets/audio/laser-shot.wav",
-      basic: "/assets/audio/basic-shot.mp3",
+      laser: "public/assets/audio/laser-shot.wav",
+      basic: "public/assets/audio/basic-shot.mp3",
     },
   },
   [GameEvent.ENEMY_KILLED]: {
-    category: AudioCategory.SFX,
+    category: "sfx",
     volume: 60,
   },
   [GameEvent.ENEMY_REACHED_END]: {
-    category: AudioCategory.SFX,
+    category: "sfx",
     volume: 80,
   },
   [GameEvent.PROJECTILE_HIT]: {
-    category: AudioCategory.SFX,
+    category: "sfx",
     volume: 40,
   },
   [GameEvent.WAVE_STARTED]: {
-    category: AudioCategory.SFX,
+    category: "sfx",
     volume: 90,
   },
   [GameEvent.GAME_OVER]: {
-    category: AudioCategory.SFX,
+    category: "sfx",
     volume: 100,
     spatial: false,
   },
   [GameEvent.GAME_WON]: {
-    category: AudioCategory.SFX,
+    category: "sfx",
     volume: 100,
     spatial: false,
   },
   [GameEvent.GAME_PAUSED]: {
-    category: AudioCategory.SFX,
+    category: "sfx",
     volume: 50,
     spatial: false,
   },
   [GameEvent.GAME_RESUMED]: {
-    category: AudioCategory.SFX,
+    category: "sfx",
     volume: 30,
     spatial: false,
   },
   [GameEvent.UI_CLICK]: {
-    category: AudioCategory.SFX,
+    category: "sfx",
     volume: 30,
     spatial: false,
   },

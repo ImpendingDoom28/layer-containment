@@ -20,6 +20,10 @@ export type SoundConfig = {
   fadeIn?: number; // seconds
   fadeOut?: number; // seconds
   srces?: Record<string, string>;
+  /** When false, playback rate stays 1. Ignored for looping sounds. */
+  pitchVariation?: boolean;
+  /** Half-range around 1.0 for playbackRate (e.g. 0.05 → 0.95–1.05). */
+  pitchSpread?: number;
 };
 
 /**

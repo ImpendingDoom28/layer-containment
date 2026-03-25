@@ -9,6 +9,11 @@ import {
 import { GameEvent } from "../types/enums/events";
 import { MAX_VOLUME, MIN_VOLUME, useAudioStore } from "../stores/useAudioStore";
 
+const DEFAULT_PITCH_SPREAD = 0.05;
+
+const getRandomPlaybackRate = (spread: number) =>
+  1 + (Math.random() * 2 - 1) * spread;
+
 type SoundPool = {
   buffers: AudioBufferSourceNode[];
   maxSize: number;
@@ -167,6 +172,11 @@ export const useAudioSystem = () => {
         // Create source node
         const source = audioContext.createBufferSource();
         source.buffer = buffer;
+
+        if (!config.loop && config.pitchVariation !== false) {
+          const spread = config.pitchSpread ?? DEFAULT_PITCH_SPREAD;
+          source.playbackRate.value = getRandomPlaybackRate(spread);
+        }
 
         // Create gain node for volume control
         const gainNode = audioContext.createGain();

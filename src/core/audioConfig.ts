@@ -1,5 +1,10 @@
 import { GameEvent } from "./types/enums/events";
 import { EnemyType, ProjectileType, TowerType } from "./types/game";
+import {
+  UI_ACTION_DENIED_SFX_NOISE_DURATION_SEC,
+  UI_ACTION_DENIED_SFX_NOISE_PLACEHOLDER_FREQ_HZ,
+  UI_ACTION_DENIED_SFX_VOLUME,
+} from "../constants/uiActionDeniedFeedback";
 
 export type WorldPosition = {
   x: number;
@@ -7,7 +12,6 @@ export type WorldPosition = {
   z: number;
 };
 
-/**
 /**
  * Audio categories for volume control
  */
@@ -92,6 +96,11 @@ export const SOUND_CONFIGS: Record<GameEvent, SoundConfig> = {
     volume: 30,
     spatial: false,
   },
+  [GameEvent.UI_ACTION_DENIED]: {
+    category: "sfx",
+    volume: UI_ACTION_DENIED_SFX_VOLUME,
+    spatial: false,
+  },
 };
 
 export type AudioEventDataMap = {
@@ -147,6 +156,10 @@ export type AudioEventDataMap = {
     towerId: number;
     towerType: TowerType;
     worldPosition: WorldPosition;
+  };
+  [GameEvent.UI_ACTION_DENIED]: {
+    reason: "insufficient_funds";
+    towerType: TowerType;
   };
 };
 
@@ -272,6 +285,13 @@ export async function getPlaceholderSoundForEvent<T extends GameEvent>(
       return generatePlaceholderSound(audioContext, "click", 0.1, 600);
     case GameEvent.UI_CLICK:
       return generatePlaceholderSound(audioContext, "click", 0.05, 1000);
+    case GameEvent.UI_ACTION_DENIED:
+      return generatePlaceholderSound(
+        audioContext,
+        "noise",
+        UI_ACTION_DENIED_SFX_NOISE_DURATION_SEC,
+        UI_ACTION_DENIED_SFX_NOISE_PLACEHOLDER_FREQ_HZ
+      );
     default:
       return generatePlaceholderSound(audioContext, "tone", 0.1, 440);
   }

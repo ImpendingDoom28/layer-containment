@@ -146,7 +146,7 @@
     ]
   ],
   "projectiles": [],
-  "startingMoney": 10000,
+  "startingMoney": 150,
   "towers": [],
   "waveConfigs": [
     {

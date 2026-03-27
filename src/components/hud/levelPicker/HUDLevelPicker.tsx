@@ -148,12 +148,7 @@ export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
                       </UITypography>
                     </UICardTitle>
                     <UICardDescription className="p-0">
-                      <UITypography
-                        variant="small"
-                        className="text-muted-foreground"
-                      >
-                        {waveCount} wave{waveCount === 1 ? "" : "s"}
-                      </UITypography>
+                      {waveCount} wave{waveCount === 1 ? "" : "s"}
                     </UICardDescription>
                   </div>
                 </UICardContent>

@@ -26,6 +26,7 @@ import { useWaveSystem } from "../../core/hooks/useWaveSystem";
 import { useLevelSystem } from "../../core/hooks/useLevelSystem";
 import { useUpgradesSystem } from "../../core/hooks/useUpgradesSystem";
 import type { Tower } from "../../core/types/game";
+import { PageWrapper } from "./PageWrapper";
 
 type GamePageProps = {
   onOpenLevelEditor: () => void;
@@ -140,7 +141,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
   const isGameReady = isGameConfigLoaded && (isMenu || isLevelConfigLoaded);
 
   return (
-    <div className="relative w-screen h-screen bg-gray-900">
+    <PageWrapper>
       {!isGameReady && (
         <HUDLoading
           message={isGameConfigLoaded ? "Loading level..." : "Loading game..."}
@@ -254,6 +255,6 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
           />
         </>
       )}
-    </div>
+    </PageWrapper>
   );
 };

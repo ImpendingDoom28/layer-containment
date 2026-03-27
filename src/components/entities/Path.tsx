@@ -1,4 +1,4 @@
-import { FC, memo } from "react";
+import { FC, memo, useMemo } from "react";
 
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import { GUINextWavePreview } from "../gui/GUINextWavePreview";
@@ -27,10 +27,12 @@ export const Path: FC<PathProps> = memo(({ timeUntilNextWave, pathIndex }) => {
   const pathYOffset = useGameStore(pathYOffsetSelector);
   const pathWidth = useGameStore(pathWidthSelector);
 
-  const path = pathWaypoints[pathIndex];
-  if (!path) return null;
+  const [path, segments] = useMemo(() => {
+    const path = pathWaypoints[pathIndex];
+    return [path, getPathRenderSegments(path)];
+  }, [pathWaypoints, pathIndex]);
 
-  const segments = getPathRenderSegments(path ?? []);
+  if (!path) return null;
 
   return (
     <group>

@@ -14,4 +14,5 @@ export enum GameEvent {
   GAME_PAUSED = "game_paused",
   GAME_RESUMED = "game_resumed",
   UI_CLICK = "ui_click",
+  UI_ACTION_DENIED = "ui_action_denied",
 }

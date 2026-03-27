@@ -8,10 +8,24 @@ import {
   useLevelStore,
 } from "../../../core/stores/useLevelStore";
 import {
+  incrementDenyPulseSelector,
   tileSizeSelector,
   useGameStore,
 } from "../../../core/stores/useGameStore";
 import { isPointerOverGameCameraBlock } from "../../../utils/isPointerOverGameCameraBlock";
+import { gameEvents } from "../../../utils/eventEmitter";
+import { GameEvent } from "../../../core/types/enums/events";
+import type { AudioEventData } from "../../../core/audioConfig";
+import {
+  MS_PER_SECOND,
+  UI_ACTION_DENIED_CAMERA_SHAKE_AMPLITUDE,
+  UI_ACTION_DENIED_CAMERA_SHAKE_DURATION_MS,
+  UI_ACTION_DENIED_CAMERA_SHAKE_FREQ_X,
+  UI_ACTION_DENIED_CAMERA_SHAKE_FREQ_Y,
+  UI_ACTION_DENIED_CAMERA_SHAKE_FREQ_Z,
+  UI_ACTION_DENIED_CAMERA_SHAKE_SCALE_XZ,
+  UI_ACTION_DENIED_CAMERA_SHAKE_SCALE_Y,
+} from "../../../constants/uiActionDeniedFeedback";
 
 // Reusable vectors to avoid GC pressure in useFrame
 const forwardVector = new Vector3();
@@ -47,6 +61,21 @@ export const GameCamera = ({
   const lastMousePosition = useRef({ x: 0, y: 0 });
   const rotation = useRef({ pitch: 0, yaw: 0 });
   const initialized = useRef(false);
+  const shakeOffsetRef = useRef(new Vector3());
+  const shakeRemainingMsRef = useRef(0);
+  const incrementDenyPulse = useGameStore(incrementDenyPulseSelector);
+
+  useEffect(() => {
+    const unsubscribe = gameEvents.on<
+      AudioEventData<GameEvent.UI_ACTION_DENIED>
+    >(GameEvent.UI_ACTION_DENIED, (data) => {
+      if (data.reason === "insufficient_funds") {
+        shakeRemainingMsRef.current = UI_ACTION_DENIED_CAMERA_SHAKE_DURATION_MS;
+        incrementDenyPulse(data.towerType);
+      }
+    });
+    return unsubscribe;
+  }, [incrementDenyPulse]);
 
   useEffect(() => {
     if (shouldDisableControls) {
@@ -190,10 +219,12 @@ export const GameCamera = ({
     initialized.current = true;
   }, [camera]);
 
-  useFrame((_state, delta) => {
+  useFrame((state, delta) => {
     if (!initialized.current || shouldDisableControls) {
       return;
     }
+
+    camera.position.sub(shakeOffsetRef.current);
 
     const { forward, backward, left, right, up, down } = moveState.current;
 
@@ -249,6 +280,30 @@ export const GameCamera = ({
       minHeight,
       Math.min(maxHeight, camera.position.y)
     );
+
+    const shakeMs = shakeRemainingMsRef.current;
+    if (shakeMs > 0) {
+      const decMs = delta * MS_PER_SECOND;
+      shakeRemainingMsRef.current = Math.max(0, shakeMs - decMs);
+      const fade = shakeMs / UI_ACTION_DENIED_CAMERA_SHAKE_DURATION_MS;
+      const amp = UI_ACTION_DENIED_CAMERA_SHAKE_AMPLITUDE * fade;
+      const t = state.clock.elapsedTime;
+      shakeOffsetRef.current.set(
+        Math.sin(t * UI_ACTION_DENIED_CAMERA_SHAKE_FREQ_X) *
+          amp *
+          UI_ACTION_DENIED_CAMERA_SHAKE_SCALE_XZ,
+        Math.sin(t * UI_ACTION_DENIED_CAMERA_SHAKE_FREQ_Y) *
+          amp *
+          UI_ACTION_DENIED_CAMERA_SHAKE_SCALE_Y,
+        Math.cos(t * UI_ACTION_DENIED_CAMERA_SHAKE_FREQ_Z) *
+          amp *
+          UI_ACTION_DENIED_CAMERA_SHAKE_SCALE_XZ
+      );
+    } else {
+      shakeOffsetRef.current.set(0, 0, 0);
+    }
+
+    camera.position.add(shakeOffsetRef.current);
 
     camera.rotation.order = "YXZ";
     camera.rotation.y = rotation.current.yaw;

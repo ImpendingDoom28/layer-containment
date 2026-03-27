@@ -4,7 +4,7 @@ alwaysApply: true
 
 When writting js/ts code, use the following rules:
 
-- DO NOT run build commands (assume dev-server is running).
+- DO NOT run build commands or `npx tsc --noEmit` (assume dev-server is running).
 - Always write typescript code until specified otherwise.
 - Prefer arrow functions over function declarations if possible (including react components).
 - Use named exports instead of default exports.

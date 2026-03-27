@@ -37,6 +37,7 @@ type GameStoreState = {
   previousStatus: GameStatus | null;
   debug: boolean;
   showAudioSettings: boolean;
+  denyPulse: Partial<Record<TowerType, number>>;
 };
 
 type GameStoreActions = {
@@ -52,6 +53,7 @@ type GameStoreActions = {
   setSelectedTower: (tower: Tower | null) => void;
   setDebug: (debug: boolean) => void;
   resetGameState: () => void;
+  incrementDenyPulse: (towerType: TowerType) => void;
 };
 
 type GameStore = GameStoreState & GameStoreActions;
@@ -70,6 +72,7 @@ const DEFAULT_STATE: GameStoreState = {
   gameStatus: "menu",
   debug: false,
   showAudioSettings: false,
+  denyPulse: {},
   enemyHealthLoss: 0,
   tileSize: 0,
   towerBaseRadius: 0,
@@ -163,6 +166,15 @@ export const useGameStore = create<GameStore>((set) => ({
     set({ debug });
   },
 
+  incrementDenyPulse: (towerType) => {
+    set((state) => ({
+      denyPulse: {
+        ...state.denyPulse,
+        [towerType]: (state.denyPulse[towerType] ?? 0) + 1,
+      },
+    }));
+  },
+
   resetGameState: () => {
     set({
       ...DEFAULT_STATE,
@@ -186,3 +198,6 @@ export const waveDelaySelector = (state: GameStore) => state.waveDelay;
 export const enemyUpgradesSelector = (state: GameStore) => state.enemyUpgrades;
 export const initializeGameStateSelector = (state: GameStore) =>
   state.initializeGameState;
+export const denyPulseSelector = (state: GameStore) => state.denyPulse;
+export const incrementDenyPulseSelector = (state: GameStore) =>
+  state.incrementDenyPulse;

@@ -23,7 +23,11 @@ const AppRoutes: FC = () => {
       />
       <Route
         path="/editor"
-        element={<LevelEditorPage onBackToGame={() => navigate("/")} />}
+        element={
+          <EntityIdProvider>
+            <LevelEditorPage onBackToGame={() => navigate("/")} />
+          </EntityIdProvider>
+        }
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

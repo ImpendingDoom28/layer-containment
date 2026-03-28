@@ -1,5 +1,5 @@
 import { FC } from "react";
-import { Pause, Play } from "lucide-react";
+import { HeartPulse, Pause, Play } from "lucide-react";
 
 import type { GameStatus } from "../../core/types/game";
 import { UITypography } from "../ui/UITypography";
@@ -44,43 +44,31 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
   return (
     <HUDWrapper className="bottom-auto left-auto w-80 top-4 right-4">
       <UICard className="flex-1">
-        <UICardContent>
-          <div className="flex flex-col items-center">
-            <div className="flex items-center justify-between flex-1 w-full gap-1">
+        <UICardContent className="gap-4">
+          <div className="flex flex-row gap-4">
+            <div className="flex items-center">
               <UIMoney money={money} variant="h4" iconSize={20} />
-              {gameStatus === "paused" && (
-                <UIButton
-                  variant="default"
-                  size={"icon-sm"}
-                  className="cursor-default"
-                >
-                  <Pause />
-                </UIButton>
-              )}
             </div>
-
-            <div className="flex flex-row items-center flex-1 gap-1">
-              <UITypography variant="medium">Health</UITypography>
-              <UITypography variant="small" className={getHealthColor()}>
+            <div className="flex items-center gap-2">
+              <HeartPulse size={20} className={getHealthColor()} />
+              <UITypography variant="h4" className={getHealthColor()}>
                 {health}
               </UITypography>
             </div>
           </div>
           <div className="flex items-center">
-            <div className="flex flex-row justify-center flex-1 gap-1">
-              <UITypography variant="medium">Wave</UITypography>
-              <UITypography variant="small">
-                {currentWave === 0
-                  ? "Not Started"
-                  : `${currentWave} / ${totalWaves}`}
+            <div className="flex flex-row justify-center items-center gap-1">
+              <UITypography variant="body">Wave:</UITypography>
+              <UITypography variant="medium">
+                {`${currentWave} / ${totalWaves}`}
               </UITypography>
             </div>
 
             {currentWave > 0 &&
               currentWave <= totalWaves &&
               remainingEnemies > 0 && (
-                <div className="flex flex-col justify-center flex-1 gap-1">
-                  <UITypography variant="small">Enemies Remaining</UITypography>
+                <div className="flex flex-row items-center justify-center flex-1 gap-1">
+                  <UITypography variant="body">Enemies:</UITypography>
                   <UITypography variant="medium">
                     {remainingEnemies}
                   </UITypography>
@@ -88,24 +76,35 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
               )}
           </div>
 
-          {currentWave === 0 && (
-            <div className="flex flex-col justify-center flex-1 gap-1">
-              <UIButton onClick={onStartFirstWave} variant="outline">
-                <Play /> Start next wave
+          <div>
+            {currentWave === 0 && (
+              <div className="flex flex-col justify-center flex-1 gap-1">
+                <UIButton onClick={onStartFirstWave} variant="outline">
+                  <Play /> Start next wave
+                </UIButton>
+              </div>
+            )}
+            {timeUntilNextWave !== null && timeUntilNextWave > 0 && (
+              <div className="flex flex-col justify-center flex-1 gap-1">
+                <UITypography variant="small">Next Wave In</UITypography>
+                <UITypography variant="medium" className="text-orange-400">
+                  {Math.ceil(timeUntilNextWave / 1000)}s
+                </UITypography>
+                <UIButton onClick={onStartWaveEarly} variant="outline">
+                  <Play /> Start Wave Early
+                </UIButton>
+              </div>
+            )}
+            {gameStatus === "paused" && (
+              <UIButton
+                variant="default"
+                size={"icon-sm"}
+                className="cursor-default"
+              >
+                <Pause />
               </UIButton>
-            </div>
-          )}
-          {timeUntilNextWave !== null && timeUntilNextWave > 0 && (
-            <div className="flex flex-col justify-center flex-1 gap-1">
-              <UITypography variant="small">Next Wave In</UITypography>
-              <UITypography variant="medium" className="text-orange-400">
-                {Math.ceil(timeUntilNextWave / 1000)}s
-              </UITypography>
-              <UIButton onClick={onStartWaveEarly} variant="outline">
-                <Play /> Start Wave Early
-              </UIButton>
-            </div>
-          )}
+            )}
+          </div>
         </UICardContent>
       </UICard>
     </HUDWrapper>

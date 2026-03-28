@@ -1,5 +1,6 @@
 import { useCallback, useRef, useEffect } from "react";
 
+import { getShouldStopMovement } from "../getShouldStopMovement";
 import { useGameStore } from "../stores/useGameStore";
 import { useEntityIds } from "../contexts/EntityIdContext";
 import { GameStatus } from "../types/game";
@@ -46,8 +47,7 @@ export const useGameSystem = () => {
     gameStatus === "gameOver" ||
     gameStatus === "won" ||
     gameStatus === "gameMenu";
-  const shouldStopMovement =
-    shouldDisableControls || gameStatus === "paused" || !isPageVisible;
+  const shouldStopMovement = getShouldStopMovement(gameStatus, isPageVisible);
 
   // Load game config
   useEffect(() => {

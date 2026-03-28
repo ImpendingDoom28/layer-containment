@@ -10,10 +10,12 @@ import {
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import type { Enemy as EnemyInstance } from "../../core/types/game";
 import { GUIDebugInfo } from "../gui/GUIDebugInfo";
+import { getShouldStopMovement } from "../../core/getShouldStopMovement";
 import {
   pathWaypointsSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
+import { useGameStore } from "../../core/stores/useGameStore";
 import {
   createPauseClock,
   getEffectiveGameTime,
@@ -25,7 +27,6 @@ import { UpgradeEffect } from "./effects/UpgradeEffect";
 
 type EnemyProps = {
   enemy: EnemyInstance;
-  shouldStopMovement: boolean;
   onReachEnd: ((enemyId: number) => void) | null;
   onUpdate: ((enemyId: number, updates: Partial<EnemyInstance>) => void) | null;
   onSpawnEffect:
@@ -44,10 +45,14 @@ export const Enemy: FC<EnemyProps> = memo(
     onUpdate,
     onSpawnEffect,
     onEndEffect,
-    shouldStopMovement,
     debug = false,
   }) => {
     const pathWaypoints = useLevelStore(pathWaypointsSelector);
+    const shouldStopMovement = useGameStore((s) =>
+      getShouldStopMovement(s.gameStatus, s.isPageVisible)
+    );
+    const shouldStopRef = useRef(shouldStopMovement);
+    shouldStopRef.current = shouldStopMovement;
 
     const meshRef = useRef<Group>(null);
     const upgradeFirstRingRef = useRef<Mesh>(null);
@@ -84,7 +89,7 @@ export const Enemy: FC<EnemyProps> = memo(
       const now = state.clock.elapsedTime;
 
       const wasPaused = previousShouldStopMovementRef.current;
-      const isPaused = shouldStopMovement;
+      const isPaused = shouldStopRef.current;
 
       stepPauseClock(pauseClockRef.current, now, isPaused, wasPaused);
       previousShouldStopMovementRef.current = isPaused;
@@ -92,7 +97,7 @@ export const Enemy: FC<EnemyProps> = memo(
       const adjustedTime = getEffectiveGameTime(now, pauseClockRef.current);
 
       if (
-        !shouldStopMovement &&
+        !isPaused &&
         enemy.upgrades.length > 0 &&
         upgradeFirstRingRef.current
       ) {
@@ -103,7 +108,7 @@ export const Enemy: FC<EnemyProps> = memo(
         upgradeFirstRingRef.current.scale.setScalar(baseRadius * pulse);
       }
 
-      if (shouldStopMovement) {
+      if (isPaused) {
         const currentlySlowed =
           enemy.slowUntil > 0 &&
           enemy.slowUntil > adjustedTime &&

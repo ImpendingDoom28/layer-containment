@@ -112,7 +112,6 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = ({
           onUpdate={onEnemyUpdate}
           onSpawnEffect={onSpawnEffect}
           onEndEffect={onEndEffect}
-          shouldStopMovement={shouldStopMovement}
         />
       ))}
 

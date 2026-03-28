@@ -1,6 +1,7 @@
 import { FC, memo, useCallback, useMemo } from "react";
 
 import type { ThreeEvent } from "@react-three/fiber";
+
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import {
   pathYOffsetSelector,

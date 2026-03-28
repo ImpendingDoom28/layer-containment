@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 
 import type { PlayableLevelId } from "../../../constants/playableLevels";
 import { Grid } from "../../entities/Grid";
+import { PlacementHighlightOverlay } from "../../entities/PlacementHighlightOverlay";
 import { Path } from "../../entities/Path";
 import { GameAudioListenerSync } from "./GameAudioListenerSync";
 import { GameCamera } from "./GameCamera";
@@ -117,6 +118,11 @@ export const GameScene: React.FC<GameSceneProps> = ({
         onTileHover={handleTileHover}
         setHoveredTile={setHoveredTile}
         onTileHoverEnd={handleTileHoverEnd}
+        selectedTowerType={selectedTowerType}
+      />
+
+      <PlacementHighlightOverlay
+        hoveredTile={hoveredTile}
         selectedTowerType={selectedTowerType}
       />
 

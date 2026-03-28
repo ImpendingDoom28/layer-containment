@@ -27,8 +27,8 @@
       "color": "#ec4899",
       "description": "Support unit. Every few seconds restores HP to nearby allies (not itself).",
       "healPulse": {
-        "healAmount": 15,
-        "intervalSeconds": 2.5,
+        "healAmount": 25,
+        "intervalSeconds": 2,
         "radius": 2.5
       },
       "health": 45,

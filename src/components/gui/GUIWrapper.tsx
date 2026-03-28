@@ -1,6 +1,8 @@
 import { Html } from "@react-three/drei";
 import { CSSProperties, FC, PropsWithChildren } from "react";
 
+import { DREI_HTML_Z_INDEX_RANGE } from "../../constants/canvas";
+
 const DEFAULT_STYLE: CSSProperties = {
   pointerEvents: "none",
   userSelect: "none",
@@ -21,6 +23,7 @@ export const GUIWrapper: FC<GUIWrapperProps> = ({
       position={position}
       center
       distanceFactor={distanceFactor}
+      zIndexRange={DREI_HTML_Z_INDEX_RANGE}
       style={DEFAULT_STYLE}
     >
       {children}

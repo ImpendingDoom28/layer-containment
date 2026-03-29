@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from "react";
+import { useCallback, useRef, useEffect, useLayoutEffect } from "react";
 
 import { getShouldStopMovement } from "../getShouldStopMovement";
 import { useGameStore } from "../stores/useGameStore";
@@ -35,7 +35,7 @@ export const useGameSystem = () => {
 
   const previousGameStatusRef = useRef<GameStatus>(gameStatus);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const onVisibilityChange = () => {
       setIsPageVisible(document.visibilityState === "visible");
     };

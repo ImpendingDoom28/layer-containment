@@ -65,7 +65,7 @@ const selectWeightedEnemy = (
 };
 
 export const useWaveSystem = (gameState: GameState) => {
-  const { winGame, gameStatus } = gameState;
+  const { winGame, gameStatus: initialGameStatus } = gameState;
   const isPageVisible = useGameStore(isPageVisibleSelector);
   const waveDelay = useGameStore(waveDelaySelector);
 
@@ -84,7 +84,7 @@ export const useWaveSystem = (gameState: GameState) => {
   const waveStartedRef = useRef<boolean>(false);
   const lastInitializedWaveRef = useRef<number>(0);
   const totalPauseDurationRef = useRef<number>(0);
-  const previousGameStatusRef = useRef<GameStatus>(gameStatus);
+  const previousGameStatusRef = useRef<GameStatus>(initialGameStatus);
   const lastPlayingTimeRef = useRef<number>(0);
   const waveEndTimeRef = useRef<number>(0);
   const countdownPauseDurationRef = useRef<number>(0);
@@ -170,14 +170,6 @@ export const useWaveSystem = (gameState: GameState) => {
     totalPauseDurationRef.current = 0;
   }, [currentWave, totalWaves, waveConfigs]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTimeUntilNextWave(timeUntilNextWaveRef.current);
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [setTimeUntilNextWave]);
-
   const startNextWave = useCallback(() => {
     setCurrentWave((prev) => {
       const newWave = prev + 1;
@@ -220,151 +212,155 @@ export const useWaveSystem = (gameState: GameState) => {
 
   const updateWaveSpawning = useCallback(
     (currentTime: number) => {
-      const wasSimulationActive =
-        previousGameStatusRef.current === "playing" &&
-        previousIsPageVisibleRef.current;
-      const isSimulationActive = gameStatus === "playing" && isPageVisible;
-
-      if (
-        !wasSimulationActive &&
-        isSimulationActive &&
-        lastPlayingTimeRef.current > 0
-      ) {
-        const pauseDuration = currentTime - lastPlayingTimeRef.current;
-        totalPauseDurationRef.current += pauseDuration;
-      }
-
-      if (pendingCountdownStartAfterUpgradeRef.current && isSimulationActive) {
-        pendingCountdownStartAfterUpgradeRef.current = false;
-        isCountingDownRef.current = true;
-        waveEndTimeRef.current = currentTime;
-        countdownPauseDurationRef.current = 0;
-        lastCountdownPlayingTimeRef.current = currentTime;
-      }
-
-      if (isCountingDownRef.current) {
-        const wasCountdownPaused =
-          previousGameStatusRef.current === "paused" ||
-          previousGameStatusRef.current === "gameMenu" ||
-          !previousIsPageVisibleRef.current;
+      const { gameStatus, isPageVisible } = useGameStore.getState();
+      try {
+        const wasSimulationActive =
+          previousGameStatusRef.current === "playing" &&
+          previousIsPageVisibleRef.current;
+        const isSimulationActive = gameStatus === "playing" && isPageVisible;
 
         if (
-          wasCountdownPaused &&
+          !wasSimulationActive &&
           isSimulationActive &&
-          lastCountdownPlayingTimeRef.current > 0
+          lastPlayingTimeRef.current > 0
         ) {
-          const pauseDuration =
-            currentTime - lastCountdownPlayingTimeRef.current;
-          countdownPauseDurationRef.current += pauseDuration;
+          const pauseDuration = currentTime - lastPlayingTimeRef.current;
+          totalPauseDurationRef.current += pauseDuration;
         }
 
-        if (isSimulationActive) {
+        if (pendingCountdownStartAfterUpgradeRef.current && isSimulationActive) {
+          pendingCountdownStartAfterUpgradeRef.current = false;
+          isCountingDownRef.current = true;
+          waveEndTimeRef.current = currentTime;
+          countdownPauseDurationRef.current = 0;
           lastCountdownPlayingTimeRef.current = currentTime;
         }
 
-        if (currentWave > 0 && currentWave < totalWaves) {
-          if (isSimulationActive) {
-            const elapsedSinceWaveEnd =
-              currentTime -
-              waveEndTimeRef.current -
-              countdownPauseDurationRef.current;
-            const remaining = waveDelay - elapsedSinceWaveEnd;
+        if (isCountingDownRef.current) {
+          const wasCountdownPaused =
+            previousGameStatusRef.current === "paused" ||
+            previousGameStatusRef.current === "gameMenu" ||
+            !previousIsPageVisibleRef.current;
 
-            if (remaining <= 0) {
-              isCountingDownRef.current = false;
-              waveEndTimeRef.current = 0;
-              countdownPauseDurationRef.current = 0;
-              lastCountdownPlayingTimeRef.current = 0;
-              timeUntilNextWaveRef.current = null;
-              startNextWave();
-              return;
+          if (
+            wasCountdownPaused &&
+            isSimulationActive &&
+            lastCountdownPlayingTimeRef.current > 0
+          ) {
+            const pauseDuration =
+              currentTime - lastCountdownPlayingTimeRef.current;
+            countdownPauseDurationRef.current += pauseDuration;
+          }
+
+          if (isSimulationActive) {
+            lastCountdownPlayingTimeRef.current = currentTime;
+          }
+
+          if (currentWave > 0 && currentWave < totalWaves) {
+            if (isSimulationActive) {
+              const elapsedSinceWaveEnd =
+                currentTime -
+                waveEndTimeRef.current -
+                countdownPauseDurationRef.current;
+              const remaining = waveDelay - elapsedSinceWaveEnd;
+
+              if (remaining <= 0) {
+                isCountingDownRef.current = false;
+                waveEndTimeRef.current = 0;
+                countdownPauseDurationRef.current = 0;
+                lastCountdownPlayingTimeRef.current = 0;
+                timeUntilNextWaveRef.current = null;
+                startNextWave();
+                return;
+              } else {
+                timeUntilNextWaveRef.current = remaining;
+              }
             } else {
-              timeUntilNextWaveRef.current = remaining;
+              const elapsedSinceWaveEnd =
+                lastCountdownPlayingTimeRef.current -
+                waveEndTimeRef.current -
+                countdownPauseDurationRef.current;
+              const remaining = waveDelay - elapsedSinceWaveEnd;
+              timeUntilNextWaveRef.current = remaining > 0 ? remaining : null;
             }
           } else {
-            const elapsedSinceWaveEnd =
-              lastCountdownPlayingTimeRef.current -
-              waveEndTimeRef.current -
-              countdownPauseDurationRef.current;
-            const remaining = waveDelay - elapsedSinceWaveEnd;
-            timeUntilNextWaveRef.current = remaining > 0 ? remaining : null;
+            timeUntilNextWaveRef.current = null;
           }
         } else {
           timeUntilNextWaveRef.current = null;
         }
-      } else {
-        timeUntilNextWaveRef.current = null;
-      }
 
-      previousGameStatusRef.current = gameStatus;
-      previousIsPageVisibleRef.current = isPageVisible;
+        previousGameStatusRef.current = gameStatus;
+        previousIsPageVisibleRef.current = isPageVisible;
 
-      if (gameStatus !== "playing" || !isPageVisible) {
-        return;
-      }
+        if (gameStatus !== "playing" || !isPageVisible) {
+          return;
+        }
 
-      lastPlayingTimeRef.current = currentTime;
+        lastPlayingTimeRef.current = currentTime;
 
-      if (currentWave === 0 || currentWave > totalWaves) return;
+        if (currentWave === 0 || currentWave > totalWaves) return;
 
-      if (spawnQueueIndexRef.current >= spawnQueueRef.current.length) {
-        if (
-          waveStartedRef.current &&
-          useLevelStore.getState().enemies.length === 0
-        ) {
-          waveStartedRef.current = false;
-          if (currentTime - lastSpawnTimeRef.current > 300) {
-            if (currentWave < totalWaves) {
-              const enemyUpgrades = useGameStore.getState().enemyUpgrades;
-              if (enemyUpgrades && Object.keys(enemyUpgrades).length > 0) {
-                const ids = Object.keys(enemyUpgrades) as EnemyUpgradeId[];
-                const opened = useUpgradeStore
-                  .getState()
-                  .openEnemyUpgradeGate(ids);
-                if (!opened) {
+        if (spawnQueueIndexRef.current >= spawnQueueRef.current.length) {
+          if (
+            waveStartedRef.current &&
+            useLevelStore.getState().enemies.length === 0
+          ) {
+            waveStartedRef.current = false;
+            if (currentTime - lastSpawnTimeRef.current > 300) {
+              if (currentWave < totalWaves) {
+                const enemyUpgrades = useGameStore.getState().enemyUpgrades;
+                if (enemyUpgrades && Object.keys(enemyUpgrades).length > 0) {
+                  const ids = Object.keys(enemyUpgrades) as EnemyUpgradeId[];
+                  const opened = useUpgradeStore
+                    .getState()
+                    .openEnemyUpgradeGate(ids);
+                  if (!opened) {
+                    isCountingDownRef.current = true;
+                    waveEndTimeRef.current = currentTime;
+                    countdownPauseDurationRef.current = 0;
+                    lastCountdownPlayingTimeRef.current = currentTime;
+                  }
+                } else {
                   isCountingDownRef.current = true;
                   waveEndTimeRef.current = currentTime;
                   countdownPauseDurationRef.current = 0;
                   lastCountdownPlayingTimeRef.current = currentTime;
                 }
               } else {
-                isCountingDownRef.current = true;
-                waveEndTimeRef.current = currentTime;
-                countdownPauseDurationRef.current = 0;
-                lastCountdownPlayingTimeRef.current = currentTime;
+                winGame();
               }
-            } else {
-              winGame();
             }
           }
+          return;
         }
-        return;
-      }
 
-      if (lastSpawnTimeRef.current === 0) {
-        lastSpawnTimeRef.current = currentTime;
-        waveStartedRef.current = true;
-        totalPauseDurationRef.current = 0;
-      }
+        if (lastSpawnTimeRef.current === 0) {
+          lastSpawnTimeRef.current = currentTime;
+          waveStartedRef.current = true;
+          totalPauseDurationRef.current = 0;
+        }
 
-      const nextSpawn = spawnQueueRef.current[spawnQueueIndexRef.current];
-      const timeSinceWaveStart =
-        currentTime - lastSpawnTimeRef.current - totalPauseDurationRef.current;
+        const nextSpawn = spawnQueueRef.current[spawnQueueIndexRef.current];
+        const timeSinceWaveStart =
+          currentTime - lastSpawnTimeRef.current - totalPauseDurationRef.current;
 
-      if (nextSpawn && timeSinceWaveStart >= nextSpawn.delay) {
-        addEnemy(nextSpawn.type, nextSpawn.upgrades);
-        spawnQueueIndexRef.current += 1;
+        if (nextSpawn && timeSinceWaveStart >= nextSpawn.delay) {
+          addEnemy(nextSpawn.type, nextSpawn.upgrades);
+          spawnQueueIndexRef.current += 1;
+        }
+      } finally {
+        setTimeUntilNextWave(timeUntilNextWaveRef.current);
       }
     },
     [
-      gameStatus,
-      isPageVisible,
       currentWave,
       totalWaves,
       waveDelay,
       startNextWave,
       winGame,
       addEnemy,
+      setTimeUntilNextWave,
     ]
   );
 

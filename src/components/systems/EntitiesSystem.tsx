@@ -76,7 +76,6 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = ({
     enemies,
     onHit: onProjectileHit,
     onRemove: onProjectileRemove,
-    isPaused: shouldStopMovement,
   });
 
   const enemiesToRender = useMemo(() => {
@@ -126,7 +125,6 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = ({
         selectedTower={selectedTower}
         selectedTowerType={selectedTowerType}
         hoveredTilePlacementState={hoveredTilePlacementState}
-        shouldStopMovement={shouldStopMovement}
       />
 
       {activeEffects.map((effect) => (

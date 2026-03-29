@@ -29,6 +29,7 @@ import {
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import { GameEvent } from "../../core/types/enums/events";
 import type { TilePlacementState } from "../../utils/tilePlacement";
+import { getShouldStopMovement } from "../../core/getShouldStopMovement";
 
 type TowerSystemProps = {
   fireProjectile: (
@@ -41,7 +42,6 @@ type TowerSystemProps = {
   hoveredTile: TileData | null;
   hoveredTilePlacementState: TilePlacementState | null;
   selectedTowerType: TowerType | null;
-  shouldStopMovement: boolean;
 };
 
 export const TowerSystem: FC<TowerSystemProps> = memo(
@@ -54,9 +54,8 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     hoveredTile,
     selectedTowerType,
     hoveredTilePlacementState,
-    shouldStopMovement,
   }) => {
-    const { towerTypes, tileSize, towerHeight, gameStatus } = useGameStore();
+    const { towerTypes, tileSize, towerHeight } = useGameStore();
     const gridSize = useLevelStore(gridSizeSelector);
     const towers = useLevelStore(towersSelector);
     const enemies = useLevelStore(enemiesSelector);
@@ -113,7 +112,8 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     ]);
 
     useFrame((state) => {
-      if (shouldStopMovement) return;
+      const { gameStatus, isPageVisible } = useGameStore.getState();
+      if (getShouldStopMovement(gameStatus, isPageVisible)) return;
       if (gameStatus !== "playing" && gameStatus !== "menu") return;
 
       const currentTime = state.clock.elapsedTime;

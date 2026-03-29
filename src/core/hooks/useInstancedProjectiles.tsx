@@ -29,6 +29,8 @@ import type { Projectile, Enemy } from "../types/game";
 import { distance2D } from "../../utils/mathUtils";
 import { useEntityIds } from "../contexts/EntityIdContext";
 import { useInstancedEntity } from "./useInstancedEntity";
+import { getShouldStopMovement } from "../getShouldStopMovement";
+import { useGameStore } from "../stores/useGameStore";
 
 const CHAIN_BOLT_RADIUS = 0.03;
 const CHAIN_BOLT_LENGTH = 0.5;
@@ -283,7 +285,6 @@ type InstancedProjectilesConfig = {
   enemies: Enemy[];
   onHit: (projectile: Projectile, enemy: Enemy, currentTime: number) => void;
   onRemove: (projectileId: number) => void;
-  isPaused: boolean;
 };
 
 type InstancedProjectilesReturn = {
@@ -308,7 +309,6 @@ export const useInstancedProjectiles = (
     enemies,
     onHit,
     onRemove,
-    isPaused,
   } = config;
 
   const sphereInstancesContent = useMemo(
@@ -519,8 +519,6 @@ export const useInstancedProjectiles = (
 
   const updateProjectilesFrame = useCallback(
     (currentTime: number, delta: number): void => {
-      if (isPaused) return;
-
       const toRemove = toRemoveRef.current;
       toRemove.length = 0;
 
@@ -555,15 +553,7 @@ export const useInstancedProjectiles = (
         removeProjectile(id);
       }
     },
-    [
-      isPaused,
-      beamDuration,
-      boltPool,
-      onHit,
-      spherePool,
-      hitThreshold,
-      removeProjectile,
-    ]
+    [beamDuration, boltPool, onHit, spherePool, hitThreshold, removeProjectile]
   );
 
   const clearAllProjectiles = useCallback((): void => {
@@ -581,6 +571,8 @@ export const useInstancedProjectiles = (
   }, []);
 
   useFrame((state, delta) => {
+    const { gameStatus, isPageVisible } = useGameStore.getState();
+    if (getShouldStopMovement(gameStatus, isPageVisible)) return;
     updateProjectilesFrame(state.clock.elapsedTime, delta);
   });
 

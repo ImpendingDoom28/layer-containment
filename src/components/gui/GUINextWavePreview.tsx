@@ -163,7 +163,7 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
                 variant="verySmall"
                 className="shrink-0 text-muted-foreground uppercase tracking-[0.16em]"
               >
-                {Math.ceil(timeUntilNextWave ?? 0 / 1000)}s
+                {Math.ceil((timeUntilNextWave ?? 0) / 1000)}s
               </UITypography>
             </div>
           </UICardHeader>

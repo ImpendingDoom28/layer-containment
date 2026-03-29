@@ -14,14 +14,15 @@ import {
   towersSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
-import type { TowerType } from "../../core/types/game";
+import type { Tower, TowerType } from "../../core/types/game";
 import type { TileData } from "../../core/types/utils";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import type { TilePlacementState } from "../../utils/tilePlacement";
 
 const PLACEMENT_OVERLAY_Y_EPSILON = 0.018;
 const PLANE_INSET = 0.98;
-const OVERLAY_OPACITY = 0.38;
+const OVERLAY_OPACITY_BUFF = 0.38;
+const OVERLAY_OPACITY_FOOTPRINT = 0.22;
 
 const NEIGHBOR_OFFSETS: ReadonlyArray<readonly [number, number]> = [
   [1, 0],
@@ -30,14 +31,104 @@ const NEIGHBOR_OFFSETS: ReadonlyArray<readonly [number, number]> = [
   [0, -1],
 ];
 
+type RelayNeighborOverlayItem = {
+  key: string;
+  position: [number, number, number];
+  color: string;
+  opacity: number;
+};
+
+type GetTilePlacementStateFn = (
+  gridX: number,
+  gridZ: number
+) => TilePlacementState;
+
+const buildRelayNeighborOverlayItems = ({
+  sourceGridX,
+  sourceGridZ,
+  gridSize,
+  tileSize,
+  overlayY,
+  towers,
+  getTilePlacementState,
+  buffColor,
+  footprintColor,
+}: {
+  sourceGridX: number;
+  sourceGridZ: number;
+  gridSize: number;
+  tileSize: number;
+  overlayY: number;
+  towers: Tower[];
+  getTilePlacementState: GetTilePlacementStateFn;
+  buffColor: string;
+  footprintColor: string;
+}): RelayNeighborOverlayItem[] => {
+  const items: RelayNeighborOverlayItem[] = [];
+
+  for (const [dx, dz] of NEIGHBOR_OFFSETS) {
+    const gridX = sourceGridX + dx;
+    const gridZ = sourceGridZ + dz;
+    if (gridX < 0 || gridX >= gridSize || gridZ < 0 || gridZ >= gridSize) {
+      continue;
+    }
+
+    const towerOnCell = towers.find(
+      (t) => t.gridX === gridX && t.gridZ === gridZ
+    );
+    const placementState = getTilePlacementState(gridX, gridZ);
+
+    const wx = tileToWorldCoordinate(gridX, gridSize, tileSize);
+    const wz = tileToWorldCoordinate(gridZ, gridSize, tileSize);
+    const position: [number, number, number] = [wx, overlayY, wz];
+
+    if (towerOnCell && towerOnCell.type !== "relay") {
+      items.push({
+        key: `relay-buff-${gridX}-${gridZ}`,
+        position,
+        color: buffColor,
+        opacity: OVERLAY_OPACITY_BUFF,
+      });
+      continue;
+    }
+
+    if (towerOnCell?.type === "relay") {
+      continue;
+    }
+
+    if (
+      placementState.isOnPath ||
+      placementState.isWater ||
+      placementState.isOccupiedByBuilding
+    ) {
+      continue;
+    }
+
+    items.push({
+      key: `relay-footprint-${gridX}-${gridZ}`,
+      position,
+      color: footprintColor,
+      opacity: OVERLAY_OPACITY_FOOTPRINT,
+    });
+  }
+
+  return items;
+};
+
 type RelayBuffPreviewOverlayProps = {
   selectedTowerType: TowerType | null;
+  selectedTower: Tower | null;
   hoveredTile: TileData | null;
   hoveredTilePlacementState: TilePlacementState | null;
 };
 
 export const RelayBuffPreviewOverlay: FC<RelayBuffPreviewOverlayProps> = memo(
-  ({ selectedTowerType, hoveredTile, hoveredTilePlacementState }) => {
+  ({
+    selectedTowerType,
+    selectedTower,
+    hoveredTile,
+    hoveredTilePlacementState,
+  }) => {
     const gridSize = useLevelStore(gridSizeSelector);
     const towers = useLevelStore(towersSelector);
     const tileSize = useGameStore(tileSizeSelector);
@@ -50,51 +141,54 @@ export const RelayBuffPreviewOverlay: FC<RelayBuffPreviewOverlayProps> = memo(
       return `#${c.getHexString()}`;
     }, []);
 
+    const footprintColor = useMemo(() => {
+      const c = new Color(getCssColorValue("scene-hp-high"));
+      c.lerp(new Color(getCssColorValue("scene-gray-600")), 0.55);
+      return `#${c.getHexString()}`;
+    }, []);
+
     const overlayY = pathYOffset + PLACEMENT_OVERLAY_Y_EPSILON;
     const planeSize = tileSize * PLANE_INSET;
 
     const buffCells = useMemo(() => {
-      if (
-        selectedTowerType !== "relay" ||
-        !hoveredTile ||
-        !hoveredTilePlacementState ||
-        hoveredTilePlacementState.isBlocked
-      ) {
-        return [];
-      }
+      const placementRelayActive =
+        selectedTowerType === "relay" &&
+        hoveredTile &&
+        hoveredTilePlacementState &&
+        !hoveredTilePlacementState.isBlocked;
 
-      const items: {
-        key: string;
-        position: [number, number, number];
-      }[] = [];
-
-      for (const [dx, dz] of NEIGHBOR_OFFSETS) {
-        const gridX = hoveredTile.gridX + dx;
-        const gridZ = hoveredTile.gridZ + dz;
-        if (gridX < 0 || gridX >= gridSize || gridZ < 0 || gridZ >= gridSize) {
-          continue;
-        }
-
-        const towerOnCell = towers.find(
-          (t) => t.gridX === gridX && t.gridZ === gridZ
-        );
-        if (!towerOnCell || towerOnCell.type === "relay") continue;
-
-        const placementState = getTilePlacementState(gridX, gridZ);
-        if (placementState.isBlocked) continue;
-
-        const wx = tileToWorldCoordinate(gridX, gridSize, tileSize);
-        const wz = tileToWorldCoordinate(gridZ, gridSize, tileSize);
-
-        items.push({
-          key: `relay-buff-${gridX}-${gridZ}`,
-          position: [wx, overlayY, wz],
+      if (placementRelayActive) {
+        return buildRelayNeighborOverlayItems({
+          sourceGridX: hoveredTile.gridX,
+          sourceGridZ: hoveredTile.gridZ,
+          gridSize,
+          tileSize,
+          overlayY,
+          towers,
+          getTilePlacementState,
+          buffColor,
+          footprintColor,
         });
       }
 
-      return items;
+      if (selectedTower?.type === "relay") {
+        return buildRelayNeighborOverlayItems({
+          sourceGridX: selectedTower.gridX,
+          sourceGridZ: selectedTower.gridZ,
+          gridSize,
+          tileSize,
+          overlayY,
+          towers,
+          getTilePlacementState,
+          buffColor,
+          footprintColor,
+        });
+      }
+
+      return [];
     }, [
       selectedTowerType,
+      selectedTower,
       hoveredTile,
       hoveredTilePlacementState,
       gridSize,
@@ -102,6 +196,8 @@ export const RelayBuffPreviewOverlay: FC<RelayBuffPreviewOverlayProps> = memo(
       towers,
       getTilePlacementState,
       overlayY,
+      buffColor,
+      footprintColor,
     ]);
 
     if (buffCells.length === 0) {
@@ -110,12 +206,13 @@ export const RelayBuffPreviewOverlay: FC<RelayBuffPreviewOverlayProps> = memo(
 
     return (
       <group>
-        {buffCells.map(({ key, position }) => (
+        {buffCells.map(({ key, position, color, opacity }) => (
           <OverlayPlane
             key={key}
             position={position}
             planeSize={planeSize}
-            color={buffColor}
+            color={color}
+            opacity={opacity}
           />
         ))}
       </group>
@@ -129,10 +226,11 @@ type OverlayPlaneProps = {
   position: [number, number, number];
   planeSize: number;
   color: string;
+  opacity: number;
 };
 
 const OverlayPlane: FC<OverlayPlaneProps> = memo(
-  ({ position, planeSize, color }) => {
+  ({ position, planeSize, color, opacity }) => {
     const meshRef = useRef<Mesh>(null);
 
     useLayoutEffect(() => {
@@ -147,7 +245,7 @@ const OverlayPlane: FC<OverlayPlaneProps> = memo(
         <meshBasicMaterial
           color={color}
           transparent
-          opacity={OVERLAY_OPACITY}
+          opacity={opacity}
           depthWrite={false}
           depthTest
         />

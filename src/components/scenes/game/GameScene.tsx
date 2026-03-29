@@ -137,6 +137,7 @@ export const GameScene: React.FC<GameSceneProps> = ({
       <RelayBuffPreviewOverlay
         hoveredTile={hoveredTile}
         hoveredTilePlacementState={hoveredTilePlacementState}
+        selectedTower={selectedTower}
         selectedTowerType={selectedTowerType}
       />
 

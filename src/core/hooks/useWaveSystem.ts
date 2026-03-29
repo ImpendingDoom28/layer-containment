@@ -12,7 +12,6 @@ import {
   totalWavesSelector,
   useLevelStore,
   waveConfigsSelector,
-  enemiesSelector,
   setCurrentWaveSelector,
   currentWaveSelector,
   pathWaypointsSelector,
@@ -72,7 +71,6 @@ export const useWaveSystem = (gameState: GameState) => {
 
   const totalWaves = useLevelStore(totalWavesSelector);
   const waveConfigs = useLevelStore(waveConfigsSelector);
-  const enemies = useLevelStore(enemiesSelector);
   const setCurrentWave = useLevelStore(setCurrentWaveSelector);
   const currentWave = useLevelStore(currentWaveSelector);
   const pathWaypoints = useLevelStore(pathWaypointsSelector);
@@ -310,7 +308,10 @@ export const useWaveSystem = (gameState: GameState) => {
       if (currentWave === 0 || currentWave > totalWaves) return;
 
       if (spawnQueueIndexRef.current >= spawnQueueRef.current.length) {
-        if (waveStartedRef.current && enemies.length === 0) {
+        if (
+          waveStartedRef.current &&
+          useLevelStore.getState().enemies.length === 0
+        ) {
           waveStartedRef.current = false;
           if (currentTime - lastSpawnTimeRef.current > 300) {
             if (currentWave < totalWaves) {
@@ -362,7 +363,6 @@ export const useWaveSystem = (gameState: GameState) => {
       totalWaves,
       waveDelay,
       startNextWave,
-      enemies.length,
       winGame,
       addEnemy,
     ]
@@ -371,9 +371,11 @@ export const useWaveSystem = (gameState: GameState) => {
   const getRemainingEnemiesInWave = useCallback((): number => {
     if (currentWave === 0 || currentWave > totalWaves) return 0;
     return (
-      spawnQueueRef.current.length - spawnQueueIndexRef.current + enemies.length
+      spawnQueueRef.current.length -
+      spawnQueueIndexRef.current +
+      useLevelStore.getState().enemies.length
     );
-  }, [currentWave, enemies.length, totalWaves]);
+  }, [currentWave, totalWaves]);
 
   return {
     updateWaveSpawning,

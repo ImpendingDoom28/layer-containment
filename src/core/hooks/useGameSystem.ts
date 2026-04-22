@@ -1,7 +1,25 @@
 import { useCallback, useRef, useEffect, useLayoutEffect } from "react";
 
 import { getShouldStopMovement } from "../getShouldStopMovement";
-import { useGameStore } from "../stores/useGameStore";
+import {
+  activeEffectsSelector,
+  debugSelector,
+  gameStatusSelector,
+  healthSelector,
+  initializeGameStateSelector,
+  isGameConfigLoadedSelector,
+  isPageVisibleSelector,
+  previousStatusSelector,
+  resetGameStateSelector,
+  selectedTowerSelector,
+  setActiveEffectsSelector,
+  setDebugSelector,
+  setGameStatusSelector,
+  setIsPageVisibleSelector,
+  setPreviousStatusSelector,
+  setSelectedTowerSelector,
+  useGameStore,
+} from "../stores/useGameStore";
 import { useEntityIds } from "../contexts/EntityIdContext";
 import { GameStatus } from "../types/game";
 import { loadGameConfig } from "../gameConfig";
@@ -9,25 +27,23 @@ import { gameEvents } from "../../utils/eventEmitter";
 import { GameEvent } from "../types/enums/events";
 
 export const useGameSystem = () => {
-  const {
-    health,
-    activeEffects,
-    gameStatus,
-    previousStatus,
-    selectedTower,
-    debug,
-    isGameConfigLoaded,
+  const health = useGameStore(healthSelector);
+  const activeEffects = useGameStore(activeEffectsSelector);
+  const gameStatus = useGameStore(gameStatusSelector);
+  const previousStatus = useGameStore(previousStatusSelector);
+  const selectedTower = useGameStore(selectedTowerSelector);
+  const debug = useGameStore(debugSelector);
+  const isGameConfigLoaded = useGameStore(isGameConfigLoadedSelector);
+  const isPageVisible = useGameStore(isPageVisibleSelector);
 
-    setActiveEffects,
-    setGameStatus,
-    setPreviousStatus,
-    setSelectedTower,
-    setDebug,
-    resetGameState,
-    initializeGameState,
-    isPageVisible,
-    setIsPageVisible,
-  } = useGameStore();
+  const setActiveEffects = useGameStore(setActiveEffectsSelector);
+  const setGameStatus = useGameStore(setGameStatusSelector);
+  const setPreviousStatus = useGameStore(setPreviousStatusSelector);
+  const setSelectedTower = useGameStore(setSelectedTowerSelector);
+  const setDebug = useGameStore(setDebugSelector);
+  const resetGameState = useGameStore(resetGameStateSelector);
+  const initializeGameState = useGameStore(initializeGameStateSelector);
+  const setIsPageVisible = useGameStore(setIsPageVisibleSelector);
 
   const { getNextEffectId } = useEntityIds();
 
@@ -60,6 +76,7 @@ export const useGameSystem = () => {
     loadConfig();
   }, [isGameConfigLoaded, initializeGameState]);
 
+  // TODO: Move to level system, health is not a game store state
   // Emit game over event when health reaches 0
   useEffect(() => {
     if (

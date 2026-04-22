@@ -19,7 +19,12 @@ import type {
 import { Tower } from "../entities/Tower";
 import { GUITowerInfoPanel } from "../gui/GUITowerInfoPanel";
 import { TileData } from "../../core/types/utils";
-import { useGameStore } from "../../core/stores/useGameStore";
+import {
+  tileSizeSelector,
+  towerHeightSelector,
+  towerTypesSelector,
+  useGameStore,
+} from "../../core/stores/useGameStore";
 import {
   enemiesSelector,
   gridSizeSelector,
@@ -61,7 +66,9 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     selectedTowerType,
     hoveredTilePlacementState,
   }) => {
-    const { towerTypes, tileSize, towerHeight } = useGameStore();
+    const towerTypes = useGameStore(towerTypesSelector);
+    const tileSize = useGameStore(tileSizeSelector);
+    const towerHeight = useGameStore(towerHeightSelector);
     const gridSize = useLevelStore(gridSizeSelector);
     const pathWaypoints = useLevelStore(pathWaypointsSelector);
     const towers = useLevelStore(towersSelector);

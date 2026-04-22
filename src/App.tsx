@@ -1,10 +1,16 @@
-import { FC } from "react";
+import { FC, lazy, Suspense } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 
+import { HUDLoading } from "./components/hud/HUDLoading";
 import { GamePage } from "./components/pages/GamePage";
-import { LevelEditorPage } from "./components/pages/LevelEditorPage";
 import { useAudioSystem } from "./core/hooks/useAudioSystem";
 import { EntityIdProvider } from "./core/contexts/EntityIdContext";
+
+const LevelEditorPage = lazy(() =>
+  import("./components/pages/LevelEditorPage").then((mod) => ({
+    default: mod.LevelEditorPage,
+  }))
+);
 
 const AppRoutes: FC = () => {
   const navigate = useNavigate();
@@ -25,7 +31,11 @@ const AppRoutes: FC = () => {
         path="/editor"
         element={
           <EntityIdProvider>
-            <LevelEditorPage onBackToGame={() => navigate("/")} />
+            <Suspense
+              fallback={<HUDLoading className="fixed inset-0" message="Loading editor..." />}
+            >
+              <LevelEditorPage onBackToGame={() => navigate("/")} />
+            </Suspense>
           </EntityIdProvider>
         }
       />

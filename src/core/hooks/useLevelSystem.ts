@@ -1,7 +1,43 @@
 import { useCallback } from "react";
-import { useGameStore } from "../stores/useGameStore";
-import { useLevelStore } from "../stores/useLevelStore";
-import { useUpgradeStore } from "../stores/useUpgradeStore";
+
+import {
+  enemyTypesSelector,
+  enemyUpgradesSelector,
+  gameStatusSelector,
+  loseHealthSelector,
+  pathWidthSelector,
+  setSelectedTowerSelector,
+  setSelectedTowerTypeToPlaceSelector,
+  tileSizeSelector,
+  towerHeightSelector,
+  towerSellPriceMultiplierSelector,
+  towerTypesSelector,
+  useGameStore,
+} from "../stores/useGameStore";
+import {
+  addMoneySelector,
+  buildingsSelector,
+  currentWaveSelector,
+  enemiesKilledSelector,
+  gridOffsetSelector,
+  gridSizeSelector,
+  incrementEnemiesKilledSelector,
+  isLevelConfigLoadedSelector,
+  moneySelector,
+  pathWaypointsSelector,
+  resetLevelStateSelector,
+  setEnemiesSelector,
+  setProjectilesSelector,
+  setTowersSelector,
+  spendMoneySelector,
+  towersSelector,
+  useLevelStore,
+  watersSelector,
+} from "../stores/useLevelStore";
+import {
+  resetLevelEnemyUpgradesSelector,
+  useUpgradeStore,
+} from "../stores/useUpgradeStore";
 import { useAlmanacStore } from "../stores/useAlmanacStore";
 import {
   Enemy,
@@ -26,39 +62,42 @@ import { gameEvents } from "../../utils/eventEmitter";
 import { GameEvent } from "../types/enums/events";
 
 export const useLevelSystem = () => {
-  const {
-    buildings,
-    waters,
-    gridOffset,
-    gridSize,
-    setTowers,
-    resetLevelState,
-    towers,
-    setEnemies,
-    setProjectiles,
-    pathWaypoints,
-    currentWave,
-    money,
-    enemiesKilled,
-    spendMoney,
-    addMoney,
-    isLevelConfigLoaded,
-    incrementEnemiesKilled,
-  } = useLevelStore();
-  const {
-    towerTypes,
-    enemyTypes,
-    tileSize,
-    loseHealth,
-    setSelectedTower,
-    setSelectedTowerTypeToPlace,
-    towerSellPriceMultiplier,
-    pathWidth,
-    gameStatus,
-    enemyUpgrades,
-    towerHeight,
-  } = useGameStore();
-  const { resetLevelEnemyUpgrades } = useUpgradeStore();
+  const buildings = useLevelStore(buildingsSelector);
+  const waters = useLevelStore(watersSelector);
+  const gridOffset = useLevelStore(gridOffsetSelector);
+  const gridSize = useLevelStore(gridSizeSelector);
+  const setTowers = useLevelStore(setTowersSelector);
+  const resetLevelState = useLevelStore(resetLevelStateSelector);
+  const towers = useLevelStore(towersSelector);
+  const setEnemies = useLevelStore(setEnemiesSelector);
+  const setProjectiles = useLevelStore(setProjectilesSelector);
+  const pathWaypoints = useLevelStore(pathWaypointsSelector);
+  const currentWave = useLevelStore(currentWaveSelector);
+  const money = useLevelStore(moneySelector);
+  const enemiesKilled = useLevelStore(enemiesKilledSelector);
+  const spendMoney = useLevelStore(spendMoneySelector);
+  const addMoney = useLevelStore(addMoneySelector);
+  const isLevelConfigLoaded = useLevelStore(isLevelConfigLoadedSelector);
+  const incrementEnemiesKilled = useLevelStore(incrementEnemiesKilledSelector);
+
+  const towerTypes = useGameStore(towerTypesSelector);
+  const enemyTypes = useGameStore(enemyTypesSelector);
+  const tileSize = useGameStore(tileSizeSelector);
+  const loseHealth = useGameStore(loseHealthSelector);
+  const setSelectedTower = useGameStore(setSelectedTowerSelector);
+  const setSelectedTowerTypeToPlace = useGameStore(
+    setSelectedTowerTypeToPlaceSelector
+  );
+  const towerSellPriceMultiplier = useGameStore(
+    towerSellPriceMultiplierSelector
+  );
+  const pathWidth = useGameStore(pathWidthSelector);
+  const gameStatus = useGameStore(gameStatusSelector);
+  const enemyUpgrades = useGameStore(enemyUpgradesSelector);
+  const towerHeight = useGameStore(towerHeightSelector);
+  const resetLevelEnemyUpgrades = useUpgradeStore(
+    resetLevelEnemyUpgradesSelector
+  );
 
   const { getNextTowerId, getNextEnemyId, getNextProjectileId } =
     useEntityIds();

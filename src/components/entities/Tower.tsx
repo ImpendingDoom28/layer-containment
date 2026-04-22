@@ -13,6 +13,8 @@ import {
 } from "../../core/stores/useLevelStore";
 import {
   tileSizeSelector,
+  towerBaseRadiusSelector,
+  towerHeightSelector,
   useGameStore,
 } from "../../core/stores/useGameStore";
 import {
@@ -57,7 +59,8 @@ export const Tower: FC<TowerProps> = memo(
     effectiveRange,
   }) => {
     syncSharedMaterials();
-    const { towerBaseRadius, towerHeight } = useGameStore();
+    const towerBaseRadius = useGameStore(towerBaseRadiusSelector);
+    const towerHeight = useGameStore(towerHeightSelector);
     const gridSize = useLevelStore(gridSizeSelector);
     const tileSize = useGameStore(tileSizeSelector);
     const towerBasePosition: Vector3D = [0, towerBaseRadius, 0];

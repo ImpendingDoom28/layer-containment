@@ -32,5 +32,6 @@ When writting js/ts code, use the following rules:
 - Always create a separate type for components props.
 - Remove unused imports if after your changes there are any.
 - Don't use barrel files (a.k.a. `index.js/index.ts` files).
-- Try to use DRY pattern as much, as you can. Check the codebase for the same lines you've written
+- Try to use DRY pattern as much, as you can. Check the codebase for the same lines you've written and if you find any compact them with your new changes or reuse existing
 - For React refs you shouldn't read (or write) the `ref.current` value during rendering.
+- Prefer atomic selectors when writing calls to a store

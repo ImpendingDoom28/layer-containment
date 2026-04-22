@@ -226,3 +226,23 @@ export const selectedTowerSelector = (state: GameStore) => state.selectedTower;
 export const setSelectedTowerSelector = (state: GameStore) =>
   state.setSelectedTower;
 export const gameStatusSelector = (state: GameStore) => state.gameStatus;
+export const previousStatusSelector = (state: GameStore) => state.previousStatus;
+export const healthSelector = (state: GameStore) => state.health;
+export const activeEffectsSelector = (state: GameStore) => state.activeEffects;
+export const isGameConfigLoadedSelector = (state: GameStore) =>
+  state.isGameConfigLoaded;
+export const towerHeightSelector = (state: GameStore) => state.towerHeight;
+export const towerBaseRadiusSelector = (state: GameStore) =>
+  state.towerBaseRadius;
+export const towerSellPriceMultiplierSelector = (state: GameStore) =>
+  state.towerSellPriceMultiplier;
+export const setActiveEffectsSelector = (state: GameStore) =>
+  state.setActiveEffects;
+export const setGameStatusSelector = (state: GameStore) => state.setGameStatus;
+export const setPreviousStatusSelector = (state: GameStore) =>
+  state.setPreviousStatus;
+export const setDebugSelector = (state: GameStore) => state.setDebug;
+export const resetGameStateSelector = (state: GameStore) => state.resetGameState;
+export const loseHealthSelector = (state: GameStore) => state.loseHealth;
+export const setIsPageVisibleSelector = (state: GameStore) =>
+  state.setIsPageVisible;

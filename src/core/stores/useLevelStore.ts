@@ -244,3 +244,17 @@ export const projectilesSelector = (state: LevelStore) => state.projectiles;
 export const setCurrentWaveSelector = (state: LevelStore) =>
   state.setCurrentWave;
 export const currentWaveSelector = (state: LevelStore) => state.currentWave;
+export const moneySelector = (state: LevelStore) => state.money;
+export const enemiesKilledSelector = (state: LevelStore) => state.enemiesKilled;
+export const isLevelConfigLoadedSelector = (state: LevelStore) =>
+  state.isLevelConfigLoaded;
+export const spendMoneySelector = (state: LevelStore) => state.spendMoney;
+export const addMoneySelector = (state: LevelStore) => state.addMoney;
+export const incrementEnemiesKilledSelector = (state: LevelStore) =>
+  state.incrementEnemiesKilled;
+export const setTowersSelector = (state: LevelStore) => state.setTowers;
+export const setEnemiesSelector = (state: LevelStore) => state.setEnemies;
+export const setProjectilesSelector = (state: LevelStore) =>
+  state.setProjectiles;
+export const resetLevelStateSelector = (state: LevelStore) =>
+  state.resetLevelState;

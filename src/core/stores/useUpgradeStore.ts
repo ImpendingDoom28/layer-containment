@@ -67,3 +67,5 @@ export const upgradeChoiceOptionsSelector = (state: UpgradeStore) =>
   state.upgradeChoiceOptions;
 export const confirmEnemyUpgradePickSelector = (state: UpgradeStore) =>
   state.confirmEnemyUpgradePick;
+export const resetLevelEnemyUpgradesSelector = (state: UpgradeStore) =>
+  state.resetLevelEnemyUpgrades;

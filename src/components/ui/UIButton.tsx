@@ -68,9 +68,9 @@ export const UIButton: FC<UIButtonProps> = ({
     if (disabled) {
       gameEvents.emit(GameEvent.UI_ACTION_DENIED, deniedData);
     } else {
+      onClick?.(event);
       gameEvents.emit(GameEvent.UI_CLICK);
     }
-    onClick?.(event);
   };
 
   return (

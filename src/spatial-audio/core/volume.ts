@@ -7,6 +7,19 @@ export const MAX_VOLUME = 100;
 export const MIN_VOLUME = 0;
 
 /**
+ * Extracts a {@link VolumeState} snapshot from a store or partial state object.
+ *
+ * @param state - Full store state or volume fields from {@link VolumeStoreApi.getState}.
+ */
+export const toVolumeState = <TCategory extends string>(
+  state: VolumeState<TCategory> & Record<string, unknown>
+): VolumeState<TCategory> => ({
+  masterVolume: state.masterVolume,
+  categoryVolumes: state.categoryVolumes,
+  muted: state.muted === true,
+});
+
+/**
  * Computes the effective category gain multiplier from a {@link VolumeState}.
  *
  * Formula: `(masterVolume * categoryVolume) / (MAX_VOLUME * 10)` when not muted;

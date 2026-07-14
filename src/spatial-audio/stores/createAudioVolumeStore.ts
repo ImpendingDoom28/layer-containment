@@ -160,6 +160,11 @@ export const createAudioVolumeStore = <
       }),
       {
         name: persistKey,
+        partialize: (state) => ({
+          masterVolume: state.masterVolume,
+          categoryVolumes: state.categoryVolumes,
+          muted: state.muted,
+        }),
         merge: (persistedState, currentState) => {
           const persisted = persistedState as
             | Partial<AudioVolumeStore<TCategory>>

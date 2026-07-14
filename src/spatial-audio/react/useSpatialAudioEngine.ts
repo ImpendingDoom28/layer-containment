@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from "react";
 
 import { setAudioContext } from "../context/audioContextRegistry";
 import { SpatialAudioEngine } from "../core/spatialAudioEngine";
+import { toVolumeState } from "../core/volume";
 import type { SpatialAudioEngineOptions, VolumeStoreApi } from "../types";
 
 /**
@@ -107,9 +108,15 @@ export const useSpatialAudioEngine = <
     const engine = new SpatialAudioEngine(audioContext, {
       soundConfigs,
       resolveBuffer,
-      getVolumeState: () => volumeStoreRef.current.getState(),
+      getVolumeState: () =>
+        toVolumeState(volumeStoreRef.current.getState()),
     });
     engineRef.current = engine;
+
+    const unsubscribeVolume = volumeStore.subscribe(() => {
+      engine.applyLiveVolumes();
+    });
+    engine.applyLiveVolumes();
 
     if (audioContext.state === "suspended") {
       const activateAudio = async () => {
@@ -140,6 +147,7 @@ export const useSpatialAudioEngine = <
     }
 
     return () => {
+      unsubscribeVolume();
       engine.dispose();
       engineRef.current = null;
       setAudioContext(null);
@@ -149,13 +157,7 @@ export const useSpatialAudioEngine = <
         audioContext.close().catch(console.error);
       }
     };
-  }, [soundConfigs, resolveBuffer]);
-
-  useEffect(() => {
-    return volumeStore.subscribe(() => {
-      engineRef.current?.applyLiveVolumes();
-    });
-  }, [volumeStore]);
+  }, [soundConfigs, resolveBuffer, volumeStore]);
 
   const play = useCallback(async (event: TEvent, data?: unknown) => {
     await engineRef.current?.play(event, data);

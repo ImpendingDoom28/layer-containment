@@ -4,7 +4,7 @@ import type {
   VolumeState,
   WorldPosition,
 } from "../types";
-import { getCategoryVolume, MAX_VOLUME } from "./volume";
+import { getCategoryVolume, MAX_VOLUME, toVolumeState } from "./volume";
 
 /** Default half-range for randomized playback rate when config omits `pitchSpread`. */
 const DEFAULT_PITCH_SPREAD = 0.05;
@@ -32,9 +32,7 @@ const getRandomPlaybackRate = (spread: number) =>
  * @param data - Optional payload passed to {@link SpatialAudioEngine.play}.
  * @returns Valid world position, or `null` when missing / malformed.
  */
-const getWorldPositionFromPayload = (
-  data: unknown
-): WorldPosition | null => {
+const getWorldPositionFromPayload = (data: unknown): WorldPosition | null => {
   if (!data || typeof data !== "object" || !("worldPosition" in data)) {
     return null;
   }
@@ -154,6 +152,10 @@ export class SpatialAudioEngine<
       return;
     }
 
+    if (toVolumeState(this.getVolumeState()).muted) {
+      return;
+    }
+
     const config = this.soundConfigs[event];
     if (!config) {
       console.warn(`No sound config for event: ${event}`);
@@ -171,6 +173,10 @@ export class SpatialAudioEngine<
       return;
     }
 
+    if (toVolumeState(this.getVolumeState()).muted) {
+      return;
+    }
+
     try {
       const source = this.audioContext.createBufferSource();
       source.buffer = buffer;
@@ -183,7 +189,7 @@ export class SpatialAudioEngine<
       const gainNode = this.audioContext.createGain();
       const baseVolume = (config.volume ?? MAX_VOLUME) / MAX_VOLUME;
       const categoryVolume = getCategoryVolume(
-        this.getVolumeState(),
+        toVolumeState(this.getVolumeState()),
         config.category
       );
       gainNode.gain.value = baseVolume * categoryVolume;
@@ -249,21 +255,23 @@ export class SpatialAudioEngine<
    * {@link VolumeState} (master × category, or silence when muted).
    */
   applyLiveVolumes = () => {
-    const volumeState = this.getVolumeState();
+    const volumeState = toVolumeState(this.getVolumeState());
+
+    if (volumeState.muted) {
+      this.stopAllPlayingSounds();
+      return;
+    }
+
     this.playingSounds.forEach((sound) => {
       const categoryVolume = getCategoryVolume(volumeState, sound.category);
       sound.gainNode.gain.value = sound.baseVolume * categoryVolume;
     });
   };
 
-  /**
-   * Stops all playing sources, disconnects nodes, and prevents further playback.
-   * Does not close the {@link AudioContext} — ownership remains with the caller.
-   */
-  dispose = () => {
-    this.disposed = true;
+  private readonly stopAllPlayingSounds = () => {
     this.playingSounds.forEach((sound) => {
       try {
+        sound.gainNode.gain.value = 0;
         sound.source.stop();
         sound.source.disconnect();
         sound.gainNode.disconnect();
@@ -273,5 +281,14 @@ export class SpatialAudioEngine<
       }
     });
     this.playingSounds.clear();
+  };
+
+  /**
+   * Stops all playing sources, disconnects nodes, and prevents further playback.
+   * Does not close the {@link AudioContext} — ownership remains with the caller.
+   */
+  dispose = () => {
+    this.disposed = true;
+    this.stopAllPlayingSounds();
   };
 }

@@ -15,7 +15,7 @@ import {
 import { isPointerOverGameCameraBlock } from "../../../utils/isPointerOverGameCameraBlock";
 import { gameEvents } from "../../../utils/eventEmitter";
 import { GameEvent } from "../../../core/types/enums/events";
-import type { AudioEventData } from "../../../core/audioConfig";
+import type { AudioEventData } from "../../../game/audio/gameSoundConfig";
 import {
   MS_PER_SECOND,
   UI_ACTION_DENIED_CAMERA_SHAKE_AMPLITUDE,

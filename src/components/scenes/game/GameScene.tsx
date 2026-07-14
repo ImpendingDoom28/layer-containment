@@ -6,7 +6,7 @@ import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
 import { PlacementHighlightOverlay } from "../../entities/PlacementHighlightOverlay";
 import { RelayBuffPreviewOverlay } from "../../entities/RelayBuffPreviewOverlay";
 import { Path } from "../../entities/Path";
-import { GameAudioListenerSync } from "./GameAudioListenerSync";
+import { AudioListenerSync } from "../../../spatial-audio/r3f/AudioListenerSync";
 import { GameCamera } from "./GameCamera";
 import type {
   Tower as TowerInstance,
@@ -100,7 +100,7 @@ export const GameScene: React.FC<GameSceneProps> = ({
         shouldDisableControls={shouldDisableControls}
       />
 
-      <GameAudioListenerSync />
+      <AudioListenerSync />
 
       {pathWaypoints.map((_, index) => (
         <Path key={index} pathIndex={index} />

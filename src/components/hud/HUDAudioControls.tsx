@@ -1,7 +1,10 @@
 import { FC } from "react";
 import { ArrowLeft, Volume2, VolumeX } from "lucide-react";
 
-import { useAudioStore } from "../../core/stores/useAudioStore";
+import {
+  type GameAudioCategory,
+  useAudioStore,
+} from "../../core/audio/useAudioStore";
 import { UIButton } from "../ui/UIButton";
 import {
   UICard,
@@ -30,6 +33,12 @@ type AudioSliderProps = {
   disabled: boolean;
   label: string;
   sliderId: string;
+};
+
+const CATEGORY_LABELS: Record<GameAudioCategory, string> = {
+  sfx: "Sound Effects",
+  music: "Music",
+  ambient: "Ambient",
 };
 
 const defaultSliderProps = {
@@ -76,18 +85,12 @@ export const HUDAudioControls: FC<HUDAudioControlsProps> = ({
   const showAudioSettings = useGameStore(showAudioSettingsSelector);
   const setShowAudioSettings = useGameStore(setShowAudioSettingsSelector);
 
-  const {
-    masterVolume,
-    sfxVolume,
-    musicVolume,
-    ambientVolume,
-    muted,
-    setMasterVolume,
-    setSfxVolume,
-    setMusicVolume,
-    setAmbientVolume,
-    toggleMute,
-  } = useAudioStore();
+  const masterVolume = useAudioStore((state) => state.masterVolume);
+  const categoryVolumes = useAudioStore((state) => state.categoryVolumes);
+  const muted = useAudioStore((state) => state.muted);
+  const setMasterVolume = useAudioStore((state) => state.setMasterVolume);
+  const setCategoryVolume = useAudioStore((state) => state.setCategoryVolume);
+  const toggleMute = useAudioStore((state) => state.toggleMute);
 
   if (!showAudioSettings) return null;
 
@@ -127,27 +130,16 @@ export const HUDAudioControls: FC<HUDAudioControlsProps> = ({
           label="Master Volume"
           sliderId="master-volume"
         />
-        <AudioSlider
-          volume={sfxVolume}
-          setVolume={setSfxVolume}
-          disabled={muted}
-          label="Sound Effects"
-          sliderId="sfx-volume"
-        />
-        <AudioSlider
-          volume={musicVolume}
-          setVolume={setMusicVolume}
-          disabled={muted}
-          label="Music"
-          sliderId="music-volume"
-        />
-        <AudioSlider
-          volume={ambientVolume}
-          setVolume={setAmbientVolume}
-          disabled={muted}
-          label="Ambient"
-          sliderId="ambient-volume"
-        />
+        {useAudioStore.categories.map((category) => (
+          <AudioSlider
+            key={category}
+            volume={categoryVolumes[category]}
+            setVolume={(volume) => setCategoryVolume(category, volume)}
+            disabled={muted}
+            label={CATEGORY_LABELS[category]}
+            sliderId={`${category}-volume`}
+          />
+        ))}
       </UICardContent>
     </UICard>
   );

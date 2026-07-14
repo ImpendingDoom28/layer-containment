@@ -3,8 +3,8 @@ import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 
 import { HUDLoading } from "./components/hud/HUDLoading";
 import { GamePage } from "./components/pages/GamePage";
-import { useAudioSystem } from "./core/hooks/useAudioSystem";
 import { EntityIdProvider } from "./core/contexts/EntityIdContext";
+import { useGameAudioSystem } from "./core/audio/useGameAudioSystem";
 
 const LevelEditorPage = lazy(() =>
   import("./components/pages/LevelEditorPage").then((mod) => ({
@@ -15,7 +15,7 @@ const LevelEditorPage = lazy(() =>
 const AppRoutes: FC = () => {
   const navigate = useNavigate();
 
-  useAudioSystem();
+  useGameAudioSystem();
 
   return (
     <Routes>
@@ -32,7 +32,12 @@ const AppRoutes: FC = () => {
         element={
           <EntityIdProvider>
             <Suspense
-              fallback={<HUDLoading className="fixed inset-0" message="Loading editor..." />}
+              fallback={
+                <HUDLoading
+                  className="fixed inset-0"
+                  message="Loading editor..."
+                />
+              }
             >
               <LevelEditorPage onBackToGame={() => navigate("/")} />
             </Suspense>

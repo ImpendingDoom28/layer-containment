@@ -1,4 +1,4 @@
-import type { Shader } from "three";
+import type { Shader, WebGLRenderer } from "three";
 import { describe, expect, it } from "vitest";
 
 import { createPlanetTileMaterial } from "./planetTileMaterial";
@@ -50,7 +50,7 @@ describe("createPlanetTileMaterial", () => {
     if (onBeforeCompile == null) {
       throw new Error("expected onBeforeCompile");
     }
-    onBeforeCompile(shader);
+    onBeforeCompile(shader, {} as WebGLRenderer);
 
     expect(shader.fragmentShader).not.toMatch(/\bfloat patch\b/);
     expect(shader.fragmentShader).toContain("surfacePatch");

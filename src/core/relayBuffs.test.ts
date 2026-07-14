@@ -43,9 +43,6 @@ const baseTower = (
 ): Tower => ({
   ...basicTemplate,
   type: "basic",
-  id: overrides.id,
-  gridX: overrides.gridX,
-  gridZ: overrides.gridZ,
   x: overrides.x ?? 0,
   z: overrides.z ?? 0,
   lastFireTime: 0,

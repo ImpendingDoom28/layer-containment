@@ -25,10 +25,7 @@ import {
 } from "../../../utils/levelEditor";
 import { getCssColorValue } from "../../ui/lib/cssUtils";
 import { LevelEditorCamera } from "./LevelEditorCamera";
-import {
-  LevelEditorTerrainTile,
-  LEVEL_EDITOR_TILE_HEIGHT,
-} from "./LevelEditorTerrainTile";
+import { LevelEditorTerrainTile } from "./LevelEditorTerrainTile";
 
 const BUILDING_OUTLINE_SCALE = 1.06;
 
@@ -110,7 +107,11 @@ export const LevelEditorScene = () => {
             draftLevel.gridSize * tileSize,
           ]}
         />
-        <meshStandardMaterial color={draftLevel.groundColor ?? getCssColorValue("editor-default-ground")} />
+        <meshStandardMaterial
+          color={
+            draftLevel.groundColor ?? getCssColorValue("editor-default-ground")
+          }
+        />
       </mesh>
 
       <group>
@@ -133,8 +134,7 @@ export const LevelEditorScene = () => {
           const canPaintWater =
             activeTool === "water" && !placementState.isOnPath;
           const canHighlightEditorAction =
-            canPlaceBuilding ||
-            (activeTool === "water" && canPaintWater);
+            canPlaceBuilding || (activeTool === "water" && canPaintWater);
           const baseTileColor =
             draftLevel.tileColor ?? getCssColorValue("editor-default-tile");
 
@@ -159,15 +159,15 @@ export const LevelEditorScene = () => {
       </group>
 
       <PlanetTileDecorations
-        gridSize={draftLevel.gridSize}
-        tileSize={tileSize}
-        gridOffset={gridOffset}
+        //gridSize={draftLevel.gridSize}
+        //tileSize={tileSize}
+        //gridOffset={gridOffset}
         pathWaypoints={draftLevel.pathWaypoints}
-        pathWidth={pathWidth}
-        waters={draftLevel.waters}
-        buildings={draftLevel.buildings}
+        //pathWidth={pathWidth}
+        //waters={draftLevel.waters}
+        //buildings={draftLevel.buildings}
         towers={[]}
-        surfaceHalfHeight={LEVEL_EDITOR_TILE_HEIGHT / 2}
+        //surfaceHalfHeight={LEVEL_EDITOR_TILE_HEIGHT / 2}
       />
 
       <group>
@@ -196,7 +196,11 @@ export const LevelEditorScene = () => {
                     >
                       <boxGeometry args={[segment.length, 0.025, pathWidth]} />
                       <meshStandardMaterial
-                        color={isSelectedPath ? getCssColorValue("editor-path-active") : getCssColorValue("scene-gray-500")}
+                        color={
+                          isSelectedPath
+                            ? getCssColorValue("editor-path-active")
+                            : getCssColorValue("scene-gray-500")
+                        }
                       />
                     </mesh>
                     <mesh
@@ -207,7 +211,11 @@ export const LevelEditorScene = () => {
                         args={[segment.length, 0.01, pathWidth + 0.06]}
                       />
                       <meshStandardMaterial
-                        color={isSelectedPath ? getCssColorValue("editor-path-active-border") : getCssColorValue("scene-gray-600")}
+                        color={
+                          isSelectedPath
+                            ? getCssColorValue("editor-path-active-border")
+                            : getCssColorValue("scene-gray-600")
+                        }
                       />
                     </mesh>
                   </group>

@@ -81,60 +81,60 @@ export const SOUND_CONFIGS: Record<
 };
 
 export type AudioEventDataMap = {
-  [GameEvent.TOWER_FIRE]: {
+  "tower_fire": {
     towerId: number;
     towerType: TowerType;
     worldPosition: WorldPosition;
   };
-  [GameEvent.ENEMY_KILLED]: {
+  "enemy_killed": {
     enemyId: number;
     enemyType: EnemyType;
     worldPosition: WorldPosition;
   };
-  [GameEvent.ENEMY_REACHED_END]: {
+  "enemy_reached_end": {
     enemyId: number;
     enemyType: EnemyType;
     worldPosition: WorldPosition;
   };
-  [GameEvent.PROJECTILE_HIT]: {
+  "projectile_hit": {
     projectileId: number;
     enemyId: number;
     towerType: TowerType;
     projectileType: ProjectileType;
     worldPosition: WorldPosition;
   };
-  [GameEvent.WAVE_STARTED]: {
+  "wave_started": {
     waveNumber: number;
     worldPosition: WorldPosition;
   };
-  [GameEvent.GAME_OVER]: {
+  "game_over": {
     gameOverType: "loss" | "win";
   };
-  [GameEvent.GAME_PAUSED]: {
+  "game_paused": {
     gamePausedType: "pause";
   };
-  [GameEvent.UI_CLICK]: {
+  "ui_click": {
     uiClickType?: "click" | "hover" | "select";
   };
-  [GameEvent.GAME_RESUMED]: {
+  "game_resumed": {
     gameResumedType: "resume";
   };
-  [GameEvent.GAME_WON]: {
+  "game_won": {
     gameWonType: "win";
   };
-  [GameEvent.TOWER_PLACED]: {
+  "tower_placed": {
     towerId: number;
     towerType: TowerType;
     gridX: number;
     gridZ: number;
     worldPosition: WorldPosition;
   };
-  [GameEvent.TOWER_SOLD]: {
+  "tower_sold": {
     towerId: number;
     towerType: TowerType;
     worldPosition: WorldPosition;
   };
-  [GameEvent.UI_ACTION_DENIED]: {
+  "ui_action_denied": {
     reason: "insufficient_funds";
     towerType: TowerType;
   };

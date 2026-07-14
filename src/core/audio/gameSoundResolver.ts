@@ -22,7 +22,7 @@ export const resolveGameSoundBuffer = async (
     case GameEvent.TOWER_SOLD:
       return generatePlaceholderSound(audioContext, "click", 0.1, 400);
     case GameEvent.TOWER_FIRE: {
-      const data = eventData as AudioEventData<GameEvent.TOWER_FIRE> | undefined;
+      const data = eventData as AudioEventData<"tower_fire"> | undefined;
       const soundName = data?.towerType;
       const url = soundName
         ? SOUND_CONFIGS[event].srces?.[soundName]

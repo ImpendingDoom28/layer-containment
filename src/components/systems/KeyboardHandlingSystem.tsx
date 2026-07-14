@@ -1,15 +1,23 @@
 import { useEffect } from "react";
 import { useGameSystem } from "../../core/hooks/useGameSystem";
+import {
+  selectedTowerTypeToPlaceSelector,
+  setSelectedTowerTypeToPlaceSelector,
+  useGameStore,
+} from "../../core/stores/useGameStore";
 
 export const KeyboardHandlingSystem = () => {
+  const selectedTowerType = useGameStore(selectedTowerTypeToPlaceSelector);
+  const setSelectedTowerType = useGameStore(
+    setSelectedTowerTypeToPlaceSelector
+  );
+
   const {
     gameStatus,
-    selectedTowerType,
     selectedTower,
     pauseGame,
     openGameMenu,
     closeGameMenu,
-    setSelectedTowerType,
     setSelectedTower,
     toggleDebug,
   } = useGameSystem();

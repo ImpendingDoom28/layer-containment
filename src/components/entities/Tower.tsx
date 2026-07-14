@@ -84,20 +84,20 @@ export const Tower: FC<TowerProps> = memo(
       [towerBaseRadius, towerHeight]
     );
 
-    if (!tower) return null;
-
     const footing = useMemo(() => {
       const r = getPlanetRadius(gridSize, tileSize);
       const { surfacePoint, normal } = flatFieldToSphereSurface(
-        tower.x,
-        tower.z,
+        tower?.x ?? 0,
+        tower?.z ?? 0,
         r
       );
       return {
         position: surfacePoint,
         quaternion: getSurfaceQuaternion(normal),
       };
-    }, [tower.x, tower.z, gridSize, tileSize]);
+    }, [tower?.x, tower?.z, gridSize, tileSize]);
+
+    if (!tower) return null;
 
     const towerColor =
       isPreview && isInvalidPlacement

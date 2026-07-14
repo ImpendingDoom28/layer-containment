@@ -1,11 +1,4 @@
-import {
-  FC,
-  Suspense,
-  useCallback,
-  useLayoutEffect,
-  useMemo,
-  useState,
-} from "react";
+import { FC, Suspense, useCallback, useMemo, useState } from "react";
 
 import { cn } from "../ui/lib/twUtils";
 import { Canvas } from "@react-three/fiber";
@@ -122,10 +115,6 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
     return `game-${activePlayableLevel}`;
   }, [activePlayableLevel, isGameConfigLoaded, isLevelConfigLoaded, isMenu]);
 
-  useLayoutEffect(() => {
-    setAreShadersReady(false);
-  }, [shaderGateKey]);
-
   const isGameReady =
     isGameConfigLoaded && (isMenu || isLevelConfigLoaded) && areShadersReady;
 
@@ -148,6 +137,14 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
         style={GAME_CANVAS_STYLE}
         gl={GAME_CANVAS_GL}
       >
+        {shaderGateKey !== null && (
+          <ShaderReadyGate
+            key={shaderGateKey}
+            compileKey={shaderGateKey}
+            onReadyChange={setAreShadersReady}
+          />
+        )}
+
         <Suspense fallback={<HUDLoading message={loadingMessage} />}>
           {isGameConfigLoaded && isMenu && <MainMenuScene />}
           {isGameConfigLoaded && !isMenu && (
@@ -186,14 +183,6 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
             </>
           )}
 
-          {shaderGateKey !== null && (
-            <ShaderReadyGate
-              key={shaderGateKey}
-              onShadersReady={() => {
-                setAreShadersReady(true);
-              }}
-            />
-          )}
           <KeyboardHandlingSystem />
         </Suspense>
       </Canvas>

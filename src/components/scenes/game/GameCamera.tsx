@@ -15,7 +15,7 @@ import {
 import { isPointerOverGameCameraBlock } from "../../../utils/isPointerOverGameCameraBlock";
 import { gameEvents } from "../../../utils/eventEmitter";
 import { GameEvent } from "../../../core/types/enums/events";
-import type { AudioEventData } from "../../../game/audio/gameSoundConfig";
+import type { AudioEventData } from "../../../core/audio/gameSoundConfig";
 import {
   MS_PER_SECOND,
   UI_ACTION_DENIED_CAMERA_SHAKE_AMPLITUDE,
@@ -66,9 +66,9 @@ export const GameCamera = ({
   const incrementDenyPulse = useGameStore(incrementDenyPulseSelector);
 
   useEffect(() => {
-    const unsubscribe = gameEvents.on<
-      AudioEventData<GameEvent.UI_ACTION_DENIED>
-    >(GameEvent.UI_ACTION_DENIED, (data) => {
+    const unsubscribe = gameEvents.on<AudioEventData<"ui_action_denied">>(
+      GameEvent.UI_ACTION_DENIED,
+      (data) => {
       if (data.reason === "insufficient_funds") {
         shakeRemainingMsRef.current = UI_ACTION_DENIED_CAMERA_SHAKE_DURATION_MS;
         incrementDenyPulse(data.towerType);

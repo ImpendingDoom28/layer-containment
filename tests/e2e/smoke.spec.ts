@@ -3,6 +3,35 @@ import { expect, test } from "@playwright/test";
 import { onOpenGame, onOpenMainMenu } from "./fixtures/navigation";
 import { onPlaceMultipleBasicTowers } from "./fixtures/towerPlacement";
 
+const onWaitForMainMenuReady = async (
+  page: import("@playwright/test").Page
+) => {
+  await expect(page.getByText("Preparing graphics")).not.toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(page.getByRole("button", { name: "Play" })).toBeVisible({
+    timeout: 15_000,
+  });
+};
+
+test("returns to the main menu after editor round-trip", async ({ page }) => {
+  await onOpenMainMenu(page);
+  await onWaitForMainMenuReady(page);
+
+  await page.getByRole("button", { name: "Level Creator" }).click();
+  await expect(page.getByTestId("editor-canvas")).toBeVisible();
+
+  await page.getByRole("button", { name: "Back to game" }).click();
+  await expect(page).toHaveURL("/");
+  await onWaitForMainMenuReady(page);
+});
+
+test("clears loading after invalid route redirect", async ({ page }) => {
+  await page.goto("/does-not-exist");
+  await expect(page).toHaveURL("/");
+  await onWaitForMainMenuReady(page);
+});
+
 test("loads the main menu and enters gameplay HUD", async ({ page }) => {
   await onOpenMainMenu(page);
 

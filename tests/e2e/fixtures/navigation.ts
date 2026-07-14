@@ -25,3 +25,15 @@ export const onOpenGame = async (
     );
   }
 };
+
+export const onOpenEditor = async (page: Page) => {
+  await page.goto("/editor");
+
+  await expect(page.getByTestId("editor-canvas")).toBeVisible({
+    timeout: 20_000,
+  });
+
+  await expect(page.getByText("Loading editor...")).not.toBeVisible({
+    timeout: 20_000,
+  });
+};

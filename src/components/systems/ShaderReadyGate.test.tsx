@@ -10,9 +10,9 @@ const advanceUntilReady = async (
   renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>
 ) => {
   await ReactThreeTestRenderer.act(async () => {
-    await renderer.advanceFrames(2, 1);
+    await renderer.advanceFrames(5, 1);
     await new Promise((resolve) => {
-      setTimeout(resolve, 50);
+      setTimeout(resolve, 100);
     });
   });
 };
@@ -22,7 +22,11 @@ describe("ShaderReadyGate", () => {
     const onReadyChange = vi.fn();
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ShaderReadyGate compileKey="menu" onReadyChange={onReadyChange} />
+      <ShaderReadyGate
+        key="menu"
+        compileKey="menu"
+        onReadyChange={onReadyChange}
+      />
     );
 
     try {
@@ -40,7 +44,11 @@ describe("ShaderReadyGate", () => {
     const onReadyChange = vi.fn();
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ShaderReadyGate compileKey="menu" onReadyChange={onReadyChange} />
+      <ShaderReadyGate
+        key="menu"
+        compileKey="menu"
+        onReadyChange={onReadyChange}
+      />
     );
 
     try {
@@ -49,13 +57,15 @@ describe("ShaderReadyGate", () => {
 
       await ReactThreeTestRenderer.act(async () => {
         renderer.update(
-          <ShaderReadyGate compileKey="game-1" onReadyChange={onReadyChange} />
+          <ShaderReadyGate
+            key="game-1"
+            compileKey="game-1"
+            onReadyChange={onReadyChange}
+          />
         );
-        await renderer.advanceFrames(2, 1);
-        await new Promise((resolve) => {
-          setTimeout(resolve, 50);
-        });
       });
+
+      await advanceUntilReady(renderer);
 
       expect(onReadyChange).toHaveBeenCalledWith(false);
       expect(onReadyChange).toHaveBeenLastCalledWith(true);
@@ -68,7 +78,11 @@ describe("ShaderReadyGate", () => {
     const onReadyChange = vi.fn();
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ShaderReadyGate compileKey="menu" onReadyChange={onReadyChange} />
+      <ShaderReadyGate
+        key="menu"
+        compileKey="menu"
+        onReadyChange={onReadyChange}
+      />
     );
 
     await advanceUntilReady(renderer);

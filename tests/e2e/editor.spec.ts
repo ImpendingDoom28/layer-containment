@@ -1,9 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-test("loads the level editor route", async ({ page }) => {
-  await page.goto("/editor");
+import { onOpenEditor } from "./fixtures/navigation";
 
-  await expect(page.getByTestId("editor-canvas")).toBeVisible();
+test("loads the level editor route", async ({ page }) => {
+  await onOpenEditor(page);
+
+  await expect(page.getByRole("button", { name: "Back to game" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Level" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Waves" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Publish" })).toBeVisible();

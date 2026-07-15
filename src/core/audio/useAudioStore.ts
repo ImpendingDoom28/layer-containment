@@ -1,5 +1,5 @@
-import { createAudioVolumeStore } from "../../spatial-audio/stores/createAudioVolumeStore";
-import { MAX_VOLUME, MIN_VOLUME } from "../../spatial-audio/core/volume";
+import { MAX_VOLUME, MIN_VOLUME } from "@webgamedevkit/audio-engine";
+import { createAudioVolumeStore } from "@webgamedevkit/audio-engine/stores";
 import { GAME_NAME_ID } from "../../constants/game";
 
 export { MAX_VOLUME, MIN_VOLUME };

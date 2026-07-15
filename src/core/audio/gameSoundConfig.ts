@@ -1,4 +1,4 @@
-import type { SoundConfig, WorldPosition } from "../../spatial-audio/types";
+import type { SoundConfig, WorldPosition } from "@webgamedevkit/audio-engine";
 import { UI_ACTION_DENIED_SFX_VOLUME } from "../../constants/uiActionDeniedFeedback";
 import { GameEvent } from "../../core/types/enums/events";
 import type {
@@ -11,10 +11,7 @@ import type { GameAudioCategory } from "./useAudioStore";
 
 export type { WorldPosition };
 
-export const SOUND_CONFIGS: Record<
-  GameEvent,
-  SoundConfig<GameAudioCategory>
-> = {
+export const SOUND_CONFIGS = {
   [GameEvent.TOWER_PLACED]: {
     category: "sfx",
     volume: 70,
@@ -78,7 +75,7 @@ export const SOUND_CONFIGS: Record<
     volume: UI_ACTION_DENIED_SFX_VOLUME,
     spatial: false,
   },
-};
+} as const satisfies Record<GameEvent, SoundConfig<GameAudioCategory>>;
 
 export type AudioEventDataMap = {
   "tower_fire": {

@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { AudioListenerSync } from "@webgamedevkit/audio-engine/r3f";
 
 import type { PlayableLevelId } from "../../../constants/playableLevels";
 import { Grid } from "../../entities/Grid";
@@ -6,7 +7,6 @@ import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
 import { PlacementHighlightOverlay } from "../../entities/PlacementHighlightOverlay";
 import { RelayBuffPreviewOverlay } from "../../entities/RelayBuffPreviewOverlay";
 import { Path } from "../../entities/Path";
-import { AudioListenerSync } from "../../../spatial-audio/r3f/AudioListenerSync";
 import { GameCamera } from "./GameCamera";
 import type {
   Tower as TowerInstance,

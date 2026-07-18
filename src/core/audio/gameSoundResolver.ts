@@ -1,15 +1,44 @@
-import { generatePlaceholderSound } from "@webgamedevkit/audio-engine";
+import { loadAudioBuffer } from "@webgamedevkit/audio-engine";
+
 import {
   UI_ACTION_DENIED_SFX_NOISE_DURATION_SEC,
   UI_ACTION_DENIED_SFX_NOISE_PLACEHOLDER_FREQ_HZ,
 } from "../../constants/uiActionDeniedFeedback";
 import { GameEvent } from "../../core/types/enums/events";
 
+import { TOWER_FIRE_SRCES, type TowerFireSrcKey } from "./gameSoundConfig";
+import { generatePlaceholderSound } from "./generatePlaceholderSound";
+
+const TOWER_FIRE_SRC_KEYS = Object.keys(TOWER_FIRE_SRCES) as TowerFireSrcKey[];
+
+const isTowerFireSrcKey = (value: unknown): value is TowerFireSrcKey =>
+  typeof value === "string" &&
+  TOWER_FIRE_SRC_KEYS.includes(value as TowerFireSrcKey);
+
+const resolveTowerFireSrcKey = (data: unknown): TowerFireSrcKey => {
+  if (
+    typeof data === "object" &&
+    data !== null &&
+    "srcKey" in data &&
+    isTowerFireSrcKey(data.srcKey)
+  ) {
+    return data.srcKey;
+  }
+
+  return "basic";
+};
+
 export const resolveGameSoundBuffer = async (
   audioContext: AudioContext,
-  event: GameEvent
+  event: GameEvent,
+  data?: unknown
 ): Promise<AudioBuffer | null> => {
   switch (event) {
+    case GameEvent.TOWER_FIRE: {
+      const srcKey = resolveTowerFireSrcKey(data);
+      const url = TOWER_FIRE_SRCES[srcKey];
+      return loadAudioBuffer(audioContext, url);
+    }
     case GameEvent.TOWER_PLACED:
       return generatePlaceholderSound(audioContext, "click", 0.15, 600);
     case GameEvent.TOWER_SOLD:

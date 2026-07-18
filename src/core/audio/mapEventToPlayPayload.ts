@@ -2,17 +2,16 @@ import type { PlayPayloadForEvent } from "@webgamedevkit/audio-engine";
 
 import { GameEvent } from "../../core/types/enums/events";
 
-import { type AudioEventData, SOUND_CONFIGS } from "./gameSoundConfig";
+import {
+  type AudioEventData,
+  SOUND_CONFIGS,
+  TOWER_FIRE_SRCES,
+  type TowerFireSrcKey,
+} from "./gameSoundConfig";
 
 type SoundConfigs = typeof SOUND_CONFIGS;
 
-type TowerFireSrcKey = keyof NonNullable<
-  SoundConfigs[typeof GameEvent.TOWER_FIRE]["srces"]
->;
-
-const TOWER_FIRE_SRC_KEYS = Object.keys(
-  SOUND_CONFIGS[GameEvent.TOWER_FIRE].srces ?? {}
-) as TowerFireSrcKey[];
+const TOWER_FIRE_SRC_KEYS = Object.keys(TOWER_FIRE_SRCES) as TowerFireSrcKey[];
 
 const SPATIAL_EVENTS = new Set<GameEvent>([
   GameEvent.TOWER_PLACED,
@@ -38,10 +37,17 @@ const hasWorldPosition = (
 const isTowerFireSrcKey = (value: string): value is TowerFireSrcKey =>
   TOWER_FIRE_SRC_KEYS.includes(value as TowerFireSrcKey);
 
+type TowerFirePlayPayload = PlayPayloadForEvent<
+  SoundConfigs,
+  typeof GameEvent.TOWER_FIRE
+> & {
+  srcKey: TowerFireSrcKey;
+};
+
 export function mapEventToPlayPayload(
   event: typeof GameEvent.TOWER_FIRE,
   data: AudioEventData<"tower_fire"> | undefined
-): PlayPayloadForEvent<SoundConfigs, typeof GameEvent.TOWER_FIRE> | undefined;
+): TowerFirePlayPayload | undefined;
 
 export function mapEventToPlayPayload<E extends GameEvent>(
   event: E,

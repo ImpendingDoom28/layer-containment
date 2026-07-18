@@ -1,5 +1,5 @@
-import type { SoundConfig, WorldPosition } from "@webgamedevkit/audio-engine";
-import { UI_ACTION_DENIED_SFX_VOLUME } from "../../constants/uiActionDeniedFeedback";
+import { defineSoundConfigs, type WorldPosition } from "@webgamedevkit/audio-engine";
+
 import { GameEvent } from "../../core/types/enums/events";
 import type {
   EnemyType,
@@ -7,75 +7,68 @@ import type {
   TowerType,
 } from "../../core/types/game";
 
-import type { GameAudioCategory } from "./useAudioStore";
+import { GAME_AUDIO_CATEGORIES } from "./useAudioStore";
 
 export type { WorldPosition };
 
-export const SOUND_CONFIGS = {
-  [GameEvent.TOWER_PLACED]: {
-    category: "sfx",
-    volume: 70,
-  },
-  [GameEvent.TOWER_SOLD]: {
-    category: "sfx",
-    volume: 60,
-  },
-  [GameEvent.TOWER_FIRE]: {
-    category: "sfx",
-    volume: 50,
-    srces: {
-      laser: "assets/audio/laser-shot.wav",
-      basic: "assets/audio/basic-shot.mp3",
-      chain: "assets/audio/basic-shot.mp3",
+export const TOWER_FIRE_SRCES = {
+  laser: "assets/audio/laser-shot.wav",
+  basic: "assets/audio/basic-shot.mp3",
+  chain: "assets/audio/basic-shot.mp3",
+} as const;
+
+export type TowerFireSrcKey = keyof typeof TOWER_FIRE_SRCES;
+
+export const SOUND_CONFIGS = defineSoundConfigs<GameEvent>(
+  GAME_AUDIO_CATEGORIES,
+  {
+    [GameEvent.TOWER_PLACED]: {
+      category: "sfx",
     },
-  },
-  [GameEvent.ENEMY_KILLED]: {
-    category: "sfx",
-    volume: 60,
-  },
-  [GameEvent.ENEMY_REACHED_END]: {
-    category: "sfx",
-    volume: 80,
-  },
-  [GameEvent.PROJECTILE_HIT]: {
-    category: "sfx",
-    volume: 40,
-  },
-  [GameEvent.WAVE_STARTED]: {
-    category: "sfx",
-    volume: 90,
-  },
-  [GameEvent.GAME_OVER]: {
-    category: "sfx",
-    volume: 100,
-    spatial: false,
-  },
-  [GameEvent.GAME_WON]: {
-    category: "sfx",
-    volume: 100,
-    spatial: false,
-  },
-  [GameEvent.GAME_PAUSED]: {
-    category: "sfx",
-    volume: 50,
-    spatial: false,
-  },
-  [GameEvent.GAME_RESUMED]: {
-    category: "sfx",
-    volume: 30,
-    spatial: false,
-  },
-  [GameEvent.UI_CLICK]: {
-    category: "sfx",
-    volume: 30,
-    spatial: false,
-  },
-  [GameEvent.UI_ACTION_DENIED]: {
-    category: "sfx",
-    volume: UI_ACTION_DENIED_SFX_VOLUME,
-    spatial: false,
-  },
-} as const satisfies Record<GameEvent, SoundConfig<GameAudioCategory>>;
+    [GameEvent.TOWER_SOLD]: {
+      category: "sfx",
+    },
+    [GameEvent.TOWER_FIRE]: {
+      category: "sfx",
+    },
+    [GameEvent.ENEMY_KILLED]: {
+      category: "sfx",
+    },
+    [GameEvent.ENEMY_REACHED_END]: {
+      category: "sfx",
+    },
+    [GameEvent.PROJECTILE_HIT]: {
+      category: "sfx",
+    },
+    [GameEvent.WAVE_STARTED]: {
+      category: "sfx",
+    },
+    [GameEvent.GAME_OVER]: {
+      category: "sfx",
+      spatial: false,
+    },
+    [GameEvent.GAME_WON]: {
+      category: "sfx",
+      spatial: false,
+    },
+    [GameEvent.GAME_PAUSED]: {
+      category: "sfx",
+      spatial: false,
+    },
+    [GameEvent.GAME_RESUMED]: {
+      category: "sfx",
+      spatial: false,
+    },
+    [GameEvent.UI_CLICK]: {
+      category: "sfx",
+      spatial: false,
+    },
+    [GameEvent.UI_ACTION_DENIED]: {
+      category: "sfx",
+      spatial: false,
+    },
+  }
+);
 
 export type AudioEventDataMap = {
   "tower_fire": {

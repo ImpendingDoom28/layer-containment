@@ -7,7 +7,7 @@ import { useLevelEditorStore } from "../../../core/stores/useLevelEditorStore";
 import type { EnemyType } from "../../../core/types/game";
 import { parseNumberInputOr } from "../../../utils/parseNumberInput";
 import { UIAccordionContent, UIAccordionItem, UIAccordionTrigger } from "../../ui/UIAccordion";
-import { UIButton } from "../../ui/UIButton";
+import { UIButton } from "../../ui/buttons/UIButton";
 import { UIInput } from "../../ui/UIInput";
 import { UISelect } from "../../ui/UISelect";
 import { UITypography } from "../../ui/UITypography";

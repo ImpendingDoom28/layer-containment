@@ -15,6 +15,9 @@ export const GameEvent = {
   GAME_RESUMED: "game_resumed",
   UI_CLICK: "ui_click",
   UI_ACTION_DENIED: "ui_action_denied",
+  UI_ACTION_HOLD_START: "ui_action_hold_start",
+  UI_ACTION_HOLD_END: "ui_action_hold_end",
+  UI_ACTION_HOLD_ABORT: "ui_action_hold_abort",
 } as const;
 
 export type GameEvent = (typeof GameEvent)[keyof typeof GameEvent];

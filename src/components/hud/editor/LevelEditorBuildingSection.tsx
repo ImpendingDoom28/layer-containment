@@ -1,7 +1,7 @@
 import { Trash2 } from "lucide-react";
 
 import { UIAccordionContent, UIAccordionItem, UIAccordionTrigger } from "../../ui/UIAccordion";
-import { UIButton } from "../../ui/UIButton";
+import { UIButton } from "../../ui/buttons/UIButton";
 import { UIInput } from "../../ui/UIInput";
 import { UISelect } from "../../ui/UISelect";
 import { tileSizeSelector, useGameStore } from "../../../core/stores/useGameStore";

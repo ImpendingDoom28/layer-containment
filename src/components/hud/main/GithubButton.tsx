@@ -2,7 +2,7 @@ import { FC } from "react";
 import { REPOSITORY_URL } from "../../../constants/game";
 import { GithubIcon } from "../../ui/assets/GithubIcon";
 import { cn } from "../../ui/lib/twUtils";
-import { UIButton } from "../../ui/UIButton";
+import { UIButton } from "../../ui/buttons/UIButton";
 
 type GithubButtonProps = {
   hasInteracted: boolean;

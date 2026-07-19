@@ -67,6 +67,18 @@ export const SOUND_CONFIGS = defineSoundConfigs<GameEvent>(
       category: "sfx",
       spatial: false,
     },
+    [GameEvent.UI_ACTION_HOLD_START]: {
+      category: "sfx",
+      spatial: false,
+    },
+    [GameEvent.UI_ACTION_HOLD_END]: {
+      category: "sfx",
+      spatial: false,
+    },
+    [GameEvent.UI_ACTION_HOLD_ABORT]: {
+      category: "sfx",
+      spatial: false,
+    },
   }
 );
 
@@ -127,6 +139,11 @@ export type AudioEventDataMap = {
   "ui_action_denied": {
     reason: "insufficient_funds";
     towerType: TowerType;
+  };
+  "ui_action_hold_start": Record<string, never>;
+  "ui_action_hold_end": Record<string, never>;
+  "ui_action_hold_abort": {
+    progress: number;
   };
 };
 

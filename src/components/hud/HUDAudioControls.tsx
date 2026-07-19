@@ -5,7 +5,7 @@ import {
   type GameAudioCategory,
   useAudioStore,
 } from "../../core/audio/useAudioStore";
-import { UIButton } from "../ui/UIButton";
+import { UIButton } from "../ui/buttons/UIButton";
 import {
   UICard,
   UICardAction,

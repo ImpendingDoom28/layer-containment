@@ -1,14 +1,34 @@
 import { useRef, useState, type ChangeEvent } from "react";
 
-import { AlertCircle, CheckCircle2, Download, FileUp, Pencil, Route } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Download,
+  FileUp,
+  Pencil,
+  Route,
+} from "lucide-react";
 
-import { UIAccordionContent, UIAccordionItem, UIAccordionTrigger } from "../../ui/UIAccordion";
-import { UIButton } from "../../ui/UIButton";
-import { UITypography } from "../../ui/UITypography";
-import { tileSizeSelector, useGameStore } from "../../../core/stores/useGameStore";
-import { loadLevelConfigFile, parseLevelConfigData } from "../../../core/levelConfig";
+import {
+  UIAccordionContent,
+  UIAccordionItem,
+  UIAccordionTrigger,
+} from "../../ui/UIAccordion";
+import { UIButton } from "@/components/ui/buttons/UIButton";
+import { UITypography } from "@/components/ui/UITypography";
+import {
+  tileSizeSelector,
+  useGameStore,
+} from "../../../core/stores/useGameStore";
+import {
+  loadLevelConfigFile,
+  parseLevelConfigData,
+} from "../../../core/levelConfig";
 import { useLevelEditorStore } from "../../../core/stores/useLevelEditorStore";
-import { buildLevelFileName, createExportableLevel } from "../../../utils/levelEditor";
+import {
+  buildLevelFileName,
+  createExportableLevel,
+} from "../../../utils/levelEditor";
 import type { LevelEditorPublishState } from "../../../core/types/editor";
 
 import { EditorSection } from "./EditorSection";
@@ -26,9 +46,21 @@ const PUBLISH_CONFIG: Record<
   LevelEditorPublishState,
   { label: string; className: string; icon: typeof Pencil }
 > = {
-  drafting: { label: "Drafting", className: "text-muted-foreground", icon: Pencil },
-  needsFixes: { label: "Needs fixes", className: "text-amber-400", icon: AlertCircle },
-  ready: { label: "Ready to export", className: "text-emerald-400", icon: CheckCircle2 },
+  drafting: {
+    label: "Drafting",
+    className: "text-muted-foreground",
+    icon: Pencil,
+  },
+  needsFixes: {
+    label: "Needs fixes",
+    className: "text-amber-400",
+    icon: AlertCircle,
+  },
+  ready: {
+    label: "Ready to export",
+    className: "text-emerald-400",
+    icon: CheckCircle2,
+  },
 };
 
 const VISIBLE_ISSUES = 3;
@@ -63,7 +95,9 @@ export const LevelEditorPublishSection = () => {
       loadDraftLevel(sampleLevel, tileSize);
       setStatusMessage("Loaded sample level.");
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "Failed to load sample level.");
+      setStatusMessage(
+        error instanceof Error ? error.message : "Failed to load sample level."
+      );
     }
   };
 
@@ -77,14 +111,18 @@ export const LevelEditorPublishSection = () => {
       const parsedLevel = parseLevelConfigData(parsedJson);
 
       if (!parsedLevel.success) {
-        setStatusMessage(parsedLevel.error.issues[0]?.message ?? "Invalid level JSON.");
+        setStatusMessage(
+          parsedLevel.error.issues[0]?.message ?? "Invalid level JSON."
+        );
         return;
       }
 
       loadDraftLevel(parsedLevel.data, tileSize);
       setStatusMessage(`Imported ${file.name}.`);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "Failed to import level JSON.");
+      setStatusMessage(
+        error instanceof Error ? error.message : "Failed to import level JSON."
+      );
     } finally {
       event.target.value = "";
     }
@@ -100,7 +138,9 @@ export const LevelEditorPublishSection = () => {
     const exportableLevel = createExportableLevel(draftLevel, tileSize);
     const parsedLevel = parseLevelConfigData(exportableLevel);
     if (!parsedLevel.success) {
-      setStatusMessage(parsedLevel.error.issues[0]?.message ?? "Level export failed.");
+      setStatusMessage(
+        parsedLevel.error.issues[0]?.message ?? "Level export failed."
+      );
       return;
     }
 
@@ -118,7 +158,9 @@ export const LevelEditorPublishSection = () => {
 
   const onValidate = () => {
     const isValid = validateDraftLevel();
-    setStatusMessage(isValid ? "Level is valid." : "Fix validation issues before exporting.");
+    setStatusMessage(
+      isValid ? "Level is valid." : "Fix validation issues before exporting."
+    );
   };
 
   return (
@@ -137,13 +179,16 @@ export const LevelEditorPublishSection = () => {
             {visibleIssues.map((issue, index) => (
               <div
                 key={`issue-${issue.path}-${index}`}
-                className="flex items-start gap-2 border-l-2 border-amber-400/40 pl-2"
+                className="flex items-start gap-2 pl-2 border-l-2 border-amber-400/40"
               >
                 <div>
                   <UITypography variant="verySmall" className="font-medium">
                     {issue.path || "level"}
                   </UITypography>
-                  <UITypography variant="verySmall" className="text-muted-foreground">
+                  <UITypography
+                    variant="verySmall"
+                    className="text-muted-foreground"
+                  >
                     {issue.message}
                   </UITypography>
                 </div>
@@ -185,7 +230,11 @@ export const LevelEditorPublishSection = () => {
             <Route />
             Sample
           </UIButton>
-          <UIButton onClick={() => fileInputRef.current?.click()} variant="outline" size="xs">
+          <UIButton
+            onClick={() => fileInputRef.current?.click()}
+            variant="outline"
+            size="xs"
+          >
             <FileUp />
             Import
           </UIButton>

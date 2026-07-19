@@ -12,6 +12,12 @@ const LevelEditorPage = lazy(() =>
   }))
 );
 
+const DevHoldButtonPage = lazy(() =>
+  import("./components/pages/DevHoldButtonPage").then((mod) => ({
+    default: mod.DevHoldButtonPage,
+  }))
+);
+
 const AppRoutes: FC = () => {
   const navigate = useNavigate();
 
@@ -44,6 +50,23 @@ const AppRoutes: FC = () => {
           </EntityIdProvider>
         }
       />
+      {import.meta.env.DEV ? (
+        <Route
+          path="/dev/hold-button"
+          element={
+            <Suspense
+              fallback={
+                <HUDLoading
+                  className="fixed inset-0"
+                  message="Loading dev page..."
+                />
+              }
+            >
+              <DevHoldButtonPage />
+            </Suspense>
+          }
+        />
+      ) : null}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -1,7 +1,7 @@
 import { FC, useMemo } from "react";
 import { ArrowLeft, DollarSign, Gauge, HeartPulse, Skull } from "lucide-react";
 
-import { UIButton } from "../ui/UIButton";
+import { UIButton } from "../ui/buttons/UIButton";
 import { UITypography } from "../ui/UITypography";
 import {
   UICard,

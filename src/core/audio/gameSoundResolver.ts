@@ -68,6 +68,10 @@ export const resolveGameSoundBuffer = async (
         UI_ACTION_DENIED_SFX_NOISE_DURATION_SEC,
         UI_ACTION_DENIED_SFX_NOISE_PLACEHOLDER_FREQ_HZ
       );
+    case GameEvent.UI_ACTION_HOLD_START:
+    case GameEvent.UI_ACTION_HOLD_END:
+    case GameEvent.UI_ACTION_HOLD_ABORT:
+      return null;
     default:
       return generatePlaceholderSound(audioContext, "tone", 0.1, 440);
   }

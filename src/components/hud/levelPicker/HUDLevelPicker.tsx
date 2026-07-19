@@ -13,7 +13,7 @@ import {
   tileSizeSelector,
   useGameStore,
 } from "../../../core/stores/useGameStore";
-import { UIButton } from "../../ui/UIButton";
+import { UIButton } from "../../ui/buttons/UIButton";
 import {
   UICard,
   UICardContent,

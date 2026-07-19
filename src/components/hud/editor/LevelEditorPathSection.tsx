@@ -14,7 +14,7 @@ import {
   UIAccordionItem,
   UIAccordionTrigger,
 } from "../../ui/UIAccordion";
-import { UIButton } from "../../ui/UIButton";
+import { UIButton } from "../../ui/buttons/UIButton";
 import { UITypography } from "../../ui/UITypography";
 
 import { EDITOR_PATH_SUBTOOL_ACTIVE_CLASS } from "./editorModeAccents";

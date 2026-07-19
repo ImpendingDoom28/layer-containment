@@ -1,9 +1,10 @@
 import { FC } from "react";
 import { HeartPulse, Pause, Play } from "lucide-react";
 
+import { UIButton } from "@/components/ui/buttons/UIButton";
+
 import type { GameStatus } from "../../core/types/game";
 import { UITypography } from "../ui/UITypography";
-import { UIButton } from "../ui/UIButton";
 import { UICard, UICardContent } from "../ui/UICard";
 import {
   totalWavesSelector,

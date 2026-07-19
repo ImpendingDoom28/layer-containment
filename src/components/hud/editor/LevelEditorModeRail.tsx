@@ -2,7 +2,7 @@ import { Box, Droplets, MousePointer2, Route, Eraser, ChevronLeft } from "lucide
 
 import { useLevelEditorStore } from "../../../core/stores/useLevelEditorStore";
 import type { LevelEditorMode, LevelEditorTool } from "../../../core/types/editor";
-import { UIButton } from "../../ui/UIButton";
+import { UIButton } from "../../ui/buttons/UIButton";
 
 import { EDITOR_PATH_MODE_ACCENT_BG_CLASS } from "./editorModeAccents";
 

@@ -14,7 +14,7 @@ import {
   useGameStore,
 } from "../../core/stores/useGameStore";
 import { towersSelector, useLevelStore } from "../../core/stores/useLevelStore";
-import { UIButton } from "../ui/UIButton";
+import { UIHoldButton } from "../ui/buttons/UIHoldButton";
 import {
   UICard,
   UICardContent,
@@ -153,19 +153,15 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
               </div>
             </UICardContent>
 
-            <UICardFooter className="border-border/70 p-0">
-              <UIButton
-                onClick={(event) => {
-                  onStopPanelPropagation(event);
-                  onSell();
-                }}
-                onPointerDown={onStopPanelPropagation}
+            <UICardFooter className="p-0 border-border/70">
+              <UIHoldButton
+                onConfirm={onSell}
+                label={`Sell $${sellPrice}`}
+                holdingLabel="Selling..."
                 variant="destructive"
                 size="sm"
-                className="h-8 w-full border-0"
-              >
-                Sell ${sellPrice}
-              </UIButton>
+                className="w-full h-8 border-0"
+              />
             </UICardFooter>
           </UICard>
         </div>

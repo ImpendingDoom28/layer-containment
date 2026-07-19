@@ -2,7 +2,7 @@ import { FC, useMemo } from "react";
 import { Zap, Shield, Wind, Heart, LucideProps } from "lucide-react";
 
 import type { EnemyUpgradeId } from "../../core/types/game";
-import { UIButton } from "@/components/ui/UIButton";
+import { UIButton } from "@/components/ui/buttons/UIButton";
 import {
   UICard,
   UICardContent,

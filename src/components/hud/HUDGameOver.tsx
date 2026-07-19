@@ -1,7 +1,7 @@
 import { FC } from "react";
 
 import type { GameStatus } from "../../core/types/game";
-import { UIButton } from "../ui/UIButton";
+import { UIButton } from "../ui/buttons/UIButton";
 import {
   UICard,
   UICardContent,

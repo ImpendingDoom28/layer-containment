@@ -1,7 +1,7 @@
 import { FC, memo } from "react";
 import { ArrowRight } from "lucide-react";
 
-import { UIButton, UIButtonProps } from "../../ui/UIButton";
+import { UIButton, UIButtonProps } from "../../ui/buttons/UIButton";
 import { UITypography } from "../../ui/UITypography";
 import { HUDAudioControls } from "../HUDAudioControls";
 import { HUDAlmanac } from "../HUDAlmanac";

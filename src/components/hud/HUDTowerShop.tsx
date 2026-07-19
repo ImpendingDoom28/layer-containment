@@ -1,6 +1,6 @@
 import { FC, useMemo } from "react";
 
-import { UIButton } from "@/components/ui/UIButton";
+import { UIButton } from "@/components/ui/buttons/UIButton";
 import { UITypography } from "../ui/UITypography";
 import {
   denyPulseSelector,

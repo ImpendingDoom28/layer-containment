@@ -72,7 +72,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
     isLevelConfigLoaded,
   } = levelSystem;
 
-  const { onEnemyReachEnd, onEnemyUpdate } = enemySystem;
+  const { onEnemyReachEnd } = enemySystem;
 
   const { onProjectileHit, onProjectileRemove } = projectileSystem;
 
@@ -159,7 +159,6 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
               gameStatus={gameStatus}
               waveSystem={waveSystem}
               onEnemyReachEnd={onEnemyReachEnd}
-              onEnemyUpdate={onEnemyUpdate}
               onProjectileHit={onProjectileHit}
               onProjectileRemove={onProjectileRemove}
               onSellTower={sellTower}

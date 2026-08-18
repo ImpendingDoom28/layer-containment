@@ -25,6 +25,8 @@ import { useLevelSystem } from "./useLevelSystem";
 import { useUpgradeStore } from "../stores/useUpgradeStore";
 import { GameEvent } from "../types/enums/events";
 import { gameEvents } from "../../utils/eventEmitter";
+import { world } from "../ecs/world";
+import { getLivingEnemySnapshots } from "../ecs/selectors/enemySnapshots";
 
 type SpawnQueueItem = {
   type: EnemyType;
@@ -307,7 +309,7 @@ export const useWaveSystem = (gameState: GameState) => {
         if (spawnQueueIndexRef.current >= spawnQueueRef.current.length) {
           if (
             waveStartedRef.current &&
-            useLevelStore.getState().enemies.length === 0
+            getLivingEnemySnapshots(world).length === 0
           ) {
             waveStartedRef.current = false;
             if (currentTime - lastSpawnTimeRef.current > 300) {
@@ -374,7 +376,7 @@ export const useWaveSystem = (gameState: GameState) => {
     return (
       spawnQueueRef.current.length -
       spawnQueueIndexRef.current +
-      useLevelStore.getState().enemies.length
+      getLivingEnemySnapshots(world).length
     );
   }, [currentWave, totalWaves]);
 

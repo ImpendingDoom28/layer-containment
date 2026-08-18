@@ -1,10 +1,9 @@
 import { useCallback } from "react";
+import { useActions } from "koota/react";
 
 import {
   enemyTypesSelector,
   enemyUpgradesSelector,
-  gameStatusSelector,
-  loseHealthSelector,
   pathWidthSelector,
   setSelectedTowerSelector,
   setSelectedTowerTypeToPlaceSelector,
@@ -21,12 +20,10 @@ import {
   enemiesKilledSelector,
   gridOffsetSelector,
   gridSizeSelector,
-  incrementEnemiesKilledSelector,
   isLevelConfigLoadedSelector,
   moneySelector,
   pathWaypointsSelector,
   resetLevelStateSelector,
-  setEnemiesSelector,
   setProjectilesSelector,
   setTowersSelector,
   spendMoneySelector,
@@ -38,7 +35,6 @@ import {
   resetLevelEnemyUpgradesSelector,
   useUpgradeStore,
 } from "../stores/useUpgradeStore";
-import { useAlmanacStore } from "../stores/useAlmanacStore";
 import {
   Enemy,
   EnemyType,
@@ -60,6 +56,7 @@ import { getTilePlacementState as getSharedTilePlacementState } from "../../util
 import { useEntityIds } from "../contexts/EntityIdContext";
 import { gameEvents } from "../../utils/eventEmitter";
 import { GameEvent } from "../types/enums/events";
+import { enemyActions } from "../ecs/actions/enemyActions";
 
 export const useLevelSystem = () => {
   const buildings = useLevelStore(buildingsSelector);
@@ -69,7 +66,6 @@ export const useLevelSystem = () => {
   const setTowers = useLevelStore(setTowersSelector);
   const resetLevelState = useLevelStore(resetLevelStateSelector);
   const towers = useLevelStore(towersSelector);
-  const setEnemies = useLevelStore(setEnemiesSelector);
   const setProjectiles = useLevelStore(setProjectilesSelector);
   const pathWaypoints = useLevelStore(pathWaypointsSelector);
   const currentWave = useLevelStore(currentWaveSelector);
@@ -78,12 +74,10 @@ export const useLevelSystem = () => {
   const spendMoney = useLevelStore(spendMoneySelector);
   const addMoney = useLevelStore(addMoneySelector);
   const isLevelConfigLoaded = useLevelStore(isLevelConfigLoadedSelector);
-  const incrementEnemiesKilled = useLevelStore(incrementEnemiesKilledSelector);
 
   const towerTypes = useGameStore(towerTypesSelector);
   const enemyTypes = useGameStore(enemyTypesSelector);
   const tileSize = useGameStore(tileSizeSelector);
-  const loseHealth = useGameStore(loseHealthSelector);
   const setSelectedTower = useGameStore(setSelectedTowerSelector);
   const setSelectedTowerTypeToPlace = useGameStore(
     setSelectedTowerTypeToPlaceSelector
@@ -92,12 +86,13 @@ export const useLevelSystem = () => {
     towerSellPriceMultiplierSelector
   );
   const pathWidth = useGameStore(pathWidthSelector);
-  const gameStatus = useGameStore(gameStatusSelector);
   const enemyUpgrades = useGameStore(enemyUpgradesSelector);
   const towerHeight = useGameStore(towerHeightSelector);
   const resetLevelEnemyUpgrades = useUpgradeStore(
     resetLevelEnemyUpgradesSelector
   );
+
+  const actions = useActions(enemyActions);
 
   const { getNextTowerId, getNextEnemyId, getNextProjectileId } =
     useEntityIds();
@@ -123,13 +118,11 @@ export const useLevelSystem = () => {
     [towers, buildings, waters, gridOffset, tileSize, pathWaypoints, pathWidth]
   );
 
-  // Towers
   const placeTower = useCallback(
     (gridX: number, gridZ: number, towerType: TowerType): boolean => {
       const towerConfig = towerTypes?.[towerType];
       if (!towerConfig) return false;
 
-      // Check if can afford
       if (money < towerConfig.cost) return false;
 
       const placementState = getTilePlacementState(gridX, gridZ);
@@ -224,7 +217,6 @@ export const useLevelSystem = () => {
     [addMoney, removeTower, towers, towerSellPriceMultiplier, towerHeight]
   );
 
-  //Enemies
   const addEnemy = useCallback(
     (
       enemyType: EnemyType,
@@ -285,7 +277,7 @@ export const useLevelSystem = () => {
         speed,
         reward,
         pathProgress: 0,
-        pathIndex: pathIndex,
+        pathIndex,
         slowUntil: 0,
         slowMultiplier: 1,
         x: startPosition.x,
@@ -296,12 +288,7 @@ export const useLevelSystem = () => {
         slowResistance,
       };
 
-      if (gameStatus === "playing") {
-        // Mark enemy type as discovered in the almanac
-        useAlmanacStore.getState().discoverEnemy(enemyType);
-      }
-
-      setEnemies((prev) => [...prev, enemy]);
+      actions.spawnEnemy(enemy);
       return enemy;
     },
     [
@@ -310,118 +297,24 @@ export const useLevelSystem = () => {
       calcPathIndex,
       pathWaypoints,
       getNextEnemyId,
-      gameStatus,
-      setEnemies,
+      actions,
     ]
   );
 
   const updateEnemy = useCallback(
     (enemyId: number, updates: Partial<Enemy>) => {
-      const updateKeys = Object.keys(updates) as Array<keyof Enemy>;
-      if (updateKeys.length === 0) return;
-
-      setEnemies((prev) => {
-        let foundEnemy: Enemy | null = null;
-        let updatedEnemy: Enemy | null = null;
-        let hasChanges = false;
-        const nextEnemies: Enemy[] = [];
-
-        for (const enemy of prev) {
-          if (enemy.id !== enemyId) {
-            nextEnemies.push(enemy);
-            continue;
-          }
-
-          foundEnemy = enemy;
-
-          const shouldUpdate = updateKeys.some(
-            (key) => enemy[key] !== updates[key]
-          );
-
-          if (!shouldUpdate) {
-            nextEnemies.push(enemy);
-            continue;
-          }
-
-          hasChanges = true;
-          updatedEnemy = {
-            ...enemy,
-            ...updates,
-          };
-
-          if (updatedEnemy.health > 0) {
-            nextEnemies.push(updatedEnemy);
-          }
-        }
-
-        if (!foundEnemy || !hasChanges || !updatedEnemy) {
-          return prev;
-        }
-
-        if (updatedEnemy.health <= 0) {
-          addMoney(updatedEnemy.reward);
-          if (gameStatus !== "menu") {
-            incrementEnemiesKilled();
-          }
-          gameEvents.emit(GameEvent.ENEMY_KILLED, {
-            enemyId,
-            enemyType: updatedEnemy.type,
-            worldPosition: {
-              x: updatedEnemy.x,
-              y: updatedEnemy.size / 2,
-              z: updatedEnemy.z,
-            },
-          });
-          return nextEnemies;
-        }
-
-        return nextEnemies;
-      });
+      actions.updateEnemy(enemyId, updates);
     },
-    [setEnemies, addMoney, incrementEnemiesKilled, gameStatus]
+    [actions]
   );
 
   const removeEnemy = useCallback(
-    (enemyId: number, reachedEnd: boolean = false) => {
-      setEnemies((prev) => {
-        const enemy = prev.find((e) => e.id === enemyId);
-        if (!enemy) return prev;
-
-        // If enemy reached end, lose health
-        if (reachedEnd) {
-          loseHealth(enemy.healthLoss);
-          gameEvents.emit(GameEvent.ENEMY_REACHED_END, {
-            enemyId,
-            enemyType: enemy.type,
-            worldPosition: {
-              x: enemy.x,
-              y: enemy.size / 2,
-              z: enemy.z,
-            },
-          });
-        } else {
-          addMoney(enemy.reward);
-          if (gameStatus !== "menu") {
-            incrementEnemiesKilled();
-          }
-          gameEvents.emit(GameEvent.ENEMY_KILLED, {
-            enemyId,
-            enemyType: enemy.type,
-            worldPosition: {
-              x: enemy.x,
-              y: enemy.size / 2,
-              z: enemy.z,
-            },
-          });
-        }
-
-        return prev.filter((e) => e.id !== enemyId);
-      });
+    (enemyId: number, reachedEnd = false) => {
+      actions.removeEnemy(enemyId, reachedEnd);
     },
-    [setEnemies, loseHealth, addMoney, incrementEnemiesKilled, gameStatus]
+    [actions]
   );
 
-  // Projectiles
   const addProjectile = useCallback(
     (projectile: Omit<Projectile, "id">): Projectile => {
       const newProjectile: Projectile = {

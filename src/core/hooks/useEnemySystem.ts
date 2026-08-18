@@ -1,11 +1,13 @@
 import { useCallback } from "react";
+import { useActions } from "koota/react";
 
 import type { Enemy } from "../types/game";
 import type { LevelSystem } from "./useLevelSystem";
-import { useLevelStore } from "../stores/useLevelStore";
+import { enemyActions } from "../ecs/actions/enemyActions";
 
 export const useEnemySystem = (levelSystem: LevelSystem) => {
   const { removeEnemy, updateEnemy } = levelSystem;
+  const actions = useActions(enemyActions);
 
   const onEnemyReachEnd = useCallback(
     (enemyId: number) => {
@@ -23,26 +25,11 @@ export const useEnemySystem = (levelSystem: LevelSystem) => {
 
   const damageEnemy = useCallback(
     (enemyId: number, damage: number): boolean => {
-      const enemy = useLevelStore
-        .getState()
-        .enemies.find((e) => e.id === enemyId);
-      if (!enemy) return false;
-
-      const newHealth = Math.max(0, enemy.health - damage);
-
-      if (newHealth <= 0) {
-        removeEnemy(enemyId, false);
-        return true;
-      }
-      updateEnemy(enemyId, { health: newHealth });
-      return false;
+      return actions.damageEnemy(enemyId, damage);
     },
-    [updateEnemy, removeEnemy]
+    [actions]
   );
 
-  // Apply slow debuff to enemy
-  // Note: slowUntil should be set using the game clock, not Date.now()
-  // This will be handled by the component that calls this
   const slowEnemy = useCallback(
     (
       enemyId: number,
@@ -50,26 +37,9 @@ export const useEnemySystem = (levelSystem: LevelSystem) => {
       duration: number,
       currentTime: number
     ) => {
-      const enemy = useLevelStore
-        .getState()
-        .enemies.find((e) => e.id === enemyId);
-      if (!enemy) return;
-
-      // Check for slow resistance (1 = fully immune)
-      const resistance = enemy.slowResistance ?? 0;
-      if (resistance >= 1) return;
-
-      // Reduce slow effectiveness based on resistance
-      const effectiveSlowMultiplier =
-        1 - (1 - slowMultiplier) * (1 - resistance);
-      const slowUntil = currentTime + duration * (1 - resistance);
-
-      updateEnemy(enemyId, {
-        slowMultiplier: effectiveSlowMultiplier,
-        slowUntil: slowUntil,
-      });
+      actions.slowEnemy(enemyId, slowMultiplier, duration, currentTime);
     },
-    [updateEnemy]
+    [actions]
   );
 
   return {

@@ -1,4 +1,5 @@
 import { FC, memo, useCallback, useMemo } from "react";
+import { useQuery } from "koota/react";
 
 import { TowerSystem } from "./TowerSystem";
 import { Building } from "../entities/Building";
@@ -7,13 +8,11 @@ import { Enemy } from "../entities/Enemy";
 import { useLevelSystem } from "../../core/hooks/useLevelSystem";
 import {
   buildingsSelector,
-  enemiesSelector,
   useLevelStore,
   watersSelector,
 } from "../../core/stores/useLevelStore";
 import type {
   Tower as TowerInstance,
-  Enemy as EnemyInstance,
   Projectile as ProjectileInstance,
   ActiveEffect,
   Tower,
@@ -29,17 +28,15 @@ import {
   setSelectedTowerTypeToPlaceSelector,
 } from "../../core/stores/useGameStore";
 import { useGameStore } from "../../core/stores/useGameStore";
+import { IsEnemy } from "../../core/ecs/traits/enemy";
 
 type EntitiesSystemProps = {
   activeEffects: ActiveEffect[];
   onEffectComplete: (effectId: number) => void;
   onEnemyReachEnd: ((enemyId: number) => void) | null;
-  onEnemyUpdate:
-    | ((enemyId: number, updates: Partial<EnemyInstance>) => void)
-    | null;
   onProjectileHit: (
     projectile: ProjectileInstance,
-    targetEnemy: EnemyInstance,
+    targetEnemy: import("../../core/types/game").Enemy,
     currentTime: number
   ) => void;
   onProjectileRemove: (projectileId: number) => void;
@@ -54,7 +51,6 @@ type EntitiesSystemProps = {
 export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
   ({
     onEnemyReachEnd,
-    onEnemyUpdate,
     onProjectileHit,
     onProjectileRemove,
     onSellTower,
@@ -66,6 +62,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
     activeEffects,
     shouldStopMovement,
   }) => {
+    const enemyEntities = useQuery(IsEnemy);
     const selectedTowerTypeToPlace = useGameStore(
       selectedTowerTypeToPlaceSelector
     );
@@ -76,21 +73,15 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
     const levelSystem = useLevelSystem();
     const buildings = useLevelStore(buildingsSelector);
     const waters = useLevelStore(watersSelector);
-    const enemies = useLevelStore(enemiesSelector);
     const { getTilePlacementState, updateTower } = levelSystem;
 
     const { InstancedProjectiles, fireProjectile } = useInstancedProjectiles({
       maxProjectiles: 500,
       maxBeams: 50,
       projectileSize: 0.1,
-      enemies,
       onHit: onProjectileHit,
       onRemove: onProjectileRemove,
     });
-
-    const enemiesToRender = useMemo(() => {
-      return enemies.filter((enemy) => enemy.health > 0);
-    }, [enemies]);
 
     const hoveredTilePlacementState = useMemo<TilePlacementState | null>(() => {
       if (!hoveredTile) return null;
@@ -112,10 +103,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
 
     return (
       <>
-        <MedicHealPulseSystem
-          shouldStopMovement={shouldStopMovement}
-          onEnemyUpdate={onEnemyUpdate}
-        />
+        <MedicHealPulseSystem shouldStopMovement={shouldStopMovement} />
 
         {buildings.map((building) => (
           <Building key={building.id} building={building} />
@@ -125,12 +113,11 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
           <Water key={water.id} water={water} />
         ))}
 
-        {enemiesToRender.map((enemy) => (
+        {enemyEntities.map((entity) => (
           <Enemy
-            key={enemy.id}
-            enemy={enemy}
+            key={entity}
+            entity={entity}
             onReachEnd={onEnemyReachEnd}
-            onUpdate={onEnemyUpdate}
             onSpawnEffect={onSpawnEffect}
             onEndEffect={onEndEffect}
           />

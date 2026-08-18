@@ -1,5 +1,6 @@
 import { FC, memo, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
+import { useWorld } from "koota/react";
 
 import {
   findNearestEnemy,
@@ -26,12 +27,12 @@ import {
   useGameStore,
 } from "../../core/stores/useGameStore";
 import {
-  enemiesSelector,
   gridSizeSelector,
   pathWaypointsSelector,
   towersSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
+import { getLivingEnemySnapshots } from "../../core/ecs/selectors/enemySnapshots";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import {
   flatCombatPointToWorldPosition,
@@ -72,7 +73,7 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     const gridSize = useLevelStore(gridSizeSelector);
     const pathWaypoints = useLevelStore(pathWaypointsSelector);
     const towers = useLevelStore(towersSelector);
-    const enemies = useLevelStore(enemiesSelector);
+    const world = useWorld();
 
     const combatStatsByTowerId = useMemo(() => {
       const map = new Map<number, { damage: number; range: number }>();
@@ -131,6 +132,7 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
       if (gameStatus !== "playing" && gameStatus !== "menu") return;
 
       const currentTime = state.clock.elapsedTime;
+      const enemies = getLivingEnemySnapshots(world);
 
       towers.forEach((tower) => {
         if (tower.type === "relay") return;

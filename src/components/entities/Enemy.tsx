@@ -1,14 +1,23 @@
-import { FC, useRef, useEffect, useState, useMemo, memo, useCallback } from "react";
+import {
+  FC,
+  useRef,
+  useEffect,
+  useState,
+  useMemo,
+  memo,
+  useCallback,
+} from "react";
 import { useFrame } from "@react-three/fiber";
 import { Billboard } from "@react-three/drei";
 import { Quaternion, Vector3, type Group, type Mesh } from "three";
+import type { Entity } from "koota";
+import { useActions, useTrait } from "koota/react";
 
 import {
   getPositionAlongMultiplePaths,
   isAtPathEnd,
 } from "../../utils/pathUtils";
 import { getCssColorValue } from "../ui/lib/cssUtils";
-import type { Enemy as EnemyInstance } from "../../core/types/game";
 import { GUIDebugInfo } from "../gui/GUIDebugInfo";
 import { getShouldStopMovement } from "../../core/getShouldStopMovement";
 import {
@@ -16,10 +25,7 @@ import {
   pathWaypointsSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
-import {
-  tileSizeSelector,
-  useGameStore,
-} from "../../core/stores/useGameStore";
+import { tileSizeSelector, useGameStore } from "../../core/stores/useGameStore";
 import {
   flatFieldToSphereSurface,
   getPlanetRadius,
@@ -30,14 +36,15 @@ import {
   getEffectiveGameTime,
   stepPauseClock,
 } from "../../utils/pauseClock";
+import { enemyActions } from "../../core/ecs/actions/enemyActions";
+import { EnemyState } from "../../core/ecs/traits/enemy";
 import { MedicHealBurstEffect } from "./effects/MedicHealBurstEffect";
 import { SlowEffect } from "./effects/SlowEffect";
 import { UpgradeEffect } from "./effects/UpgradeEffect";
 
 type EnemyProps = {
-  enemy: EnemyInstance;
+  entity: Entity;
   onReachEnd: ((enemyId: number) => void) | null;
-  onUpdate: ((enemyId: number, updates: Partial<EnemyInstance>) => void) | null;
   onSpawnEffect:
     | ((position: [number, number, number], color: string) => void)
     | null;
@@ -48,14 +55,10 @@ type EnemyProps = {
 };
 
 export const Enemy: FC<EnemyProps> = memo(
-  ({
-    enemy,
-    onReachEnd,
-    onUpdate,
-    onSpawnEffect,
-    onEndEffect,
-    debug = false,
-  }) => {
+  ({ entity, onReachEnd, onSpawnEffect, onEndEffect, debug = false }) => {
+    const enemy = useTrait(entity, EnemyState);
+    const actions = useActions(enemyActions);
+
     const pathWaypoints = useLevelStore(pathWaypointsSelector);
     const gridSize = useLevelStore(gridSizeSelector);
     const tileSize = useGameStore(tileSizeSelector);
@@ -82,7 +85,10 @@ export const Enemy: FC<EnemyProps> = memo(
           .copy(scratchSurface.current)
           .addScaledVector(scratchNormal.current, pathY + halfHeight);
         getSurfaceQuaternion(scratchNormal.current, scratchQuat.current);
-        return { position: scratchGroupPos.current, quaternion: scratchQuat.current };
+        return {
+          position: scratchGroupPos.current,
+          quaternion: scratchQuat.current,
+        };
       },
       [radius]
     );
@@ -102,8 +108,9 @@ export const Enemy: FC<EnemyProps> = memo(
     const pauseClockRef = useRef(createPauseClock());
     const previousShouldStopMovementRef = useRef<boolean>(shouldStopMovement);
 
-    // Trigger spawn effect when enemy first appears
     useEffect(() => {
+      if (!enemy) return;
+
       if (
         !hasTriggeredSpawnEffect.current &&
         onSpawnEffect &&
@@ -137,7 +144,8 @@ export const Enemy: FC<EnemyProps> = memo(
     }, [enemy, onSpawnEffect, pathWaypoints, radius]);
 
     useFrame((state, delta) => {
-      if (!enemy || enemy.health <= 0) return;
+      const live = entity.get(EnemyState);
+      if (!live || live.health <= 0) return;
 
       const now = state.clock.elapsedTime;
 
@@ -151,22 +159,21 @@ export const Enemy: FC<EnemyProps> = memo(
 
       if (
         !isPaused &&
-        enemy.upgrades.length > 0 &&
+        live.upgrades.length > 0 &&
         upgradeFirstRingRef.current
       ) {
         const time = state.clock.elapsedTime;
         upgradeFirstRingRef.current.rotation.y = time * 1.5;
         const pulse = Math.sin(time * 2) * 0.05 + 1;
-        const baseRadius = enemy.size * 1.1;
+        const baseRadius = live.size * 1.1;
         upgradeFirstRingRef.current.scale.setScalar(baseRadius * pulse);
       }
 
       if (isPaused) {
         const currentlySlowed =
-          enemy.slowUntil > 0 &&
-          enemy.slowUntil > adjustedTime &&
-          enemy.slowMultiplier < 1;
-        // Only trigger React update if value changed
+          live.slowUntil > 0 &&
+          live.slowUntil > adjustedTime &&
+          live.slowMultiplier < 1;
         if (isSlowedRef.current !== currentlySlowed) {
           isSlowedRef.current = currentlySlowed;
           setIsSlowed(currentlySlowed);
@@ -174,34 +181,31 @@ export const Enemy: FC<EnemyProps> = memo(
         return;
       }
 
-      let effectiveSpeed = enemy.speed;
+      let effectiveSpeed = live.speed;
 
       const currentlySlowed =
-        enemy.slowUntil > 0 &&
-        enemy.slowUntil > adjustedTime &&
-        enemy.slowMultiplier < 1;
-      // Only trigger React update if value changed
+        live.slowUntil > 0 &&
+        live.slowUntil > adjustedTime &&
+        live.slowMultiplier < 1;
       if (isSlowedRef.current !== currentlySlowed) {
         isSlowedRef.current = currentlySlowed;
         setIsSlowed(currentlySlowed);
       }
 
       if (currentlySlowed) {
-        effectiveSpeed *= enemy.slowMultiplier;
-      } else if (enemy.slowMultiplier < 1) {
-        onUpdate?.(enemy.id, { slowMultiplier: 1, slowUntil: 0 });
+        effectiveSpeed *= live.slowMultiplier;
+      } else if (live.slowMultiplier < 1) {
+        actions.updateEnemy(live.id, { slowMultiplier: 1, slowUntil: 0 });
       }
 
-      // Update path progress
-      const progressDelta = (effectiveSpeed * delta) / 20; // Adjust divisor for path length scaling
-      const newProgress = enemy.pathProgress + progressDelta;
+      const progressDelta = (effectiveSpeed * delta) / 20;
+      const newProgress = live.pathProgress + progressDelta;
 
-      // Check if reached end
       if (isAtPathEnd(newProgress)) {
         if (!hasReachedEnd.current && onEndEffect) {
           const endPosition = getPositionAlongMultiplePaths(
             pathWaypoints,
-            enemy.pathIndex,
+            live.pathIndex,
             1
           );
           flatFieldToSphereSurface(
@@ -220,18 +224,17 @@ export const Enemy: FC<EnemyProps> = memo(
               scratchGroupPos.current.y,
               scratchGroupPos.current.z,
             ],
-            enemy.color
+            live.color
           );
           hasReachedEnd.current = true;
         }
-        onReachEnd?.(enemy.id);
+        onReachEnd?.(live.id);
         return;
       }
 
-      // Get position along path
       const position = getPositionAlongMultiplePaths(
         pathWaypoints,
-        enemy.pathIndex,
+        live.pathIndex,
         newProgress
       );
 
@@ -240,33 +243,27 @@ export const Enemy: FC<EnemyProps> = memo(
           position.x,
           position.z,
           position.y,
-          enemy.size / 2
+          live.size / 2
         );
         meshRef.current.position.copy(footing.position);
         meshRef.current.quaternion.copy(footing.quaternion);
       }
 
-      const live = useLevelStore
-        .getState()
-        .enemies.find((e) => e.id === enemy.id);
-
       if (
-        enemy.regeneration &&
-        enemy.regeneration > 0 &&
-        live &&
+        live.regeneration &&
+        live.regeneration > 0 &&
         live.health < live.maxHealth
       ) {
-        const healAmount = enemy.regeneration * delta;
+        const healAmount = live.regeneration * delta;
         const newHealth = Math.min(live.maxHealth, live.health + healAmount);
-        onUpdate?.(enemy.id, {
+        actions.updateEnemy(live.id, {
           pathProgress: newProgress,
           x: position.x,
           z: position.z,
           health: newHealth,
         });
       } else {
-        // Update enemy state
-        onUpdate?.(enemy.id, {
+        actions.updateEnemy(live.id, {
           pathProgress: newProgress,
           x: position.x,
           z: position.z,
@@ -275,6 +272,13 @@ export const Enemy: FC<EnemyProps> = memo(
     });
 
     const initialFooting = useMemo(() => {
+      if (!enemy) {
+        return {
+          position: new Vector3(),
+          quaternion: new Quaternion(),
+        };
+      }
+
       const pos = getPositionAlongMultiplePaths(
         pathWaypoints,
         enemy.pathIndex,
@@ -290,14 +294,7 @@ export const Enemy: FC<EnemyProps> = memo(
         .clone()
         .addScaledVector(normal, pos.y + enemy.size / 2);
       return { position: p, quaternion: getSurfaceQuaternion(normal) };
-    }, [
-      enemy.pathProgress,
-      enemy.pathIndex,
-      pathWaypoints,
-      gridSize,
-      tileSize,
-      enemy.size,
-    ]);
+    }, [enemy, pathWaypoints, gridSize, tileSize]);
 
     if (!enemy || enemy.health <= 0) return null;
 
@@ -329,7 +326,7 @@ export const Enemy: FC<EnemyProps> = memo(
 
         {enemy.healPulse && (
           <MedicHealBurstEffect
-            enemyId={enemy.id}
+            entity={entity}
             healPulse={enemy.healPulse}
             shouldStopMovement={shouldStopMovement}
             color={enemy.color}

@@ -43,7 +43,6 @@ type GameSceneProps = {
   waveSystem: WaveSystem;
   money: number;
   onEnemyReachEnd: (enemyId: number) => void;
-  onEnemyUpdate: (enemyId: number, updates: Partial<EnemyInstance>) => void;
   onProjectileHit: (
     projectile: ProjectileInstance,
     targetEnemy: EnemyInstance,
@@ -65,7 +64,6 @@ export const GameScene: React.FC<GameSceneProps> = ({
   shouldStopMovement,
   waveSystem,
   onEnemyReachEnd,
-  onEnemyUpdate,
   onProjectileHit,
   onProjectileRemove,
   onSellTower,
@@ -125,7 +123,6 @@ export const GameScene: React.FC<GameSceneProps> = ({
 
       <EntitiesSystem
         onEnemyReachEnd={onEnemyReachEnd}
-        onEnemyUpdate={onEnemyUpdate}
         onProjectileHit={onProjectileHit}
         onProjectileRemove={onProjectileRemove}
         onSellTower={onSellTower}

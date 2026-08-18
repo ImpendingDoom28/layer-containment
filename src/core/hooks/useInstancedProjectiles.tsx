@@ -7,13 +7,7 @@
  * Integrates with the game's Projectile type and existing systems.
  */
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ReactElement } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
@@ -36,6 +30,8 @@ import { useInstancedEntity } from "./useInstancedEntity";
 import { getShouldStopMovement } from "../getShouldStopMovement";
 import { useGameStore } from "../stores/useGameStore";
 import { useLevelStore } from "../stores/useLevelStore";
+import { world } from "../ecs/world";
+import { getEnemiesById } from "../ecs/selectors/enemySnapshots";
 
 const CHAIN_BOLT_RADIUS = 0.03;
 const CHAIN_BOLT_LENGTH = 0.5;
@@ -334,7 +330,6 @@ type InstancedProjectilesConfig = {
   beamEmissiveIntensity?: number;
   hitThreshold?: number;
   beamDuration?: number;
-  enemies: Enemy[];
   onHit: (projectile: Projectile, enemy: Enemy, currentTime: number) => void;
   onRemove: (projectileId: number) => void;
 };
@@ -358,7 +353,6 @@ export const useInstancedProjectiles = (
     beamEmissiveIntensity = 1.5,
     hitThreshold = 0.3,
     beamDuration = 0.15,
-    enemies,
     onHit,
     onRemove,
   } = config;
@@ -400,9 +394,7 @@ export const useInstancedProjectiles = (
   const boltInstancesContent = useMemo(
     () => (
       <>
-        <cylinderGeometry
-          args={[CHAIN_BOLT_RADIUS, CHAIN_BOLT_RADIUS, 1, 8]}
-        />
+        <cylinderGeometry args={[CHAIN_BOLT_RADIUS, CHAIN_BOLT_RADIUS, 1, 8]} />
         <meshStandardMaterial
           color={defaultColor}
           emissive={defaultColor}
@@ -446,15 +438,6 @@ export const useInstancedProjectiles = (
   const toRemoveRef = useRef<number[]>([]);
 
   const { getNextProjectileId } = useEntityIds();
-
-  useLayoutEffect(() => {
-    const nextEnemiesById = new Map<number, Enemy>();
-    for (const enemy of enemies) {
-      nextEnemiesById.set(enemy.id, enemy);
-    }
-
-    enemiesByIdRef.current = nextEnemiesById;
-  }, [enemies]);
 
   useEffect(() => {
     const projectilesRefCurrent = projectilesRef.current;
@@ -623,6 +606,7 @@ export const useInstancedProjectiles = (
   }, []);
 
   useFrame((state, delta) => {
+    enemiesByIdRef.current = getEnemiesById(world);
     const { gameStatus, isPageVisible } = useGameStore.getState();
     if (getShouldStopMovement(gameStatus, isPageVisible)) return;
     updateProjectilesFrame(state.clock.elapsedTime, delta);

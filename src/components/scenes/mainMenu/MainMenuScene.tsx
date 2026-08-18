@@ -1,5 +1,6 @@
 import { FC, useRef, useCallback } from "react";
 import { useFrame } from "@react-three/fiber";
+import { useWorld } from "koota/react";
 
 import type { EnemyType } from "../../../core/types/game";
 import { LevelSystem } from "../../systems/LevelSystem";
@@ -13,6 +14,7 @@ import {
   useGameStore,
 } from "../../../core/stores/useGameStore";
 import { useGameSystem } from "../../../core/hooks/useGameSystem";
+import { getLivingEnemySnapshots } from "../../../core/ecs/selectors/enemySnapshots";
 import { Path } from "../../entities/Path";
 import { MainMenuCamera } from "./MainMenuCamera";
 import { MAIN_MENU_ENEMY_SPAWN_CONFIG } from "./constants";
@@ -56,10 +58,9 @@ export const MainMenuScene: FC = () => {
   const { onSpawnEffect, onEndEffect, activeEffects, onEffectComplete } =
     gameSystem;
 
-  const { pathWaypoints, enemies, enemyWeights } = useLevelStore();
+  const { pathWaypoints, enemyWeights } = useLevelStore();
   const { addEnemy, removeEnemy } = levelSystem;
-
-  const { onEnemyUpdate } = enemySystem;
+  const world = useWorld();
 
   const lastSpawnTime = useRef(0);
   const clockRef = useRef(0);
@@ -88,7 +89,8 @@ export const MainMenuScene: FC = () => {
 
     if (
       timeSinceLastSpawn >= spawnInterval &&
-      enemies.length < MAIN_MENU_ENEMY_SPAWN_CONFIG.maxEnemies
+      getLivingEnemySnapshots(world).length <
+        MAIN_MENU_ENEMY_SPAWN_CONFIG.maxEnemies
     ) {
       spawnEnemy(enemyWeights);
       lastSpawnTime.current = clockRef.current;
@@ -114,7 +116,6 @@ export const MainMenuScene: FC = () => {
         hoveredTile={null}
         selectedTower={null}
         shouldStopMovement={false}
-        onEnemyUpdate={onEnemyUpdate}
         onProjectileHit={onProjectileHit}
         onProjectileRemove={onProjectileRemove}
         onEnemyReachEnd={removeEnemy}

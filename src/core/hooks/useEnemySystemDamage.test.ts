@@ -1,7 +1,9 @@
 import { describe, expect, it, beforeEach } from "vitest";
 
+import { enemyActions } from "../ecs/actions/enemyActions";
+import { getEnemySnapshots } from "../ecs/selectors/enemySnapshots";
+import { world } from "../ecs/world";
 import type { Enemy } from "../types/game";
-import { useLevelStore } from "../stores/useLevelStore";
 
 const baseEnemy = (health: number): Enemy => ({
   id: 1,
@@ -23,28 +25,19 @@ const baseEnemy = (health: number): Enemy => ({
   upgrades: [],
 });
 
-describe("sequential damage reads fresh enemy health from store", () => {
+describe("sequential damage reads fresh enemy health from ECS", () => {
   beforeEach(() => {
-    useLevelStore.setState({
-      enemies: [baseEnemy(100)],
-    });
+    enemyActions(world).clearAllEnemies();
+    enemyActions(world).spawnEnemy(baseEnemy(100));
   });
 
   it("second damage application uses updated health after first", () => {
-    const applyDamage = (damage: number) => {
-      const enemy = useLevelStore.getState().enemies.find((e) => e.id === 1);
-      if (!enemy) return;
-      const newHealth = Math.max(0, enemy.health - damage);
-      useLevelStore.setState((s) => ({
-        enemies: s.enemies.map((e) =>
-          e.id === 1 ? { ...e, health: newHealth } : e
-        ),
-      }));
-    };
+    const actions = enemyActions(world);
 
-    applyDamage(10);
-    expect(useLevelStore.getState().enemies[0].health).toBe(90);
-    applyDamage(10);
-    expect(useLevelStore.getState().enemies[0].health).toBe(80);
+    actions.damageEnemy(1, 10);
+    expect(getEnemySnapshots(world)[0]?.health).toBe(90);
+
+    actions.damageEnemy(1, 10);
+    expect(getEnemySnapshots(world)[0]?.health).toBe(80);
   });
 });

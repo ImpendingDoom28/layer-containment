@@ -18,10 +18,11 @@ import {
   withRecalculatedWaterCoordinates,
 } from "../../utils/levelEditor";
 import { getUpgradeIndicatorColors } from "../../utils/enemyUpgradeVisuals";
+import { enemyActions } from "../ecs/actions/enemyActions";
+import { world } from "../ecs/world";
 import { useGameStore } from "./useGameStore";
 
 type LevelStoreState = {
-  // From level config
   gridSize: number;
   waters: WaterBody[];
   pathWaypoints: PathWaypoint[][];
@@ -31,12 +32,10 @@ type LevelStoreState = {
   enemyWeights: Record<EnemyType, number> | null;
   money: number;
 
-  // Calculated in game
   enemiesKilled: number;
   currentWave: number;
   gridOffset: number;
   towers: Tower[];
-  enemies: Enemy[];
   projectiles: Projectile[];
   isLevelConfigLoaded: boolean;
 };
@@ -51,7 +50,6 @@ type LevelStoreActions = {
   setTotalWaves: (totalWaves: number) => void;
   setWaveConfigs: (waveConfigs: WaveConfig[]) => void;
   setBuildings: (buildings: Building[]) => void;
-  setEnemies: (enemies: Enemy[] | ((prev: Enemy[]) => Enemy[])) => void;
   setTowers: (towers: Tower[] | ((prev: Tower[]) => Tower[])) => void;
   setProjectiles: (
     projectiles: Projectile[] | ((prev: Projectile[]) => Projectile[])
@@ -76,10 +74,34 @@ const DEFAULT_STATE: LevelStoreState = {
   waveConfigs: [],
   buildings: [],
   towers: [],
-  enemies: [],
   projectiles: [],
   isLevelConfigLoaded: false,
 };
+
+const buildLevelConfigEnemies = (
+  levelData: LevelConfigData,
+  enemyTypes: NonNullable<
+    ReturnType<typeof useGameStore.getState>["enemyTypes"]
+  >,
+  enemyUpgrades: NonNullable<
+    ReturnType<typeof useGameStore.getState>["enemyUpgrades"]
+  >
+): Enemy[] =>
+  levelData.enemies.map((enemy) => ({
+    ...enemyTypes[enemy.type],
+    ...enemy,
+    pathIndex: enemy.pathIndex ?? 0,
+    maxHealth: enemy.health,
+    slowUntil: 0,
+    slowMultiplier: 1,
+    upgradeIndicatorColors:
+      enemy.upgradeIndicatorColors ??
+      getUpgradeIndicatorColors(
+        enemy.upgrades,
+        enemyUpgrades,
+        getCssColorValue("scene-white")
+      ),
+  }));
 
 export const useLevelStore = create<LevelStore>((set) => ({
   ...DEFAULT_STATE,
@@ -89,28 +111,24 @@ export const useLevelStore = create<LevelStore>((set) => ({
     const enemyTypes = useGameStore.getState().enemyTypes;
     const enemyUpgrades = useGameStore.getState().enemyUpgrades;
 
-    const gridOffset = getLevelGridOffset(levelData.gridSize, tileSize);
+    if (!towerTypes || !enemyTypes || !enemyUpgrades) return;
 
-    // Only used if we have defined enemies in the level config
-    const enemies = levelData.enemies.map((enemy) => {
-      return {
-        ...enemyTypes![enemy.type],
-        ...enemy,
-        pathIndex: enemy.pathIndex ?? 0,
-        upgradeIndicatorColors:
-          enemy.upgradeIndicatorColors ??
-          getUpgradeIndicatorColors(
-            enemy.upgrades,
-            enemyUpgrades,
-            getCssColorValue("scene-white")
-          ),
-      };
-    });
+    const gridOffset = getLevelGridOffset(levelData.gridSize, tileSize);
+    const actions = enemyActions(world);
+
+    actions.clearAllEnemies();
+    for (const enemy of buildLevelConfigEnemies(
+      levelData,
+      enemyTypes,
+      enemyUpgrades
+    )) {
+      actions.spawnEnemy(enemy);
+    }
 
     // Only used if we have defined towers in the level config
     const towers = levelData.towers.map((tower) => ({
       lastFireTime: 0,
-      ...towerTypes![tower.type],
+      ...towerTypes[tower.type],
       ...tower,
     }));
 
@@ -134,12 +152,11 @@ export const useLevelStore = create<LevelStore>((set) => ({
       pathWaypoints: levelData.pathWaypoints,
       totalWaves: levelData.waveConfigs.length,
       waveConfigs: levelData.waveConfigs,
-      buildings: buildings,
-      towers: towers,
-      enemies: enemies,
+      buildings,
+      towers,
       projectiles: levelData.projectiles,
       enemyWeights: levelData.enemyWeights as Record<EnemyType, number>,
-      gridOffset: gridOffset,
+      gridOffset,
       isLevelConfigLoaded: true,
     });
   },
@@ -184,12 +201,6 @@ export const useLevelStore = create<LevelStore>((set) => ({
     set({ buildings });
   },
 
-  setEnemies: (enemies) => {
-    set((state) => ({
-      enemies: typeof enemies === "function" ? enemies(state.enemies) : enemies,
-    }));
-  },
-
   setTowers: (towers) => {
     set((state) => ({
       towers: typeof towers === "function" ? towers(state.towers) : towers,
@@ -218,6 +229,7 @@ export const useLevelStore = create<LevelStore>((set) => ({
   },
 
   resetLevelState: () => {
+    enemyActions(world).clearAllEnemies();
     set({
       ...DEFAULT_STATE,
     });
@@ -238,7 +250,6 @@ export const setTotalWavesSelector = (state: LevelStore) => state.setTotalWaves;
 export const setWaveConfigsSelector = (state: LevelStore) =>
   state.setWaveConfigs;
 export const setBuildingsSelector = (state: LevelStore) => state.setBuildings;
-export const enemiesSelector = (state: LevelStore) => state.enemies;
 export const towersSelector = (state: LevelStore) => state.towers;
 export const projectilesSelector = (state: LevelStore) => state.projectiles;
 export const setCurrentWaveSelector = (state: LevelStore) =>
@@ -253,7 +264,6 @@ export const addMoneySelector = (state: LevelStore) => state.addMoney;
 export const incrementEnemiesKilledSelector = (state: LevelStore) =>
   state.incrementEnemiesKilled;
 export const setTowersSelector = (state: LevelStore) => state.setTowers;
-export const setEnemiesSelector = (state: LevelStore) => state.setEnemies;
 export const setProjectilesSelector = (state: LevelStore) =>
   state.setProjectiles;
 export const resetLevelStateSelector = (state: LevelStore) =>

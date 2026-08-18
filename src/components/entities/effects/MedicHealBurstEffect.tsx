@@ -1,9 +1,10 @@
 import { FC, memo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Mesh } from "three";
+import type { Entity } from "koota";
 
 import type { HealPulseConfig } from "../../../core/types/game";
-import { useLevelStore } from "../../../core/stores/useLevelStore";
+import { EnemyState } from "../../../core/ecs/traits/enemy";
 import { didHealPulseJustReschedule } from "../../../utils/enemyMedicPulse";
 import { getCssColorValue } from "../../ui/lib/cssUtils";
 
@@ -16,7 +17,7 @@ import {
 } from "./utils/dualRingBurst";
 
 type MedicHealBurstEffectProps = EnemyAttachedEffectProps & {
-  enemyId: number;
+  entity: Entity;
   healPulse: HealPulseConfig;
   color: string;
 };
@@ -24,7 +25,7 @@ type MedicHealBurstEffectProps = EnemyAttachedEffectProps & {
 const BURST_DURATION = 0.45;
 
 export const MedicHealBurstEffect: FC<MedicHealBurstEffectProps> = memo(
-  ({ enemyId, healPulse, shouldStopMovement, color }) => {
+  ({ entity, healPulse, shouldStopMovement, color }) => {
     const ring1Ref = useRef<Mesh>(null);
     const ring2Ref = useRef<Mesh>(null);
     const prevNextAtRef = useRef<number | undefined>(undefined);
@@ -33,10 +34,7 @@ export const MedicHealBurstEffect: FC<MedicHealBurstEffectProps> = memo(
     const glowColor = getCssColorValue("scene-portal-glow");
 
     useFrame((_, delta) => {
-      const medic = useLevelStore
-        .getState()
-        .enemies.find((e) => e.id === enemyId);
-      const nextHealPulseAt = medic?.nextHealPulseAt;
+      const nextHealPulseAt = entity.get(EnemyState)?.nextHealPulseAt;
 
       const prev = prevNextAtRef.current;
       if (

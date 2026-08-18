@@ -16,6 +16,12 @@
       ],
       "@/ui/*": [
         "./src/components/ui/*"
+      ],
+      "three-original": [
+        "./node_modules/three/build/three.module.js"
+      ],
+      "three": [
+        "./src/lib/three.ts"
       ]
     },
     /* Bundler mode */

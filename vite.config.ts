@@ -17,6 +17,11 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@/ui": path.resolve(__dirname, "./src/components/ui"),
+      "three-original": path.resolve(
+        __dirname,
+        "./node_modules/three/build/three.module.js"
+      ),
+      three: path.resolve(__dirname, "./src/lib/three.ts"),
     },
   },
   build: {

@@ -1,4 +1,4 @@
-import { FC, useEffect } from "react";
+import { FC, useEffect, useLayoutEffect } from "react";
 
 import { useLevelStore } from "../../core/stores/useLevelStore";
 import {
@@ -14,6 +14,12 @@ export const LevelSystem: FC<{ levelName?: LevelConfigFiles }> = ({
   const { initializeLevelState, isLevelConfigLoaded, resetLevelState } =
     useLevelStore();
 
+  useLayoutEffect(() => {
+    if (!levelName) return;
+
+    resetLevelState();
+  }, [levelName, resetLevelState]);
+
   useEffect(() => {
     if (!levelName || isLevelConfigLoaded || tileSize <= 0) return;
 
@@ -24,12 +30,6 @@ export const LevelSystem: FC<{ levelName?: LevelConfigFiles }> = ({
 
     loadLevelData();
   }, [isLevelConfigLoaded, initializeLevelState, levelName, tileSize]);
-
-  useEffect(() => {
-    if (levelName) {
-      resetLevelState();
-    }
-  }, [levelName, resetLevelState]);
 
   return null;
 };

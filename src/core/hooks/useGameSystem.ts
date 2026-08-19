@@ -12,6 +12,7 @@ import {
   previousStatusSelector,
   resetGameStateSelector,
   selectedTowerSelector,
+  startNewRunSelector,
   setActiveEffectsSelector,
   setDebugSelector,
   setGameStatusSelector,
@@ -42,6 +43,7 @@ export const useGameSystem = () => {
   const setSelectedTower = useGameStore(setSelectedTowerSelector);
   const setDebug = useGameStore(setDebugSelector);
   const resetGameState = useGameStore(resetGameStateSelector);
+  const startNewRun = useGameStore(startNewRunSelector);
   const initializeGameState = useGameStore(initializeGameStateSelector);
   const setIsPageVisible = useGameStore(setIsPageVisibleSelector);
 
@@ -105,9 +107,8 @@ export const useGameSystem = () => {
   }, [setGameStatus, gameStatus]);
 
   const startGame = useCallback(async () => {
-    resetGameState();
-    setGameStatus("playing");
-  }, [resetGameState, setGameStatus]);
+    startNewRun();
+  }, [startNewRun]);
 
   const goToMainMenu = useCallback(() => {
     resetGameState();

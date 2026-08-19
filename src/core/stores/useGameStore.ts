@@ -17,6 +17,7 @@ import { getIsDocumentVisible } from "../../utils/isDocumentVisible";
 type GameStoreState = {
   enemyHealthLoss: number;
   health: number;
+  startingHealth: number;
   activeEffects: ActiveEffect[];
   /**
    * The type of tower that is currently selected to place from the tower shop
@@ -61,6 +62,7 @@ type GameStoreActions = {
   setSelectedTower: (tower: Tower | null) => void;
   setDebug: (debug: boolean) => void;
   resetGameState: () => void;
+  startNewRun: () => void;
   incrementDenyPulse: (towerType: TowerType) => void;
   setIsPageVisible: (visible: boolean) => void;
 };
@@ -75,6 +77,7 @@ const DEFAULT_STATE: GameStoreState = {
   selectedTowerTypeToPlace: null,
   selectedTower: null,
   health: 0,
+  startingHealth: 0,
 
   isGameConfigLoaded: false,
   previousStatus: null,
@@ -117,6 +120,7 @@ export const useGameStore = create<GameStore>((set) => ({
 
     set({
       health: startingHealth,
+      startingHealth,
       tileSize,
       towerBaseRadius,
       enemyHealthLoss,
@@ -193,6 +197,18 @@ export const useGameStore = create<GameStore>((set) => ({
     });
   },
 
+  startNewRun: () => {
+    set((state) => ({
+      health: state.startingHealth,
+      activeEffects: [],
+      selectedTowerTypeToPlace: null,
+      selectedTower: null,
+      previousStatus: null,
+      denyPulse: {},
+      gameStatus: "playing",
+    }));
+  },
+
   setIsPageVisible: (visible: boolean) => {
     set({ isPageVisible: visible });
   },
@@ -243,6 +259,7 @@ export const setPreviousStatusSelector = (state: GameStore) =>
   state.setPreviousStatus;
 export const setDebugSelector = (state: GameStore) => state.setDebug;
 export const resetGameStateSelector = (state: GameStore) => state.resetGameState;
+export const startNewRunSelector = (state: GameStore) => state.startNewRun;
 export const loseHealthSelector = (state: GameStore) => state.loseHealth;
 export const setIsPageVisibleSelector = (state: GameStore) =>
   state.setIsPageVisible;

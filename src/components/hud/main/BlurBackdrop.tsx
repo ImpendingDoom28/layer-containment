@@ -5,7 +5,7 @@ type BlurBackdropProps = {
   isMenu: boolean;
   blurDimensions: { width: string; height: string };
   setBlurDimensions: (dimensions: { width: string; height: string }) => void;
-  menuRef: React.RefObject<HTMLDivElement>;
+  menuRef: React.RefObject<HTMLDivElement | null>;
   hasInteracted: boolean;
 };
 
@@ -38,7 +38,8 @@ export const BlurBackdrop: FC<BlurBackdropProps> = ({
     updateLayoutMetrics();
     window.addEventListener("resize", updateLayoutMetrics);
     return () => window.removeEventListener("resize", updateLayoutMetrics);
-  }, [menuRef, setBlurDimensions]);
+    // Recalculate the dimensions when the menu is interacted with
+  }, [menuRef, setBlurDimensions, hasInteracted]);
 
   const blurTwTranslateX = (() => {
     if (isMenu && viewportWidthPx > 0 && blurTranslateReferenceWidthPx > 0) {

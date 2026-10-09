@@ -8,22 +8,12 @@ import {
 } from "./isPointerOverGameCameraBlock";
 
 describe("isPointerOverGameCameraBlock", () => {
-  it("returns false when elementFromPoint returns null", () => {
-    const doc = {
-      elementFromPoint: () => null,
-    };
-    expect(isPointerOverGameCameraBlock(0, 0, doc)).toBe(false);
-  });
-
   it("returns false when hit element is outside a camera block", () => {
     const root = document.createElement("div");
     const child = document.createElement("button");
     root.appendChild(child);
     document.body.append(root);
-    const doc = {
-      elementFromPoint: () => child,
-    };
-    expect(isPointerOverGameCameraBlock(1, 1, doc)).toBe(false);
+    expect(isPointerOverGameCameraBlock(1, 1)).toBe(false);
     root.remove();
   });
 
@@ -33,10 +23,7 @@ describe("isPointerOverGameCameraBlock", () => {
     const child = document.createElement("button");
     hud.appendChild(child);
     document.body.append(hud);
-    const doc = {
-      elementFromPoint: () => child,
-    };
-    expect(isPointerOverGameCameraBlock(1, 1, doc)).toBe(true);
+    expect(isPointerOverGameCameraBlock(1, 1)).toBe(true);
     hud.remove();
   });
 

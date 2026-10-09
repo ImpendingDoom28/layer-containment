@@ -69,11 +69,13 @@ export const GameCamera = ({
     const unsubscribe = gameEvents.on<AudioEventData<"ui_action_denied">>(
       GameEvent.UI_ACTION_DENIED,
       (data) => {
-      if (data.reason === "insufficient_funds") {
-        shakeRemainingMsRef.current = UI_ACTION_DENIED_CAMERA_SHAKE_DURATION_MS;
-        incrementDenyPulse(data.towerType);
+        if (data.reason === "insufficient_funds") {
+          shakeRemainingMsRef.current =
+            UI_ACTION_DENIED_CAMERA_SHAKE_DURATION_MS;
+          incrementDenyPulse(data.towerType);
+        }
       }
-    });
+    );
     return unsubscribe;
   }, [incrementDenyPulse]);
 
@@ -159,7 +161,7 @@ export const GameCamera = ({
       if (e.button !== 0) {
         return;
       }
-      if (isPointerOverGameCameraBlock(e.clientX, e.clientY, document)) {
+      if (isPointerOverGameCameraBlock(e.clientX, e.clientY)) {
         return;
       }
       isDragging.current = true;
@@ -170,7 +172,7 @@ export const GameCamera = ({
       if (!isDragging.current) {
         return;
       }
-      if (isPointerOverGameCameraBlock(e.clientX, e.clientY, document)) {
+      if (isPointerOverGameCameraBlock(e.clientX, e.clientY)) {
         lastMousePosition.current = { x: e.clientX, y: e.clientY };
         return;
       }

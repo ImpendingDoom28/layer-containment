@@ -16,12 +16,15 @@ import { GAME_NAME } from "../../../constants/game";
 import { BlurBackdrop } from "./BlurBackdrop";
 import { GithubButton } from "./GithubButton";
 import { useBlurBackdrop } from "../../../core/hooks/utils/useBlurBackdrop";
+import { useNavigate } from "react-router-dom";
 
 type HUDMainMenuProps = MenuActions;
 
 export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
   ({ onStartGameWithLevel, onOpenLevelEditor }) => {
     const { menuRef, blurDimensions, setBlurDimensions } = useBlurBackdrop();
+
+    const navigate = useNavigate();
 
     const {
       hasInteracted,
@@ -48,6 +51,12 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
         children: "Level Creator",
         onClick: onOpenLevelEditor,
         className: "mt-8",
+      },
+      {
+        children: "ECS",
+        onClick: () => {
+          navigate("/ecs");
+        },
       },
     ];
 

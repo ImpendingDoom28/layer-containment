@@ -25,7 +25,7 @@ import {
   getTotalRewardMultiplierFromStack,
 } from "../../utils/enemyUpgradeTierEffects";
 import {
-  timeUntilNextWaveSelector,
+  nextWaveReadySelector,
   useWaveStore,
 } from "../../core/stores/useWaveStore";
 
@@ -82,7 +82,7 @@ type GUINextWavePreviewProps = {
 export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
   pathIndex,
 }) => {
-  const timeUntilNextWave = useWaveStore(timeUntilNextWaveSelector);
+  const nextWaveReady = useWaveStore(nextWaveReadySelector);
   const pathWaypoints = useLevelStore(pathWaypointsSelector);
   const totalWaves = useLevelStore(totalWavesSelector);
   const waveConfigs = useLevelStore(waveConfigsSelector);
@@ -107,13 +107,8 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
   }, [totalRewardMultiplier]);
 
   const shouldShow = useMemo(() => {
-    return (
-      timeUntilNextWave !== null &&
-      timeUntilNextWave > 0 &&
-      currentWave > 0 &&
-      currentWave < totalWaves
-    );
-  }, [timeUntilNextWave, currentWave, totalWaves]);
+    return nextWaveReady && currentWave > 0 && currentWave < totalWaves;
+  }, [nextWaveReady, currentWave, totalWaves]);
 
   const nextWaveConfig = useMemo(() => {
     if (!shouldShow) return null;
@@ -163,12 +158,6 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
             <div className="flex items-center justify-between gap-3">
               <UITypography variant="medium" className="font-semibold">
                 Next Wave
-              </UITypography>
-              <UITypography
-                variant="verySmall"
-                className="shrink-0 text-muted-foreground uppercase tracking-[0.16em]"
-              >
-                {Math.ceil((timeUntilNextWave ?? 0) / 1000)}s
               </UITypography>
             </div>
           </UICardHeader>

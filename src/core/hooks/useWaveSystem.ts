@@ -1,6 +1,5 @@
 import { useCallback, useRef, useEffect, useLayoutEffect } from "react";
 
-import { useWaveStore } from "../stores/useWaveStore";
 import type {
   EnemyType,
   EnemyUpgradeId,
@@ -16,15 +15,15 @@ import {
   currentWaveSelector,
   pathWaypointsSelector,
 } from "../stores/useLevelStore";
+import { useGameStore, isPageVisibleSelector } from "../stores/useGameStore";
 import {
-  useGameStore,
-  waveDelaySelector,
-  isPageVisibleSelector,
-} from "../stores/useGameStore";
-import { useSettingsStore, pauseWhenTabHiddenSelector } from "../stores/useSettingsStore";
+  useSettingsStore,
+  pauseWhenTabHiddenSelector,
+} from "../stores/useSettingsStore";
 import { shouldPauseForTabHidden } from "../getShouldStopMovement";
 import { useLevelSystem } from "./useLevelSystem";
 import { useUpgradeStore } from "../stores/useUpgradeStore";
+import { useWaveStore } from "../stores/useWaveStore";
 import { GameEvent } from "../types/enums/events";
 import { gameEvents } from "../../utils/eventEmitter";
 import { world } from "../ecs/world";
@@ -72,7 +71,6 @@ export const useWaveSystem = (gameState: GameState) => {
   const { winGame, gameStatus: initialGameStatus } = gameState;
   const isPageVisible = useGameStore(isPageVisibleSelector);
   const pauseWhenTabHidden = useSettingsStore(pauseWhenTabHiddenSelector);
-  const waveDelay = useGameStore(waveDelaySelector);
 
   const totalWaves = useLevelStore(totalWavesSelector);
   const waveConfigs = useLevelStore(waveConfigsSelector);
@@ -80,8 +78,6 @@ export const useWaveSystem = (gameState: GameState) => {
   const currentWave = useLevelStore(currentWaveSelector);
   const pathWaypoints = useLevelStore(pathWaypointsSelector);
   const { addEnemy } = useLevelSystem();
-
-  const { setTimeUntilNextWave } = useWaveStore();
 
   const spawnQueueRef = useRef<SpawnQueueItem[]>([]);
   const spawnQueueIndexRef = useRef<number>(0);
@@ -91,12 +87,6 @@ export const useWaveSystem = (gameState: GameState) => {
   const totalPauseDurationRef = useRef<number>(0);
   const previousGameStatusRef = useRef<GameStatus>(initialGameStatus);
   const lastPlayingTimeRef = useRef<number>(0);
-  const waveEndTimeRef = useRef<number>(0);
-  const countdownPauseDurationRef = useRef<number>(0);
-  const lastCountdownPlayingTimeRef = useRef<number>(0);
-  const isCountingDownRef = useRef<boolean>(false);
-  const timeUntilNextWaveRef = useRef<number | null>(null);
-  const pendingCountdownStartAfterUpgradeRef = useRef<boolean>(false);
   const previousIsPageVisibleRef = useRef(
     !shouldPauseForTabHidden(isPageVisible, pauseWhenTabHidden)
   );
@@ -134,11 +124,6 @@ export const useWaveSystem = (gameState: GameState) => {
     spawnQueueRef.current = [];
     spawnQueueIndexRef.current = 0;
     lastSpawnTimeRef.current = 0;
-    isCountingDownRef.current = false;
-    waveEndTimeRef.current = 0;
-    countdownPauseDurationRef.current = 0;
-    lastCountdownPlayingTimeRef.current = 0;
-    timeUntilNextWaveRef.current = null;
 
     const waveUpgrades = [...useUpgradeStore.getState().levelEnemyUpgradeStack];
 
@@ -185,6 +170,7 @@ export const useWaveSystem = (gameState: GameState) => {
   }, [currentWave, totalWaves, waveConfigs]);
 
   const startNextWave = useCallback(() => {
+    const setNextWaveReady = useWaveStore.getState().setNextWaveReady;
     setCurrentWave((prev) => {
       const newWave = prev + 1;
       const wp = pathWaypoints[0]?.[0];
@@ -195,34 +181,24 @@ export const useWaveSystem = (gameState: GameState) => {
         waveNumber: newWave,
         worldPosition,
       });
+      setNextWaveReady(false);
       return newWave;
     });
   }, [setCurrentWave, pathWaypoints]);
 
-  const startFirstWave = useCallback(() => {
-    if (currentWave === 0) {
-      startNextWave();
+  /**
+   * Starts the next wave when the previous one has fully finished (spawn
+   * queue exhausted and all enemies cleared). Waves never start
+   * automatically: the player decides when they are ready.
+   */
+  const startWave = useCallback(() => {
+    if (currentWave >= totalWaves) return;
+    if (currentWave > 0) {
+      if (spawnQueueIndexRef.current < spawnQueueRef.current.length) return;
+      if (getLivingEnemySnapshots(world).length > 0) return;
     }
-  }, [currentWave, startNextWave]);
-
-  const startNextWaveEarly = useCallback(() => {
-    if (
-      isCountingDownRef.current &&
-      currentWave > 0 &&
-      currentWave < totalWaves
-    ) {
-      isCountingDownRef.current = false;
-      waveEndTimeRef.current = 0;
-      countdownPauseDurationRef.current = 0;
-      lastCountdownPlayingTimeRef.current = 0;
-      timeUntilNextWaveRef.current = null;
-      startNextWave();
-    }
-  }, [currentWave, startNextWave, totalWaves]);
-
-  const resumeCountdownAfterUpgradePick = useCallback(() => {
-    pendingCountdownStartAfterUpgradeRef.current = true;
-  }, []);
+    startNextWave();
+  }, [currentWave, totalWaves, startNextWave]);
 
   const updateWaveSpawning = useCallback(
     (currentTime: number) => {
@@ -231,160 +207,77 @@ export const useWaveSystem = (gameState: GameState) => {
         isPageVisible,
         useSettingsStore.getState().pauseWhenTabHidden
       );
-      try {
-        const wasSimulationActive =
-          previousGameStatusRef.current === "playing" &&
-          previousIsPageVisibleRef.current;
-        const isSimulationActive = gameStatus === "playing" && !isTabHiddenPaused;
+      const wasSimulationActive =
+        previousGameStatusRef.current === "playing" &&
+        previousIsPageVisibleRef.current;
+      const isSimulationActive = gameStatus === "playing" && !isTabHiddenPaused;
 
+      if (
+        !wasSimulationActive &&
+        isSimulationActive &&
+        lastPlayingTimeRef.current > 0
+      ) {
+        const pauseDuration = currentTime - lastPlayingTimeRef.current;
+        totalPauseDurationRef.current += pauseDuration;
+      }
+
+      previousGameStatusRef.current = gameStatus;
+      previousIsPageVisibleRef.current = !isTabHiddenPaused;
+
+      if (gameStatus !== "playing" || isTabHiddenPaused) {
+        return;
+      }
+
+      lastPlayingTimeRef.current = currentTime;
+
+      const waveCleared =
+        spawnQueueIndexRef.current >= spawnQueueRef.current.length &&
+        getLivingEnemySnapshots(world).length === 0;
+      const nextWaveReady =
+        currentWave === 0 || (currentWave < totalWaves && waveCleared);
+      if (useWaveStore.getState().nextWaveReady !== nextWaveReady) {
+        useWaveStore.getState().setNextWaveReady(nextWaveReady);
+      }
+
+      if (currentWave === 0 || currentWave > totalWaves) return;
+
+      if (spawnQueueIndexRef.current >= spawnQueueRef.current.length) {
         if (
-          !wasSimulationActive &&
-          isSimulationActive &&
-          lastPlayingTimeRef.current > 0
+          waveStartedRef.current &&
+          getLivingEnemySnapshots(world).length === 0
         ) {
-          const pauseDuration = currentTime - lastPlayingTimeRef.current;
-          totalPauseDurationRef.current += pauseDuration;
-        }
-
-        if (
-          pendingCountdownStartAfterUpgradeRef.current &&
-          isSimulationActive
-        ) {
-          pendingCountdownStartAfterUpgradeRef.current = false;
-          isCountingDownRef.current = true;
-          waveEndTimeRef.current = currentTime;
-          countdownPauseDurationRef.current = 0;
-          lastCountdownPlayingTimeRef.current = currentTime;
-        }
-
-        if (isCountingDownRef.current) {
-          const wasCountdownPaused =
-            previousGameStatusRef.current === "paused" ||
-            previousGameStatusRef.current === "gameMenu" ||
-            !previousIsPageVisibleRef.current;
-
-          if (
-            wasCountdownPaused &&
-            isSimulationActive &&
-            lastCountdownPlayingTimeRef.current > 0
-          ) {
-            const pauseDuration =
-              currentTime - lastCountdownPlayingTimeRef.current;
-            countdownPauseDurationRef.current += pauseDuration;
-          }
-
-          if (isSimulationActive) {
-            lastCountdownPlayingTimeRef.current = currentTime;
-          }
-
-          if (currentWave > 0 && currentWave < totalWaves) {
-            if (isSimulationActive) {
-              const elapsedSinceWaveEnd =
-                currentTime -
-                waveEndTimeRef.current -
-                countdownPauseDurationRef.current;
-              const remaining = waveDelay - elapsedSinceWaveEnd;
-
-              if (remaining <= 0) {
-                isCountingDownRef.current = false;
-                waveEndTimeRef.current = 0;
-                countdownPauseDurationRef.current = 0;
-                lastCountdownPlayingTimeRef.current = 0;
-                timeUntilNextWaveRef.current = null;
-                startNextWave();
-                return;
-              } else {
-                timeUntilNextWaveRef.current = remaining;
+          waveStartedRef.current = false;
+          if (currentTime - lastSpawnTimeRef.current > 300) {
+            if (currentWave < totalWaves) {
+              const enemyUpgrades = useGameStore.getState().enemyUpgrades;
+              if (enemyUpgrades && Object.keys(enemyUpgrades).length > 0) {
+                const ids = Object.keys(enemyUpgrades) as EnemyUpgradeId[];
+                useUpgradeStore.getState().openEnemyUpgradeGate(ids);
               }
             } else {
-              const elapsedSinceWaveEnd =
-                lastCountdownPlayingTimeRef.current -
-                waveEndTimeRef.current -
-                countdownPauseDurationRef.current;
-              const remaining = waveDelay - elapsedSinceWaveEnd;
-              timeUntilNextWaveRef.current = remaining > 0 ? remaining : null;
-            }
-          } else {
-            timeUntilNextWaveRef.current = null;
-          }
-        } else {
-          timeUntilNextWaveRef.current = null;
-        }
-
-        previousGameStatusRef.current = gameStatus;
-        previousIsPageVisibleRef.current = !isTabHiddenPaused;
-
-        if (gameStatus !== "playing" || isTabHiddenPaused) {
-          return;
-        }
-
-        lastPlayingTimeRef.current = currentTime;
-
-        if (currentWave === 0 || currentWave > totalWaves) return;
-
-        if (spawnQueueIndexRef.current >= spawnQueueRef.current.length) {
-          if (
-            waveStartedRef.current &&
-            getLivingEnemySnapshots(world).length === 0
-          ) {
-            waveStartedRef.current = false;
-            if (currentTime - lastSpawnTimeRef.current > 300) {
-              if (currentWave < totalWaves) {
-                const enemyUpgrades = useGameStore.getState().enemyUpgrades;
-                if (enemyUpgrades && Object.keys(enemyUpgrades).length > 0) {
-                  const ids = Object.keys(enemyUpgrades) as EnemyUpgradeId[];
-                  const opened = useUpgradeStore
-                    .getState()
-                    .openEnemyUpgradeGate(ids);
-                  if (!opened) {
-                    isCountingDownRef.current = true;
-                    waveEndTimeRef.current = currentTime;
-                    countdownPauseDurationRef.current = 0;
-                    lastCountdownPlayingTimeRef.current = currentTime;
-                  }
-                } else {
-                  isCountingDownRef.current = true;
-                  waveEndTimeRef.current = currentTime;
-                  countdownPauseDurationRef.current = 0;
-                  lastCountdownPlayingTimeRef.current = currentTime;
-                }
-              } else {
-                winGame();
-              }
+              winGame();
             }
           }
-          return;
         }
+        return;
+      }
 
-        if (lastSpawnTimeRef.current === 0) {
-          lastSpawnTimeRef.current = currentTime;
-          waveStartedRef.current = true;
-          totalPauseDurationRef.current = 0;
-        }
+      if (lastSpawnTimeRef.current === 0) {
+        lastSpawnTimeRef.current = currentTime;
+        waveStartedRef.current = true;
+        totalPauseDurationRef.current = 0;
+      }
 
-        const nextSpawn = spawnQueueRef.current[spawnQueueIndexRef.current];
-        const timeSinceWaveStart =
-          currentTime -
-          lastSpawnTimeRef.current -
-          totalPauseDurationRef.current;
+      const nextSpawn = spawnQueueRef.current[spawnQueueIndexRef.current];
+      const timeSinceWaveStart =
+        currentTime - lastSpawnTimeRef.current - totalPauseDurationRef.current;
 
-        if (nextSpawn && timeSinceWaveStart >= nextSpawn.delay) {
-          addEnemy(nextSpawn.type, nextSpawn.upgrades);
-          spawnQueueIndexRef.current += 1;
-        }
-      } finally {
-        setTimeUntilNextWave(timeUntilNextWaveRef.current);
+      if (nextSpawn && timeSinceWaveStart >= nextSpawn.delay) {
+        addEnemy(nextSpawn.type, nextSpawn.upgrades);
+        spawnQueueIndexRef.current += 1;
       }
     },
-    [
-      currentWave,
-      totalWaves,
-      waveDelay,
-      startNextWave,
-      winGame,
-      addEnemy,
-      setTimeUntilNextWave,
-    ]
+    [currentWave, totalWaves, winGame, addEnemy]
   );
 
   const getRemainingEnemiesInWave = useCallback((): number => {
@@ -398,10 +291,8 @@ export const useWaveSystem = (gameState: GameState) => {
 
   return {
     updateWaveSpawning,
-    startFirstWave,
+    startWave,
     getRemainingEnemiesInWave,
-    startNextWaveEarly,
-    resumeCountdownAfterUpgradePick,
   };
 };
 

@@ -1,16 +1,15 @@
 import { create } from "zustand";
 
 type WaveStore = {
-  timeUntilNextWave: number | null;
-  setTimeUntilNextWave: (time: number | null) => void;
+  nextWaveReady: boolean;
+  setNextWaveReady: (ready: boolean) => void;
 };
 
 export const useWaveStore = create<WaveStore>((set) => ({
-  timeUntilNextWave: null,
-  setTimeUntilNextWave: (time) => {
-    set({ timeUntilNextWave: time });
+  nextWaveReady: true,
+  setNextWaveReady: (ready) => {
+    set({ nextWaveReady: ready });
   },
 }));
 
-export const timeUntilNextWaveSelector = (state: WaveStore) =>
-  state.timeUntilNextWave;
+export const nextWaveReadySelector = (state: WaveStore) => state.nextWaveReady;

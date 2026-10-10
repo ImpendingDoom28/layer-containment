@@ -92,7 +92,7 @@ The dev server uses a fixed port (`5173`) and `strictPort: true`, so the URL is 
 5. **Manage towers**: Click on a placed tower to view its stats and sell it if needed
 6. **Start the first wave**: Click "Start next wave" to begin the first wave (gives you time to place towers first)
 7. **Defend**: Towers automatically target and shoot at enemies based on their targeting mode
-8. **Continue waves**: After each wave, start the next wave early or wait for the automatic countdown
+8. **Continue waves**: After each wave is cleared, click "Start next wave" when you're ready to begin the next one
 9. **Survive**: Defend against 7 waves of enemies without losing all your health
 10. **Win**: Complete all waves to win the game
 
@@ -110,9 +110,7 @@ The dev server uses a fixed port (`5173`) and `strictPort: true`, so the URL is 
 - **Money**: Start with $10,000, earn more by killing enemies (rewards vary by enemy type)
 - **Health**: Start with 20 health, lose health when enemies reach the end (amount varies by enemy type)
 - **Waves**: 7 waves with increasing difficulty, each containing multiple enemy types
-  - The first wave must be started manually, giving you time to place initial towers
-  - Subsequent waves start automatically after a 15-second delay (configurable)
-  - You can start waves early if all enemies from the previous wave are defeated
+  - Every wave is started manually: the "Start next wave" button appears before the first wave and after each wave is fully cleared, giving you time to build and adjust before the next wave
 - **Tower Types**: Each tower has unique stats:
   - **Basic Tower**: $50, 20 damage, 3.5 range, 1s fire rate
   - **Slow Tower**: $80, 10 damage, 3 range, 0.8s fire rate, slows enemies by 60% for 2s

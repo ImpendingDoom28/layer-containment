@@ -6,11 +6,8 @@ import {
   pendingEnemyUpgradeGateSelector,
   useUpgradeStore,
 } from "../stores/useUpgradeStore";
-import { WaveSystem } from "./useWaveSystem";
 
-export const useUpgradesSystem = (waveSystem: WaveSystem) => {
-  const { resumeCountdownAfterUpgradePick } = waveSystem;
-
+export const useUpgradesSystem = () => {
   const pendingEnemyUpgradeGate = useUpgradeStore(
     pendingEnemyUpgradeGateSelector
   );
@@ -26,9 +23,8 @@ export const useUpgradesSystem = (waveSystem: WaveSystem) => {
   const onEnemyUpgradePick = useCallback(
     (id: EnemyUpgradeId) => {
       confirmEnemyUpgradePick(id);
-      resumeCountdownAfterUpgradePick();
     },
-    [confirmEnemyUpgradePick, resumeCountdownAfterUpgradePick]
+    [confirmEnemyUpgradePick]
   );
 
   return {

@@ -46,7 +46,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
   const enemyActions = useEnemyActions();
   const projectileSystem = useProjectileSystem(enemyActions);
   const waveSystem = useWaveSystem(gameSystem);
-  const upgradesSystem = useUpgradesSystem(waveSystem);
+  const upgradesSystem = useUpgradesSystem();
 
   const {
     shouldDisableControls,
@@ -80,8 +80,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
 
   const { showUpgradePanel, onEnemyUpgradePick } = upgradesSystem;
 
-  const { getRemainingEnemiesInWave, startNextWaveEarly, startFirstWave } =
-    waveSystem;
+  const { getRemainingEnemiesInWave, startWave } = waveSystem;
 
   const onStartGameWithLevel = useCallback(
     async (level: PlayableLevelId) => {
@@ -214,8 +213,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
                   currentWave={currentWave}
                   remainingEnemies={remainingEnemies}
                   gameStatus={gameStatus}
-                  onStartWaveEarly={startNextWaveEarly}
-                  onStartFirstWave={startFirstWave}
+                  onStartWave={startWave}
                 />
               </div>
 

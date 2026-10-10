@@ -1,12 +1,15 @@
 import { trait } from "koota";
 
 import type {
+  Enemy,
   EnemyType,
   EnemyUpgradeId,
   HealPulseConfig,
 } from "../../types/game";
 
 export const IsEnemy = trait();
+
+export const requestEnemyDeath = trait();
 
 export type EnemyStateData = {
   id: number;
@@ -56,3 +59,30 @@ export const createDefaultEnemyState = (): EnemyStateData => ({
 });
 
 export const EnemyState = trait(createDefaultEnemyState);
+
+/** Pure mapping from the ECS state to the domain snapshot. */
+export const toEnemySnapshot = (state: EnemyStateData): Enemy => ({
+  id: state.id,
+  type: state.type,
+  name: state.name,
+  health: state.health,
+  maxHealth: state.maxHealth,
+  speed: state.speed,
+  reward: state.reward,
+  color: state.color,
+  size: state.size,
+  healthLoss: state.healthLoss,
+  description: state.description,
+  pathProgress: state.pathProgress,
+  pathIndex: state.pathIndex,
+  slowUntil: state.slowUntil,
+  slowMultiplier: state.slowMultiplier,
+  x: state.x,
+  z: state.z,
+  upgrades: state.upgrades,
+  upgradeIndicatorColors: state.upgradeIndicatorColors,
+  regeneration: state.regeneration,
+  slowResistance: state.slowResistance,
+  nextHealPulseAt: state.nextHealPulseAt,
+  healPulse: state.healPulse,
+});

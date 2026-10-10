@@ -26,16 +26,20 @@ const sampleParams = {
 };
 
 describe("createPlanetTileMaterial", () => {
-  it("exposes onBeforeCompile and a stable customProgramCacheKey for the same params", () => {
+  it("exposes onBeforeCompile and a program cache key independent of per-tile uniforms", () => {
     const mat = createPlanetTileMaterial(sampleParams);
 
     expect(mat.onBeforeCompile).toBeDefined();
     expect(mat.customProgramCacheKey).toBeDefined();
-    const cacheKey = mat.customProgramCacheKey?.();
-    expect(cacheKey).toBe(
-      `planet_${sampleParams.tileSeed}_${sampleParams.tileHalfHeight}_${sampleParams.transparent}_${sampleParams.opacity}`
-    );
-    expect(mat.customProgramCacheKey?.()).toBe(cacheKey);
+    const key = mat.customProgramCacheKey?.();
+    expect(key).toBeTruthy();
+    // seed/halfHeight are uniforms, not program source: all tiles share one program.
+    const otherMat = createPlanetTileMaterial({
+      ...sampleParams,
+      tileSeed: 999,
+      tileHalfHeight: 0.75,
+    });
+    expect(otherMat.customProgramCacheKey?.()).toBe(key);
   });
 
   it("injects fragment code without reserved GLSL identifier patch and with expected uniforms", () => {

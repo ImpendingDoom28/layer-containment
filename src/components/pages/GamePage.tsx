@@ -22,6 +22,7 @@ import {
   type PlayableLevelId,
 } from "../../constants/playableLevels";
 import { useGameSystem } from "../../core/hooks/useGameSystem";
+import { useBaseHealth } from "../../core/hooks/useBaseHealth";
 import { useEnemyActions } from "../../core/hooks/useEnemyActions";
 import { useProjectileSystem } from "../../core/hooks/useProjectileSystem";
 import { useWaveSystem } from "../../core/hooks/useWaveSystem";
@@ -40,6 +41,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
 
   const gameSystem = useGameSystem();
   const levelSystem = useLevelSystem();
+  const baseHealth = useBaseHealth();
 
   const enemyActions = useEnemyActions();
   const projectileSystem = useProjectileSystem(enemyActions);
@@ -47,7 +49,6 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
   const upgradesSystem = useUpgradesSystem(waveSystem);
 
   const {
-    health,
     shouldDisableControls,
     gameStatus,
     selectedTower,
@@ -209,7 +210,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
 
                 <HUDGameStats
                   money={money}
-                  health={health}
+                  health={baseHealth}
                   currentWave={currentWave}
                   remainingEnemies={remainingEnemies}
                   gameStatus={gameStatus}

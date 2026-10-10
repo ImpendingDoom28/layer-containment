@@ -12,3 +12,9 @@
   - **`tests/e2e/editor.spec.ts`**: `/editor` route (`editor-canvas`, `Level`, `Waves`, `Publish`)
 - Shared placement helpers: `tests/e2e/fixtures/towerPlacement.ts` (`onPlaceBasicTower`, `onPlaceMultipleBasicTowers`); coordinates in `tests/e2e/fixtures/canvasPoints.ts` (`1280x720` viewport)
 - The Empower smoke test uses `test.setTimeout(180_000)` and a 120s wait for the modal after wave 1 ends
+
+## Known baseline (2025-10-09)
+
+- In this headless Chromium environment the WebGL game scene does not render, so the in-game tests (`Tower Shop` heading, gameplay tower placement, shaders, game menu, Empower) **fail on a clean `master` too**. That 8-test failure set is the environmental baseline; only flag a regression if the set changes vs. `master`. Main-menu and editor-route tests pass (the editor test is occasionally flaky in full-suite runs — re-run in isolation to confirm).
+- The base-health ECS refactor (`feature/ecs-health-component`) left this baseline unchanged: same 8 pre-existing failures on `master` and on the branch.
+- The ECS request refactor (no action→action calls) kept the baseline unchanged too: enemy death is a `requestEnemyDeath` trait consumed by `EnemyDeathSystem` (one-frame delay at 0 HP before the kill is settled — targeting/AoE/medic skip 0-HP enemies); the system settles the kill by calling the domain's own `removeEnemy` action (actions never call actions, and no action internals are exported). End-of-path base damage is a generic `damageRequest` trait (in `src/core/ecs/traits/damage.ts`) on the base consumed by `ApplyDamageSystem` (generic damage authority, works on any entity with `HealthInfo`); `ApplyBaseDefeatSystem` raises `requestBaseDefeat` when the base is dead and `GameProcessSystem` (`runBaseDefeatSystem`) consumes it. Unit tests: 96 passing, `tsc` shows only the 6 pre-existing errors, build OK.

@@ -1,11 +1,12 @@
-import { useCallback, useRef, useEffect, useLayoutEffect } from "react";
+import { useCallback, useEffect, useLayoutEffect } from "react";
+import { useActions } from "koota/react";
 
+import { worldBaseActions } from "../ecs/actions/baseActions";
 import { getShouldStopMovement } from "../getShouldStopMovement";
 import {
   activeEffectsSelector,
   debugSelector,
   gameStatusSelector,
-  healthSelector,
   initializeGameStateSelector,
   isGameConfigLoadedSelector,
   isPageVisibleSelector,
@@ -23,7 +24,6 @@ import {
   useGameStore,
 } from "../stores/useGameStore";
 import { useEntityIds } from "../contexts/EntityIdContext";
-import { GameStatus } from "../types/game";
 import { loadGameConfig } from "../configs/gameConfig";
 import {
   pauseWhenTabHiddenSelector,
@@ -33,7 +33,8 @@ import { gameEvents } from "../../utils/eventEmitter";
 import { GameEvent } from "../types/enums/events";
 
 export const useGameSystem = () => {
-  const health = useGameStore(healthSelector);
+  const { spawnBase } = useActions(worldBaseActions);
+
   const activeEffects = useGameStore(activeEffectsSelector);
   const gameStatus = useGameStore(gameStatusSelector);
   const previousStatus = useGameStore(previousStatusSelector);
@@ -55,8 +56,6 @@ export const useGameSystem = () => {
   const pauseWhenTabHidden = useSettingsStore(pauseWhenTabHiddenSelector);
 
   const { getNextEffectId } = useEntityIds();
-
-  const previousGameStatusRef = useRef<GameStatus>(gameStatus);
 
   useLayoutEffect(() => {
     const onVisibilityChange = () => {
@@ -90,19 +89,6 @@ export const useGameSystem = () => {
     loadConfig();
   }, [isGameConfigLoaded, initializeGameState]);
 
-  // TODO: Move to level system, health is not a game store state
-  // Emit game over event when health reaches 0
-  useEffect(() => {
-    if (
-      health === 0 &&
-      gameStatus === "gameOver" &&
-      previousGameStatusRef.current !== "gameOver"
-    ) {
-      gameEvents.emit(GameEvent.GAME_OVER, { gameOverType: "loss" });
-    }
-    previousGameStatusRef.current = gameStatus;
-  }, [health, gameStatus]);
-
   const winGame = useCallback(() => {
     setGameStatus("won");
     gameEvents.emit(GameEvent.GAME_WON, { gameWonType: "win" });
@@ -120,7 +106,9 @@ export const useGameSystem = () => {
 
   const startGame = useCallback(async () => {
     startNewRun();
-  }, [startNewRun]);
+    const maxHealth = useGameStore.getState().startingHealth;
+    spawnBase(maxHealth);
+  }, [startNewRun, spawnBase]);
 
   const goToMainMenu = useCallback(() => {
     resetGameState();
@@ -175,7 +163,6 @@ export const useGameSystem = () => {
 
   return {
     // State
-    health,
     gameStatus,
     selectedTower,
     activeEffects,

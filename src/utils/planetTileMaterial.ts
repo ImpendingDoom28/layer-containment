@@ -87,8 +87,8 @@ varying vec3 vPlanetWorldPos;`
     );
   };
 
-  mat.customProgramCacheKey = () =>
-    `planet_${seed}_${halfH}_${params.transparent}_${params.opacity}`;
+  // seed and halfH are uniforms, not part of the program source: share one program across tiles.
+  mat.customProgramCacheKey = () => "planet_tile";
 
   return mat;
 };

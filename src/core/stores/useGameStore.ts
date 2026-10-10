@@ -33,7 +33,6 @@ type GameStoreState = {
   towerBaseRadius: number;
   towerHeight: number;
   towerSellPriceMultiplier: number;
-  waveDelay: number;
   enemyTypes: Record<EnemyType, EnemyConfig> | null;
   towerTypes: Record<TowerType, TowerConfig> | null;
   enemyUpgrades: Record<EnemyUpgradeId, EnemyUpgradeConfig> | null;
@@ -87,7 +86,6 @@ const DEFAULT_STATE: GameStoreState = {
   towerBaseRadius: 0,
   towerHeight: 0,
   towerSellPriceMultiplier: 0,
-  waveDelay: 0,
   pathWidth: 0,
   pathYOffset: 0,
   projectileSize: 0,
@@ -106,7 +104,6 @@ export const useGameStore = create<GameStore>((set) => ({
       towerBaseRadius,
       towerHeight,
       towerSellPriceMultiplier,
-      waveDelay,
       enemyTypes,
       towerTypes,
       enemyUpgrades,
@@ -122,7 +119,6 @@ export const useGameStore = create<GameStore>((set) => ({
       enemyHealthLoss,
       towerHeight,
       towerSellPriceMultiplier,
-      waveDelay,
       enemyTypes: enemyTypes as Record<EnemyType, EnemyConfig>,
       towerTypes: towerTypes as Record<TowerType, TowerConfig>,
       enemyUpgrades: enemyUpgrades as Record<
@@ -211,7 +207,6 @@ export const pathYOffsetSelector = (state: GameStore) => state.pathYOffset;
 export const towerTypesSelector = (state: GameStore) => state.towerTypes;
 export const projectileSizeSelector = (state: GameStore) =>
   state.projectileSize;
-export const waveDelaySelector = (state: GameStore) => state.waveDelay;
 export const enemyUpgradesSelector = (state: GameStore) => state.enemyUpgrades;
 export const initializeGameStateSelector = (state: GameStore) =>
   state.initializeGameState;

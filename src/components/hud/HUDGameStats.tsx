@@ -12,7 +12,6 @@ import {
 } from "../../core/stores/useLevelStore";
 import { HUDWrapper } from "./HUDWrapper";
 import { UIMoney } from "../ui/UIMoney";
-import { useWaveStore } from "../../core/stores/useWaveStore";
 
 type HUDGameStatsProps = {
   money: number;
@@ -20,8 +19,7 @@ type HUDGameStatsProps = {
   currentWave: number;
   remainingEnemies: number;
   gameStatus: GameStatus;
-  onStartWaveEarly: () => void;
-  onStartFirstWave: () => void;
+  onStartWave: () => void;
 };
 
 export const HUDGameStats: FC<HUDGameStatsProps> = ({
@@ -30,10 +28,8 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
   currentWave,
   remainingEnemies,
   gameStatus,
-  onStartWaveEarly,
-  onStartFirstWave,
+  onStartWave,
 }) => {
-  const { timeUntilNextWave } = useWaveStore();
   const totalWaves = useLevelStore(totalWavesSelector);
 
   const getHealthColor = (): string => {
@@ -78,21 +74,10 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
           </div>
 
           <div>
-            {currentWave === 0 && (
+            {currentWave < totalWaves && remainingEnemies === 0 && (
               <div className="flex flex-col justify-center flex-1 gap-1">
-                <UIButton onClick={onStartFirstWave} variant="outline">
+                <UIButton onClick={onStartWave} variant="outline">
                   <Play /> Start next wave
-                </UIButton>
-              </div>
-            )}
-            {timeUntilNextWave !== null && timeUntilNextWave > 0 && (
-              <div className="flex flex-col justify-center flex-1 gap-1">
-                <UITypography variant="small">Next Wave In</UITypography>
-                <UITypography variant="medium" className="text-orange-400">
-                  {Math.ceil(timeUntilNextWave / 1000)}s
-                </UITypography>
-                <UIButton onClick={onStartWaveEarly} variant="outline">
-                  <Play /> Start Wave Early
                 </UIButton>
               </div>
             )}

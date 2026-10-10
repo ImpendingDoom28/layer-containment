@@ -99,7 +99,6 @@ export const gameConfigSchema = z.object({
   towerTypes: z.record(towerTypeSchema, towerConfigSchema),
   enemyTypes: z.record(enemyTypeSchema, enemyConfigSchema),
   enemyUpgrades: z.record(enemyUpgradeIdSchema, enemyUpgradeConfigSchema),
-  waveDelay: z.number(),
   pathWidth: z.number(),
   pathYOffset: z.number(),
   towerHeight: z.number(),

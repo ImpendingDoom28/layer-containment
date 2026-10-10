@@ -35,6 +35,7 @@ import {
   resetLevelEnemyUpgradesSelector,
   useUpgradeStore,
 } from "../stores/useUpgradeStore";
+import { useWaveStore } from "../stores/useWaveStore";
 import {
   Enemy,
   EnemyType,
@@ -328,6 +329,7 @@ export const useLevelSystem = () => {
     getNextEnemyId(true);
     getNextProjectileId(true);
     resetLevelEnemyUpgrades();
+    useWaveStore.getState().setNextWaveReady(true);
   }, [
     resetLevelState,
     getNextTowerId,

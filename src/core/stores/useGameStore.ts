@@ -16,7 +16,6 @@ import { getIsDocumentVisible } from "../../utils/isDocumentVisible";
 
 type GameStoreState = {
   enemyHealthLoss: number;
-  health: number;
   startingHealth: number;
   activeEffects: ActiveEffect[];
   /**
@@ -52,7 +51,6 @@ type GameStoreState = {
 type GameStoreActions = {
   setShowSettings: (show: boolean) => void;
   initializeGameState: (config: GameConfigData) => void;
-  loseHealth: (amount: number) => void;
   setActiveEffects: (
     effects: ActiveEffect[] | ((prev: ActiveEffect[]) => ActiveEffect[])
   ) => void;
@@ -76,7 +74,6 @@ const DEFAULT_STATE: GameStoreState = {
   activeEffects: [],
   selectedTowerTypeToPlace: null,
   selectedTower: null,
-  health: 0,
   startingHealth: 0,
 
   isGameConfigLoaded: false,
@@ -119,7 +116,6 @@ export const useGameStore = create<GameStore>((set) => ({
     } = config;
 
     set({
-      health: startingHealth,
       startingHealth,
       tileSize,
       towerBaseRadius,
@@ -142,16 +138,6 @@ export const useGameStore = create<GameStore>((set) => ({
 
   setShowSettings: (show: boolean) => {
     set({ showSettings: show });
-  },
-
-  loseHealth: (amount: number) => {
-    set((state) => {
-      const newHealth = Math.max(0, state.health - amount);
-      if (newHealth === 0) {
-        return { health: newHealth, gameStatus: "gameOver" as GameStatus };
-      }
-      return { health: newHealth };
-    });
   },
 
   setActiveEffects: (effects) => {
@@ -198,8 +184,7 @@ export const useGameStore = create<GameStore>((set) => ({
   },
 
   startNewRun: () => {
-    set((state) => ({
-      health: state.startingHealth,
+    set({
       activeEffects: [],
       selectedTowerTypeToPlace: null,
       selectedTower: null,
@@ -207,7 +192,7 @@ export const useGameStore = create<GameStore>((set) => ({
       denyPulse: {},
       showSettings: false,
       gameStatus: "playing",
-    }));
+    });
   },
 
   setIsPageVisible: (visible: boolean) => {
@@ -244,7 +229,6 @@ export const setSelectedTowerSelector = (state: GameStore) =>
 export const gameStatusSelector = (state: GameStore) => state.gameStatus;
 export const previousStatusSelector = (state: GameStore) =>
   state.previousStatus;
-export const healthSelector = (state: GameStore) => state.health;
 export const activeEffectsSelector = (state: GameStore) => state.activeEffects;
 export const isGameConfigLoadedSelector = (state: GameStore) =>
   state.isGameConfigLoaded;
@@ -262,6 +246,5 @@ export const setDebugSelector = (state: GameStore) => state.setDebug;
 export const resetGameStateSelector = (state: GameStore) =>
   state.resetGameState;
 export const startNewRunSelector = (state: GameStore) => state.startNewRun;
-export const loseHealthSelector = (state: GameStore) => state.loseHealth;
 export const setIsPageVisibleSelector = (state: GameStore) =>
   state.setIsPageVisible;

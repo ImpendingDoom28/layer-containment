@@ -1,4 +1,4 @@
-import { createActions, type Entity, type TraitRecord } from "koota";
+import { createActions, type Entity } from "koota";
 
 import { useAlmanacStore } from "../../stores/useAlmanacStore";
 import { useLevelStore } from "../../stores/useLevelStore";
@@ -6,11 +6,18 @@ import { useGameStore } from "../../stores/useGameStore";
 import type { Enemy } from "../../types/game";
 import { GameEvent } from "../../types/enums/events";
 import { gameEvents } from "../../../utils/eventEmitter";
-import { EnemyState, IsEnemy, type EnemyStateData } from "../traits/enemy";
+import {
+  EnemyState,
+  IsEnemy,
+  requestEnemyDeath,
+  toEnemySnapshot,
+  type EnemyStateData,
+} from "../traits/enemy";
+import { isBase } from "../traits/base";
+import { damageRequest } from "../traits/damage";
 
+/** Enemy id → entity registry; internal to the enemy domain. */
 const enemyEntitiesById = new Map<number, Entity>();
-
-type EnemyStateRecord = TraitRecord<typeof EnemyState>;
 
 const enemyToState = (enemyData: Enemy): EnemyStateData => ({
   id: enemyData.id,
@@ -40,33 +47,8 @@ const enemyToState = (enemyData: Enemy): EnemyStateData => ({
   healPulse: enemyData.healPulse,
 });
 
-export const toEnemySnapshot = (state: EnemyStateRecord): Enemy => ({
-  id: state.id,
-  type: state.type,
-  name: state.name,
-  health: state.health,
-  maxHealth: state.maxHealth,
-  speed: state.speed,
-  reward: state.reward,
-  color: state.color,
-  size: state.size,
-  healthLoss: state.healthLoss,
-  description: state.description,
-  pathProgress: state.pathProgress,
-  pathIndex: state.pathIndex,
-  slowUntil: state.slowUntil,
-  slowMultiplier: state.slowMultiplier,
-  x: state.x,
-  z: state.z,
-  upgrades: state.upgrades,
-  upgradeIndicatorColors: state.upgradeIndicatorColors,
-  regeneration: state.regeneration,
-  slowResistance: state.slowResistance,
-  nextHealPulseAt: state.nextHealPulseAt,
-  healPulse: state.healPulse,
-});
-
-const handleEnemyDeath = (enemy: Enemy) => {
+/** Settle a kill: reward, kill count, ENEMY_KILLED. Private to the enemy domain. */
+const handleEnemyDeath = (enemy: Enemy): void => {
   const gameStatus = useGameStore.getState().gameStatus;
   useLevelStore.getState().addMoney(enemy.reward);
   if (gameStatus !== "menu") {
@@ -118,9 +100,12 @@ export const enemyActions = createActions((world) => ({
     const nextState = { ...current, ...updates };
 
     if (nextState.health <= 0) {
-      handleEnemyDeath(toEnemySnapshot(nextState));
-      enemyEntitiesById.delete(enemyId);
-      entity.destroy();
+      // Death is not settled here: clamp health and raise the request,
+      // letting the EnemyDeathSystem own the kill.
+      entity.set(EnemyState, { ...nextState, health: 0 });
+      if (!entity.has(requestEnemyDeath)) {
+        entity.add(requestEnemyDeath);
+      }
       return true;
     }
 
@@ -138,7 +123,19 @@ export const enemyActions = createActions((world) => ({
     const enemy = toEnemySnapshot(state);
 
     if (reachedEnd) {
-      useGameStore.getState().loseHealth(enemy.healthLoss);
+      // Raise the damage as an ECS request (consumed by the ApplyDamageSystem).
+      // Same-frame requests merge so no damage is lost.
+      const base = world.queryFirst(isBase);
+      if (base) {
+        const pending = base.get(damageRequest);
+        if (pending) {
+          base.set(damageRequest, {
+            amount: pending.amount + enemy.healthLoss,
+          });
+        } else {
+          base.add(damageRequest({ amount: enemy.healthLoss }));
+        }
+      }
       gameEvents.emit(GameEvent.ENEMY_REACHED_END, {
         enemyId,
         enemyType: enemy.type,
@@ -164,10 +161,15 @@ export const enemyActions = createActions((world) => ({
     const enemy = entity.get(EnemyState);
     if (!enemy) return false;
 
-    const newHealth = Math.max(0, enemy.health - damage);
+    const newHealth = enemy.health - damage;
 
     if (newHealth <= 0) {
-      enemyActions(world).removeEnemy(enemyId, false);
+      // Death is not settled here: clamp health and raise the request,
+      // letting the EnemyDeathSystem own the kill.
+      entity.set(EnemyState, { ...enemy, health: 0 });
+      if (!entity.has(requestEnemyDeath)) {
+        entity.add(requestEnemyDeath);
+      }
       return true;
     }
 

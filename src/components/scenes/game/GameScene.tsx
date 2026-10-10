@@ -17,6 +17,10 @@ import type {
   TowerType,
 } from "../../../core/types/game";
 import { WaveLoopSystem } from "../../systems/WaveLoopSystem";
+import { GameProcessSystem } from "../../systems/GameProcessSystem";
+import { ApplyDamageSystem } from "../../systems/ApplyDamageSystem";
+import { ApplyBaseDefeatSystem } from "../../systems/ApplyBaseDefeatSystem";
+import { EnemyDeathSystem } from "../../systems/EnemyDeathSystem";
 import { WaveSystem } from "../../../core/hooks/useWaveSystem";
 import { TileData } from "../../../core/types/utils";
 import { EntitiesSystem } from "../../systems/EntitiesSystem";
@@ -135,6 +139,11 @@ export const GameScene: React.FC<GameSceneProps> = ({
       />
 
       <WaveLoopSystem waveSystem={waveSystem} />
+
+      <GameProcessSystem />
+      <ApplyDamageSystem />
+      <EnemyDeathSystem />
+      <ApplyBaseDefeatSystem />
     </>
   );
 };

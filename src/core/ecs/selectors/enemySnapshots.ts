@@ -1,8 +1,7 @@
 import type { World } from "koota";
 
 import type { Enemy } from "../../types/game";
-import { EnemyState, IsEnemy } from "../traits/enemy";
-import { toEnemySnapshot } from "../actions/enemyActions";
+import { EnemyState, IsEnemy, toEnemySnapshot } from "../traits/enemy";
 
 export const getEnemySnapshots = (world: World): Enemy[] => {
   const enemies: Enemy[] = [];

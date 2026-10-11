@@ -43,12 +43,14 @@ type GameStoreState = {
   previousStatus: GameStatus | null;
   debug: boolean;
   showSettings: boolean;
+  gameMenuClosing: boolean;
   denyPulse: Partial<Record<TowerType, number>>;
   isPageVisible: boolean;
 };
 
 type GameStoreActions = {
   setShowSettings: (show: boolean) => void;
+  setGameMenuClosing: (closing: boolean) => void;
   initializeGameState: (config: GameConfigData) => void;
   setActiveEffects: (
     effects: ActiveEffect[] | ((prev: ActiveEffect[]) => ActiveEffect[])
@@ -80,6 +82,7 @@ const DEFAULT_STATE: GameStoreState = {
   gameStatus: "menu",
   debug: false,
   showSettings: false,
+  gameMenuClosing: false,
   denyPulse: {},
   enemyHealthLoss: 0,
   tileSize: 0,
@@ -136,6 +139,10 @@ export const useGameStore = create<GameStore>((set) => ({
     set({ showSettings: show });
   },
 
+  setGameMenuClosing: (closing: boolean) => {
+    set({ gameMenuClosing: closing });
+  },
+
   setActiveEffects: (effects) => {
     set((state) => ({
       activeEffects:
@@ -187,6 +194,7 @@ export const useGameStore = create<GameStore>((set) => ({
       previousStatus: null,
       denyPulse: {},
       showSettings: false,
+      gameMenuClosing: false,
       gameStatus: "playing",
     });
   },
@@ -198,8 +206,12 @@ export const useGameStore = create<GameStore>((set) => ({
 
 export const debugSelector = (state: GameStore) => state.debug;
 export const showSettingsSelector = (state: GameStore) => state.showSettings;
+export const gameMenuClosingSelector = (state: GameStore) =>
+  state.gameMenuClosing;
 export const setShowSettingsSelector = (state: GameStore) =>
   state.setShowSettings;
+export const setGameMenuClosingSelector = (state: GameStore) =>
+  state.setGameMenuClosing;
 export const tileSizeSelector = (state: GameStore) => state.tileSize;
 export const enemyTypesSelector = (state: GameStore) => state.enemyTypes;
 export const pathWidthSelector = (state: GameStore) => state.pathWidth;

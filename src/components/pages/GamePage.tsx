@@ -28,6 +28,10 @@ import { useProjectileSystem } from "../../core/hooks/useProjectileSystem";
 import { useWaveSystem } from "../../core/hooks/useWaveSystem";
 import { useLevelSystem } from "../../core/hooks/useLevelSystem";
 import { useUpgradesSystem } from "../../core/hooks/useUpgradesSystem";
+import {
+  useGameStore,
+  gameMenuClosingSelector,
+} from "../../core/stores/useGameStore";
 import { PageWrapper } from "./PageWrapper";
 
 type GamePageProps = {
@@ -79,6 +83,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
   const { onProjectileHit, onProjectileRemove } = projectileSystem;
 
   const { showUpgradePanel, onEnemyUpgradePick } = upgradesSystem;
+  const gameMenuClosing = useGameStore(gameMenuClosingSelector);
 
   const { getRemainingEnemiesInWave, startWave } = waveSystem;
 
@@ -198,7 +203,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
 
       {isGameReady && !isMenu && (
         <>
-          {!shouldDisableControls && (
+          {(shouldDisableControls ? gameMenuClosing : true) && (
             <>
               <div
                 className={cn(

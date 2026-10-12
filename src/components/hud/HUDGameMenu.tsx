@@ -1,5 +1,5 @@
 import { FC, useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
 import type { GameStatus } from "../../core/types/game";
 import {
@@ -96,18 +96,35 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
                 headquarters.
               </UICardDescription>
             </UICardHeader>
-            <UICardContent className="flex flex-col gap-4">
-              <UIButton onClick={() => startClose(onRestart)}>
-                Restart
+            <UICardContent className="flex flex-col gap-1">
+              <UIButton
+                onClick={() => startClose(onRestart)}
+                className="justify-between text-sm text-left group text-foreground hover:border-primary/30"
+              >
+                <span className="transition-transform group-hover:translate-x-1">
+                  Restart
+                </span>
+                <ArrowRight className="transition-transform size-4 group-hover:translate-x-1" />
               </UIButton>
-              <UIButton onClick={() => setShowSettings(true)} variant="outline">
-                Settings
+              <UIButton
+                onClick={() => setShowSettings(true)}
+                variant="outline"
+                className="justify-between text-sm text-left group text-foreground hover:border-primary/30"
+              >
+                <span className="transition-transform group-hover:translate-x-1">
+                  Settings
+                </span>
+                <ArrowRight className="transition-transform size-4 text-muted-foreground group-hover:translate-x-1 group-hover:text-primary" />
               </UIButton>
               <UIButton
                 onClick={() => setShowExitConfirm(true)}
                 variant="secondary"
+                className="justify-between text-sm text-left group text-foreground hover:border-primary/30"
               >
-                Go to Main Menu
+                <span className="transition-transform group-hover:translate-x-1">
+                  Go to Main Menu
+                </span>
+                <ArrowRight className="transition-transform size-4 text-muted-foreground group-hover:translate-x-1 group-hover:text-primary" />
               </UIButton>
             </UICardContent>
           </UICard>

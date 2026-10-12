@@ -15,16 +15,12 @@ import {
   type EnemyMotionData,
   type EnemyStateData,
 } from "../traits/enemy";
+import { Position, type PositionData } from "../traits/position";
 import { isBase } from "../traits/base";
 import { damageRequest } from "../traits/damage";
 
 /** Enemy id → entity registry; internal to the enemy domain. */
 const enemyEntitiesById = new Map<number, Entity>();
-
-type EnemyMotionField = "pathProgress" | "x" | "z";
-
-const isMotionKey = (key: keyof Enemy): key is EnemyMotionField =>
-  key === "pathProgress" || key === "x" || key === "z";
 
 const enemyToState = (enemyData: Enemy): EnemyStateData => ({
   id: enemyData.id,
@@ -53,11 +49,14 @@ const enemyToState = (enemyData: Enemy): EnemyStateData => ({
 
 const enemyToMotion = (enemyData: Enemy): EnemyMotionData => ({
   pathProgress: enemyData.pathProgress,
+  lastRegenTick: 0,
+  hasReachedEnd: false,
+});
+
+const enemyToPosition = (enemyData: Enemy): PositionData => ({
   x: enemyData.x,
   y: 0,
   z: enemyData.z,
-  lastRegenTick: 0,
-  hasReachedEnd: false,
 });
 
 /** Settle a kill: reward, kill count, ENEMY_KILLED. Private to the enemy domain. */
@@ -85,9 +84,10 @@ export const enemyActions = createActions((world) => ({
       existingEntity.destroy();
     }
 
-    const entity = world.spawn(IsEnemy, EnemyState, EnemyMotion);
+    const entity = world.spawn(IsEnemy, EnemyState, EnemyMotion, Position);
     entity.set(EnemyState, enemyToState(enemyData));
     entity.set(EnemyMotion, enemyToMotion(enemyData));
+    entity.set(Position, enemyToPosition(enemyData));
 
     enemyEntitiesById.set(enemyData.id, entity);
 
@@ -108,11 +108,17 @@ export const enemyActions = createActions((world) => ({
     const motion = entity.get(EnemyMotion);
     if (!motion) return false;
 
+    const position = entity.get(Position);
+    if (!position) return false;
+
     const updateKeys = Object.keys(updates) as Array<keyof Enemy>;
     if (updateKeys.length === 0) return false;
 
-    const currentFor = (key: keyof Enemy) =>
-      isMotionKey(key) ? motion[key] : (state as Partial<Enemy>)[key];
+    const currentFor = (key: keyof Enemy) => {
+      if (key === "x" || key === "z") return position[key];
+      if (key === "pathProgress") return motion.pathProgress;
+      return (state as Partial<Enemy>)[key];
+    };
 
     const hasChanges = updateKeys.some(
       (key) => currentFor(key) !== updates[key]
@@ -120,14 +126,17 @@ export const enemyActions = createActions((world) => ({
     if (!hasChanges) return false;
 
     // Mirrors the original single-trait `{ ...current, ...updates }`
-    // spread exactly, then mirrors the motion keys onto the hot motion
-    // record.
+    // spread exactly, then mirrors the hot keys onto the hot records
+    // (pathProgress on EnemyMotion, x/z on the generic Position).
     const nextState = { ...state, ...updates } as EnemyStateData;
     const nextMotion: EnemyMotionData = { ...motion };
+    const nextPosition: PositionData = { ...position };
 
     for (const key of updateKeys) {
-      if (isMotionKey(key)) {
-        nextMotion[key] = updates[key] as number;
+      if (key === "x" || key === "z") {
+        nextPosition[key] = updates[key] as number;
+      } else if (key === "pathProgress") {
+        nextMotion.pathProgress = updates[key] as number;
       }
     }
 
@@ -136,6 +145,7 @@ export const enemyActions = createActions((world) => ({
       // letting the EnemyDeathSystem own the kill.
       entity.set(EnemyState, { ...nextState, health: 0 });
       entity.set(EnemyMotion, nextMotion);
+      entity.set(Position, nextPosition);
       if (!entity.has(requestEnemyDeath)) {
         entity.add(requestEnemyDeath);
       }
@@ -144,6 +154,7 @@ export const enemyActions = createActions((world) => ({
 
     entity.set(EnemyState, nextState);
     entity.set(EnemyMotion, nextMotion);
+    entity.set(Position, nextPosition);
     return true;
   },
 
@@ -157,7 +168,10 @@ export const enemyActions = createActions((world) => ({
     const motion = entity.get(EnemyMotion);
     if (!motion) return false;
 
-    const enemy = toEnemySnapshot(state, motion);
+    const position = entity.get(Position);
+    if (!position) return false;
+
+    const enemy = toEnemySnapshot(state, motion, position);
 
     if (reachedEnd) {
       // Raise the damage as an ECS request (consumed by the ApplyDamageSystem).

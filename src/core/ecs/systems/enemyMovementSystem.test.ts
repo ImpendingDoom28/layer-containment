@@ -5,6 +5,7 @@ import { runEnemyMovementSystem } from "./enemyMovementSystem";
 import { enemyActions } from "../actions/enemyActions";
 import { getEnemySnapshots } from "../selectors/enemySnapshots";
 import { EnemyMotion, EnemyState } from "../traits/enemy";
+import { Position } from "../traits/position";
 import { testWorld } from "../world";
 import type { Enemy, PathWaypoint } from "../../../core/types/game";
 
@@ -51,9 +52,10 @@ const defaultOptions = (): TestOptions => ({
   onEndEffect: vi.fn(),
 });
 
-/** Entity helpers: both traits are always present on spawned enemies. */
+/** Entity helpers: all traits are always present on spawned enemies. */
 const stateOf = (entity: Entity) => entity.get(EnemyState)!;
 const motionOf = (entity: Entity) => entity.get(EnemyMotion)!;
+const positionOf = (entity: Entity) => entity.get(Position)!;
 
 describe("enemyMovementSystem", () => {
   beforeEach(() => {
@@ -70,9 +72,10 @@ describe("enemyMovementSystem", () => {
     run(0.2, 0);
 
     const motion = motionOf(entity);
+    const pos = positionOf(entity);
     expect(motion.pathProgress).toBeCloseTo(0.1);
-    expect(motion.x).toBeCloseTo(1);
-    expect(motion.z).toBeCloseTo(0);
+    expect(pos.x).toBeCloseTo(1);
+    expect(pos.z).toBeCloseTo(0);
 
     // The cold state is untouched by per-frame movement.
     const state = stateOf(entity);
@@ -89,7 +92,7 @@ describe("enemyMovementSystem", () => {
     run(0.2, 0);
 
     expect(motionOf(entity).pathProgress).toBeCloseTo(0.05);
-    expect(motionOf(entity).x).toBeCloseTo(0.5);
+    expect(positionOf(entity).x).toBeCloseTo(0.5);
   });
 
   it("expires an active slow (cold write) and moves at full speed that frame", () => {
@@ -132,9 +135,10 @@ describe("enemyMovementSystem", () => {
     run(0.2, 0, options);
 
     const motion = motionOf(entity);
+    const pos = positionOf(entity);
     expect(motion.pathProgress).toBeGreaterThanOrEqual(1);
-    expect(motion.x).toBe(10);
-    expect(motion.z).toBe(0);
+    expect(pos.x).toBe(10);
+    expect(pos.z).toBe(0);
     expect(options.onEnemyReachEnd).toHaveBeenCalledTimes(1);
     expect(options.onEnemyReachEnd).toHaveBeenCalledWith(1);
     expect(options.onEndEffect).toHaveBeenCalledTimes(1);

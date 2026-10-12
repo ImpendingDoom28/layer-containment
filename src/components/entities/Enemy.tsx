@@ -29,6 +29,7 @@ import {
   getSurfaceQuaternion,
 } from "../../utils/planetSurfaceMapping";
 import { EnemyMotion, EnemyState } from "../../core/ecs/traits/enemy";
+import { Position } from "../../core/ecs/traits/position";
 import type { GetSimulationTime } from "../../core/hooks/useSimulationClock";
 import { MedicHealBurstEffect } from "./effects/MedicHealBurstEffect";
 import { SlowEffect } from "./effects/SlowEffect";
@@ -139,12 +140,12 @@ export const Enemy: FC<EnemyProps> = memo(
     // it in sync afterwards.
     useLayoutEffect(() => {
       const live = entity.get(EnemyState);
-      const motionData = entity.get(EnemyMotion);
-      if (!meshRef.current || !live || !motionData || live.health <= 0) return;
+      const pos = entity.get(Position);
+      if (!meshRef.current || !live || !pos || live.health <= 0) return;
       const footing = applySphereFooting(
-        motionData.x,
-        motionData.z,
-        motionData.y,
+        pos.x,
+        pos.z,
+        pos.y,
         live.size / 2
       );
       meshRef.current.position.copy(footing.position);
@@ -153,16 +154,16 @@ export const Enemy: FC<EnemyProps> = memo(
 
     useFrame((state) => {
       const live = entity.get(EnemyState);
-      const motionData = entity.get(EnemyMotion);
-      if (!live || !motionData || live.health <= 0) return;
+      const pos = entity.get(Position);
+      if (!live || !pos || live.health <= 0) return;
 
-      // The movement system already advanced the motion; this frame just
+      // The movement system already advanced the position; this frame just
       // mirrors it onto the mesh (allocation-free via scratch vectors).
       if (meshRef.current) {
         const footing = applySphereFooting(
-          motionData.x,
-          motionData.z,
-          motionData.y,
+          pos.x,
+          pos.z,
+          pos.y,
           live.size / 2
         );
         meshRef.current.position.copy(footing.position);

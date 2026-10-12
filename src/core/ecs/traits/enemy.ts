@@ -6,6 +6,7 @@ import type {
   EnemyUpgradeId,
   HealPulseConfig,
 } from "../../types/game";
+import type { PositionData } from "./position";
 
 export const IsEnemy = trait();
 
@@ -68,12 +69,12 @@ export const EnemyState = trait(createDefaultEnemyState);
  * SoA (schema) so the movement system can mutate it in place without
  * allocating objects per enemy per frame. No React hook subscribes to this
  * trait, so its per-frame change events cost nothing in the view layer.
+ *
+ * The world position lives in the generic `Position` trait (see
+ * traits/position.ts), which is also written per frame.
  */
 export const EnemyMotion = trait({
   pathProgress: 0,
-  x: 0,
-  y: 0,
-  z: 0,
   /** Simulation timestamp of the last regeneration tick. */
   lastRegenTick: 0,
   /** Guards the reach-end effect/callback against re-firing each frame. */
@@ -84,9 +85,6 @@ export type EnemyMotionData = TraitRecord<typeof EnemyMotion>;
 
 export const createDefaultEnemyMotion = (): EnemyMotionData => ({
   pathProgress: 0,
-  x: 0,
-  y: 0,
-  z: 0,
   lastRegenTick: 0,
   hasReachedEnd: false,
 });
@@ -94,7 +92,8 @@ export const createDefaultEnemyMotion = (): EnemyMotionData => ({
 /** Pure mapping from the ECS state to the domain snapshot. */
 export const toEnemySnapshot = (
   state: EnemyStateData,
-  motion: EnemyMotionData
+  motion: EnemyMotionData,
+  position: PositionData
 ): Enemy => ({
   id: state.id,
   type: state.type,
@@ -111,8 +110,8 @@ export const toEnemySnapshot = (
   pathIndex: state.pathIndex,
   slowUntil: state.slowUntil,
   slowMultiplier: state.slowMultiplier,
-  x: motion.x,
-  z: motion.z,
+  x: position.x,
+  z: position.z,
   upgrades: state.upgrades,
   upgradeIndicatorColors: state.upgradeIndicatorColors,
   regeneration: state.regeneration,

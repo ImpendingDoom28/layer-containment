@@ -2,6 +2,7 @@ import type { World } from "koota";
 import { Vector3 } from "three";
 
 import { EnemyMotion, EnemyState } from "../traits/enemy";
+import { Position } from "../traits/position";
 import {
   isAtPathEnd,
   getPositionAlongMultiplePaths,
@@ -61,7 +62,9 @@ export const runEnemyMovementSystem = (
   const { pathWaypoints, radius, onEnemyReachEnd, onEndEffect } = options;
   const reachedEndIds: number[] = [];
 
-  world.query(EnemyState, EnemyMotion).updateEach(([state, motion]) => {
+  world
+    .query(EnemyState, EnemyMotion, Position)
+    .updateEach(([state, motion, position]) => {
       if (state.health <= 0) return;
 
       // Slow expiry mirrors the previous per-component logic: the slow is
@@ -95,9 +98,9 @@ export const runEnemyMovementSystem = (
           1
         );
         motion.pathProgress = Math.max(motion.pathProgress, 1);
-        motion.x = endPos.x;
-        motion.y = endPos.y;
-        motion.z = endPos.z;
+        position.x = endPos.x;
+        position.y = endPos.y;
+        position.z = endPos.z;
 
         if (!motion.hasReachedEnd) {
           motion.hasReachedEnd = true;
@@ -123,14 +126,14 @@ export const runEnemyMovementSystem = (
         return;
       }
 
-      const position = getPositionAlongMultiplePaths(
+      const waypoint = getPositionAlongMultiplePaths(
         pathWaypoints,
         state.pathIndex,
         motion.pathProgress
       );
-      motion.x = position.x;
-      motion.y = position.y;
-      motion.z = position.z;
+      position.x = waypoint.x;
+      position.y = waypoint.y;
+      position.z = waypoint.z;
 
       // Regeneration: discrete ticks on the cold trait.
       if (

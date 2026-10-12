@@ -119,7 +119,7 @@ export const UIConfirmModal: FC<UIConfirmModalProps> = ({
                 </UITypography>
               </DialogPrimitive.Description>
             </UICardContent>
-            <UICardFooter className="justify-end">
+            <UICardFooter className="justify-end gap-6">
               <DialogPrimitive.Close asChild>
                 <UIButton variant="ghost">{cancelLabel}</UIButton>
               </DialogPrimitive.Close>

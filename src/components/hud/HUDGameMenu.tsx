@@ -41,7 +41,8 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
   onGoToMainMenu,
   className,
 }) => {
-  const { closing, startClose, finishClose, cancelClose } = close;
+  const { closing, startClose, startCloseImmediate, finishClose, cancelClose } =
+    close;
   const { menuRef, blurDimensions, setBlurDimensions } = useBlurBackdrop();
   const setShowSettings = useGameStore(setShowSettingsSelector);
   const showSettings = useGameStore(showSettingsSelector);
@@ -116,11 +117,11 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
         open={showExitConfirm}
         title="Exit game"
         message="Are you sure you want to exit? All unsaved changes will be lost"
-        confirmLabel="Exit"
-        cancelLabel="Ok"
+        confirmLabel="Proceed"
+        cancelLabel="Cancel"
         onConfirm={() => {
           setShowExitConfirm(false);
-          startClose(onGoToMainMenu);
+          startCloseImmediate(onGoToMainMenu);
         }}
         onOpenChange={setShowExitConfirm}
       />

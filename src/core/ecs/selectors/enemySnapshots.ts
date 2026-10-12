@@ -1,22 +1,31 @@
 import type { World } from "koota";
 
 import type { Enemy } from "../../types/game";
-import { EnemyState, IsEnemy, toEnemySnapshot } from "../traits/enemy";
+import {
+  EnemyMotion,
+  EnemyState,
+  IsEnemy,
+  toEnemySnapshot,
+} from "../traits/enemy";
 
 export const getEnemySnapshots = (world: World): Enemy[] => {
   const enemies: Enemy[] = [];
-  world.query(IsEnemy, EnemyState).readEach(([state]) => {
-    enemies.push(toEnemySnapshot(state));
-  });
+  world.query(IsEnemy, EnemyState, EnemyMotion).readEach(
+    ([state, motion]) => {
+      enemies.push(toEnemySnapshot(state, motion));
+    }
+  );
   return enemies;
 };
 
 export const getEnemiesById = (world: World): Map<number, Enemy> => {
   const byId = new Map<number, Enemy>();
-  world.query(IsEnemy, EnemyState).readEach(([state]) => {
-    const enemy = toEnemySnapshot(state);
-    byId.set(enemy.id, enemy);
-  });
+  world.query(IsEnemy, EnemyState, EnemyMotion).readEach(
+    ([state, motion]) => {
+      const enemy = toEnemySnapshot(state, motion);
+      byId.set(enemy.id, enemy);
+    }
+  );
   return byId;
 };
 

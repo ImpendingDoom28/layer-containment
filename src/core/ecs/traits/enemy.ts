@@ -1,4 +1,4 @@
-import { trait } from "koota";
+import { trait, type TraitRecord } from "koota";
 
 import type {
   Enemy,
@@ -11,6 +11,13 @@ export const IsEnemy = trait();
 
 export const requestEnemyDeath = trait();
 
+/**
+ * Cold enemy data: changes only on discrete events (damage, slow, heal,
+ * upgrades, spawn). `useTrait` subscriptions are safe on this trait.
+ *
+ * High-frequency motion fields (pathProgress, x, z) live in `EnemyMotion`
+ * so per-frame writes do not trigger React re-renders.
+ */
 export type EnemyStateData = {
   id: number;
   type: EnemyType;
@@ -23,13 +30,10 @@ export type EnemyStateData = {
   size: number;
   healthLoss: number;
   description?: string;
-  pathProgress: number;
   pathIndex: number;
   /** Expiry timestamp in pause-adjusted simulation time. */
   slowUntil: number;
   slowMultiplier: number;
-  x: number;
-  z: number;
   upgrades: EnemyUpgradeId[];
   upgradeIndicatorColors?: string[];
   regeneration?: number;
@@ -49,19 +53,49 @@ export const createDefaultEnemyState = (): EnemyStateData => ({
   color: "",
   size: 0,
   healthLoss: 0,
-  pathProgress: 0,
   pathIndex: 0,
   slowUntil: 0,
   slowMultiplier: 1,
-  x: 0,
-  z: 0,
   upgrades: [],
 });
 
 export const EnemyState = trait(createDefaultEnemyState);
 
+/**
+ * Hot per-frame enemy motion, written by the EnemyMovementSystem and read
+ * by the Enemy render component and the snapshot selectors.
+ *
+ * SoA (schema) so the movement system can mutate it in place without
+ * allocating objects per enemy per frame. No React hook subscribes to this
+ * trait, so its per-frame change events cost nothing in the view layer.
+ */
+export const EnemyMotion = trait({
+  pathProgress: 0,
+  x: 0,
+  y: 0,
+  z: 0,
+  /** Simulation timestamp of the last regeneration tick. */
+  lastRegenTick: 0,
+  /** Guards the reach-end effect/callback against re-firing each frame. */
+  hasReachedEnd: false,
+});
+
+export type EnemyMotionData = TraitRecord<typeof EnemyMotion>;
+
+export const createDefaultEnemyMotion = (): EnemyMotionData => ({
+  pathProgress: 0,
+  x: 0,
+  y: 0,
+  z: 0,
+  lastRegenTick: 0,
+  hasReachedEnd: false,
+});
+
 /** Pure mapping from the ECS state to the domain snapshot. */
-export const toEnemySnapshot = (state: EnemyStateData): Enemy => ({
+export const toEnemySnapshot = (
+  state: EnemyStateData,
+  motion: EnemyMotionData
+): Enemy => ({
   id: state.id,
   type: state.type,
   name: state.name,
@@ -73,12 +107,12 @@ export const toEnemySnapshot = (state: EnemyStateData): Enemy => ({
   size: state.size,
   healthLoss: state.healthLoss,
   description: state.description,
-  pathProgress: state.pathProgress,
+  pathProgress: motion.pathProgress,
   pathIndex: state.pathIndex,
   slowUntil: state.slowUntil,
   slowMultiplier: state.slowMultiplier,
-  x: state.x,
-  z: state.z,
+  x: motion.x,
+  z: motion.z,
   upgrades: state.upgrades,
   upgradeIndicatorColors: state.upgradeIndicatorColors,
   regeneration: state.regeneration,

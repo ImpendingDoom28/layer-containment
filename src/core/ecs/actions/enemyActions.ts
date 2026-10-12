@@ -7,10 +7,12 @@ import type { Enemy } from "../../types/game";
 import { GameEvent } from "../../types/enums/events";
 import { gameEvents } from "../../../utils/eventEmitter";
 import {
+  EnemyMotion,
   EnemyState,
   IsEnemy,
   requestEnemyDeath,
   toEnemySnapshot,
+  type EnemyMotionData,
   type EnemyStateData,
 } from "../traits/enemy";
 import { isBase } from "../traits/base";
@@ -18,6 +20,11 @@ import { damageRequest } from "../traits/damage";
 
 /** Enemy id → entity registry; internal to the enemy domain. */
 const enemyEntitiesById = new Map<number, Entity>();
+
+type EnemyMotionField = "pathProgress" | "x" | "z";
+
+const isMotionKey = (key: keyof Enemy): key is EnemyMotionField =>
+  key === "pathProgress" || key === "x" || key === "z";
 
 const enemyToState = (enemyData: Enemy): EnemyStateData => ({
   id: enemyData.id,
@@ -31,12 +38,9 @@ const enemyToState = (enemyData: Enemy): EnemyStateData => ({
   size: enemyData.size,
   healthLoss: enemyData.healthLoss,
   description: enemyData.description,
-  pathProgress: enemyData.pathProgress,
   pathIndex: enemyData.pathIndex,
   slowUntil: enemyData.slowUntil,
   slowMultiplier: enemyData.slowMultiplier,
-  x: enemyData.x,
-  z: enemyData.z,
   upgrades: [...enemyData.upgrades],
   upgradeIndicatorColors: enemyData.upgradeIndicatorColors
     ? [...enemyData.upgradeIndicatorColors]
@@ -45,6 +49,15 @@ const enemyToState = (enemyData: Enemy): EnemyStateData => ({
   slowResistance: enemyData.slowResistance,
   nextHealPulseAt: enemyData.nextHealPulseAt,
   healPulse: enemyData.healPulse,
+});
+
+const enemyToMotion = (enemyData: Enemy): EnemyMotionData => ({
+  pathProgress: enemyData.pathProgress,
+  x: enemyData.x,
+  y: 0,
+  z: enemyData.z,
+  lastRegenTick: 0,
+  hasReachedEnd: false,
 });
 
 /** Settle a kill: reward, kill count, ENEMY_KILLED. Private to the enemy domain. */
@@ -72,8 +85,9 @@ export const enemyActions = createActions((world) => ({
       existingEntity.destroy();
     }
 
-    const entity = world.spawn(IsEnemy, EnemyState);
+    const entity = world.spawn(IsEnemy, EnemyState, EnemyMotion);
     entity.set(EnemyState, enemyToState(enemyData));
+    entity.set(EnemyMotion, enemyToMotion(enemyData));
 
     enemyEntitiesById.set(enemyData.id, entity);
 
@@ -88,21 +102,40 @@ export const enemyActions = createActions((world) => ({
     const entity = enemyEntitiesById.get(enemyId);
     if (!entity) return false;
 
-    const current = entity.get(EnemyState);
-    if (!current) return false;
+    const state = entity.get(EnemyState);
+    if (!state) return false;
+
+    const motion = entity.get(EnemyMotion);
+    if (!motion) return false;
 
     const updateKeys = Object.keys(updates) as Array<keyof Enemy>;
     if (updateKeys.length === 0) return false;
 
-    const hasChanges = updateKeys.some((key) => current[key] !== updates[key]);
+    const currentFor = (key: keyof Enemy) =>
+      isMotionKey(key) ? motion[key] : (state as Partial<Enemy>)[key];
+
+    const hasChanges = updateKeys.some(
+      (key) => currentFor(key) !== updates[key]
+    );
     if (!hasChanges) return false;
 
-    const nextState = { ...current, ...updates };
+    // Mirrors the original single-trait `{ ...current, ...updates }`
+    // spread exactly, then mirrors the motion keys onto the hot motion
+    // record.
+    const nextState = { ...state, ...updates } as EnemyStateData;
+    const nextMotion: EnemyMotionData = { ...motion };
+
+    for (const key of updateKeys) {
+      if (isMotionKey(key)) {
+        nextMotion[key] = updates[key] as number;
+      }
+    }
 
     if (nextState.health <= 0) {
       // Death is not settled here: clamp health and raise the request,
       // letting the EnemyDeathSystem own the kill.
       entity.set(EnemyState, { ...nextState, health: 0 });
+      entity.set(EnemyMotion, nextMotion);
       if (!entity.has(requestEnemyDeath)) {
         entity.add(requestEnemyDeath);
       }
@@ -110,6 +143,7 @@ export const enemyActions = createActions((world) => ({
     }
 
     entity.set(EnemyState, nextState);
+    entity.set(EnemyMotion, nextMotion);
     return true;
   },
 
@@ -120,7 +154,10 @@ export const enemyActions = createActions((world) => ({
     const state = entity.get(EnemyState);
     if (!state) return false;
 
-    const enemy = toEnemySnapshot(state);
+    const motion = entity.get(EnemyMotion);
+    if (!motion) return false;
+
+    const enemy = toEnemySnapshot(state, motion);
 
     if (reachedEnd) {
       // Raise the damage as an ECS request (consumed by the ApplyDamageSystem).

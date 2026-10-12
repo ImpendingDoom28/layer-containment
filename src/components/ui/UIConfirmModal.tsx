@@ -1,4 +1,4 @@
-import type { FC, ReactNode } from "react";
+import { useEffect, useRef, type FC, type ReactNode } from "react";
 
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { AlertTriangle } from "lucide-react";
@@ -79,6 +79,23 @@ export const UIConfirmModal: FC<UIConfirmModalProps> = ({
   onConfirm,
   onOpenChange,
 }) => {
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
+
+  // No DialogPrimitive.Trigger is rendered, so Radix has nothing to
+  // refocus on dismissal — restore the element that had focus before
+  // the dialog opened.
+  useEffect(() => {
+    if (!open) return;
+    restoreFocusRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    return () => {
+      restoreFocusRef.current?.focus();
+      restoreFocusRef.current = null;
+    };
+  }, [open]);
+
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) return;
     onOpenChange?.(false);
@@ -91,7 +108,7 @@ export const UIConfirmModal: FC<UIConfirmModalProps> = ({
         <DialogPrimitive.Content
           role="alertdialog"
           onEscapeKeyDown={(e) => e.stopPropagation()}
-          className="fixed inset-0 z-(--z-modal) flex items-center justify-center p-4 outline-none"
+          className="fixed left-1/2 top-1/2 z-(--z-modal) -translate-x-1/2 -translate-y-1/2 w-[min(100%-2rem,20rem)] outline-none"
         >
           <UICard
             className={cn(

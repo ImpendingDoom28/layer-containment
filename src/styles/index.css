@@ -86,6 +86,7 @@
   --editor-default-building: #8b7355;
 
   --z-overlay: 50;
+  --z-modal: 100;
 }
 
 @theme inline {

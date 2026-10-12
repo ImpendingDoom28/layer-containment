@@ -4,6 +4,9 @@ const baseURL = "http://localhost:5173";
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  // The stress scene has its own Playwright config (playwright.stress.config.ts)
+  // and dev server on port 5174, so it is excluded from the default suite.
+  testIgnore: /stress\.spec\.ts$/,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : "50%",

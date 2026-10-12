@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { AudioListenerSync } from "@webgamedevkit/audio-engine/r3f";
 
-import type { PlayableLevelId } from "../../../constants/playableLevels";
+import type { AnyPlayableLevelId } from "../../../constants/playableLevels";
 import { Grid } from "../../entities/Grid";
 import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
 import { PlacementHighlightOverlay } from "../../entities/PlacementHighlightOverlay";
@@ -54,7 +54,7 @@ type GameSceneProps = {
   ) => void;
   onProjectileRemove: (projectileId: number) => void;
   onSellTower: (towerId: number) => void;
-  playableLevelId: PlayableLevelId;
+  playableLevelId: AnyPlayableLevelId;
 };
 
 export const GameScene: React.FC<GameSceneProps> = ({

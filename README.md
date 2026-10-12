@@ -72,6 +72,31 @@ Vitest runs React Three Fiber unit tests with `@react-three/test-renderer` witho
 npm run build
 ```
 
+### Performance Stress Test
+
+A dedicated, unattended stress-test entry saturates the renderer and simulation
+on a generated `64x64` level (4096 shader-compiled tiles, a ~2080-tile
+serpentine path, 150 pre-placed towers of all six types, and 20 waves totalling
+~2330 enemies). The run loops forever with a very high base health so it never
+ends, and a live overlay shows FPS, draw calls, triangles, and wave/entity
+counts.
+
+The stress app lives under `src/stress-test/` and is only reachable through its
+own Vite entry (`index.stress.html` / `vite.stress.config.ts`). It is **not**
+imported by the default `index.html` entry, so `npm run build` never bundles
+any stress-test code.
+
+```bash
+npm run dev:stress          # serve http://localhost:5174/index.stress.html
+npm run build:stress        # build only the stress entry into dist/
+npm run test:e2e:stress     # Playwright smoke test (port 5174)
+npm run generate:stress-level  # regenerate public/configs/levels/stress.json
+```
+
+The generated level is written to `public/configs/levels/stress.json` by
+`scripts/generate-stress-level.py`; rerun the generator (or commit the result)
+when the scenario parameters change.
+
 ### Live Browser Checks (for AI agents)
 
 Agents can verify the app in a browser using Cursor’s built-in browser MCP (no extra install needed):

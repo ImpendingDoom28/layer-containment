@@ -6,7 +6,13 @@ import {
   useGameStore,
 } from "../../core/stores/useGameStore";
 
-export const KeyboardHandlingSystem = () => {
+type KeyboardHandlingSystemProps = {
+  onGameMenuEscape: () => void;
+};
+
+export const KeyboardHandlingSystem = ({
+  onGameMenuEscape,
+}: KeyboardHandlingSystemProps) => {
   const selectedTowerType = useGameStore(selectedTowerTypeToPlaceSelector);
   const setSelectedTowerType = useGameStore(
     setSelectedTowerTypeToPlaceSelector
@@ -17,7 +23,6 @@ export const KeyboardHandlingSystem = () => {
     selectedTower,
     pauseGame,
     openGameMenu,
-    closeGameMenu,
     setSelectedTower,
     toggleDebug,
   } = useGameSystem();
@@ -31,7 +36,7 @@ export const KeyboardHandlingSystem = () => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (gameStatus === "gameMenu") {
-          closeGameMenu();
+          onGameMenuEscape();
         } else if (selectedTowerType) {
           setSelectedTowerType(null);
         } else if (selectedTower) {
@@ -51,15 +56,15 @@ export const KeyboardHandlingSystem = () => {
       }
     };
 
-    window.addEventListener("keydown", handleKeyPress);
-    return () => window.removeEventListener("keydown", handleKeyPress);
+    globalThis.addEventListener("keydown", handleKeyPress);
+    return () => globalThis.removeEventListener("keydown", handleKeyPress);
   }, [
     selectedTowerType,
     selectedTower,
     gameStatus,
+    onGameMenuEscape,
     pauseGame,
     openGameMenu,
-    closeGameMenu,
     setSelectedTowerType,
     setSelectedTower,
     toggleDebug,

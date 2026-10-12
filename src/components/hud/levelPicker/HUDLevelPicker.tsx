@@ -33,13 +33,11 @@ type LevelPickerEntry = {
 type HUDLevelPickerProps = {
   onBack: () => void;
   onSelectLevel: (level: PlayableLevelId) => void;
-  className?: string;
 };
 
 export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
   onBack,
   onSelectLevel,
-  className,
 }) => {
   const tileSize = useGameStore(tileSizeSelector);
   const [entries, setEntries] = useState<LevelPickerEntry[] | null>(null);
@@ -78,7 +76,7 @@ export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
   }, []);
 
   return (
-    <UICard className={cn("w-full", className)}>
+    <UICard className={"w-full"}>
       <UICardHeader>
         <UICardTitle>
           <UIButton onClick={onBack} variant="ghost" size="icon">

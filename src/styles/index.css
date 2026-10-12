@@ -84,6 +84,8 @@
   --editor-default-tile: #1f2937; /* gray-800 */
   --editor-default-ground: #8f8f86; /* zinc-700 */
   --editor-default-building: #8b7355;
+
+  --z-overlay: 50;
 }
 
 @theme inline {
@@ -146,6 +148,44 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+}
+
+@keyframes ui-panel-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--ui-panel-slide-from-x, -2.5rem));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes ui-panel-slide-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(var(--ui-panel-slide-from-x, -2.5rem));
+  }
+}
+
+@utility ui-panel-slide-in {
+  animation: ui-panel-slide-in var(--ui-panel-slide-duration, 250ms) var(--ui-panel-slide-easing, ease-out) var(--ui-panel-slide-delay, 0ms) both;
+}
+
+@utility ui-panel-slide-out {
+  animation: ui-panel-slide-out var(--ui-panel-slide-duration, 250ms) var(--ui-panel-slide-easing, ease-in) var(--ui-panel-slide-delay, 0ms) both;
+}
+
+@utility ui-panel-slide-left {
+  --ui-panel-slide-from-x: -2.5rem;
+}
+
+@utility ui-panel-slide-right {
+  --ui-panel-slide-from-x: 2.5rem;
 }
 
 body {

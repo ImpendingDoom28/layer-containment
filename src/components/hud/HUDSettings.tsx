@@ -20,20 +20,26 @@ import { cn } from "../ui/lib/twUtils";
 
 type HUDSettingsProps = {
   className?: string;
+  onBack?: () => void;
 };
 
-export const HUDSettings: FC<HUDSettingsProps> = ({ className = "" }) => {
+export const HUDSettings: FC<HUDSettingsProps> = ({
+  className = "",
+  onBack,
+}) => {
   const showSettings = useGameStore(showSettingsSelector);
   const setShowSettings = useGameStore(setShowSettingsSelector);
 
   if (!showSettings) return null;
+
+  const handleBack = () => (onBack ? onBack() : setShowSettings(false));
 
   return (
     <UICard className={cn("w-full", className)}>
       <UICardHeader>
         <UICardTitle>
           <UIButton
-            onClick={() => setShowSettings(false)}
+            onClick={handleBack}
             variant="ghost"
             size="icon"
           >

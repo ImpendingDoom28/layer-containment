@@ -28,6 +28,7 @@ import { useProjectileSystem } from "../../core/hooks/useProjectileSystem";
 import { useWaveSystem } from "../../core/hooks/useWaveSystem";
 import { useLevelSystem } from "../../core/hooks/useLevelSystem";
 import { useUpgradesSystem } from "../../core/hooks/useUpgradesSystem";
+import { useHeldClose } from "../../core/hooks/useHeldClose";
 import { PageWrapper } from "./PageWrapper";
 
 type GamePageProps = {
@@ -79,6 +80,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
   const { onProjectileHit, onProjectileRemove } = projectileSystem;
 
   const { showUpgradePanel, onEnemyUpgradePick } = upgradesSystem;
+  const gameMenuClose = useHeldClose();
 
   const { getRemainingEnemiesInWave, startWave } = waveSystem;
 
@@ -185,7 +187,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
             </>
           )}
 
-          <KeyboardHandlingSystem />
+          <KeyboardHandlingSystem onGameMenuEscape={gameMenuClose.startClose} />
         </Suspense>
       </Canvas>
 
@@ -198,7 +200,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
 
       {isGameReady && !isMenu && (
         <>
-          {!shouldDisableControls && (
+          {(shouldDisableControls ? gameMenuClose.closing : true) && (
             <>
               <div
                 className={cn(
@@ -225,6 +227,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
 
           <HUDGameMenu
             gameStatus={gameStatus}
+            close={gameMenuClose}
             onResume={closeGameMenu}
             onRestart={onRestart}
             onGoToMainMenu={onGoToMainMenu}

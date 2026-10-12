@@ -47,7 +47,8 @@ export type EnemyMovementSystemOptions = {
  * Advances all enemies along their paths in a single batched pass.
  *
  * Writes only `EnemyMotion` (hot, unsubscribed by React) per frame; the
- * cold `EnemyState` is written on discrete events (slow expiry, regen tick).
+ * cold `EnemyState` is written by other systems on discrete events (slow
+ * application/expiry by the ApplySlowSystem, regen ticks here).
  * Reaching the end of the path is collected and settled after the query
  * pass so entities are never destroyed mid-iteration.
  */
@@ -67,19 +68,12 @@ export const runEnemyMovementSystem = (
     .updateEach(([state, motion, position]) => {
       if (state.health <= 0) return;
 
-      // Slow expiry mirrors the previous per-component logic: the slow is
-      // cleared, and the enemy keeps moving this frame at full speed.
-      // (In-place write: entity.set on a trait being iterated by updateEach
-      // is dropped by koota, while in-place mutation persists and fires the
-      // trait's change event.)
+      // Reads the slow state written by the ApplySlowSystem (which runs
+      // first in the frame): an expired slow simply no longer applies.
       const currentlySlowed =
         state.slowUntil > 0 &&
         state.slowUntil > effectiveTime &&
         state.slowMultiplier < 1;
-      if (!currentlySlowed && state.slowMultiplier < 1) {
-        state.slowMultiplier = 1;
-        state.slowUntil = 0;
-      }
 
       const effectiveSpeed = currentlySlowed
         ? state.speed * state.slowMultiplier

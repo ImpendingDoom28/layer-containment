@@ -6,6 +6,7 @@ import { getEnemySnapshots } from "../selectors/enemySnapshots";
 import { IsEnemy, requestEnemyDeath } from "../traits/enemy";
 import { isBase } from "../traits/base";
 import { damageRequest } from "../traits/damage";
+import { slowRequest } from "../traits/slow";
 import { HealthInfo } from "../traits/health";
 import { testWorld } from "../world";
 import type { Enemy } from "../../types/game";
@@ -126,19 +127,20 @@ describe("enemyActions", () => {
     const actions = enemyActions(testWorld);
     const clock = createPauseClock();
     actions.spawnEnemy(baseEnemy(1, 100));
+    const entity = testWorld.queryFirst(IsEnemy)!;
 
     const slowStartedAt = getEffectiveGameTime(10, clock);
     actions.slowEnemy(1, 0.4, 2, slowStartedAt);
 
     beginPauseSegment(clock, 10);
     expect(getEffectiveGameTime(70, clock)).toBe(10);
-    expect(getEnemySnapshots(testWorld)[0]?.slowUntil).toBeGreaterThan(
+    expect(entity.get(slowRequest)!.expiresAt).toBeGreaterThan(
       getEffectiveGameTime(70, clock)
     );
 
     endPauseSegment(clock, 70);
     expect(getEffectiveGameTime(71.99, clock)).toBeLessThan(12);
     expect(getEffectiveGameTime(72, clock)).toBe(12);
-    expect(getEnemySnapshots(testWorld)[0]?.slowUntil).toBe(12);
+    expect(entity.get(slowRequest)!.expiresAt).toBe(12);
   });
 });

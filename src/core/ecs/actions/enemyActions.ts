@@ -18,6 +18,7 @@ import {
 import { Position, type PositionData } from "../traits/position";
 import { isBase } from "../traits/base";
 import { damageRequest } from "../traits/damage";
+import { slowRequest } from "../traits/slow";
 
 /** Enemy id → entity registry; internal to the enemy domain. */
 const enemyEntitiesById = new Map<number, Entity>();
@@ -247,11 +248,17 @@ export const enemyActions = createActions((world) => ({
     const effectiveSlowMultiplier = 1 - (1 - slowMultiplier) * (1 - resistance);
     const slowUntil = currentTime + duration * (1 - resistance);
 
-    entity.set(EnemyState, {
-      ...enemy,
-      slowMultiplier: effectiveSlowMultiplier,
-      slowUntil,
-    });
+    // Raise the request; the ApplySlowSystem owns the EnemyState write.
+    // Same-frame requests merge so no hit is lost.
+    const pending = entity.get(slowRequest);
+    if (pending) {
+      entity.set(slowRequest, {
+        multiplier: effectiveSlowMultiplier,
+        expiresAt: Math.max(pending.expiresAt, slowUntil),
+      });
+    } else {
+      entity.add(slowRequest({ multiplier: effectiveSlowMultiplier, expiresAt: slowUntil }));
+    }
   },
 
   clearAllEnemies: (): void => {

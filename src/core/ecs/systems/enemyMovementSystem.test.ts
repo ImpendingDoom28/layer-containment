@@ -95,17 +95,19 @@ describe("enemyMovementSystem", () => {
     expect(positionOf(entity).x).toBeCloseTo(0.5);
   });
 
-  it("expires an active slow (cold write) and moves at full speed that frame", () => {
+  it("moves at full speed when the slow has expired, without clearing the state", () => {
     const entity = enemyActions(testWorld).spawnEnemy(
       makeEnemy(1, { slowMultiplier: 0.5, slowUntil: 0.1 })
     );
 
-    // effectiveTime 0.2 > slowUntil 0.1 -> slow expires.
+    // effectiveTime 0.2 > slowUntil 0.1 -> the slow no longer applies.
     run(0.2, 0.2);
 
+    // The movement system only reads the slow state; clearing expired slows
+    // is the ApplySlowSystem's job. It moves at full speed this frame.
     const state = stateOf(entity);
-    expect(state.slowMultiplier).toBe(1);
-    expect(state.slowUntil).toBe(0);
+    expect(state.slowMultiplier).toBe(0.5);
+    expect(state.slowUntil).toBe(0.1);
     // The enemy still moved this frame, at full speed.
     expect(motionOf(entity).pathProgress).toBeCloseTo(0.1);
   });

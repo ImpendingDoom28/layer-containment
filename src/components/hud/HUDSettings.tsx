@@ -35,7 +35,7 @@ export const HUDSettings: FC<HUDSettingsProps> = ({
   const handleBack = () => (onBack ? onBack() : setShowSettings(false));
 
   return (
-    <UICard className={cn("w-full", className)}>
+    <UICard className={cn("w-full bg-transparent", className)}>
       <UICardHeader>
         <UICardTitle>
           <UIButton

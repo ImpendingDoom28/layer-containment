@@ -93,9 +93,7 @@ export const HUDSidePanel: FC<HUDSidePanelProps> = ({
           <div
             className={cn(
               "ui-menu-tilt flex min-h-0 w-full",
-              side === "left"
-                ? "ui-menu-tilt-left ui-menu-tilt-shadow-left"
-                : "ui-menu-tilt-right ui-menu-tilt-shadow-right"
+              side === "left" ? "ui-menu-tilt-left" : "ui-menu-tilt-right"
             )}
           >
             {children}

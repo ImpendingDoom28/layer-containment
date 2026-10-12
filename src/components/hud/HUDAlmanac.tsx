@@ -154,7 +154,7 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
   const totalCount = enemyEntries.length;
 
   return (
-    <UICard className="w-full">
+    <UICard className="w-full bg-transparent">
       <UICardHeader>
         <UICardTitle>
           <UIButton onClick={onBack} variant="ghost" size="icon">

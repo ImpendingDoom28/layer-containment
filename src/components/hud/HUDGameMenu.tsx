@@ -80,7 +80,7 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
         {showSettings ? (
           <HUDSettings className="w-full" />
         ) : (
-          <UICard className={cn("w-full", className)}>
+          <UICard className={cn("w-full bg-transparent", className)}>
             <UICardHeader>
               <UICardTitle>
                 <UIButton

@@ -47,12 +47,14 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
   const setShowSettings = useGameStore(setShowSettingsSelector);
   const showSettings = useGameStore(showSettingsSelector);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showRestartConfirm, setShowRestartConfirm] = useState(false);
 
   useEffect(() => {
     if (gameStatus !== "gameMenu") {
       cancelClose();
       setShowSettings(false);
       setShowExitConfirm(false);
+      setShowRestartConfirm(false);
     }
   }, [gameStatus]);
 
@@ -98,13 +100,23 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
             </UICardHeader>
             <UICardContent className="flex flex-col gap-1">
               <UIButton
-                onClick={() => startClose(onRestart)}
-                className="justify-between text-sm text-left group text-foreground hover:border-primary/30"
+                onClick={() => startClose(onResume)}
+                className="justify-between text-sm text-left group text-foreground"
+              >
+                <span className="transition-transform group-hover:translate-x-1">
+                  Continue
+                </span>
+                <ArrowRight className="transition-transform size-4 group-hover:translate-x-1" />
+              </UIButton>
+              <UIButton
+                onClick={() => setShowRestartConfirm(true)}
+                variant="secondary"
+                className="mt-2 justify-between text-sm text-left group text-foreground hover:border-primary/30"
               >
                 <span className="transition-transform group-hover:translate-x-1">
                   Restart
                 </span>
-                <ArrowRight className="transition-transform size-4 group-hover:translate-x-1" />
+                <ArrowRight className="transition-transform size-4 text-muted-foreground group-hover:translate-x-1 group-hover:text-primary" />
               </UIButton>
               <UIButton
                 onClick={() => setShowSettings(true)}
@@ -141,6 +153,18 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
           startCloseImmediate(onGoToMainMenu);
         }}
         onOpenChange={setShowExitConfirm}
+      />
+      <UIConfirmModal
+        open={showRestartConfirm}
+        title="Restart game"
+        message="Are you sure you want to restart?"
+        confirmLabel="Proceed"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          setShowRestartConfirm(false);
+          startCloseImmediate(onRestart);
+        }}
+        onOpenChange={setShowRestartConfirm}
       />
     </>
   );

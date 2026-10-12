@@ -18,7 +18,7 @@ import {
 import { Position, type PositionData } from "../traits/position";
 import { isBase } from "../traits/base";
 import { damageRequest } from "../traits/damage";
-import { EnemySlow, slowRequest, type EnemySlowData } from "../traits/slow";
+import { slowRequest } from "../traits/slow";
 
 /** Enemy id → entity registry; internal to the enemy domain. */
 const enemyEntitiesById = new Map<number, Entity>();
@@ -80,10 +80,9 @@ const handleEnemyDeath = (enemy: Enemy): void => {
 export const enemyActions = createActions((world) => ({
   spawnEnemy: (enemyData: Enemy): Entity => {
     const existingEntity = enemyEntitiesById.get(enemyData.id);
-    let carriedSlow: EnemySlowData | null = null;
     if (existingEntity) {
-      // Re-spawn: carry an active slow across so a re-spawn mid-slow keeps it.
-      carriedSlow = existingEntity.get(EnemySlow) ?? null;
+      // Re-spawn: the replacement is a clean entity — any slow on the old
+      // entity does not carry over.
       existingEntity.destroy();
     }
 
@@ -91,11 +90,6 @@ export const enemyActions = createActions((world) => ({
     entity.set(EnemyState, enemyToState(enemyData));
     entity.set(EnemyMotion, enemyToMotion(enemyData));
     entity.set(Position, enemyToPosition(enemyData));
-    if (carriedSlow) {
-      // The new entity does not carry EnemySlow (spawned without it), so it is
-      // added rather than set — `set` on an absent trait is a no-op.
-      entity.add(EnemySlow(carriedSlow));
-    }
 
     enemyEntitiesById.set(enemyData.id, entity);
 

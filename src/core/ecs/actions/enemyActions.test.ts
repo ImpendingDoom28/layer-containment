@@ -64,7 +64,7 @@ describe("enemyActions", () => {
     expect(enemies[0]).toMatchObject({ id: 5, health: 40 });
   });
 
-  it("carries an active slow across a duplicate-ID respawn", () => {
+  it("respawns a clean entity: an active slow does not carry across", () => {
     const actions = enemyActions(testWorld);
     const original = actions.spawnEnemy(baseEnemy(5, 100));
     original.add(EnemySlow({ multiplier: 0.5, until: 3 }));
@@ -76,9 +76,9 @@ describe("enemyActions", () => {
     const enemies = getEnemySnapshots(testWorld);
     expect(enemies).toHaveLength(1);
     expect(enemies[0]).toMatchObject({ id: 5, health: 60 });
-    // The replacement actually carries the slow trait (not a dropped no-op).
-    expect(replacement.has(EnemySlow)).toBe(true);
-    expect(replacement.get(EnemySlow)).toEqual({ multiplier: 0.5, until: 3 });
+    // The replacement is a clean entity: the slow stays on the old (destroyed)
+    // entity and does not apply to the new one.
+    expect(replacement.has(EnemySlow)).toBe(false);
   });
 
   it("damageEnemy reduces health on sequential hits", () => {

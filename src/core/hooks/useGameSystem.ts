@@ -27,7 +27,6 @@ import { useEntityIds } from "../contexts/EntityIdContext";
 import { loadGameConfig } from "../configs/gameConfig";
 import { getCanPause } from "../getCanPause";
 import {
-  noPauseDuringWaveWaitSelector,
   pauseWhenTabHiddenSelector,
   useSettingsStore,
 } from "../stores/useSettingsStore";
@@ -57,9 +56,6 @@ export const useGameSystem = () => {
   const setShowSettings = useGameStore(setShowSettingsSelector);
 
   const pauseWhenTabHidden = useSettingsStore(pauseWhenTabHiddenSelector);
-  const noPauseDuringWaveWait = useSettingsStore(
-    noPauseDuringWaveWaitSelector
-  );
   const nextWaveReady = useWaveStore(nextWaveReadySelector);
 
   const { getNextEffectId } = useEntityIds();
@@ -101,11 +97,7 @@ export const useGameSystem = () => {
     gameEvents.emit(GameEvent.GAME_WON, { gameWonType: "win" });
   }, [setGameStatus]);
 
-  const canPause = getCanPause(
-    gameStatus,
-    nextWaveReady,
-    noPauseDuringWaveWait
-  );
+  const canPause = getCanPause(gameStatus, nextWaveReady);
 
   const pauseGame = useCallback(() => {
     if (gameStatus === "playing" && !canPause) {

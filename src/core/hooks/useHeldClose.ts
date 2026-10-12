@@ -1,13 +1,13 @@
 import { useCallback, useRef, useState } from "react";
 
-type UseHeldCloseReturn = {
+export type HeldClose = {
   closing: boolean;
   startClose: (action?: () => void) => void;
   finishClose: (fallback?: () => void) => void;
   cancelClose: () => void;
 };
 
-export const useHeldClose = (): UseHeldCloseReturn => {
+export const useHeldClose = (): HeldClose => {
   const [closing, setClosing] = useState(false);
   const pendingActionRef = useRef<(() => void) | null>(null);
 

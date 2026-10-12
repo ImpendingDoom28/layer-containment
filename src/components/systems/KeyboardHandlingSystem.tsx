@@ -1,18 +1,22 @@
 import { useEffect } from "react";
 import { useGameSystem } from "../../core/hooks/useGameSystem";
 import {
-  setGameMenuClosingSelector,
   selectedTowerTypeToPlaceSelector,
   setSelectedTowerTypeToPlaceSelector,
   useGameStore,
 } from "../../core/stores/useGameStore";
 
-export const KeyboardHandlingSystem = () => {
+type KeyboardHandlingSystemProps = {
+  onGameMenuEscape: () => void;
+};
+
+export const KeyboardHandlingSystem = ({
+  onGameMenuEscape,
+}: KeyboardHandlingSystemProps) => {
   const selectedTowerType = useGameStore(selectedTowerTypeToPlaceSelector);
   const setSelectedTowerType = useGameStore(
     setSelectedTowerTypeToPlaceSelector
   );
-  const setGameMenuClosing = useGameStore(setGameMenuClosingSelector);
 
   const {
     gameStatus,
@@ -32,7 +36,7 @@ export const KeyboardHandlingSystem = () => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (gameStatus === "gameMenu") {
-          setGameMenuClosing(true);
+          onGameMenuEscape();
         } else if (selectedTowerType) {
           setSelectedTowerType(null);
         } else if (selectedTower) {
@@ -58,7 +62,7 @@ export const KeyboardHandlingSystem = () => {
     selectedTowerType,
     selectedTower,
     gameStatus,
-    setGameMenuClosing,
+    onGameMenuEscape,
     pauseGame,
     openGameMenu,
     setSelectedTowerType,

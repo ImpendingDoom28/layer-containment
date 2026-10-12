@@ -3,11 +3,11 @@ import { ArrowLeft } from "lucide-react";
 
 import type { GameStatus } from "../../core/types/game";
 import {
-  setGameMenuClosingSelector,
   setShowSettingsSelector,
   showSettingsSelector,
   useGameStore,
 } from "../../core/stores/useGameStore";
+import type { HeldClose } from "../../core/hooks/useHeldClose";
 import { UIButton } from "../ui/buttons/UIButton";
 import {
   UICard,
@@ -22,10 +22,10 @@ import { HUDSettings } from "./HUDSettings";
 import { HUDSidePanel } from "./HUDSidePanel";
 import { BlurBackdrop } from "./main/BlurBackdrop";
 import { useBlurBackdrop } from "../../core/hooks/utils/useBlurBackdrop";
-import { useHeldClose } from "../../core/hooks/useHeldClose";
 
 type HUDGameMenuProps = {
   gameStatus: GameStatus;
+  close: HeldClose;
   onResume: () => void | Promise<void>;
   onRestart: () => void | Promise<void>;
   onGoToMainMenu: () => void | Promise<void>;
@@ -34,32 +34,25 @@ type HUDGameMenuProps = {
 
 export const HUDGameMenu: FC<HUDGameMenuProps> = ({
   gameStatus,
+  close,
   onResume,
   onRestart,
   onGoToMainMenu,
   className,
 }) => {
+  const { closing, startClose, finishClose, cancelClose } = close;
   const { menuRef, blurDimensions, setBlurDimensions } = useBlurBackdrop();
   const setShowSettings = useGameStore(setShowSettingsSelector);
   const showSettings = useGameStore(showSettingsSelector);
-  const setGameMenuClosing = useGameStore(setGameMenuClosingSelector);
-  const { closing, startClose, finishClose, cancelClose } = useHeldClose();
 
   useEffect(() => {
     if (gameStatus !== "gameMenu") {
       cancelClose();
-      setGameMenuClosing(false);
       setShowSettings(false);
     }
   }, [gameStatus]);
 
-  const startClosing = (action: () => void) => {
-    setGameMenuClosing(true);
-    startClose(action);
-  };
-
   const handleBackdropFaded = () => {
-    setGameMenuClosing(false);
     setShowSettings(false);
     finishClose(onResume);
   };
@@ -85,7 +78,7 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
             <UICardHeader>
               <UICardTitle>
                 <UIButton
-                  onClick={() => startClosing(onResume)}
+                  onClick={() => startClose(onResume)}
                   variant="ghost"
                   size="icon"
                   aria-label="Resume"
@@ -100,14 +93,14 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
               </UICardDescription>
             </UICardHeader>
             <UICardContent className="flex flex-col gap-4">
-              <UIButton onClick={() => startClosing(onRestart)}>
+              <UIButton onClick={() => startClose(onRestart)}>
                 Restart
               </UIButton>
               <UIButton onClick={() => setShowSettings(true)} variant="outline">
                 Settings
               </UIButton>
               <UIButton
-                onClick={() => startClosing(onGoToMainMenu)}
+                onClick={() => startClose(onGoToMainMenu)}
                 variant="secondary"
               >
                 Go to Main Menu

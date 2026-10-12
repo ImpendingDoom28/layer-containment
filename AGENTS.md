@@ -1,0 +1,21 @@
+# AGENTS.md
+
+## Workflow
+- Before planning, skim `README.md` for existing functionality and library links.
+- After finishing a task (unless it's a code review):
+  - Run a browser smoke test with Playwright — reuse the known flow from `.cursor/smoke-test-handoff.md` before re-exploring.
+  - Run unit tests with RTTR: `npm run test:unit`.
+- New features (not bugfixes): document them briefly in `README.md`.
+
+## Code style (TypeScript)
+- Always write TypeScript; prefer arrow functions (incl. React components) and named exports.
+- Prefer `type` declarations over `interface`; separate props into their own type per component.
+- No file extensions in imports; group imports (libraries first, relative second, blank line between). No barrel (`index.ts`) files.
+- No comments that just restate the code — comment only hacky workarounds.
+- Custom event handlers: `on`-prefix naming (e.g. `onSelectTower`).
+- Don't read/write `ref.current` during render; prefer atomic store selectors; DRY — reuse existing code over duplicating.
+- Remove unused imports after changes.
+- Do NOT run build commands or `npx tsc --noEmit` (assume the dev server is running).
+
+## React Three Fiber
+- When working on three.js/R3F features, follow `.cursor/rules/react-three-fiber.mdc` (share geometries/materials, avoid unnecessary mounts).

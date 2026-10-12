@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from "react";
 export type HeldClose = {
   closing: boolean;
   startClose: (action?: () => void) => void;
+  startCloseImmediate: (action?: () => void) => void;
   finishClose: (fallback?: () => void) => void;
   cancelClose: () => void;
 };
@@ -20,6 +21,17 @@ export const useHeldClose = (): HeldClose => {
     [closing]
   );
 
+  // Runs the action right away, skipping the close animation entirely.
+  const startCloseImmediate = useCallback(
+    (action?: () => void) => {
+      if (closing) return;
+      pendingActionRef.current = null;
+      setClosing(false);
+      action?.();
+    },
+    [closing]
+  );
+
   const finishClose = useCallback((fallback?: () => void) => {
     const action = pendingActionRef.current ?? fallback;
     pendingActionRef.current = null;
@@ -32,5 +44,5 @@ export const useHeldClose = (): HeldClose => {
     setClosing(false);
   }, []);
 
-  return { closing, startClose, finishClose, cancelClose };
+  return { closing, startClose, startCloseImmediate, finishClose, cancelClose };
 };

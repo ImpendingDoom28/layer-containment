@@ -1,4 +1,4 @@
-import { FC, useEffect } from "react";
+import { FC, useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 
 import type { GameStatus } from "../../core/types/game";
@@ -16,6 +16,7 @@ import {
   UICardHeader,
   UICardTitle,
 } from "../ui/UICard";
+import { UIConfirmModal } from "../ui/UIConfirmModal";
 import { UITypography } from "../ui/UITypography";
 import { cn } from "../ui/lib/twUtils";
 import { HUDSettings } from "./HUDSettings";
@@ -40,15 +41,18 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
   onGoToMainMenu,
   className,
 }) => {
-  const { closing, startClose, finishClose, cancelClose } = close;
+  const { closing, startClose, startCloseImmediate, finishClose, cancelClose } =
+    close;
   const { menuRef, blurDimensions, setBlurDimensions } = useBlurBackdrop();
   const setShowSettings = useGameStore(setShowSettingsSelector);
   const showSettings = useGameStore(showSettingsSelector);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   useEffect(() => {
     if (gameStatus !== "gameMenu") {
       cancelClose();
       setShowSettings(false);
+      setShowExitConfirm(false);
     }
   }, [gameStatus]);
 
@@ -100,7 +104,7 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
                 Settings
               </UIButton>
               <UIButton
-                onClick={() => startClose(onGoToMainMenu)}
+                onClick={() => setShowExitConfirm(true)}
                 variant="secondary"
               >
                 Go to Main Menu
@@ -109,6 +113,18 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
           </UICard>
         )}
       </HUDSidePanel>
+      <UIConfirmModal
+        open={showExitConfirm}
+        title="Exit game"
+        message="Are you sure you want to exit? All unsaved changes will be lost"
+        confirmLabel="Proceed"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          setShowExitConfirm(false);
+          startCloseImmediate(onGoToMainMenu);
+        }}
+        onOpenChange={setShowExitConfirm}
+      />
     </>
   );
 };

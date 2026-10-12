@@ -73,6 +73,7 @@ type FrameStats = {
   windowTime: number;
   windowCallSum: number;
   windowTriSum: number;
+  windowProgSum: number;
   /** True once the 30s window has elapsed; freezes the averages until restart. */
   windowDone: boolean;
 };
@@ -95,6 +96,7 @@ const createFrameStats = (): FrameStats => ({
   windowTime: 0,
   windowCallSum: 0,
   windowTriSum: 0,
+  windowProgSum: 0,
   windowDone: false,
 });
 
@@ -109,6 +111,7 @@ const resetMetricsWindow = (s: FrameStats) => {
   s.windowTime = 0;
   s.windowCallSum = 0;
   s.windowTriSum = 0;
+  s.windowProgSum = 0;
   s.windowDone = false;
 };
 
@@ -162,7 +165,7 @@ const StressStatsCollector = ({
       s.windowTime += delta;
       s.windowCallSum += s.drawCalls;
       s.windowTriSum += s.triangles;
-      s.windowPrograms = s.programs;
+      s.windowProgSum += s.programs;
       s.windowElapsed = s.windowTime;
       if (s.windowTime >= METRICS_WINDOW_SECONDS) {
         s.windowDone = true;
@@ -172,6 +175,7 @@ const StressStatsCollector = ({
         s.windowFrameMs = (s.windowTime / s.windowFrames) * 1000;
         s.windowDrawCalls = s.windowCallSum / s.windowFrames;
         s.windowTriangles = s.windowTriSum / s.windowFrames;
+        s.windowPrograms = s.windowProgSum / s.windowFrames;
       }
     }
   });
@@ -274,7 +278,7 @@ const StressOverlay = ({
               `AVG TRI      ${Math.round(s.windowTriangles).toLocaleString(
                 "en-US"
               )}`,
-              `AVG PROGRAMS ${s.windowPrograms}`,
+              `AVG PROGRAMS ${Math.round(s.windowPrograms)}`,
             ]
           : [
               `AVG WINDOW   ${Math.min(

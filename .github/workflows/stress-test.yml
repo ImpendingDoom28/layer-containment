@@ -11,6 +11,10 @@ on:
     branches: [master]
   workflow_dispatch:
 
+# The job only reads the repository and runs tests; no write access needed.
+permissions:
+  contents: read
+
 jobs:
   stress:
     name: Stress e2e (64x64 scene, 30s averages)
@@ -32,8 +36,10 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Build
-        run: npm run build
+      # Build both entries: the default app and the stress-test entry
+      # (vite.stress.config.ts is not covered by the default build).
+      - name: Build (default + stress)
+        run: npm run build && npm run build:stress
 
       - name: Unit tests
         run: npm run test:unit

@@ -97,10 +97,11 @@ npm run test:e2e:stress     # Playwright smoke test + 30s averages (port 5174)
 npm run generate:stress-level  # regenerate public/configs/levels/stress.json
 ```
 
-The stress e2e suite is part of `npm run verify`, which the husky `pre-push`
-hook runs on every push, so the stress test (including the 30-second averages
-test) runs before anything is pushed/merged. The average numbers are printed to
-the test output (`[stress-averages] ...`).
+The stress e2e suite is **not** part of the local `npm run verify` pre-push
+gate; instead it runs in GitHub Actions (`.github/workflows/stress-test.yml`)
+on every pull request — so it runs before anything is merged — and on pushes
+to `master`. The repo is public, so those runs are free. The 30-second average
+numbers are printed to the CI test output (`[stress-averages] ...`).
 
 The generated level is written to `public/configs/levels/stress.json` by
 `scripts/generate-stress-level.py`; rerun the generator (or commit the result)

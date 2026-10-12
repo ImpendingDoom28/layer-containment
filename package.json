@@ -23,7 +23,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
     "lint": "eslint src --ext ts,tsx",
     "lint:fix": "eslint src --ext ts,tsx --fix",
-    "verify": "npm run build && npm run test:unit && npm run test:e2e && npm run test:e2e:stress"
+    "verify": "npm run build && npm run test:unit && npm run test:e2e"
   },
   "dependencies": {
     "@fontsource-variable/jetbrains-mono": "^5.2.8",

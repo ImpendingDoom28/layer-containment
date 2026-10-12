@@ -174,11 +174,13 @@
 }
 
 @utility ui-panel-slide-in {
-  animation: ui-panel-slide-in var(--ui-panel-slide-duration, 250ms) var(--ui-panel-slide-easing, ease-out) var(--ui-panel-slide-delay, 0ms) both;
+  animation: ui-panel-slide-in var(--ui-panel-slide-duration, 250ms)
+    var(--ui-panel-slide-easing, ease-out) var(--ui-panel-slide-delay, 0ms) both;
 }
 
 @utility ui-panel-slide-out {
-  animation: ui-panel-slide-out var(--ui-panel-slide-duration, 250ms) var(--ui-panel-slide-easing, ease-in) var(--ui-panel-slide-delay, 0ms) both;
+  animation: ui-panel-slide-out var(--ui-panel-slide-duration, 250ms)
+    var(--ui-panel-slide-easing, ease-in) var(--ui-panel-slide-delay, 0ms) both;
 }
 
 @utility ui-panel-slide-left {
@@ -187,6 +189,37 @@
 
 @utility ui-panel-slide-right {
   --ui-panel-slide-from-x: 2.5rem;
+}
+
+/*
+ * 3D tilt for menu panels: the canvas-side edge recedes into the scene,
+ * so menus read as angled surfaces standing over the canvas instead of
+ * flat overlays. Left-anchored menus tilt away from the left edge,
+ * right-anchored ones from the right edge. The shadow utilities are
+ * separate so transparent panels (e.g. the main menu) can tilt without
+ * casting a shadow over an invisible surface.
+ */
+@utility ui-menu-tilt {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+@utility ui-menu-tilt-left {
+  transform: perspective(1200px) rotateY(5deg);
+  transform-origin: left center;
+}
+
+@utility ui-menu-tilt-right {
+  transform: perspective(1200px) rotateY(-5deg);
+  transform-origin: right center;
+}
+
+@utility ui-menu-tilt-shadow-left {
+  box-shadow: 24px 0 48px -12px oklch(0 0 0 / 0.6);
+}
+
+@utility ui-menu-tilt-shadow-right {
+  box-shadow: -24px 0 48px -12px oklch(0 0 0 / 0.6);
 }
 
 body {

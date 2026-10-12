@@ -101,7 +101,7 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
           )}
         >
           <div
-            className="relative flex h-full w-[45%] max-w-xl flex-col justify-between p-8 md:p-12"
+            className="ui-menu-tilt ui-menu-tilt-left relative flex h-full w-[45%] max-w-xl flex-col justify-between p-8 md:p-12"
             ref={menuRef}
           >
             <UIBadge text="Systems Online" />

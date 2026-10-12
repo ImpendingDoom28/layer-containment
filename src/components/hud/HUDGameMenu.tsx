@@ -80,7 +80,7 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
         {showSettings ? (
           <HUDSettings className="w-full" />
         ) : (
-          <UICard className={cn("w-full", className)}>
+          <UICard className={cn("h-full w-full bg-transparent", className)}>
             <UICardHeader>
               <UICardTitle>
                 <UIButton
@@ -98,7 +98,7 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
                 headquarters.
               </UICardDescription>
             </UICardHeader>
-            <UICardContent className="flex flex-col gap-1">
+            <UICardContent className="min-h-0 flex-1 flex flex-col gap-1 overflow-y-auto">
               <UIButton
                 onClick={() => startClose(onResume)}
                 className="justify-between text-sm text-left group text-foreground"

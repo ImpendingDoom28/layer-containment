@@ -154,7 +154,7 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
   const totalCount = enemyEntries.length;
 
   return (
-    <UICard className="w-full">
+    <UICard className="h-full w-full bg-transparent">
       <UICardHeader>
         <UICardTitle>
           <UIButton onClick={onBack} variant="ghost" size="icon">
@@ -166,7 +166,7 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
           {"Discover enemies by encountering them in battle"}
         </UICardDescription>
       </UICardHeader>
-      <UICardContent className="gap-4">
+      <UICardContent className="min-h-0 flex-1 gap-4 overflow-y-auto">
         {/* Progress bar */}
         <div>
           <div className="h-2 overflow-hidden rounded-full bg-muted">

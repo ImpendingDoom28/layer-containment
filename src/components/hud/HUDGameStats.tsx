@@ -40,60 +40,62 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
 
   return (
     <HUDWrapper className="bottom-auto left-auto w-80 top-4 right-4">
-      <UICard className="flex-1">
-        <UICardContent className="gap-4">
-          <div className="flex flex-row gap-4">
+      <div className="ui-menu-tilt ui-menu-tilt-right flex h-full flex-col">
+        <UICard className="flex-1">
+          <UICardContent className="gap-4">
+            <div className="flex flex-row gap-4">
+              <div className="flex items-center">
+                <UIMoney money={money} variant="h4" iconSize={20} />
+              </div>
+              <div className="flex items-center gap-2">
+                <HeartPulse size={20} className={getHealthColor()} />
+                <UITypography variant="h4" className={getHealthColor()}>
+                  {health}
+                </UITypography>
+              </div>
+            </div>
             <div className="flex items-center">
-              <UIMoney money={money} variant="h4" iconSize={20} />
-            </div>
-            <div className="flex items-center gap-2">
-              <HeartPulse size={20} className={getHealthColor()} />
-              <UITypography variant="h4" className={getHealthColor()}>
-                {health}
-              </UITypography>
-            </div>
-          </div>
-          <div className="flex items-center">
-            <div className="flex flex-row items-center justify-center gap-1">
-              <UITypography variant="body">Wave:</UITypography>
-              <UITypography variant="medium">
-                {`${currentWave} / ${totalWaves}`}
-              </UITypography>
+              <div className="flex flex-row items-center justify-center gap-1">
+                <UITypography variant="body">Wave:</UITypography>
+                <UITypography variant="medium">
+                  {`${currentWave} / ${totalWaves}`}
+                </UITypography>
+              </div>
+
+              {currentWave > 0 &&
+                currentWave <= totalWaves &&
+                remainingEnemies > 0 && (
+                  <div className="flex flex-row items-center justify-center flex-1 gap-1">
+                    <UITypography variant="body">Enemies:</UITypography>
+                    <UITypography variant="medium">
+                      {remainingEnemies}
+                    </UITypography>
+                  </div>
+                )}
             </div>
 
-            {currentWave > 0 &&
-              currentWave <= totalWaves &&
-              remainingEnemies > 0 && (
-                <div className="flex flex-row items-center justify-center flex-1 gap-1">
-                  <UITypography variant="body">Enemies:</UITypography>
-                  <UITypography variant="medium">
-                    {remainingEnemies}
-                  </UITypography>
+            <div>
+              {currentWave < totalWaves && remainingEnemies === 0 && (
+                <div className="flex flex-col justify-center flex-1 gap-1">
+                  <UIButton onClick={onStartWave} variant="outline">
+                    <Play /> Start next wave
+                  </UIButton>
                 </div>
               )}
-          </div>
-
-          <div>
-            {currentWave < totalWaves && remainingEnemies === 0 && (
-              <div className="flex flex-col justify-center flex-1 gap-1">
-                <UIButton onClick={onStartWave} variant="outline">
-                  <Play /> Start next wave
+              {gameStatus === "paused" && (
+                <UIButton
+                  variant="default"
+                  size={"icon-sm"}
+                  className="cursor-default w-fit"
+                  data-testid="paused-indicator"
+                >
+                  <Pause />
                 </UIButton>
-              </div>
-            )}
-            {gameStatus === "paused" && (
-              <UIButton
-                variant="default"
-                size={"icon-sm"}
-                className="cursor-default w-fit"
-                data-testid="paused-indicator"
-              >
-                <Pause />
-              </UIButton>
-            )}
-          </div>
-        </UICardContent>
-      </UICard>
+              )}
+            </div>
+          </UICardContent>
+        </UICard>
+      </div>
     </HUDWrapper>
   );
 };

@@ -76,7 +76,7 @@ export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
   }, []);
 
   return (
-    <UICard className="w-full bg-transparent">
+    <UICard className="h-full w-full bg-transparent">
       <UICardHeader>
         <UICardTitle>
           <UIButton onClick={onBack} variant="ghost" size="icon">
@@ -88,7 +88,7 @@ export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
           Select a theater of operations. Tap a sector to begin.
         </UICardDescription>
       </UICardHeader>
-      <UICardContent className="flex flex-col gap-4">
+      <UICardContent className="min-h-0 flex-1 flex flex-col gap-4 overflow-y-auto">
         {errorMessage && (
           <UITypography variant="small" className="text-destructive">
             {errorMessage}

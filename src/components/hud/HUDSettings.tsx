@@ -35,7 +35,7 @@ export const HUDSettings: FC<HUDSettingsProps> = ({
   const handleBack = () => (onBack ? onBack() : setShowSettings(false));
 
   return (
-    <UICard className={cn("w-full bg-transparent", className)}>
+    <UICard className={cn("h-full w-full bg-transparent", className)}>
       <UICardHeader>
         <UICardTitle>
           <UIButton
@@ -48,7 +48,7 @@ export const HUDSettings: FC<HUDSettingsProps> = ({
           <UITypography variant="body">Settings</UITypography>
         </UICardTitle>
       </UICardHeader>
-      <UICardContent className="gap-8 overflow-y-auto">
+      <UICardContent className="min-h-0 flex-1 gap-8 overflow-y-auto">
         <HUDSettingsGeneralSection />
         <HUDSettingsAudioSection />
       </UICardContent>

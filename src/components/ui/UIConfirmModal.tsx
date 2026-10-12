@@ -1,4 +1,4 @@
-import { useEffect, useRef, type FC, type ReactNode } from "react";
+import type { FC, ReactNode } from "react";
 
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { AlertTriangle } from "lucide-react";
@@ -79,23 +79,6 @@ export const UIConfirmModal: FC<UIConfirmModalProps> = ({
   onConfirm,
   onOpenChange,
 }) => {
-  const restoreFocusRef = useRef<HTMLElement | null>(null);
-
-  // No DialogPrimitive.Trigger is rendered, so Radix has nothing to
-  // refocus on dismissal — restore the element that had focus before
-  // the dialog opened.
-  useEffect(() => {
-    if (!open) return;
-    restoreFocusRef.current =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
-    return () => {
-      restoreFocusRef.current?.focus();
-      restoreFocusRef.current = null;
-    };
-  }, [open]);
-
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) return;
     onOpenChange?.(false);

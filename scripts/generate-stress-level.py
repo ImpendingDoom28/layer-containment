@@ -17,9 +17,11 @@ TILE_SIZE = 1
 HALF = (GRID_SIZE * TILE_SIZE) / 2
 
 def tile_to_world(grid: int) -> float:
+    """Map a grid coordinate to its world-space position on the planet surface."""
     return -HALF + grid + TILE_SIZE / 2
 
 def wp(gx: int, gz: int) -> dict:
+    """Build a path waypoint dict for grid cell (gx, gz) at surface height y=0."""
     return {"x": tile_to_world(gx), "y": 0, "z": tile_to_world(gz)}
 
 # --- Serpentine path ---

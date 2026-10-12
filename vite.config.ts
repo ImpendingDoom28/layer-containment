@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     port: 5173,
-    strictPort: true,
+    strictPort: false, // For workspaces so we can run in app in different worktrees
     watch: {
       ignored: ["**/*.md"],
     },

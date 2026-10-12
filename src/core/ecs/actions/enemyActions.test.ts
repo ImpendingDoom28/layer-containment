@@ -6,7 +6,7 @@ import { getEnemySnapshots } from "../selectors/enemySnapshots";
 import { IsEnemy, requestEnemyDeath } from "../traits/enemy";
 import { isBase } from "../traits/base";
 import { damageRequest } from "../traits/damage";
-import { slowRequest } from "../traits/slow";
+import { EnemySlow, slowRequest } from "../traits/slow";
 import { HealthInfo } from "../traits/health";
 import { testWorld } from "../world";
 import type { Enemy } from "../../types/game";
@@ -62,6 +62,23 @@ describe("enemyActions", () => {
     const enemies = getEnemySnapshots(testWorld);
     expect(enemies).toHaveLength(1);
     expect(enemies[0]).toMatchObject({ id: 5, health: 40 });
+  });
+
+  it("carries an active slow across a duplicate-ID respawn", () => {
+    const actions = enemyActions(testWorld);
+    const original = actions.spawnEnemy(baseEnemy(5, 100));
+    original.add(EnemySlow({ multiplier: 0.5, until: 3 }));
+
+    // Re-spawn with the same id while a slow is still active.
+    const replacement = actions.spawnEnemy(baseEnemy(5, 60));
+    expect(replacement).not.toBe(original);
+
+    const enemies = getEnemySnapshots(testWorld);
+    expect(enemies).toHaveLength(1);
+    expect(enemies[0]).toMatchObject({ id: 5, health: 60 });
+    // The replacement actually carries the slow trait (not a dropped no-op).
+    expect(replacement.has(EnemySlow)).toBe(true);
+    expect(replacement.get(EnemySlow)).toEqual({ multiplier: 0.5, until: 3 });
   });
 
   it("damageEnemy reduces health on sequential hits", () => {

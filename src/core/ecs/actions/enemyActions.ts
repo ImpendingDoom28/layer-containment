@@ -92,7 +92,9 @@ export const enemyActions = createActions((world) => ({
     entity.set(EnemyMotion, enemyToMotion(enemyData));
     entity.set(Position, enemyToPosition(enemyData));
     if (carriedSlow) {
-      entity.set(EnemySlow, carriedSlow);
+      // The new entity does not carry EnemySlow (spawned without it), so it is
+      // added rather than set — `set` on an absent trait is a no-op.
+      entity.add(EnemySlow(carriedSlow));
     }
 
     enemyEntitiesById.set(enemyData.id, entity);

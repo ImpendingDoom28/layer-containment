@@ -2,6 +2,7 @@ import {
   FC,
   useRef,
   useEffect,
+  useLayoutEffect,
   useState,
   useMemo,
   memo,
@@ -11,12 +12,9 @@ import { useFrame } from "@react-three/fiber";
 import { Billboard } from "@react-three/drei";
 import { Quaternion, Vector3, type Group, type Mesh } from "three";
 import type { Entity } from "koota";
-import { useActions, useTrait } from "koota/react";
+import { useTrait } from "koota/react";
 
-import {
-  getPositionAlongMultiplePaths,
-  isAtPathEnd,
-} from "../../utils/pathUtils";
+import { getPositionAlongMultiplePaths } from "../../utils/pathUtils";
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import { GUIDebugInfo } from "../gui/GUIDebugInfo";
 import {
@@ -30,8 +28,8 @@ import {
   getPlanetRadius,
   getSurfaceQuaternion,
 } from "../../utils/planetSurfaceMapping";
-import { enemyActions } from "../../core/ecs/actions/enemyActions";
-import { EnemyState } from "../../core/ecs/traits/enemy";
+import { EnemyMotion, EnemyState } from "../../core/ecs/traits/enemy";
+import { Position } from "../../core/ecs/traits/position";
 import type { GetSimulationTime } from "../../core/hooks/useSimulationClock";
 import { MedicHealBurstEffect } from "./effects/MedicHealBurstEffect";
 import { SlowEffect } from "./effects/SlowEffect";
@@ -41,10 +39,7 @@ type EnemyProps = {
   entity: Entity;
   getSimulationTime: GetSimulationTime;
   shouldStopMovement: boolean;
-  onReachEnd: ((enemyId: number) => void) | null;
   onSpawnEffect:
-    ((position: [number, number, number], color: string) => void) | null;
-  onEndEffect:
     ((position: [number, number, number], color: string) => void) | null;
   debug?: boolean;
 };
@@ -54,13 +49,10 @@ export const Enemy: FC<EnemyProps> = memo(
     entity,
     getSimulationTime,
     shouldStopMovement,
-    onReachEnd,
     onSpawnEffect,
-    onEndEffect,
     debug = false,
   }) => {
     const enemy = useTrait(entity, EnemyState);
-    const actions = useActions(enemyActions);
 
     const pathWaypoints = useLevelStore(pathWaypointsSelector);
     const gridSize = useLevelStore(gridSizeSelector);
@@ -99,17 +91,18 @@ export const Enemy: FC<EnemyProps> = memo(
     const meshRef = useRef<Group>(null);
     const upgradeFirstRingRef = useRef<Mesh>(null);
     const hasTriggeredSpawnEffect = useRef(false);
-    const hasReachedEnd = useRef(false);
     const [isSlowed, setIsSlowed] = useState(false);
     const isSlowedRef = useRef(false);
 
     useEffect(() => {
       if (!enemy) return;
 
+      const motionData = entity.get(EnemyMotion);
       if (
         !hasTriggeredSpawnEffect.current &&
         onSpawnEffect &&
-        enemy.pathProgress < 0.01
+        motionData &&
+        motionData.pathProgress < 0.01
       ) {
         const spawnPosition = getPositionAlongMultiplePaths(
           pathWaypoints,
@@ -136,18 +129,35 @@ export const Enemy: FC<EnemyProps> = memo(
         );
         hasTriggeredSpawnEffect.current = true;
       }
-    }, [enemy, onSpawnEffect, pathWaypoints, radius]);
+    }, [enemy, entity, onSpawnEffect, pathWaypoints, radius]);
 
-    useFrame((state, delta) => {
+    useLayoutEffect(() => {
       const live = entity.get(EnemyState);
-      if (!live || live.health <= 0) return;
+      const pos = entity.get(Position);
+      if (!meshRef.current || !live || !pos || live.health <= 0) return;
+      const footing = applySphereFooting(pos.x, pos.z, pos.y, live.size / 2);
+      meshRef.current.position.copy(footing.position);
+      meshRef.current.quaternion.copy(footing.quaternion);
+    }, [entity, applySphereFooting]);
+
+    useFrame((state) => {
+      const live = entity.get(EnemyState);
+      const pos = entity.get(Position);
+      if (!live || !pos || live.health <= 0) return;
+
+      // The movement system already advanced the position; this frame just
+      // mirrors it onto the mesh (allocation-free via scratch vectors).
+      if (meshRef.current) {
+        const footing = applySphereFooting(pos.x, pos.z, pos.y, live.size / 2);
+        meshRef.current.position.copy(footing.position);
+        meshRef.current.quaternion.copy(footing.quaternion);
+      }
 
       const now = state.clock.elapsedTime;
-      const isPaused = shouldStopMovement;
       const adjustedTime = getSimulationTime(now);
 
       if (
-        !isPaused &&
+        !shouldStopMovement &&
         live.upgrades.length > 0 &&
         upgradeFirstRingRef.current
       ) {
@@ -158,20 +168,6 @@ export const Enemy: FC<EnemyProps> = memo(
         upgradeFirstRingRef.current.scale.setScalar(baseRadius * pulse);
       }
 
-      if (isPaused) {
-        const currentlySlowed =
-          live.slowUntil > 0 &&
-          live.slowUntil > adjustedTime &&
-          live.slowMultiplier < 1;
-        if (isSlowedRef.current !== currentlySlowed) {
-          isSlowedRef.current = currentlySlowed;
-          setIsSlowed(currentlySlowed);
-        }
-        return;
-      }
-
-      let effectiveSpeed = live.speed;
-
       const currentlySlowed =
         live.slowUntil > 0 &&
         live.slowUntil > adjustedTime &&
@@ -180,121 +176,14 @@ export const Enemy: FC<EnemyProps> = memo(
         isSlowedRef.current = currentlySlowed;
         setIsSlowed(currentlySlowed);
       }
-
-      if (currentlySlowed) {
-        effectiveSpeed *= live.slowMultiplier;
-      } else if (live.slowMultiplier < 1) {
-        actions.updateEnemy(live.id, { slowMultiplier: 1, slowUntil: 0 });
-      }
-
-      const progressDelta = (effectiveSpeed * delta) / 20;
-      const newProgress = live.pathProgress + progressDelta;
-
-      if (isAtPathEnd(newProgress)) {
-        if (!hasReachedEnd.current && onEndEffect) {
-          const endPosition = getPositionAlongMultiplePaths(
-            pathWaypoints,
-            live.pathIndex,
-            1
-          );
-          flatFieldToSphereSurface(
-            endPosition.x,
-            endPosition.z,
-            radius,
-            scratchSurface.current,
-            scratchNormal.current
-          );
-          scratchGroupPos.current
-            .copy(scratchSurface.current)
-            .addScaledVector(scratchNormal.current, endPosition.y + 0.1);
-          onEndEffect(
-            [
-              scratchGroupPos.current.x,
-              scratchGroupPos.current.y,
-              scratchGroupPos.current.z,
-            ],
-            live.color
-          );
-          hasReachedEnd.current = true;
-        }
-        onReachEnd?.(live.id);
-        return;
-      }
-
-      const position = getPositionAlongMultiplePaths(
-        pathWaypoints,
-        live.pathIndex,
-        newProgress
-      );
-
-      if (meshRef.current) {
-        const footing = applySphereFooting(
-          position.x,
-          position.z,
-          position.y,
-          live.size / 2
-        );
-        meshRef.current.position.copy(footing.position);
-        meshRef.current.quaternion.copy(footing.quaternion);
-      }
-
-      if (
-        live.regeneration &&
-        live.regeneration > 0 &&
-        live.health < live.maxHealth
-      ) {
-        const healAmount = live.regeneration * delta;
-        const newHealth = Math.min(live.maxHealth, live.health + healAmount);
-        actions.updateEnemy(live.id, {
-          pathProgress: newProgress,
-          x: position.x,
-          z: position.z,
-          health: newHealth,
-        });
-      } else {
-        actions.updateEnemy(live.id, {
-          pathProgress: newProgress,
-          x: position.x,
-          z: position.z,
-        });
-      }
     });
-
-    const initialFooting = useMemo(() => {
-      if (!enemy) {
-        return {
-          position: new Vector3(),
-          quaternion: new Quaternion(),
-        };
-      }
-
-      const pos = getPositionAlongMultiplePaths(
-        pathWaypoints,
-        enemy.pathIndex,
-        enemy.pathProgress
-      );
-      const r = getPlanetRadius(gridSize, tileSize);
-      const { surfacePoint, normal } = flatFieldToSphereSurface(
-        pos.x,
-        pos.z,
-        r
-      );
-      const p = surfacePoint
-        .clone()
-        .addScaledVector(normal, pos.y + enemy.size / 2);
-      return { position: p, quaternion: getSurfaceQuaternion(normal) };
-    }, [enemy, pathWaypoints, gridSize, tileSize]);
 
     if (!enemy || enemy.health <= 0) return null;
 
     const healthPercent = enemy.health / enemy.maxHealth;
 
     return (
-      <group
-        ref={meshRef}
-        position={initialFooting.position}
-        quaternion={initialFooting.quaternion}
-      >
+      <group ref={meshRef}>
         {/* Upgrade indicators */}
         {enemy.upgrades.length > 0 &&
           (enemy.upgradeIndicatorColors?.length ?? 0) > 0 && (

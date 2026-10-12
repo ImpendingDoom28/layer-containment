@@ -40,7 +40,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
 
   return (
     <HUDWrapper className="bottom-auto left-auto w-80 top-4 right-4">
-      <div className="ui-menu-tilt ui-menu-tilt-right ui-menu-tilt-shadow-right flex h-full flex-col">
+      <div className="ui-menu-tilt ui-menu-tilt-right flex h-full flex-col">
         <UICard className="flex-1">
           <UICardContent className="gap-4">
             <div className="flex flex-row gap-4">

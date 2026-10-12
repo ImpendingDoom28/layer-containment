@@ -149,7 +149,7 @@ const projectileSchema: z.ZodType<Projectile> = z.object({
   pierceEnemyIds: z.array(z.number()).optional(),
 });
 
-export type LevelConfigFiles = "level_main" | "level_1";
+export type LevelConfigFiles = "level_main" | "level_1" | "stress";
 
 export const levelConfigSchema = z.object({
   name: z.string().min(1),

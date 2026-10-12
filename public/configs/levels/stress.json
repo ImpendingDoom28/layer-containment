@@ -1,0 +1,2040 @@
+{
+  "name": "stress",
+  "startingMoney": 99999,
+  "gridSize": 64,
+  "tileColor": "#374151",
+  "groundColor": "#1f2937",
+  "waters": [],
+  "pathWaypoints": [
+    [
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": -31.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": -31.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": -29.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": -29.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": -27.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": -27.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": -25.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": -25.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": -23.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": -23.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": -21.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": -21.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": -19.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": -19.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": -17.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": -17.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": -15.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": -15.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": -13.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": -13.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": -11.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": -11.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": -9.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": -9.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": -7.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": -7.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": -5.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": -5.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": -3.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": -3.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": -1.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": -1.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": 0.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": 0.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": 2.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": 2.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": 4.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": 4.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": 6.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": 6.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": 8.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": 8.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": 10.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": 10.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": 12.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": 12.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": 14.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": 14.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": 16.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": 16.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": 18.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": 18.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": 20.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": 20.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": 22.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": 22.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": 24.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": 24.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": 26.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": 26.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": 28.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": 28.5
+      },
+      {
+        "x": 31.5,
+        "y": 0,
+        "z": 30.5
+      },
+      {
+        "x": -31.5,
+        "y": 0,
+        "z": 30.5
+      }
+    ]
+  ],
+  "waveConfigs": [
+    {
+      "totalEnemies": 50,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 25,
+          "spawnInterval": 0.5
+        },
+        {
+          "type": "fast",
+          "count": 12,
+          "spawnInterval": 0.5
+        },
+        {
+          "type": "tank",
+          "count": 7,
+          "spawnInterval": 0.5
+        },
+        {
+          "type": "medic",
+          "count": 6,
+          "spawnInterval": 0.5
+        }
+      ]
+    },
+    {
+      "totalEnemies": 57,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 28,
+          "spawnInterval": 0.485
+        },
+        {
+          "type": "fast",
+          "count": 14,
+          "spawnInterval": 0.485
+        },
+        {
+          "type": "tank",
+          "count": 8,
+          "spawnInterval": 0.485
+        },
+        {
+          "type": "medic",
+          "count": 7,
+          "spawnInterval": 0.485
+        }
+      ]
+    },
+    {
+      "totalEnemies": 64,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 32,
+          "spawnInterval": 0.47
+        },
+        {
+          "type": "fast",
+          "count": 16,
+          "spawnInterval": 0.47
+        },
+        {
+          "type": "tank",
+          "count": 9,
+          "spawnInterval": 0.47
+        },
+        {
+          "type": "medic",
+          "count": 7,
+          "spawnInterval": 0.47
+        }
+      ]
+    },
+    {
+      "totalEnemies": 71,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 35,
+          "spawnInterval": 0.455
+        },
+        {
+          "type": "fast",
+          "count": 17,
+          "spawnInterval": 0.455
+        },
+        {
+          "type": "tank",
+          "count": 10,
+          "spawnInterval": 0.455
+        },
+        {
+          "type": "medic",
+          "count": 9,
+          "spawnInterval": 0.455
+        }
+      ]
+    },
+    {
+      "totalEnemies": 78,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 39,
+          "spawnInterval": 0.44
+        },
+        {
+          "type": "fast",
+          "count": 19,
+          "spawnInterval": 0.44
+        },
+        {
+          "type": "tank",
+          "count": 11,
+          "spawnInterval": 0.44
+        },
+        {
+          "type": "medic",
+          "count": 9,
+          "spawnInterval": 0.44
+        }
+      ]
+    },
+    {
+      "totalEnemies": 85,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 42,
+          "spawnInterval": 0.425
+        },
+        {
+          "type": "fast",
+          "count": 21,
+          "spawnInterval": 0.425
+        },
+        {
+          "type": "tank",
+          "count": 12,
+          "spawnInterval": 0.425
+        },
+        {
+          "type": "medic",
+          "count": 10,
+          "spawnInterval": 0.425
+        }
+      ]
+    },
+    {
+      "totalEnemies": 92,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 46,
+          "spawnInterval": 0.41000000000000003
+        },
+        {
+          "type": "fast",
+          "count": 23,
+          "spawnInterval": 0.41000000000000003
+        },
+        {
+          "type": "tank",
+          "count": 13,
+          "spawnInterval": 0.41000000000000003
+        },
+        {
+          "type": "medic",
+          "count": 10,
+          "spawnInterval": 0.41000000000000003
+        }
+      ]
+    },
+    {
+      "totalEnemies": 99,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 49,
+          "spawnInterval": 0.395
+        },
+        {
+          "type": "fast",
+          "count": 24,
+          "spawnInterval": 0.395
+        },
+        {
+          "type": "tank",
+          "count": 14,
+          "spawnInterval": 0.395
+        },
+        {
+          "type": "medic",
+          "count": 12,
+          "spawnInterval": 0.395
+        }
+      ]
+    },
+    {
+      "totalEnemies": 106,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 53,
+          "spawnInterval": 0.38
+        },
+        {
+          "type": "fast",
+          "count": 26,
+          "spawnInterval": 0.38
+        },
+        {
+          "type": "tank",
+          "count": 15,
+          "spawnInterval": 0.38
+        },
+        {
+          "type": "medic",
+          "count": 12,
+          "spawnInterval": 0.38
+        }
+      ]
+    },
+    {
+      "totalEnemies": 113,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 56,
+          "spawnInterval": 0.365
+        },
+        {
+          "type": "fast",
+          "count": 28,
+          "spawnInterval": 0.365
+        },
+        {
+          "type": "tank",
+          "count": 16,
+          "spawnInterval": 0.365
+        },
+        {
+          "type": "medic",
+          "count": 13,
+          "spawnInterval": 0.365
+        }
+      ]
+    },
+    {
+      "totalEnemies": 120,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 60,
+          "spawnInterval": 0.35
+        },
+        {
+          "type": "fast",
+          "count": 30,
+          "spawnInterval": 0.35
+        },
+        {
+          "type": "tank",
+          "count": 18,
+          "spawnInterval": 0.35
+        },
+        {
+          "type": "medic",
+          "count": 12,
+          "spawnInterval": 0.35
+        }
+      ]
+    },
+    {
+      "totalEnemies": 127,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 63,
+          "spawnInterval": 0.335
+        },
+        {
+          "type": "fast",
+          "count": 31,
+          "spawnInterval": 0.335
+        },
+        {
+          "type": "tank",
+          "count": 19,
+          "spawnInterval": 0.335
+        },
+        {
+          "type": "medic",
+          "count": 14,
+          "spawnInterval": 0.335
+        }
+      ]
+    },
+    {
+      "totalEnemies": 134,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 67,
+          "spawnInterval": 0.32
+        },
+        {
+          "type": "fast",
+          "count": 33,
+          "spawnInterval": 0.32
+        },
+        {
+          "type": "tank",
+          "count": 20,
+          "spawnInterval": 0.32
+        },
+        {
+          "type": "medic",
+          "count": 14,
+          "spawnInterval": 0.32
+        }
+      ]
+    },
+    {
+      "totalEnemies": 141,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 70,
+          "spawnInterval": 0.305
+        },
+        {
+          "type": "fast",
+          "count": 35,
+          "spawnInterval": 0.305
+        },
+        {
+          "type": "tank",
+          "count": 21,
+          "spawnInterval": 0.305
+        },
+        {
+          "type": "medic",
+          "count": 15,
+          "spawnInterval": 0.305
+        }
+      ]
+    },
+    {
+      "totalEnemies": 148,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 74,
+          "spawnInterval": 0.29000000000000004
+        },
+        {
+          "type": "fast",
+          "count": 37,
+          "spawnInterval": 0.29000000000000004
+        },
+        {
+          "type": "tank",
+          "count": 22,
+          "spawnInterval": 0.29000000000000004
+        },
+        {
+          "type": "medic",
+          "count": 15,
+          "spawnInterval": 0.29000000000000004
+        }
+      ]
+    },
+    {
+      "totalEnemies": 155,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 77,
+          "spawnInterval": 0.275
+        },
+        {
+          "type": "fast",
+          "count": 38,
+          "spawnInterval": 0.275
+        },
+        {
+          "type": "tank",
+          "count": 23,
+          "spawnInterval": 0.275
+        },
+        {
+          "type": "medic",
+          "count": 17,
+          "spawnInterval": 0.275
+        }
+      ]
+    },
+    {
+      "totalEnemies": 162,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 81,
+          "spawnInterval": 0.26
+        },
+        {
+          "type": "fast",
+          "count": 40,
+          "spawnInterval": 0.26
+        },
+        {
+          "type": "tank",
+          "count": 24,
+          "spawnInterval": 0.26
+        },
+        {
+          "type": "medic",
+          "count": 17,
+          "spawnInterval": 0.26
+        }
+      ]
+    },
+    {
+      "totalEnemies": 169,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 84,
+          "spawnInterval": 0.245
+        },
+        {
+          "type": "fast",
+          "count": 42,
+          "spawnInterval": 0.245
+        },
+        {
+          "type": "tank",
+          "count": 25,
+          "spawnInterval": 0.245
+        },
+        {
+          "type": "medic",
+          "count": 18,
+          "spawnInterval": 0.245
+        }
+      ]
+    },
+    {
+      "totalEnemies": 176,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 88,
+          "spawnInterval": 0.22999999999999998
+        },
+        {
+          "type": "fast",
+          "count": 44,
+          "spawnInterval": 0.22999999999999998
+        },
+        {
+          "type": "tank",
+          "count": 26,
+          "spawnInterval": 0.22999999999999998
+        },
+        {
+          "type": "medic",
+          "count": 18,
+          "spawnInterval": 0.22999999999999998
+        }
+      ]
+    },
+    {
+      "totalEnemies": 183,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 91,
+          "spawnInterval": 0.21500000000000002
+        },
+        {
+          "type": "fast",
+          "count": 45,
+          "spawnInterval": 0.21500000000000002
+        },
+        {
+          "type": "tank",
+          "count": 27,
+          "spawnInterval": 0.21500000000000002
+        },
+        {
+          "type": "medic",
+          "count": 20,
+          "spawnInterval": 0.21500000000000002
+        }
+      ]
+    }
+  ],
+  "buildings": [],
+  "towers": [
+    {
+      "id": 1,
+      "type": "basic",
+      "gridX": 3,
+      "gridZ": 1,
+      "x": -28.5,
+      "z": -30.5
+    },
+    {
+      "id": 2,
+      "type": "slow",
+      "gridX": 15,
+      "gridZ": 1,
+      "x": -16.5,
+      "z": -30.5
+    },
+    {
+      "id": 3,
+      "type": "aoe",
+      "gridX": 27,
+      "gridZ": 1,
+      "x": -4.5,
+      "z": -30.5
+    },
+    {
+      "id": 4,
+      "type": "laser",
+      "gridX": 39,
+      "gridZ": 1,
+      "x": 7.5,
+      "z": -30.5
+    },
+    {
+      "id": 5,
+      "type": "relay",
+      "gridX": 51,
+      "gridZ": 1,
+      "x": 19.5,
+      "z": -30.5
+    },
+    {
+      "id": 6,
+      "type": "chain",
+      "gridX": 5,
+      "gridZ": 3,
+      "x": -26.5,
+      "z": -28.5
+    },
+    {
+      "id": 7,
+      "type": "basic",
+      "gridX": 17,
+      "gridZ": 3,
+      "x": -14.5,
+      "z": -28.5
+    },
+    {
+      "id": 8,
+      "type": "slow",
+      "gridX": 29,
+      "gridZ": 3,
+      "x": -2.5,
+      "z": -28.5
+    },
+    {
+      "id": 9,
+      "type": "aoe",
+      "gridX": 41,
+      "gridZ": 3,
+      "x": 9.5,
+      "z": -28.5
+    },
+    {
+      "id": 10,
+      "type": "laser",
+      "gridX": 53,
+      "gridZ": 3,
+      "x": 21.5,
+      "z": -28.5
+    },
+    {
+      "id": 11,
+      "type": "relay",
+      "gridX": 7,
+      "gridZ": 5,
+      "x": -24.5,
+      "z": -26.5
+    },
+    {
+      "id": 12,
+      "type": "chain",
+      "gridX": 19,
+      "gridZ": 5,
+      "x": -12.5,
+      "z": -26.5
+    },
+    {
+      "id": 13,
+      "type": "basic",
+      "gridX": 31,
+      "gridZ": 5,
+      "x": -0.5,
+      "z": -26.5
+    },
+    {
+      "id": 14,
+      "type": "slow",
+      "gridX": 43,
+      "gridZ": 5,
+      "x": 11.5,
+      "z": -26.5
+    },
+    {
+      "id": 15,
+      "type": "aoe",
+      "gridX": 55,
+      "gridZ": 5,
+      "x": 23.5,
+      "z": -26.5
+    },
+    {
+      "id": 16,
+      "type": "laser",
+      "gridX": 3,
+      "gridZ": 7,
+      "x": -28.5,
+      "z": -24.5
+    },
+    {
+      "id": 17,
+      "type": "relay",
+      "gridX": 15,
+      "gridZ": 7,
+      "x": -16.5,
+      "z": -24.5
+    },
+    {
+      "id": 18,
+      "type": "chain",
+      "gridX": 27,
+      "gridZ": 7,
+      "x": -4.5,
+      "z": -24.5
+    },
+    {
+      "id": 19,
+      "type": "basic",
+      "gridX": 39,
+      "gridZ": 7,
+      "x": 7.5,
+      "z": -24.5
+    },
+    {
+      "id": 20,
+      "type": "slow",
+      "gridX": 51,
+      "gridZ": 7,
+      "x": 19.5,
+      "z": -24.5
+    },
+    {
+      "id": 21,
+      "type": "aoe",
+      "gridX": 5,
+      "gridZ": 9,
+      "x": -26.5,
+      "z": -22.5
+    },
+    {
+      "id": 22,
+      "type": "laser",
+      "gridX": 17,
+      "gridZ": 9,
+      "x": -14.5,
+      "z": -22.5
+    },
+    {
+      "id": 23,
+      "type": "relay",
+      "gridX": 29,
+      "gridZ": 9,
+      "x": -2.5,
+      "z": -22.5
+    },
+    {
+      "id": 24,
+      "type": "chain",
+      "gridX": 41,
+      "gridZ": 9,
+      "x": 9.5,
+      "z": -22.5
+    },
+    {
+      "id": 25,
+      "type": "basic",
+      "gridX": 53,
+      "gridZ": 9,
+      "x": 21.5,
+      "z": -22.5
+    },
+    {
+      "id": 26,
+      "type": "slow",
+      "gridX": 7,
+      "gridZ": 11,
+      "x": -24.5,
+      "z": -20.5
+    },
+    {
+      "id": 27,
+      "type": "aoe",
+      "gridX": 19,
+      "gridZ": 11,
+      "x": -12.5,
+      "z": -20.5
+    },
+    {
+      "id": 28,
+      "type": "laser",
+      "gridX": 31,
+      "gridZ": 11,
+      "x": -0.5,
+      "z": -20.5
+    },
+    {
+      "id": 29,
+      "type": "relay",
+      "gridX": 43,
+      "gridZ": 11,
+      "x": 11.5,
+      "z": -20.5
+    },
+    {
+      "id": 30,
+      "type": "chain",
+      "gridX": 55,
+      "gridZ": 11,
+      "x": 23.5,
+      "z": -20.5
+    },
+    {
+      "id": 31,
+      "type": "basic",
+      "gridX": 3,
+      "gridZ": 13,
+      "x": -28.5,
+      "z": -18.5
+    },
+    {
+      "id": 32,
+      "type": "slow",
+      "gridX": 15,
+      "gridZ": 13,
+      "x": -16.5,
+      "z": -18.5
+    },
+    {
+      "id": 33,
+      "type": "aoe",
+      "gridX": 27,
+      "gridZ": 13,
+      "x": -4.5,
+      "z": -18.5
+    },
+    {
+      "id": 34,
+      "type": "laser",
+      "gridX": 39,
+      "gridZ": 13,
+      "x": 7.5,
+      "z": -18.5
+    },
+    {
+      "id": 35,
+      "type": "relay",
+      "gridX": 51,
+      "gridZ": 13,
+      "x": 19.5,
+      "z": -18.5
+    },
+    {
+      "id": 36,
+      "type": "chain",
+      "gridX": 5,
+      "gridZ": 15,
+      "x": -26.5,
+      "z": -16.5
+    },
+    {
+      "id": 37,
+      "type": "basic",
+      "gridX": 17,
+      "gridZ": 15,
+      "x": -14.5,
+      "z": -16.5
+    },
+    {
+      "id": 38,
+      "type": "slow",
+      "gridX": 29,
+      "gridZ": 15,
+      "x": -2.5,
+      "z": -16.5
+    },
+    {
+      "id": 39,
+      "type": "aoe",
+      "gridX": 41,
+      "gridZ": 15,
+      "x": 9.5,
+      "z": -16.5
+    },
+    {
+      "id": 40,
+      "type": "laser",
+      "gridX": 53,
+      "gridZ": 15,
+      "x": 21.5,
+      "z": -16.5
+    },
+    {
+      "id": 41,
+      "type": "relay",
+      "gridX": 7,
+      "gridZ": 17,
+      "x": -24.5,
+      "z": -14.5
+    },
+    {
+      "id": 42,
+      "type": "chain",
+      "gridX": 19,
+      "gridZ": 17,
+      "x": -12.5,
+      "z": -14.5
+    },
+    {
+      "id": 43,
+      "type": "basic",
+      "gridX": 31,
+      "gridZ": 17,
+      "x": -0.5,
+      "z": -14.5
+    },
+    {
+      "id": 44,
+      "type": "slow",
+      "gridX": 43,
+      "gridZ": 17,
+      "x": 11.5,
+      "z": -14.5
+    },
+    {
+      "id": 45,
+      "type": "aoe",
+      "gridX": 55,
+      "gridZ": 17,
+      "x": 23.5,
+      "z": -14.5
+    },
+    {
+      "id": 46,
+      "type": "laser",
+      "gridX": 3,
+      "gridZ": 19,
+      "x": -28.5,
+      "z": -12.5
+    },
+    {
+      "id": 47,
+      "type": "relay",
+      "gridX": 15,
+      "gridZ": 19,
+      "x": -16.5,
+      "z": -12.5
+    },
+    {
+      "id": 48,
+      "type": "chain",
+      "gridX": 27,
+      "gridZ": 19,
+      "x": -4.5,
+      "z": -12.5
+    },
+    {
+      "id": 49,
+      "type": "basic",
+      "gridX": 39,
+      "gridZ": 19,
+      "x": 7.5,
+      "z": -12.5
+    },
+    {
+      "id": 50,
+      "type": "slow",
+      "gridX": 51,
+      "gridZ": 19,
+      "x": 19.5,
+      "z": -12.5
+    },
+    {
+      "id": 51,
+      "type": "aoe",
+      "gridX": 5,
+      "gridZ": 21,
+      "x": -26.5,
+      "z": -10.5
+    },
+    {
+      "id": 52,
+      "type": "laser",
+      "gridX": 17,
+      "gridZ": 21,
+      "x": -14.5,
+      "z": -10.5
+    },
+    {
+      "id": 53,
+      "type": "relay",
+      "gridX": 29,
+      "gridZ": 21,
+      "x": -2.5,
+      "z": -10.5
+    },
+    {
+      "id": 54,
+      "type": "chain",
+      "gridX": 41,
+      "gridZ": 21,
+      "x": 9.5,
+      "z": -10.5
+    },
+    {
+      "id": 55,
+      "type": "basic",
+      "gridX": 53,
+      "gridZ": 21,
+      "x": 21.5,
+      "z": -10.5
+    },
+    {
+      "id": 56,
+      "type": "slow",
+      "gridX": 7,
+      "gridZ": 23,
+      "x": -24.5,
+      "z": -8.5
+    },
+    {
+      "id": 57,
+      "type": "aoe",
+      "gridX": 19,
+      "gridZ": 23,
+      "x": -12.5,
+      "z": -8.5
+    },
+    {
+      "id": 58,
+      "type": "laser",
+      "gridX": 31,
+      "gridZ": 23,
+      "x": -0.5,
+      "z": -8.5
+    },
+    {
+      "id": 59,
+      "type": "relay",
+      "gridX": 43,
+      "gridZ": 23,
+      "x": 11.5,
+      "z": -8.5
+    },
+    {
+      "id": 60,
+      "type": "chain",
+      "gridX": 55,
+      "gridZ": 23,
+      "x": 23.5,
+      "z": -8.5
+    },
+    {
+      "id": 61,
+      "type": "basic",
+      "gridX": 3,
+      "gridZ": 25,
+      "x": -28.5,
+      "z": -6.5
+    },
+    {
+      "id": 62,
+      "type": "slow",
+      "gridX": 15,
+      "gridZ": 25,
+      "x": -16.5,
+      "z": -6.5
+    },
+    {
+      "id": 63,
+      "type": "aoe",
+      "gridX": 27,
+      "gridZ": 25,
+      "x": -4.5,
+      "z": -6.5
+    },
+    {
+      "id": 64,
+      "type": "laser",
+      "gridX": 39,
+      "gridZ": 25,
+      "x": 7.5,
+      "z": -6.5
+    },
+    {
+      "id": 65,
+      "type": "relay",
+      "gridX": 51,
+      "gridZ": 25,
+      "x": 19.5,
+      "z": -6.5
+    },
+    {
+      "id": 66,
+      "type": "chain",
+      "gridX": 5,
+      "gridZ": 27,
+      "x": -26.5,
+      "z": -4.5
+    },
+    {
+      "id": 67,
+      "type": "basic",
+      "gridX": 17,
+      "gridZ": 27,
+      "x": -14.5,
+      "z": -4.5
+    },
+    {
+      "id": 68,
+      "type": "slow",
+      "gridX": 29,
+      "gridZ": 27,
+      "x": -2.5,
+      "z": -4.5
+    },
+    {
+      "id": 69,
+      "type": "aoe",
+      "gridX": 41,
+      "gridZ": 27,
+      "x": 9.5,
+      "z": -4.5
+    },
+    {
+      "id": 70,
+      "type": "laser",
+      "gridX": 53,
+      "gridZ": 27,
+      "x": 21.5,
+      "z": -4.5
+    },
+    {
+      "id": 71,
+      "type": "relay",
+      "gridX": 7,
+      "gridZ": 29,
+      "x": -24.5,
+      "z": -2.5
+    },
+    {
+      "id": 72,
+      "type": "chain",
+      "gridX": 19,
+      "gridZ": 29,
+      "x": -12.5,
+      "z": -2.5
+    },
+    {
+      "id": 73,
+      "type": "basic",
+      "gridX": 31,
+      "gridZ": 29,
+      "x": -0.5,
+      "z": -2.5
+    },
+    {
+      "id": 74,
+      "type": "slow",
+      "gridX": 43,
+      "gridZ": 29,
+      "x": 11.5,
+      "z": -2.5
+    },
+    {
+      "id": 75,
+      "type": "aoe",
+      "gridX": 55,
+      "gridZ": 29,
+      "x": 23.5,
+      "z": -2.5
+    },
+    {
+      "id": 76,
+      "type": "laser",
+      "gridX": 3,
+      "gridZ": 31,
+      "x": -28.5,
+      "z": -0.5
+    },
+    {
+      "id": 77,
+      "type": "relay",
+      "gridX": 15,
+      "gridZ": 31,
+      "x": -16.5,
+      "z": -0.5
+    },
+    {
+      "id": 78,
+      "type": "chain",
+      "gridX": 27,
+      "gridZ": 31,
+      "x": -4.5,
+      "z": -0.5
+    },
+    {
+      "id": 79,
+      "type": "basic",
+      "gridX": 39,
+      "gridZ": 31,
+      "x": 7.5,
+      "z": -0.5
+    },
+    {
+      "id": 80,
+      "type": "slow",
+      "gridX": 51,
+      "gridZ": 31,
+      "x": 19.5,
+      "z": -0.5
+    },
+    {
+      "id": 81,
+      "type": "aoe",
+      "gridX": 5,
+      "gridZ": 33,
+      "x": -26.5,
+      "z": 1.5
+    },
+    {
+      "id": 82,
+      "type": "laser",
+      "gridX": 17,
+      "gridZ": 33,
+      "x": -14.5,
+      "z": 1.5
+    },
+    {
+      "id": 83,
+      "type": "relay",
+      "gridX": 29,
+      "gridZ": 33,
+      "x": -2.5,
+      "z": 1.5
+    },
+    {
+      "id": 84,
+      "type": "chain",
+      "gridX": 41,
+      "gridZ": 33,
+      "x": 9.5,
+      "z": 1.5
+    },
+    {
+      "id": 85,
+      "type": "basic",
+      "gridX": 53,
+      "gridZ": 33,
+      "x": 21.5,
+      "z": 1.5
+    },
+    {
+      "id": 86,
+      "type": "slow",
+      "gridX": 7,
+      "gridZ": 35,
+      "x": -24.5,
+      "z": 3.5
+    },
+    {
+      "id": 87,
+      "type": "aoe",
+      "gridX": 19,
+      "gridZ": 35,
+      "x": -12.5,
+      "z": 3.5
+    },
+    {
+      "id": 88,
+      "type": "laser",
+      "gridX": 31,
+      "gridZ": 35,
+      "x": -0.5,
+      "z": 3.5
+    },
+    {
+      "id": 89,
+      "type": "relay",
+      "gridX": 43,
+      "gridZ": 35,
+      "x": 11.5,
+      "z": 3.5
+    },
+    {
+      "id": 90,
+      "type": "chain",
+      "gridX": 55,
+      "gridZ": 35,
+      "x": 23.5,
+      "z": 3.5
+    },
+    {
+      "id": 91,
+      "type": "basic",
+      "gridX": 3,
+      "gridZ": 37,
+      "x": -28.5,
+      "z": 5.5
+    },
+    {
+      "id": 92,
+      "type": "slow",
+      "gridX": 15,
+      "gridZ": 37,
+      "x": -16.5,
+      "z": 5.5
+    },
+    {
+      "id": 93,
+      "type": "aoe",
+      "gridX": 27,
+      "gridZ": 37,
+      "x": -4.5,
+      "z": 5.5
+    },
+    {
+      "id": 94,
+      "type": "laser",
+      "gridX": 39,
+      "gridZ": 37,
+      "x": 7.5,
+      "z": 5.5
+    },
+    {
+      "id": 95,
+      "type": "relay",
+      "gridX": 51,
+      "gridZ": 37,
+      "x": 19.5,
+      "z": 5.5
+    },
+    {
+      "id": 96,
+      "type": "chain",
+      "gridX": 5,
+      "gridZ": 39,
+      "x": -26.5,
+      "z": 7.5
+    },
+    {
+      "id": 97,
+      "type": "basic",
+      "gridX": 17,
+      "gridZ": 39,
+      "x": -14.5,
+      "z": 7.5
+    },
+    {
+      "id": 98,
+      "type": "slow",
+      "gridX": 29,
+      "gridZ": 39,
+      "x": -2.5,
+      "z": 7.5
+    },
+    {
+      "id": 99,
+      "type": "aoe",
+      "gridX": 41,
+      "gridZ": 39,
+      "x": 9.5,
+      "z": 7.5
+    },
+    {
+      "id": 100,
+      "type": "laser",
+      "gridX": 53,
+      "gridZ": 39,
+      "x": 21.5,
+      "z": 7.5
+    },
+    {
+      "id": 101,
+      "type": "relay",
+      "gridX": 7,
+      "gridZ": 41,
+      "x": -24.5,
+      "z": 9.5
+    },
+    {
+      "id": 102,
+      "type": "chain",
+      "gridX": 19,
+      "gridZ": 41,
+      "x": -12.5,
+      "z": 9.5
+    },
+    {
+      "id": 103,
+      "type": "basic",
+      "gridX": 31,
+      "gridZ": 41,
+      "x": -0.5,
+      "z": 9.5
+    },
+    {
+      "id": 104,
+      "type": "slow",
+      "gridX": 43,
+      "gridZ": 41,
+      "x": 11.5,
+      "z": 9.5
+    },
+    {
+      "id": 105,
+      "type": "aoe",
+      "gridX": 55,
+      "gridZ": 41,
+      "x": 23.5,
+      "z": 9.5
+    },
+    {
+      "id": 106,
+      "type": "laser",
+      "gridX": 3,
+      "gridZ": 43,
+      "x": -28.5,
+      "z": 11.5
+    },
+    {
+      "id": 107,
+      "type": "relay",
+      "gridX": 15,
+      "gridZ": 43,
+      "x": -16.5,
+      "z": 11.5
+    },
+    {
+      "id": 108,
+      "type": "chain",
+      "gridX": 27,
+      "gridZ": 43,
+      "x": -4.5,
+      "z": 11.5
+    },
+    {
+      "id": 109,
+      "type": "basic",
+      "gridX": 39,
+      "gridZ": 43,
+      "x": 7.5,
+      "z": 11.5
+    },
+    {
+      "id": 110,
+      "type": "slow",
+      "gridX": 51,
+      "gridZ": 43,
+      "x": 19.5,
+      "z": 11.5
+    },
+    {
+      "id": 111,
+      "type": "aoe",
+      "gridX": 5,
+      "gridZ": 45,
+      "x": -26.5,
+      "z": 13.5
+    },
+    {
+      "id": 112,
+      "type": "laser",
+      "gridX": 17,
+      "gridZ": 45,
+      "x": -14.5,
+      "z": 13.5
+    },
+    {
+      "id": 113,
+      "type": "relay",
+      "gridX": 29,
+      "gridZ": 45,
+      "x": -2.5,
+      "z": 13.5
+    },
+    {
+      "id": 114,
+      "type": "chain",
+      "gridX": 41,
+      "gridZ": 45,
+      "x": 9.5,
+      "z": 13.5
+    },
+    {
+      "id": 115,
+      "type": "basic",
+      "gridX": 53,
+      "gridZ": 45,
+      "x": 21.5,
+      "z": 13.5
+    },
+    {
+      "id": 116,
+      "type": "slow",
+      "gridX": 7,
+      "gridZ": 47,
+      "x": -24.5,
+      "z": 15.5
+    },
+    {
+      "id": 117,
+      "type": "aoe",
+      "gridX": 19,
+      "gridZ": 47,
+      "x": -12.5,
+      "z": 15.5
+    },
+    {
+      "id": 118,
+      "type": "laser",
+      "gridX": 31,
+      "gridZ": 47,
+      "x": -0.5,
+      "z": 15.5
+    },
+    {
+      "id": 119,
+      "type": "relay",
+      "gridX": 43,
+      "gridZ": 47,
+      "x": 11.5,
+      "z": 15.5
+    },
+    {
+      "id": 120,
+      "type": "chain",
+      "gridX": 55,
+      "gridZ": 47,
+      "x": 23.5,
+      "z": 15.5
+    },
+    {
+      "id": 121,
+      "type": "basic",
+      "gridX": 3,
+      "gridZ": 49,
+      "x": -28.5,
+      "z": 17.5
+    },
+    {
+      "id": 122,
+      "type": "slow",
+      "gridX": 15,
+      "gridZ": 49,
+      "x": -16.5,
+      "z": 17.5
+    },
+    {
+      "id": 123,
+      "type": "aoe",
+      "gridX": 27,
+      "gridZ": 49,
+      "x": -4.5,
+      "z": 17.5
+    },
+    {
+      "id": 124,
+      "type": "laser",
+      "gridX": 39,
+      "gridZ": 49,
+      "x": 7.5,
+      "z": 17.5
+    },
+    {
+      "id": 125,
+      "type": "relay",
+      "gridX": 51,
+      "gridZ": 49,
+      "x": 19.5,
+      "z": 17.5
+    },
+    {
+      "id": 126,
+      "type": "chain",
+      "gridX": 5,
+      "gridZ": 51,
+      "x": -26.5,
+      "z": 19.5
+    },
+    {
+      "id": 127,
+      "type": "basic",
+      "gridX": 17,
+      "gridZ": 51,
+      "x": -14.5,
+      "z": 19.5
+    },
+    {
+      "id": 128,
+      "type": "slow",
+      "gridX": 29,
+      "gridZ": 51,
+      "x": -2.5,
+      "z": 19.5
+    },
+    {
+      "id": 129,
+      "type": "aoe",
+      "gridX": 41,
+      "gridZ": 51,
+      "x": 9.5,
+      "z": 19.5
+    },
+    {
+      "id": 130,
+      "type": "laser",
+      "gridX": 53,
+      "gridZ": 51,
+      "x": 21.5,
+      "z": 19.5
+    },
+    {
+      "id": 131,
+      "type": "relay",
+      "gridX": 7,
+      "gridZ": 53,
+      "x": -24.5,
+      "z": 21.5
+    },
+    {
+      "id": 132,
+      "type": "chain",
+      "gridX": 19,
+      "gridZ": 53,
+      "x": -12.5,
+      "z": 21.5
+    },
+    {
+      "id": 133,
+      "type": "basic",
+      "gridX": 31,
+      "gridZ": 53,
+      "x": -0.5,
+      "z": 21.5
+    },
+    {
+      "id": 134,
+      "type": "slow",
+      "gridX": 43,
+      "gridZ": 53,
+      "x": 11.5,
+      "z": 21.5
+    },
+    {
+      "id": 135,
+      "type": "aoe",
+      "gridX": 55,
+      "gridZ": 53,
+      "x": 23.5,
+      "z": 21.5
+    },
+    {
+      "id": 136,
+      "type": "laser",
+      "gridX": 3,
+      "gridZ": 55,
+      "x": -28.5,
+      "z": 23.5
+    },
+    {
+      "id": 137,
+      "type": "relay",
+      "gridX": 15,
+      "gridZ": 55,
+      "x": -16.5,
+      "z": 23.5
+    },
+    {
+      "id": 138,
+      "type": "chain",
+      "gridX": 27,
+      "gridZ": 55,
+      "x": -4.5,
+      "z": 23.5
+    },
+    {
+      "id": 139,
+      "type": "basic",
+      "gridX": 39,
+      "gridZ": 55,
+      "x": 7.5,
+      "z": 23.5
+    },
+    {
+      "id": 140,
+      "type": "slow",
+      "gridX": 51,
+      "gridZ": 55,
+      "x": 19.5,
+      "z": 23.5
+    },
+    {
+      "id": 141,
+      "type": "aoe",
+      "gridX": 5,
+      "gridZ": 57,
+      "x": -26.5,
+      "z": 25.5
+    },
+    {
+      "id": 142,
+      "type": "laser",
+      "gridX": 17,
+      "gridZ": 57,
+      "x": -14.5,
+      "z": 25.5
+    },
+    {
+      "id": 143,
+      "type": "relay",
+      "gridX": 29,
+      "gridZ": 57,
+      "x": -2.5,
+      "z": 25.5
+    },
+    {
+      "id": 144,
+      "type": "chain",
+      "gridX": 41,
+      "gridZ": 57,
+      "x": 9.5,
+      "z": 25.5
+    },
+    {
+      "id": 145,
+      "type": "basic",
+      "gridX": 53,
+      "gridZ": 57,
+      "x": 21.5,
+      "z": 25.5
+    },
+    {
+      "id": 146,
+      "type": "slow",
+      "gridX": 7,
+      "gridZ": 59,
+      "x": -24.5,
+      "z": 27.5
+    },
+    {
+      "id": 147,
+      "type": "aoe",
+      "gridX": 19,
+      "gridZ": 59,
+      "x": -12.5,
+      "z": 27.5
+    },
+    {
+      "id": 148,
+      "type": "laser",
+      "gridX": 31,
+      "gridZ": 59,
+      "x": -0.5,
+      "z": 27.5
+    },
+    {
+      "id": 149,
+      "type": "relay",
+      "gridX": 43,
+      "gridZ": 59,
+      "x": 11.5,
+      "z": 27.5
+    },
+    {
+      "id": 150,
+      "type": "chain",
+      "gridX": 55,
+      "gridZ": 59,
+      "x": 23.5,
+      "z": 27.5
+    }
+  ],
+  "enemies": [],
+  "projectiles": [],
+  "enemyWeights": null
+}

@@ -1,0 +1,48 @@
+name: Stress test
+
+# The dedicated stress-test entry (index.stress.html / src/stress-test) is
+# verified in CI on every pull request so it runs before merging. The repo is
+# public, so these runs are free. The default e2e suite stays a local
+# pre-push gate (husky) and is intentionally not duplicated here.
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# The job only reads the repository and runs tests; no write access needed.
+permissions:
+  contents: read
+
+jobs:
+  stress:
+    name: Stress e2e (64x64 scene, 30s averages)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Build both entries: the default app and the stress-test entry
+      # (vite.stress.config.ts is not covered by the default build).
+      - name: Build (default + stress)
+        run: npm run build && npm run build:stress
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Stress e2e
+        run: npm run test:e2e:stress

@@ -18,8 +18,6 @@ const baseEnemy = (health: number): Enemy => ({
   healthLoss: 1,
   pathProgress: 0,
   pathIndex: 0,
-  slowUntil: 0,
-  slowMultiplier: 1,
   x: 0,
   z: 0,
   upgrades: [],

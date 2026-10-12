@@ -118,8 +118,6 @@ export type Enemy = Omit<EnemyConfig, "id"> & {
   maxHealth: number;
   pathProgress: number;
   pathIndex: number;
-  slowUntil: number;
-  slowMultiplier: number;
   x: number;
   z: number;
   upgrades: EnemyUpgradeId[];

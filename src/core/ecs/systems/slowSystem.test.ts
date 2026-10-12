@@ -1,10 +1,8 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import type { Entity } from "koota";
 
 import { runSlowSystem } from "./slowSystem";
 import { enemyActions } from "../actions/enemyActions";
-import { EnemyState } from "../traits/enemy";
-import { slowRequest } from "../traits/slow";
+import { slowRequest, EnemySlow } from "../traits/slow";
 import { testWorld } from "../world";
 import type { Enemy } from "../../../core/types/game";
 
@@ -21,31 +19,24 @@ const makeEnemy = (id: number, overrides: Partial<Enemy> = {}): Enemy => ({
   healthLoss: 1,
   pathProgress: 0,
   pathIndex: 0,
-  slowUntil: 0,
-  slowMultiplier: 1,
   x: 0,
   z: 0,
   upgrades: [],
   ...overrides,
 });
 
-/** Entity helpers: all traits are always present on spawned enemies. */
-const stateOf = (entity: Entity) => entity.get(EnemyState)!;
-
 describe("slowSystem", () => {
   beforeEach(() => {
     enemyActions(testWorld).clearAllEnemies();
   });
 
-  it("applies a pending slowRequest: multiplier and expiry written, request removed", () => {
+  it("applies a pending slowRequest: slow trait written, request removed", () => {
     const entity = enemyActions(testWorld).spawnEnemy(makeEnemy(1));
     entity.add(slowRequest({ multiplier: 0.5, expiresAt: 2 }));
 
     runSlowSystem(testWorld, 0);
 
-    const state = stateOf(entity);
-    expect(state.slowMultiplier).toBe(0.5);
-    expect(state.slowUntil).toBe(2);
+    expect(entity.get(EnemySlow)).toEqual({ multiplier: 0.5, until: 2 });
     expect(entity.has(slowRequest)).toBe(false);
   });
 
@@ -55,9 +46,7 @@ describe("slowSystem", () => {
     enemyActions(testWorld).slowEnemy(1, 0.4, 2, 0);
     runSlowSystem(testWorld, 0);
 
-    const state = stateOf(entity);
-    expect(state.slowMultiplier).toBeCloseTo(0.4);
-    expect(state.slowUntil).toBe(2);
+    expect(entity.get(EnemySlow)).toEqual({ multiplier: 0.4, until: 2 });
     expect(entity.has(slowRequest)).toBe(false);
   });
 
@@ -66,92 +55,89 @@ describe("slowSystem", () => {
 
     enemyActions(testWorld).slowEnemy(1, 0.5, 2, 0);
     runSlowSystem(testWorld, 0);
-    expect(stateOf(entity).slowUntil).toBe(2);
+    expect(entity.get(EnemySlow)).toEqual({ multiplier: 0.5, until: 2 });
 
     // A second hit at t=1.5: expiresAt 1.5 + 2 = 3.5 (later than 2).
     enemyActions(testWorld).slowEnemy(1, 0.3, 2, 1.5);
     runSlowSystem(testWorld, 1.5);
 
-    const state = stateOf(entity);
-    expect(state.slowMultiplier).toBeCloseTo(0.3);
-    expect(state.slowUntil).toBe(3.5);
+    const slow = entity.get(EnemySlow);
+    expect(slow).toBeDefined();
+    expect(slow!.until).toBe(3.5);
+    // 1 - (1 - 0.3) * (1 - 0) in float64.
+    expect(slow!.multiplier).toBeCloseTo(0.3);
   });
 
   it("expires an active slow when simulation time reaches slowUntil", () => {
-    const entity = enemyActions(testWorld).spawnEnemy(
-      makeEnemy(1, { slowMultiplier: 0.5, slowUntil: 0.1 })
-    );
+    const entity = enemyActions(testWorld).spawnEnemy(makeEnemy(1));
+    entity.add(EnemySlow({ multiplier: 0.5, until: 0.1 }));
 
-    // Not yet expired: the state is untouched.
+    // Not yet expired: the slow is untouched.
     runSlowSystem(testWorld, 0.05);
-    expect(stateOf(entity).slowMultiplier).toBe(0.5);
+    expect(entity.get(EnemySlow)).toEqual({ multiplier: 0.5, until: 0.1 });
 
-    // Expired: cleared.
+    // Expired: the slow trait is removed.
     runSlowSystem(testWorld, 0.2);
-
-    const state = stateOf(entity);
-    expect(state.slowMultiplier).toBe(1);
-    expect(state.slowUntil).toBe(0);
+    expect(entity.has(EnemySlow)).toBe(false);
   });
 
   it("expires a slow exactly at its expiry timestamp", () => {
-    const entity = enemyActions(testWorld).spawnEnemy(
-      makeEnemy(1, { slowMultiplier: 0.5, slowUntil: 2 })
-    );
+    const entity = enemyActions(testWorld).spawnEnemy(makeEnemy(1));
+    entity.add(EnemySlow({ multiplier: 0.5, until: 2 }));
 
     runSlowSystem(testWorld, 2);
 
-    const state = stateOf(entity);
-    expect(state.slowMultiplier).toBe(1);
-    expect(state.slowUntil).toBe(0);
+    expect(entity.has(EnemySlow)).toBe(false);
   });
 
   it("ignores a stale slow with a full-strength multiplier", () => {
-    const entity = enemyActions(testWorld).spawnEnemy(
-      makeEnemy(1, { slowMultiplier: 1, slowUntil: 100 })
-    );
+    const entity = enemyActions(testWorld).spawnEnemy(makeEnemy(1));
+    entity.add(EnemySlow({ multiplier: 1, until: 100 }));
 
     runSlowSystem(testWorld, 200);
 
-    expect(stateOf(entity).slowMultiplier).toBe(1);
-    expect(stateOf(entity).slowUntil).toBe(100);
+    // The full-strength slow is a no-op; the system leaves it alone.
+    expect(entity.get(EnemySlow)).toEqual({ multiplier: 1, until: 100 });
   });
 
-  it("does not write the cold trait for a healthy, unslowed enemy", () => {
+  it("does not fire slow-trait events for a healthy, unslowed enemy", () => {
     enemyActions(testWorld).spawnEnemy(makeEnemy(1));
-    let coldEvents = 0;
-    const unsubscribe = testWorld.onChange(EnemyState, () => {
-      coldEvents++;
-    });
+    let events = 0;
+    const unsubChange = testWorld.onChange(EnemySlow, () => events++);
+    const unsubRemove = testWorld.onRemove(EnemySlow, () => events++);
 
     runSlowSystem(testWorld, 0.5);
 
-    unsubscribe();
-    expect(coldEvents).toBe(0);
+    unsubChange();
+    unsubRemove();
+    expect(events).toBe(0);
   });
 
-  it("fires a change event exactly once when a slow is applied and then expires", () => {
+  it("fires a change event on apply and a remove event on expiry, exactly once each", () => {
     enemyActions(testWorld).spawnEnemy(makeEnemy(1));
-    let coldEvents = 0;
-    const unsubscribe = testWorld.onChange(EnemyState, () => {
-      coldEvents++;
-    });
+    let changeEvents = 0;
+    let removeEvents = 0;
+    const unsubChange = testWorld.onChange(EnemySlow, () => changeEvents++);
+    const unsubRemove = testWorld.onRemove(EnemySlow, () => removeEvents++);
 
     enemyActions(testWorld).slowEnemy(1, 0.5, 1, 0);
     runSlowSystem(testWorld, 0);
-    expect(coldEvents).toBe(1);
+    expect(changeEvents).toBe(1);
+    expect(removeEvents).toBe(0);
 
     runSlowSystem(testWorld, 2);
-    expect(coldEvents).toBe(2);
+    expect(changeEvents).toBe(1);
+    expect(removeEvents).toBe(1);
 
-    unsubscribe();
+    unsubChange();
+    unsubRemove();
   });
 
   it("runs a no-op frame without touching anything when nothing is pending", () => {
     const entity = enemyActions(testWorld).spawnEnemy(makeEnemy(1));
-    const stateBefore = stateOf(entity);
 
     expect(() => runSlowSystem(testWorld, 0)).not.toThrow();
-    expect(stateOf(entity)).toEqual(stateBefore);
+    expect(entity.has(EnemySlow)).toBe(false);
+    expect(entity.has(slowRequest)).toBe(false);
   });
 });

@@ -2,6 +2,7 @@ import type { World } from "koota";
 import { Vector3 } from "three";
 
 import { EnemyMotion, EnemyState } from "../traits/enemy";
+import { EnemySlow } from "../traits/slow";
 import { Position } from "../traits/position";
 import {
   isAtPathEnd,
@@ -47,8 +48,8 @@ export type EnemyMovementSystemOptions = {
  * Advances all enemies along their paths in a single batched pass.
  *
  * Writes only `EnemyMotion` (hot, unsubscribed by React) per frame; the
- * cold `EnemyState` is written by other systems on discrete events (slow
- * application/expiry by the ApplySlowSystem, regen ticks here).
+ * cold `EnemyState` is written by other systems on discrete events (regen
+ * ticks here) and the standalone `EnemySlow` by the ApplySlowSystem.
  * Reaching the end of the path is collected and settled after the query
  * pass so entities are never destroyed mid-iteration.
  */
@@ -65,19 +66,18 @@ export const runEnemyMovementSystem = (
 
   world
     .query(EnemyState, EnemyMotion, Position)
-    .updateEach(([state, motion, position]) => {
+    .updateEach(([state, motion, position], entity) => {
       if (state.health <= 0) return;
 
       // Reads the slow state written by the ApplySlowSystem (which runs
-      // first in the frame): an expired slow simply no longer applies.
-      const currentlySlowed =
-        state.slowUntil > 0 &&
-        state.slowUntil > effectiveTime &&
-        state.slowMultiplier < 1;
-
-      const effectiveSpeed = currentlySlowed
-        ? state.speed * state.slowMultiplier
-        : state.speed;
+      // first in the frame). The enemy carries the EnemySlow trait only while
+      // a slow is in effect, so absence means full speed. `until > effectiveTime`
+      // (effectiveTime >= 0) already implies the slow is not expired.
+      const slow = entity.get(EnemySlow);
+      const effectiveSpeed =
+        slow && slow.until > effectiveTime && slow.multiplier < 1
+          ? state.speed * slow.multiplier
+          : state.speed;
 
       const progressDelta = (effectiveSpeed * delta) / PATH_PROGRESS_DIVISOR;
       motion.pathProgress += progressDelta;

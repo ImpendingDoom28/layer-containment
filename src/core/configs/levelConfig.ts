@@ -116,8 +116,6 @@ const enemySchema: z.ZodType<Enemy> = z.object({
   maxHealth: z.number(),
   pathProgress: z.number(),
   pathIndex: z.number(),
-  slowUntil: z.number(),
-  slowMultiplier: z.number(),
   x: z.number(),
   z: z.number(),
   upgrades: z.array(enemyUpgradeIdSchema),

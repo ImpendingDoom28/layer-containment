@@ -32,9 +32,6 @@ export type EnemyStateData = {
   healthLoss: number;
   description?: string;
   pathIndex: number;
-  /** Expiry timestamp in pause-adjusted simulation time. */
-  slowUntil: number;
-  slowMultiplier: number;
   upgrades: EnemyUpgradeId[];
   upgradeIndicatorColors?: string[];
   regeneration?: number;
@@ -55,8 +52,6 @@ export const createDefaultEnemyState = (): EnemyStateData => ({
   size: 0,
   healthLoss: 0,
   pathIndex: 0,
-  slowUntil: 0,
-  slowMultiplier: 1,
   upgrades: [],
 });
 
@@ -113,8 +108,6 @@ export const toEnemySnapshot = (
   description: state.description,
   pathProgress: motion.pathProgress,
   pathIndex: state.pathIndex,
-  slowUntil: state.slowUntil,
-  slowMultiplier: state.slowMultiplier,
   x: position.x,
   z: position.z,
   upgrades: state.upgrades,

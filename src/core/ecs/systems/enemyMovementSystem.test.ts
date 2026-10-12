@@ -5,6 +5,7 @@ import { runEnemyMovementSystem } from "./enemyMovementSystem";
 import { enemyActions } from "../actions/enemyActions";
 import { getEnemySnapshots } from "../selectors/enemySnapshots";
 import { EnemyMotion, EnemyState } from "../traits/enemy";
+import { EnemySlow } from "../traits/slow";
 import { Position } from "../traits/position";
 import { testWorld } from "../world";
 import type { Enemy, PathWaypoint } from "../../../core/types/game";
@@ -30,8 +31,6 @@ const makeEnemy = (id: number, overrides: Partial<Enemy> = {}): Enemy => ({
   healthLoss: 1,
   pathProgress: 0,
   pathIndex: 0,
-  slowUntil: 0,
-  slowMultiplier: 1,
   x: 0,
   z: 0,
   upgrades: [],
@@ -80,13 +79,12 @@ describe("enemyMovementSystem", () => {
     // The cold state is untouched by per-frame movement.
     const state = stateOf(entity);
     expect(state.health).toBe(100);
-    expect(state.slowMultiplier).toBe(1);
+    expect(entity.has(EnemySlow)).toBe(false);
   });
 
   it("moves a slowed enemy at the slowed speed", () => {
-    const entity = enemyActions(testWorld).spawnEnemy(
-      makeEnemy(1, { slowMultiplier: 0.5, slowUntil: 100 })
-    );
+    const entity = enemyActions(testWorld).spawnEnemy(makeEnemy(1));
+    entity.add(EnemySlow({ multiplier: 0.5, until: 100 }));
 
     // effective speed = 10 * 0.5 = 5 -> progressDelta = (5 * 0.2) / 20 = 0.05
     run(0.2, 0);
@@ -96,18 +94,15 @@ describe("enemyMovementSystem", () => {
   });
 
   it("moves at full speed when the slow has expired, without clearing the state", () => {
-    const entity = enemyActions(testWorld).spawnEnemy(
-      makeEnemy(1, { slowMultiplier: 0.5, slowUntil: 0.1 })
-    );
+    const entity = enemyActions(testWorld).spawnEnemy(makeEnemy(1));
+    entity.add(EnemySlow({ multiplier: 0.5, until: 0.1 }));
 
-    // effectiveTime 0.2 > slowUntil 0.1 -> the slow no longer applies.
+    // effectiveTime 0.2 > until 0.1 -> the slow no longer applies.
     run(0.2, 0.2);
 
-    // The movement system only reads the slow state; clearing expired slows
+    // The movement system only reads the slow state; removing expired slows
     // is the ApplySlowSystem's job. It moves at full speed this frame.
-    const state = stateOf(entity);
-    expect(state.slowMultiplier).toBe(0.5);
-    expect(state.slowUntil).toBe(0.1);
+    expect(entity.get(EnemySlow)).toEqual({ multiplier: 0.5, until: 0.1 });
     // The enemy still moved this frame, at full speed.
     expect(motionOf(entity).pathProgress).toBeCloseTo(0.1);
   });

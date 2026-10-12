@@ -18,7 +18,7 @@ import {
 import { Position, type PositionData } from "../traits/position";
 import { isBase } from "../traits/base";
 import { damageRequest } from "../traits/damage";
-import { slowRequest } from "../traits/slow";
+import { EnemySlow, slowRequest, type EnemySlowData } from "../traits/slow";
 
 /** Enemy id → entity registry; internal to the enemy domain. */
 const enemyEntitiesById = new Map<number, Entity>();
@@ -36,8 +36,6 @@ const enemyToState = (enemyData: Enemy): EnemyStateData => ({
   healthLoss: enemyData.healthLoss,
   description: enemyData.description,
   pathIndex: enemyData.pathIndex,
-  slowUntil: enemyData.slowUntil,
-  slowMultiplier: enemyData.slowMultiplier,
   upgrades: [...enemyData.upgrades],
   upgradeIndicatorColors: enemyData.upgradeIndicatorColors
     ? [...enemyData.upgradeIndicatorColors]
@@ -82,7 +80,10 @@ const handleEnemyDeath = (enemy: Enemy): void => {
 export const enemyActions = createActions((world) => ({
   spawnEnemy: (enemyData: Enemy): Entity => {
     const existingEntity = enemyEntitiesById.get(enemyData.id);
+    let carriedSlow: EnemySlowData | null = null;
     if (existingEntity) {
+      // Re-spawn: carry an active slow across so a re-spawn mid-slow keeps it.
+      carriedSlow = existingEntity.get(EnemySlow) ?? null;
       existingEntity.destroy();
     }
 
@@ -90,6 +91,9 @@ export const enemyActions = createActions((world) => ({
     entity.set(EnemyState, enemyToState(enemyData));
     entity.set(EnemyMotion, enemyToMotion(enemyData));
     entity.set(Position, enemyToPosition(enemyData));
+    if (carriedSlow) {
+      entity.set(EnemySlow, carriedSlow);
+    }
 
     enemyEntitiesById.set(enemyData.id, entity);
 

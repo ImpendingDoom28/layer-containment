@@ -29,6 +29,7 @@ import {
   getSurfaceQuaternion,
 } from "../../utils/planetSurfaceMapping";
 import { EnemyMotion, EnemyState } from "../../core/ecs/traits/enemy";
+import { EnemySlow } from "../../core/ecs/traits/slow";
 import { Position } from "../../core/ecs/traits/position";
 import type { GetSimulationTime } from "../../core/hooks/useSimulationClock";
 import { MedicHealBurstEffect } from "./effects/MedicHealBurstEffect";
@@ -168,10 +169,11 @@ export const Enemy: FC<EnemyProps> = memo(
         upgradeFirstRingRef.current.scale.setScalar(baseRadius * pulse);
       }
 
+      // The enemy carries the EnemySlow trait only while a slow is in effect
+      // (the ApplySlowSystem adds/removes it), so absence means full speed.
+      const slow = entity.get(EnemySlow);
       const currentlySlowed =
-        live.slowUntil > 0 &&
-        live.slowUntil > adjustedTime &&
-        live.slowMultiplier < 1;
+        !!slow && slow.until > adjustedTime && slow.multiplier < 1;
       if (isSlowedRef.current !== currentlySlowed) {
         isSlowedRef.current = currentlySlowed;
         setIsSlowed(currentlySlowed);

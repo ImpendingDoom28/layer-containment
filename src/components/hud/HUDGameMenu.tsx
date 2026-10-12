@@ -110,12 +110,13 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
               </UIButton>
               <UIButton
                 onClick={() => setShowRestartConfirm(true)}
-                className="justify-between text-sm text-left group text-foreground hover:border-primary/30"
+                variant="secondary"
+                className="mt-2 justify-between text-sm text-left group text-foreground hover:border-primary/30"
               >
                 <span className="transition-transform group-hover:translate-x-1">
                   Restart
                 </span>
-                <ArrowRight className="transition-transform size-4 group-hover:translate-x-1" />
+                <ArrowRight className="transition-transform size-4 text-muted-foreground group-hover:translate-x-1 group-hover:text-primary" />
               </UIButton>
               <UIButton
                 onClick={() => setShowSettings(true)}

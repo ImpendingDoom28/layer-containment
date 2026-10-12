@@ -279,8 +279,6 @@ export const useLevelSystem = () => {
         reward,
         pathProgress: 0,
         pathIndex,
-        slowUntil: 0,
-        slowMultiplier: 1,
         x: startPosition.x,
         z: startPosition.z,
         upgrades: uniqueUpgradeIds,

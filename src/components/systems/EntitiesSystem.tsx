@@ -22,6 +22,7 @@ import type { TilePlacementState } from "../../utils/tilePlacement";
 import { Effect } from "../entities/effects/Effect";
 import { useInstancedProjectiles } from "../../core/hooks/useInstancedProjectiles";
 import { MedicHealPulseSystem } from "./MedicHealPulseSystem";
+import { ApplySlowSystem } from "./ApplySlowSystem";
 import { EnemyMovementSystem } from "./EnemyMovementSystem";
 import {
   selectedTowerTypeToPlaceSelector,
@@ -107,6 +108,11 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
 
     return (
       <>
+        <ApplySlowSystem
+          shouldStopMovement={shouldStopMovement}
+          getSimulationTime={getSimulationTime}
+        />
+
         <EnemyMovementSystem
           shouldStopMovement={shouldStopMovement}
           getSimulationTime={getSimulationTime}

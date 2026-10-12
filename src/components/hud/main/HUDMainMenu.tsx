@@ -17,7 +17,6 @@ import { BlurBackdrop } from "./BlurBackdrop";
 import { GithubButton } from "./GithubButton";
 import { useBlurBackdrop } from "../../../core/hooks/utils/useBlurBackdrop";
 import { useHeldClose } from "../../../core/hooks/useHeldClose";
-import { useNavigate } from "react-router-dom";
 
 type HUDMainMenuProps = MenuActions;
 
@@ -26,8 +25,6 @@ type ClosingView = "settings" | "almanac" | "levelPicker";
 export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
   ({ onStartGameWithLevel, onOpenLevelEditor }) => {
     const { menuRef, blurDimensions, setBlurDimensions } = useBlurBackdrop();
-
-    const navigate = useNavigate();
 
     const {
       hasInteracted,
@@ -86,12 +83,6 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
         children: "Level Creator",
         onClick: onOpenLevelEditor,
         className: "mt-8",
-      },
-      {
-        children: "ECS",
-        onClick: () => {
-          navigate("/ecs");
-        },
       },
     ];
 

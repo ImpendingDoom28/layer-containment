@@ -25,8 +25,6 @@ const baseEnemy = (overrides: Partial<Enemy> & Pick<Enemy, "id">): Enemy => ({
   pathProgress: 0,
   reward: 1,
   size: 0.4,
-  slowMultiplier: 1,
-  slowUntil: 0,
   speed: 1,
   type: "basic",
   upgrades: [],

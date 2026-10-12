@@ -97,8 +97,6 @@ const buildLevelConfigEnemies = (
     ...enemy,
     pathIndex: enemy.pathIndex ?? 0,
     maxHealth: enemy.health,
-    slowUntil: 0,
-    slowMultiplier: 1,
     upgradeIndicatorColors:
       enemy.upgradeIndicatorColors ??
       getUpgradeIndicatorColors(

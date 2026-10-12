@@ -2,6 +2,7 @@ import type { World } from "koota";
 import { Vector3 } from "three";
 
 import { EnemyMotion, EnemyState } from "../traits/enemy";
+import { EnemySlow } from "../traits/slow";
 import { Position } from "../traits/position";
 import {
   isAtPathEnd,
@@ -47,7 +48,8 @@ export type EnemyMovementSystemOptions = {
  * Advances all enemies along their paths in a single batched pass.
  *
  * Writes only `EnemyMotion` (hot, unsubscribed by React) per frame; the
- * cold `EnemyState` is written on discrete events (slow expiry, regen tick).
+ * cold `EnemyState` is written by other systems on discrete events (regen
+ * ticks here) and the standalone `EnemySlow` by the ApplySlowSystem.
  * Reaching the end of the path is collected and settled after the query
  * pass so entities are never destroyed mid-iteration.
  */
@@ -64,26 +66,18 @@ export const runEnemyMovementSystem = (
 
   world
     .query(EnemyState, EnemyMotion, Position)
-    .updateEach(([state, motion, position]) => {
+    .updateEach(([state, motion, position], entity) => {
       if (state.health <= 0) return;
 
-      // Slow expiry mirrors the previous per-component logic: the slow is
-      // cleared, and the enemy keeps moving this frame at full speed.
-      // (In-place write: entity.set on a trait being iterated by updateEach
-      // is dropped by koota, while in-place mutation persists and fires the
-      // trait's change event.)
-      const currentlySlowed =
-        state.slowUntil > 0 &&
-        state.slowUntil > effectiveTime &&
-        state.slowMultiplier < 1;
-      if (!currentlySlowed && state.slowMultiplier < 1) {
-        state.slowMultiplier = 1;
-        state.slowUntil = 0;
-      }
-
-      const effectiveSpeed = currentlySlowed
-        ? state.speed * state.slowMultiplier
-        : state.speed;
+      // Reads the slow state written by the ApplySlowSystem (which runs
+      // first in the frame). The enemy carries the EnemySlow trait only while
+      // a slow is in effect, so absence means full speed. `until > effectiveTime`
+      // (effectiveTime >= 0) already implies the slow is not expired.
+      const slow = entity.get(EnemySlow);
+      const effectiveSpeed =
+        slow && slow.until > effectiveTime && slow.multiplier < 1
+          ? state.speed * slow.multiplier
+          : state.speed;
 
       const progressDelta = (effectiveSpeed * delta) / PATH_PROGRESS_DIVISOR;
       motion.pathProgress += progressDelta;

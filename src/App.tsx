@@ -14,12 +14,6 @@ const LevelEditorPage = lazy(() =>
   }))
 );
 
-const EcsPage = lazy(() =>
-  import("./tower-defence-ecs/EcsPage").then((mod) => ({
-    default: mod.EcsPage,
-  }))
-);
-
 const AppRoutes: FC = () => {
   const navigate = useNavigate();
 
@@ -53,23 +47,6 @@ const AppRoutes: FC = () => {
                 <LevelEditorPage onBackToGame={() => navigate("/")} />
               </Suspense>
             </EntityIdProvider>
-          </WorldProvider>
-        }
-      />
-      <Route
-        path="/ecs"
-        element={
-          <WorldProvider world={world}>
-            <Suspense
-              fallback={
-                <HUDLoading
-                  className="fixed inset-0"
-                  message="Loading ECS page..."
-                />
-              }
-            >
-              <EcsPage />
-            </Suspense>
           </WorldProvider>
         }
       />

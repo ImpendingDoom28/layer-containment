@@ -38,8 +38,6 @@ const mkEnemy = (id: number, x: number, z: number, health = 50): Enemy => ({
   healthLoss: 1,
   pathProgress: 0,
   pathIndex: 0,
-  slowUntil: 0,
-  slowMultiplier: 1,
   x,
   z,
   upgrades: [],

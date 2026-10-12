@@ -6,6 +6,7 @@ import { getEnemySnapshots } from "../selectors/enemySnapshots";
 import { IsEnemy, requestEnemyDeath } from "../traits/enemy";
 import { isBase } from "../traits/base";
 import { damageRequest } from "../traits/damage";
+import { EnemySlow, slowRequest } from "../traits/slow";
 import { HealthInfo } from "../traits/health";
 import { testWorld } from "../world";
 import type { Enemy } from "../../types/game";
@@ -31,8 +32,6 @@ const baseEnemy = (id: number, health: number): Enemy => ({
   healthLoss: 1,
   pathProgress: 0,
   pathIndex: 0,
-  slowUntil: 0,
-  slowMultiplier: 1,
   x: 0,
   z: 0,
   upgrades: [],
@@ -63,6 +62,23 @@ describe("enemyActions", () => {
     const enemies = getEnemySnapshots(testWorld);
     expect(enemies).toHaveLength(1);
     expect(enemies[0]).toMatchObject({ id: 5, health: 40 });
+  });
+
+  it("respawns a clean entity: an active slow does not carry across", () => {
+    const actions = enemyActions(testWorld);
+    const original = actions.spawnEnemy(baseEnemy(5, 100));
+    original.add(EnemySlow({ multiplier: 0.5, until: 3 }));
+
+    // Re-spawn with the same id while a slow is still active.
+    const replacement = actions.spawnEnemy(baseEnemy(5, 60));
+    expect(replacement).not.toBe(original);
+
+    const enemies = getEnemySnapshots(testWorld);
+    expect(enemies).toHaveLength(1);
+    expect(enemies[0]).toMatchObject({ id: 5, health: 60 });
+    // The replacement is a clean entity: the slow stays on the old (destroyed)
+    // entity and does not apply to the new one.
+    expect(replacement.has(EnemySlow)).toBe(false);
   });
 
   it("damageEnemy reduces health on sequential hits", () => {
@@ -126,19 +142,20 @@ describe("enemyActions", () => {
     const actions = enemyActions(testWorld);
     const clock = createPauseClock();
     actions.spawnEnemy(baseEnemy(1, 100));
+    const entity = testWorld.queryFirst(IsEnemy)!;
 
     const slowStartedAt = getEffectiveGameTime(10, clock);
     actions.slowEnemy(1, 0.4, 2, slowStartedAt);
 
     beginPauseSegment(clock, 10);
     expect(getEffectiveGameTime(70, clock)).toBe(10);
-    expect(getEnemySnapshots(testWorld)[0]?.slowUntil).toBeGreaterThan(
+    expect(entity.get(slowRequest)!.expiresAt).toBeGreaterThan(
       getEffectiveGameTime(70, clock)
     );
 
     endPauseSegment(clock, 70);
     expect(getEffectiveGameTime(71.99, clock)).toBeLessThan(12);
     expect(getEffectiveGameTime(72, clock)).toBe(12);
-    expect(getEnemySnapshots(testWorld)[0]?.slowUntil).toBe(12);
+    expect(entity.get(slowRequest)!.expiresAt).toBe(12);
   });
 });

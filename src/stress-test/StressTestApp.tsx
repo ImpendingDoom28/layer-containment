@@ -49,6 +49,8 @@ import {
 
 const STRESS_LEVEL_ID = "stress" as const;
 const STRESS_BASE_HEALTH = 1_000_000;
+/** How long (seconds) the average-metrics window stays open per run. */
+const METRICS_WINDOW_SECONDS = 30;
 
 type FrameStats = {
   fps: number;
@@ -59,6 +61,20 @@ type FrameStats = {
   /** Rolling counters used to average FPS every ~0.25s. */
   frameCount: number;
   frameTime: number;
+  /** Windowed averages, measured from when the scene became ready. */
+  windowFps: number;
+  windowFrameMs: number;
+  windowDrawCalls: number;
+  windowTriangles: number;
+  windowPrograms: number;
+  windowElapsed: number;
+  /** Frames accumulated since the window opened. */
+  windowFrames: number;
+  windowTime: number;
+  windowCallSum: number;
+  windowTriSum: number;
+  /** True once the 30s window has elapsed; freezes the averages until restart. */
+  windowDone: boolean;
 };
 
 const createFrameStats = (): FrameStats => ({
@@ -69,16 +85,63 @@ const createFrameStats = (): FrameStats => ({
   programs: 0,
   frameCount: 0,
   frameTime: 0,
+  windowFps: 0,
+  windowFrameMs: 0,
+  windowDrawCalls: 0,
+  windowTriangles: 0,
+  windowPrograms: 0,
+  windowElapsed: 0,
+  windowFrames: 0,
+  windowTime: 0,
+  windowCallSum: 0,
+  windowTriSum: 0,
+  windowDone: false,
 });
+
+const resetMetricsWindow = (s: FrameStats) => {
+  s.windowFps = 0;
+  s.windowFrameMs = 0;
+  s.windowDrawCalls = 0;
+  s.windowTriangles = 0;
+  s.windowPrograms = 0;
+  s.windowElapsed = 0;
+  s.windowFrames = 0;
+  s.windowTime = 0;
+  s.windowCallSum = 0;
+  s.windowTriSum = 0;
+  s.windowDone = false;
+};
+
+/** JS heap in MB, when the browser exposes it (Chromium); "-" otherwise. */
+const heapLabel = (): string => {
+  const memory = (
+    performance as Performance & {
+      memory?: { usedJSHeapSize?: number; totalJSHeapSize?: number };
+    }
+  ).memory;
+  if (memory && typeof memory.usedJSHeapSize === "number") {
+    const used = memory.usedJSHeapSize / 1024 / 1024;
+    const total =
+      typeof memory.totalJSHeapSize === "number"
+        ? memory.totalJSHeapSize / 1024 / 1024
+        : used;
+    return `${used.toFixed(0)}/${total.toFixed(0)} MB`;
+  }
+  return "-";
+};
 
 /**
  * Collects per-frame renderer stats into a plain mutable ref so the DOM
- * overlay can read them without triggering React re-renders.
+ * overlay can read them without triggering React re-reads. While `readyRef`
+ * is set (the heavy scene is actually rendering), it also accumulates
+ * averages over a fixed METRICS_WINDOW_SECONDS window for baseline metrics.
  */
 const StressStatsCollector = ({
   statsRef,
+  readyRef,
 }: {
   statsRef: { current: FrameStats };
+  readyRef: { current: boolean };
 }) => {
   useFrame((state, delta) => {
     const s = statsRef.current;
@@ -93,6 +156,24 @@ const StressStatsCollector = ({
     s.drawCalls = state.gl.info.render.calls;
     s.triangles = state.gl.info.render.triangles;
     s.programs = state.gl.info.programs?.length ?? 0;
+
+    if (readyRef.current && !s.windowDone) {
+      s.windowFrames += 1;
+      s.windowTime += delta;
+      s.windowCallSum += s.drawCalls;
+      s.windowTriSum += s.triangles;
+      s.windowPrograms = s.programs;
+      s.windowElapsed = s.windowTime;
+      if (s.windowTime >= METRICS_WINDOW_SECONDS) {
+        s.windowDone = true;
+      }
+      if (s.windowFrames > 0 && s.windowTime > 0) {
+        s.windowFps = s.windowFrames / s.windowTime;
+        s.windowFrameMs = (s.windowTime / s.windowFrames) * 1000;
+        s.windowDrawCalls = s.windowCallSum / s.windowFrames;
+        s.windowTriangles = s.windowTriSum / s.windowFrames;
+      }
+    }
   });
   return null;
 };
@@ -183,6 +264,24 @@ const StressOverlay = ({
         `DRAW CALLS   ${s.drawCalls}`,
         `TRIANGLES    ${s.triangles}`,
         `PROGRAMS     ${s.programs}`,
+        `JS HEAP      ${heapLabel()}`,
+        ...(s.windowDone
+          ? [
+              `--- AVG (last 30s) ---`,
+              `AVG FPS      ${s.windowFps.toFixed(1)}`,
+              `AVG FRAME    ${s.windowFrameMs.toFixed(2)} ms`,
+              `AVG DRAW     ${s.windowDrawCalls.toFixed(1)}`,
+              `AVG TRI      ${Math.round(s.windowTriangles).toLocaleString(
+                "en-US"
+              )}`,
+              `AVG PROGRAMS ${s.windowPrograms}`,
+            ]
+          : [
+              `AVG WINDOW   ${Math.min(
+                s.windowElapsed,
+                METRICS_WINDOW_SECONDS
+              ).toFixed(0)}/${METRICS_WINDOW_SECONDS}s`,
+            ]),
       ];
       if (textRef.current) {
         textRef.current.textContent = lines.join("\n");
@@ -207,6 +306,14 @@ const StressTestGame = () => {
   const [areShadersReady, setAreShadersReady] = useState(false);
   const statsRef = useRef<FrameStats>(createFrameStats());
   const startedRef = useRef(false);
+  // Mirrors areShadersReady in a ref so the frame loop (collector) can tell
+  // when the heavy scene is actually rendering and start averaging.
+  const readyRef = useRef(false);
+
+  const handleReadyChange = useCallback((ready: boolean) => {
+    readyRef.current = ready;
+    setAreShadersReady(ready);
+  }, []);
 
   const gameSystem = useGameSystem();
   const levelSystem = useLevelSystem();
@@ -260,6 +367,8 @@ const StressTestGame = () => {
     resetLevelEnemyUpgrades();
     resetLevelState();
     beginRun();
+    // Re-arm the 30s averaging window for the new run.
+    resetMetricsWindow(statsRef.current);
     setRunCount((c) => c + 1);
   }, [resetLevelEnemyUpgrades, resetLevelState, beginRun]);
 
@@ -287,9 +396,9 @@ const StressTestGame = () => {
               ? `stress-${STRESS_LEVEL_ID}`
               : "stress-loading"
           }
-          onReadyChange={setAreShadersReady}
+          onReadyChange={handleReadyChange}
         />
-        <StressStatsCollector statsRef={statsRef} />
+        <StressStatsCollector statsRef={statsRef} readyRef={readyRef} />
 
         {isGameConfigLoaded && (
           <Suspense

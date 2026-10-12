@@ -31,6 +31,22 @@ const readFps = async (page: Page): Promise<number> => {
   return Number(value) || 0;
 };
 
+/** Reads the `AVG <LABEL>` values from the 30-second average block. */
+const readAverages = async (
+  page: Page
+): Promise<{ fps: number; frameMs: number; drawCalls: number } | null> => {
+  const text = await readStats(page);
+  const fps = text.match(/AVG FPS\s+([\d.]+)/);
+  const frame = text.match(/AVG FRAME\s+([\d.]+)/);
+  const draw = text.match(/AVG DRAW\s+([\d.]+)/);
+  if (!fps || !frame || !draw) return null;
+  return {
+    fps: Number(fps[1]),
+    frameMs: Number(frame[1]),
+    drawCalls: Number(draw[1]),
+  };
+};
+
 test("loads the stress scene with canvas, stats overlay and banner", async ({
   page,
 }) => {
@@ -80,4 +96,45 @@ test("auto-advances waves without any user input", async ({ page }) => {
       }
     )
     .toBeGreaterThan(0);
+});
+
+test("reports 30-second average performance metrics", async ({ page }) => {
+  test.setTimeout(180_000);
+
+  await onOpenStressScene(page);
+
+  // Wait until the overlay has collected a full 30-second window of frames
+  // and frozen the averages. No thresholds are asserted yet: the numbers are
+  // logged (test.info) so they can be used to pick baselines later.
+  await expect
+    .poll(async () => await readAverages(page), {
+      timeout: 120_000,
+    })
+    .not.toBeNull();
+
+  const averages = await readAverages(page);
+  const fullOverlay = await readStats(page);
+  const heap = (fullOverlay.match(/JS HEAP\s+(\S+)/)?.[1] ?? "-") as string;
+  const draw = (fullOverlay.match(/AVG DRAW\s+([\d.]+)/)?.[1] ?? "-") as string;
+  const tri = (fullOverlay.match(/AVG TRI\s+([\d,]+)/)?.[1] ?? "-") as string;
+  const progs = (fullOverlay.match(/AVG PROGRAMS\s+(\d+)/)?.[1] ??
+    "-") as string;
+
+  const summary = [
+    `avgFps=${averages?.fps}`,
+    `avgFrameMs=${averages?.frameMs}`,
+    `avgDrawCalls=${draw}`,
+    `avgTriangles=${tri}`,
+    `avgPrograms=${progs}`,
+    `jsHeap=${heap}`,
+  ].join(" ");
+
+  console.log(`[stress-averages] 30s window: ${summary}`);
+  test.info().annotations.push({
+    type: "stress-averages",
+    description: summary,
+  });
+
+  // Sanity: the scene is genuinely rendering frames during the window.
+  expect(averages?.fps).toBeGreaterThan(0);
 });

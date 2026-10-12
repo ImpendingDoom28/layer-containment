@@ -75,11 +75,15 @@ npm run build
 ### Performance Stress Test
 
 A dedicated, unattended stress-test entry saturates the renderer and simulation
-on a generated `64x64` level (4096 shader-compiled tiles, a ~2080-tile
-serpentine path, 150 pre-placed towers of all six types, and 20 waves totalling
-~2330 enemies). The run loops forever with a very high base health so it never
-ends, and a live overlay shows FPS, draw calls, triangles, and wave/entity
-counts.
+on a generated `64x64` level: 4096 shader-compiled grid tiles, a 64-waypoint
+serpentine path (~2,080 strip segments, each a pair of box meshes), 150
+pre-placed towers of all six types, and 20 waves totalling ~2,330 enemies. The
+run loops forever with a very high base health so it never ends, and a live
+overlay shows FPS, frame time, draw calls, triangles, JS heap, and wave/entity
+counts. After 30 seconds of steady rendering it freezes a **30-second average**
+block (FPS, frame, draw calls, triangles, programs) for baseline measurement —
+no thresholds are enforced yet, the numbers are reported so limits can be set
+later.
 
 The stress app lives under `src/stress-test/` and is only reachable through its
 own Vite entry (`index.stress.html` / `vite.stress.config.ts`). It is **not**
@@ -89,9 +93,14 @@ any stress-test code.
 ```bash
 npm run dev:stress          # serve http://localhost:5174/index.stress.html
 npm run build:stress        # build only the stress entry into dist-stress/
-npm run test:e2e:stress     # Playwright smoke test (port 5174)
+npm run test:e2e:stress     # Playwright smoke test + 30s averages (port 5174)
 npm run generate:stress-level  # regenerate public/configs/levels/stress.json
 ```
+
+The stress e2e suite is part of `npm run verify`, which the husky `pre-push`
+hook runs on every push, so the stress test (including the 30-second averages
+test) runs before anything is pushed/merged. The average numbers are printed to
+the test output (`[stress-averages] ...`).
 
 The generated level is written to `public/configs/levels/stress.json` by
 `scripts/generate-stress-level.py`; rerun the generator (or commit the result)

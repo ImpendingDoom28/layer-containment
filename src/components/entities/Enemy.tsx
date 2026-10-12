@@ -44,18 +44,14 @@ type EnemyProps = {
   debug?: boolean;
 };
 
-/**
- * Pure render component: reads enemy state and applies the transform.
- *
- * Simulation (path progress, position, slow, regen, reach-end) runs in the
- * batched EnemyMovementSystem, so this component re-renders only on
- * discrete cold-state changes (damage, slow, upgrades) — never per frame.
- */
 export const Enemy: FC<EnemyProps> = memo(
-  ({ entity, getSimulationTime, shouldStopMovement, onSpawnEffect, debug = false }) => {
-    // Cold trait only: per-frame motion lives in EnemyMotion and is read
-    // imperatively inside useFrame (never subscribed here, so per-frame
-    // motion writes do not trigger React re-renders).
+  ({
+    entity,
+    getSimulationTime,
+    shouldStopMovement,
+    onSpawnEffect,
+    debug = false,
+  }) => {
     const enemy = useTrait(entity, EnemyState);
 
     const pathWaypoints = useLevelStore(pathWaypointsSelector);
@@ -135,19 +131,11 @@ export const Enemy: FC<EnemyProps> = memo(
       }
     }, [enemy, entity, onSpawnEffect, pathWaypoints, radius]);
 
-    // Apply the current transform immediately (before first paint) so the
-    // mesh never flashes at the origin. The per-frame useFrame below keeps
-    // it in sync afterwards.
     useLayoutEffect(() => {
       const live = entity.get(EnemyState);
       const pos = entity.get(Position);
       if (!meshRef.current || !live || !pos || live.health <= 0) return;
-      const footing = applySphereFooting(
-        pos.x,
-        pos.z,
-        pos.y,
-        live.size / 2
-      );
+      const footing = applySphereFooting(pos.x, pos.z, pos.y, live.size / 2);
       meshRef.current.position.copy(footing.position);
       meshRef.current.quaternion.copy(footing.quaternion);
     }, [entity, applySphereFooting]);
@@ -160,12 +148,7 @@ export const Enemy: FC<EnemyProps> = memo(
       // The movement system already advanced the position; this frame just
       // mirrors it onto the mesh (allocation-free via scratch vectors).
       if (meshRef.current) {
-        const footing = applySphereFooting(
-          pos.x,
-          pos.z,
-          pos.y,
-          live.size / 2
-        );
+        const footing = applySphereFooting(pos.x, pos.z, pos.y, live.size / 2);
         meshRef.current.position.copy(footing.position);
         meshRef.current.quaternion.copy(footing.quaternion);
       }

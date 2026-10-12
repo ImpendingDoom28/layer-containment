@@ -25,10 +25,13 @@ import {
 } from "../stores/useGameStore";
 import { useEntityIds } from "../contexts/EntityIdContext";
 import { loadGameConfig } from "../configs/gameConfig";
+import { getCanPause } from "../getCanPause";
 import {
+  noPauseDuringWaveWaitSelector,
   pauseWhenTabHiddenSelector,
   useSettingsStore,
 } from "../stores/useSettingsStore";
+import { nextWaveReadySelector, useWaveStore } from "../stores/useWaveStore";
 import { gameEvents } from "../../utils/eventEmitter";
 import { GameEvent } from "../types/enums/events";
 
@@ -54,6 +57,10 @@ export const useGameSystem = () => {
   const setShowSettings = useGameStore(setShowSettingsSelector);
 
   const pauseWhenTabHidden = useSettingsStore(pauseWhenTabHiddenSelector);
+  const noPauseDuringWaveWait = useSettingsStore(
+    noPauseDuringWaveWaitSelector
+  );
+  const nextWaveReady = useWaveStore(nextWaveReadySelector);
 
   const { getNextEffectId } = useEntityIds();
 
@@ -94,7 +101,17 @@ export const useGameSystem = () => {
     gameEvents.emit(GameEvent.GAME_WON, { gameWonType: "win" });
   }, [setGameStatus]);
 
+  const canPause = getCanPause(
+    gameStatus,
+    nextWaveReady,
+    noPauseDuringWaveWait
+  );
+
   const pauseGame = useCallback(() => {
+    if (gameStatus === "playing" && !canPause) {
+      // Pausing is disabled while waiting for the next wave.
+      return;
+    }
     if (gameStatus === "playing") {
       setGameStatus("paused");
       gameEvents.emit(GameEvent.GAME_PAUSED, { gamePausedType: "pause" });
@@ -102,7 +119,7 @@ export const useGameSystem = () => {
       setGameStatus("playing");
       gameEvents.emit(GameEvent.GAME_RESUMED, { gameResumedType: "resume" });
     }
-  }, [setGameStatus, gameStatus]);
+  }, [setGameStatus, gameStatus, canPause]);
 
   const startGame = useCallback(async () => {
     startNewRun();
@@ -168,6 +185,7 @@ export const useGameSystem = () => {
     activeEffects,
     shouldDisableControls,
     shouldStopMovement,
+    canPause,
     debug,
     isGameConfigLoaded,
 

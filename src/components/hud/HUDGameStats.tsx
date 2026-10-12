@@ -85,7 +85,8 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
               <UIButton
                 variant="default"
                 size={"icon-sm"}
-                className="cursor-default"
+                className="cursor-default w-fit"
+                data-testid="paused-indicator"
               >
                 <Pause />
               </UIButton>

@@ -49,7 +49,8 @@ const enemyToState = (enemyData: Enemy): EnemyStateData => ({
 
 const enemyToMotion = (enemyData: Enemy): EnemyMotionData => ({
   pathProgress: enemyData.pathProgress,
-  lastRegenTick: 0,
+  // Sentinel "no baseline yet" — see lastRegenTick in traits/enemy.ts.
+  lastRegenTick: -1,
   hasReachedEnd: false,
 });
 

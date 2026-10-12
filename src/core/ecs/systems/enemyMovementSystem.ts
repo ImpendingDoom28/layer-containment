@@ -135,17 +135,23 @@ export const runEnemyMovementSystem = (
       position.y = waypoint.y;
       position.z = waypoint.z;
 
-      // Regeneration: discrete ticks on the cold trait.
+      // Regeneration: discrete ticks on the cold trait. The first pass
+      // (lastRegenTick = -1) only establishes the baseline at the current
+      // simulation time — no healing for time before the enemy spawned.
       if (
         state.regeneration &&
         state.regeneration > 0 &&
         state.health < state.maxHealth
       ) {
-        const elapsed = effectiveTime - motion.lastRegenTick;
-        if (elapsed >= REGEN_TICK_INTERVAL) {
+        if (motion.lastRegenTick < 0) {
           motion.lastRegenTick = effectiveTime;
-          const healAmount = state.regeneration * elapsed;
-          state.health = Math.min(state.maxHealth, state.health + healAmount);
+        } else {
+          const elapsed = effectiveTime - motion.lastRegenTick;
+          if (elapsed >= REGEN_TICK_INTERVAL) {
+            motion.lastRegenTick = effectiveTime;
+            const healAmount = state.regeneration * elapsed;
+            state.health = Math.min(state.maxHealth, state.health + healAmount);
+          }
         }
       }
     }

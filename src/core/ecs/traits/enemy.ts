@@ -75,8 +75,13 @@ export const EnemyState = trait(createDefaultEnemyState);
  */
 export const EnemyMotion = trait({
   pathProgress: 0,
-  /** Simulation timestamp of the last regeneration tick. */
-  lastRegenTick: 0,
+  /**
+   * Simulation timestamp of the last regeneration tick. `-1` means "no
+   * baseline yet": the first movement pass sets it to the current
+   * simulation time without healing (a `0` baseline would credit a
+   * mid-game spawn with healing for all time before it spawned).
+   */
+  lastRegenTick: -1,
   /** Guards the reach-end effect/callback against re-firing each frame. */
   hasReachedEnd: false,
 });
@@ -85,7 +90,7 @@ export type EnemyMotionData = TraitRecord<typeof EnemyMotion>;
 
 export const createDefaultEnemyMotion = (): EnemyMotionData => ({
   pathProgress: 0,
-  lastRegenTick: 0,
+  lastRegenTick: -1,
   hasReachedEnd: false,
 });
 

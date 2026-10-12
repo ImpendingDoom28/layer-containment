@@ -187,7 +187,8 @@ describe("enemyMovementSystem", () => {
       makeEnemy(1, { health: 50, regeneration: 10, pathProgress: 0, x: 0 })
     );
 
-    // t=0: no elapsed time since lastRegenTick=0, no heal.
+    // t=0: first pass only establishes the regen baseline (lastRegenTick
+    // -1 -> 0), no heal.
     run(0.2, 0);
     expect(stateOf(entity).health).toBe(50);
 
@@ -206,9 +207,31 @@ describe("enemyMovementSystem", () => {
       makeEnemy(1, { health: 99, regeneration: 10 })
     );
 
+    // First pass establishes the baseline at t=0.15 (no heal yet).
     run(0.2, 0.15);
+    expect(getEnemySnapshots(testWorld)[0]?.health).toBe(99);
 
+    // Second pass: 0.15s elapsed -> heal 1.5, capped at max health 100.
+    run(0.2, 0.3);
     expect(getEnemySnapshots(testWorld)[0]?.health).toBe(100);
+  });
+
+  it("does not heal a mid-simulation spawn for time before it spawned", () => {
+    // Simulation time is already at 30s when this injured regenerating
+    // enemy spawns. The first movement pass must only establish the
+    // baseline — healing 10/s for 30s would instantly max its health.
+    const entity = enemyActions(testWorld).spawnEnemy(
+      makeEnemy(1, { health: 50, regeneration: 10 })
+    );
+
+    run(0.2, 30);
+
+    expect(stateOf(entity).health).toBe(50);
+    expect(motionOf(entity).lastRegenTick).toBeCloseTo(30);
+
+    // Subsequent ticks heal normally: 30.15 -> 0.15s elapsed, heal 1.5.
+    run(0.2, 30.15);
+    expect(stateOf(entity).health).toBeCloseTo(51.5);
   });
 
   it("keeps enemies at the path end when no removal callback is given (menu scene)", () => {

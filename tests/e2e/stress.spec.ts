@@ -34,6 +34,10 @@ const readFps = async (page: Page): Promise<number> => {
 test("loads the stress scene with canvas, stats overlay and banner", async ({
   page,
 }) => {
+  // The 64x64 scene can take a while to shader-compile before it renders
+  // frames, so allow room for navigation plus the FPS poll below.
+  test.setTimeout(150_000);
+
   await onOpenStressScene(page);
 
   await expect(page.getByTestId("stress-banner")).toBeVisible();

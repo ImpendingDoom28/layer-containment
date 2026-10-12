@@ -15,7 +15,8 @@ import { defineConfig } from "vite";
  *
  * Run:
  *   npm run dev:stress     (open http://localhost:5174/index.stress.html)
- *   npm run build:stress   (outputs dist/ with only the stress bundle)
+ *   npm run build:stress   (outputs dist-stress/ with only the stress bundle,
+ *                           leaving the default build's dist/ untouched)
  */
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -35,6 +36,9 @@ export default defineConfig({
     },
   },
   build: {
+    // Keep the stress build isolated from the default build's dist/ so the
+    // two never clobber each other.
+    outDir: "dist-stress",
     rollupOptions: {
       input: path.resolve(__dirname, "index.stress.html"),
       output: {

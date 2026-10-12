@@ -12,6 +12,7 @@ lerna-debug.log*
 .env
 node_modules
 dist
+dist-stress
 dist-ssr
 *.local
 playwright-report

@@ -88,7 +88,7 @@ any stress-test code.
 
 ```bash
 npm run dev:stress          # serve http://localhost:5174/index.stress.html
-npm run build:stress        # build only the stress entry into dist/
+npm run build:stress        # build only the stress entry into dist-stress/
 npm run test:e2e:stress     # Playwright smoke test (port 5174)
 npm run generate:stress-level  # regenerate public/configs/levels/stress.json
 ```

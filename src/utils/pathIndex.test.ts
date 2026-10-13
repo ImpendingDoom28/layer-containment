@@ -62,32 +62,40 @@ describe("path index (precomputed lookup)", () => {
     expect(getPositionAlongPathIndexed(index, 0.5)).toEqual({ x: 5, y: 0, z: 2 });
   });
 
-  it("is faster than the linear scan", () => {
-    const points: Array<[number, number]> = [];
-    let x = 0;
-    let z = 0;
-    for (let i = 0; i < 2080; i += 1) {
-      points.push([x, z]);
-      x += 0.5;
-      if (i % 4 === 3) z += 1;
-    }
-    const waypoints = makeWaypoints(points);
-    const index = createPathIndex(waypoints);
+  // The linear scan is genuinely ~hundreds of times slower, so a small N is
+  // enough to measure the difference reliably. Keep N small (and give the test
+  // an explicit timeout) so the benchmark never blows past Vitest's default
+  // 5s test timeout on slow CI runners.
+  it(
+    "is faster than the linear scan",
+    () => {
+      const points: Array<[number, number]> = [];
+      let x = 0;
+      let z = 0;
+      for (let i = 0; i < 2080; i += 1) {
+        points.push([x, z]);
+        x += 0.5;
+        if (i % 4 === 3) z += 1;
+      }
+      const waypoints = makeWaypoints(points);
+      const index = createPathIndex(waypoints);
 
-    const N = 200_000;
-    const t0 = performance.now();
-    for (let i = 0; i < N; i += 1) {
-      getPositionAlongPath((i % 10000) / 10000, waypoints);
-    }
-    const tLinear = performance.now() - t0;
+      const N = 20_000;
+      const t0 = performance.now();
+      for (let i = 0; i < N; i += 1) {
+        getPositionAlongPath((i % 10000) / 10000, waypoints);
+      }
+      const tLinear = performance.now() - t0;
 
-    const t1 = performance.now();
-    for (let i = 0; i < N; i += 1) {
-      getPositionAlongPathIndexed(index, (i % 10000) / 10000);
-    }
-    const tIndexed = performance.now() - t1;
+      const t1 = performance.now();
+      for (let i = 0; i < N; i += 1) {
+        getPositionAlongPathIndexed(index, (i % 10000) / 10000);
+      }
+      const tIndexed = performance.now() - t1;
 
-    console.log(`linear: ${tLinear.toFixed(1)}ms, indexed: ${tIndexed.toFixed(1)}ms, speedup: ${(tLinear / tIndexed).toFixed(1)}x`);
-    expect(tIndexed).toBeLessThan(tLinear);
-  });
+      console.log(`linear: ${tLinear.toFixed(1)}ms, indexed: ${tIndexed.toFixed(1)}ms, speedup: ${(tLinear / tIndexed).toFixed(1)}x`);
+      expect(tIndexed).toBeLessThan(tLinear);
+    },
+    20_000
+  );
 });

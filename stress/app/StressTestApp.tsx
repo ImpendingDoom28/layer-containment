@@ -1,7 +1,8 @@
 /**
  * Dedicated performance stress-test harness for LAYER CONTAINMENT.
  *
- * This entry (served via `index.stress.html` / `vite.stress.config.ts`) boots
+ * This entry (served via `stress/index.stress.html` /
+ * `stress/vite.config.ts`) boots
  * the full game scene on the generated "stress" level:
  *
  *   - 64x64 grid (4096 shader-compiled tiles)
@@ -26,26 +27,26 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Stats } from "@react-three/drei";
 import { useActions, WorldProvider } from "koota/react";
 
-import { GameScene } from "../components/scenes/game/GameScene";
-import { ShaderReadyGate } from "../components/systems/ShaderReadyGate";
-import { GAME_CANVAS_GL, GAME_CANVAS_STYLE } from "../constants/canvas";
-import { worldBaseActions } from "../core/ecs/actions/baseActions";
-import { isBase } from "../core/ecs/traits/base";
-import { HealthInfo } from "../core/ecs/traits/health";
-import { getLivingEnemyCount } from "../core/ecs/selectors/enemySnapshots";
-import { EntityIdProvider } from "../core/contexts/EntityIdContext";
-import { world } from "../core/ecs/world";
-import { useEnemyActions } from "../core/hooks/useEnemyActions";
-import { useGameSystem } from "../core/hooks/useGameSystem";
-import { useLevelSystem } from "../core/hooks/useLevelSystem";
-import { useProjectileSystem } from "../core/hooks/useProjectileSystem";
-import { useWaveSystem } from "../core/hooks/useWaveSystem";
-import { startNewRunSelector, useGameStore } from "../core/stores/useGameStore";
-import { useLevelStore } from "../core/stores/useLevelStore";
+import { GameScene } from "../../src/components/scenes/game/GameScene";
+import { ShaderReadyGate } from "../../src/components/systems/ShaderReadyGate";
+import { GAME_CANVAS_GL, GAME_CANVAS_STYLE } from "../../src/constants/canvas";
+import { worldBaseActions } from "../../src/core/ecs/actions/baseActions";
+import { isBase } from "../../src/core/ecs/traits/base";
+import { HealthInfo } from "../../src/core/ecs/traits/health";
+import { getLivingEnemyCount } from "../../src/core/ecs/selectors/enemySnapshots";
+import { EntityIdProvider } from "../../src/core/contexts/EntityIdContext";
+import { world } from "../../src/core/ecs/world";
+import { useEnemyActions } from "../../src/core/hooks/useEnemyActions";
+import { useGameSystem } from "../../src/core/hooks/useGameSystem";
+import { useLevelSystem } from "../../src/core/hooks/useLevelSystem";
+import { useProjectileSystem } from "../../src/core/hooks/useProjectileSystem";
+import { useWaveSystem } from "../../src/core/hooks/useWaveSystem";
+import { startNewRunSelector, useGameStore } from "../../src/core/stores/useGameStore";
+import { useLevelStore } from "../../src/core/stores/useLevelStore";
 import {
   resetLevelEnemyUpgradesSelector,
   useUpgradeStore,
-} from "../core/stores/useUpgradeStore";
+} from "../../src/core/stores/useUpgradeStore";
 
 const STRESS_LEVEL_ID = "stress" as const;
 const STRESS_BASE_HEALTH = 1_000_000;

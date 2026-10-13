@@ -3,18 +3,22 @@
  * window and prints the hottest JS functions (self time) plus the heaviest
  * call stacks. Answers "what eats CPU process time the most".
  *
- * Usage: node scripts/cpu-profile.mjs [--metal]
+ * Usage: node stress/scripts/cpu-profile.mjs [--metal]
  */
 import { chromium } from "@playwright/test";
 import { writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const URL = "http://localhost:5174/index.stress.html";
+import { ensureStressServer, safeClose, STRESS_URL } from "../stress-server.mjs";
+
 const METAL = process.argv.includes("--metal");
 const DURATION_S = Number(process.env.DURATION_S ?? 10);
 
 const readOverlay = async (page) =>
   (await page.getByTestId("stress-stats-overlay").textContent()) ?? "";
+
+await ensureStressServer();
 
 const browser = await chromium.launch(
   METAL ? { args: ["--use-angle=metal"] } : undefined
@@ -23,7 +27,7 @@ const context = await browser.newContext({ viewport: { width: 1280, height: 720 
 const page = await context.newPage();
 const client = await context.newCDPSession(page);
 
-await page.goto(URL, { waitUntil: "domcontentloaded" });
+await page.goto(STRESS_URL, { waitUntil: "domcontentloaded" });
 await page.getByTestId("game-canvas").waitFor({ timeout: 30_000 });
 console.log(`[cpu] waiting for 30s metrics window...`);
 
@@ -42,7 +46,7 @@ await client.send("Profiler.start");
 await page.waitForTimeout(DURATION_S * 1000);
 const { profile } = await client.send("Profiler.stop");
 
-const outDir = path.resolve("profiling");
+const outDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "profiling");
 mkdirSync(outDir, { recursive: true });
 const file = path.join(outDir, `cpu-profile-${Date.now()}.cpuprofile`);
 writeFileSync(file, JSON.stringify(profile));
@@ -105,4 +109,4 @@ for (const f of topSelf) {
   );
 }
 
-await browser.close();
+await safeClose(browser);

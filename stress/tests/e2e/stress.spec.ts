@@ -1,6 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const STRESS_PATH = "/index.stress.html";
+// The entry lives in stress/index.stress.html; with Vite's root at the repo
+// root it is served at /stress/index.stress.html (not the main-menu flow).
+const STRESS_PATH = "/stress/index.stress.html";
 
 const onOpenStressScene = async (page: Page) => {
   await page.goto(STRESS_PATH);

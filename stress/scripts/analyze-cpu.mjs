@@ -2,8 +2,9 @@
 // ~3x median CPU work) and shows which functions dominate them vs calm buckets.
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const dir = "profiling";
+const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "profiling");
 const argFile = process.argv[2];
 const files = readdirSync(dir).filter((f) => f.endsWith(".cpuprofile")).sort();
 const f = argFile

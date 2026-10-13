@@ -6,11 +6,12 @@
  * and the wave it happened on, so the result reflects the heaviest waves
  * (e.g. wave 19 with ~183 concurrent enemies), not just the early ones.
  *
- * Usage: node scripts/peak-fps.mjs [--metal] [--minutes 4]
+ * Usage: node stress/scripts/peak-fps.mjs [--metal] [--minutes 4]
  */
 import { chromium } from "@playwright/test";
 
-const URL = "http://localhost:5174/index.stress.html";
+import { ensureStressServer, safeClose, STRESS_URL } from "../stress-server.mjs";
+
 const METAL = process.argv.includes("--metal");
 const idx = process.argv.indexOf("--minutes");
 // Without the flag, indexOf is -1 and argv[0] (the node path) would yield
@@ -23,6 +24,8 @@ const readStat = async (page, label) => {
   return line ? line.split("  ").slice(1).join("  ").trim() : "";
 };
 
+await ensureStressServer();
+
 const browser = await chromium.launch(
   METAL ? { args: ["--use-angle=metal"] } : undefined
 );
@@ -30,7 +33,7 @@ const context = await browser.newContext({ viewport: { width: 1280, height: 720 
 const page = await context.newPage();
 const pageErrors = [];
 page.on("pageerror", (e) => pageErrors.push(String(e)));
-await page.goto(URL, { waitUntil: "domcontentloaded" });
+await page.goto(STRESS_URL, { waitUntil: "domcontentloaded" });
 await page.getByTestId("game-canvas").waitFor({ timeout: 30_000 });
 console.log(`[peak] watching ${MINUTES} min...`);
 
@@ -99,4 +102,4 @@ if (pageErrors.length) {
   console.log("\npage errors:");
   for (const e of pageErrors.slice(0, 5)) console.log("  ", e);
 }
-await browser.close();
+await safeClose(browser);

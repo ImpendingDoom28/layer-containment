@@ -2,16 +2,16 @@
  * A/B attribution harness: measures the stress scene's frame rate with each
  * visual layer hidden, so we can attribute frame time to specific scene parts.
  *
- * Usage: node scripts/attribute-layers.mjs
+ * Usage: node stress/scripts/attribute-layers.mjs
  *
  * Prints a table: layer | draw calls (visible/hidden) | triangles | FPS.
  *
  * Requires the stress scene to expose `window.__stressScene` /
- * `window.__stressGl` (see SceneDebugBridge in src/stress-test).
+ * `window.__stressGl` (see SceneDebugBridge in stress/app).
  */
 import { chromium } from "@playwright/test";
 
-const URL = "http://localhost:5174/index.stress.html";
+import { ensureStressServer, safeClose, STRESS_URL } from "../stress-server.mjs";
 
 const LAYERS = [
   "grid",
@@ -95,12 +95,14 @@ const setLayerVisible = async (page, name, visible) => {
 };
 
 const METAL = process.argv.includes("--metal");
+await ensureStressServer();
+
 const browser = await chromium.launch(
   METAL ? { args: ["--use-angle=metal"] } : undefined
 );
 const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
 const page = await context.newPage();
-await page.goto(URL, { waitUntil: "domcontentloaded" });
+await page.goto(STRESS_URL, { waitUntil: "domcontentloaded" });
 await page.getByTestId("game-canvas").waitFor({ timeout: 30_000 });
 console.log("[attr] waiting for 30s metrics window...");
 
@@ -164,4 +166,4 @@ for (const r of results) {
   );
 }
 
-await browser.close();
+await safeClose(browser);

@@ -6,22 +6,25 @@
  * GPU cost — if it's near 60 FPS, the GPU has headroom and the rest is
  * CPU/JS.
  *
- * Usage: node scripts/frame-budget.mjs [--metal]
+ * Usage: node stress/scripts/frame-budget.mjs [--metal]
  */
 import { chromium } from "@playwright/test";
 
-const URL = "http://localhost:5174/index.stress.html";
+import { ensureStressServer, safeClose, STRESS_URL } from "../stress-server.mjs";
+
 const METAL = process.argv.includes("--metal");
 
 const readOverlay = async (page) =>
   (await page.getByTestId("stress-stats-overlay").textContent()) ?? "";
+
+await ensureStressServer();
 
 const browser = await chromium.launch(
   METAL ? { args: ["--use-angle=metal"] } : undefined
 );
 const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
 const page = await context.newPage();
-await page.goto(URL, { waitUntil: "domcontentloaded" });
+await page.goto(STRESS_URL, { waitUntil: "domcontentloaded" });
 await page.getByTestId("game-canvas").waitFor({ timeout: 30_000 });
 
 console.log("[budget] waiting for 30s metrics window...");
@@ -130,4 +133,4 @@ console.log("\n===== SUMMARY (ms per frame) =====");
 console.log("running:", JSON.stringify(summary(running)));
 console.log("paused: ", JSON.stringify(summary(paused)));
 
-await browser.close();
+await safeClose(browser);

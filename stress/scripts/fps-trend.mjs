@@ -3,16 +3,19 @@
  * enemy count over a long window, so the report can state honestly whether the
  * stress test stays >=60 FPS and, if not, at what enemy count it dips.
  *
- * Usage: node scripts/fps-trend.mjs [--metal] [--seconds 150]
+ * Usage: node stress/scripts/fps-trend.mjs [--metal] [--seconds 150]
  */
 import { chromium } from "@playwright/test";
 
-const URL = "http://localhost:5174/index.stress.html";
+import { ensureStressServer, safeClose, STRESS_URL } from "../stress-server.mjs";
+
 const METAL = process.argv.includes("--metal");
 const idx = process.argv.indexOf("--seconds");
 // Without the flag, indexOf is -1 and argv[0] (the node path) would yield
 // NaN; default to 150s.
 const SECONDS = idx === -1 ? 150 : Number(process.argv[idx + 1]);
+
+await ensureStressServer();
 
 const browser = await chromium.launch(
   METAL ? { args: ["--use-angle=metal"] } : undefined
@@ -21,7 +24,7 @@ const context = await browser.newContext({ viewport: { width: 1280, height: 720 
 const page = await context.newPage();
 const pageErrors = [];
 page.on("pageerror", (e) => pageErrors.push(String(e)));
-await page.goto(URL, { waitUntil: "domcontentloaded" });
+await page.goto(STRESS_URL, { waitUntil: "domcontentloaded" });
 await page.getByTestId("game-canvas").waitFor({ timeout: 30_000 });
 
 console.log("[trend] instrumenting rAF...");
@@ -102,4 +105,4 @@ if (pageErrors.length) {
   console.log("\npage errors:");
   for (const e of pageErrors.slice(0, 5)) console.log("  ", e);
 }
-await browser.close();
+await safeClose(browser);

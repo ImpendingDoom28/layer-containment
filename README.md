@@ -86,14 +86,17 @@ block (FPS, frame, draw calls, triangles, programs) for baseline measurement —
 no thresholds are enforced yet, the numbers are reported so limits can be set
 later.
 
-The stress app lives under `src/stress-test/` and is only reachable through its
-own Vite entry (`index.stress.html` / `vite.stress.config.ts`). It is **not**
-imported by the default `index.html` entry, so `npm run build` never bundles
-any stress-test code.
+Everything stress-test related — the app, the entry HTML, the Vite and
+Playwright configs, the e2e spec, and the profiling scripts — lives under
+`stress/` (the level data stays at `public/configs/levels/stress.json` because
+it is fetched at runtime). The stress app is only reachable through its own
+Vite entry (`stress/index.stress.html` / `stress/vite.config.ts`) and is
+**not** imported by the default `index.html` entry, so `npm run build` never
+bundles any stress-test code.
 
 ```bash
-npm run dev:stress          # serve http://localhost:5174/index.stress.html
-npm run build:stress        # build only the stress entry into dist-stress/
+npm run dev:stress          # serve http://localhost:5174/stress/index.stress.html
+npm run build:stress        # build only the stress entry into stress/dist/
 npm run test:e2e:stress     # Playwright smoke test + 30s averages (port 5174)
 npm run generate:stress-level  # regenerate public/configs/levels/stress.json
 ```
@@ -111,23 +114,29 @@ when the scenario parameters change.
 ### Stress-Test Profiling Tooling
 
 All scripts are standalone Node scripts (no test framework) that drive the
-stress entry at `http://localhost:5174/index.stress.html` with Playwright.
-Start the dev server first (`npm run dev:stress`). Pass `--metal` to force a
-real GPU via ANGLE/Metal (`--use-angle=metal`, e.g. an Apple Silicon Mac);
-without it Chromium falls back to SwiftShader (software GL), which is a
-separate, much slower regime and not representative of the 60 FPS target.
+stress entry at `http://localhost:5174/stress/index.stress.html` with
+Playwright. They are **self-contained**: each starts the stress dev server
+itself (from the repo root, via `stress/stress-server.mjs`) if nothing is
+already listening on port 5174, and stops it again on exit; a manually
+started `npm run dev:stress` is simply reused. The page is the stress scene
+itself — the main menu and its usual flow are never loaded. Run them from the
+repo root (e.g. `node stress/scripts/fps-trend.mjs --metal`); artifacts land
+in `profiling/` at the repo root. Pass `--metal` to force a real GPU via
+ANGLE/Metal (`--use-angle=metal`, e.g. an Apple Silicon Mac); without it
+Chromium falls back to SwiftShader (software GL), which is a separate, much
+slower regime and not representative of the 60 FPS target.
 
 | Script | What it measures |
 | --- | --- |
-| `scripts/profile-stress.mjs [--metal] [--trace]` | Baseline 30 s averages (FPS, frame, draw calls, triangles, programs) plus 5 steady-state samples; `--trace` captures a Chromium performance trace (CPU + GPU slices) via the CDP `Tracing` domain to `profiling/*.trace` (open in chrome://tracing / Perfetto). |
-| `scripts/frame-budget.mjs [--metal]` | Splits frame time into JS longtasks (via `PerformanceObserver`) vs `gl.render` API time vs an **unattributed residual** (non-longtask JS + GPU/present, which it does not measure directly), for the **running** and **paused** simulation. The paused number is an upper bound on GPU cost — if it's near 60 FPS, the GPU has headroom and the rest is CPU/JS. |
-| `scripts/cpu-profile.mjs [--metal]` | CDP `Profiler` (2000 samples/s) over a steady-state window; prints top self-time functions. |
-| `scripts/attribute-layers.mjs [--metal]` | A/B harness: hides scene layers by name (`skybox`, `ground`, `path`, `grid`, `towers`, `enemies`, `rock-decorations`, `shadow-light`) and measures the FPS delta of each, isolating which part of the scene costs what. |
-| `scripts/peak-fps.mjs [--metal] [--minutes N]` | Lets a full run (all 20 waves, restarts) play for N minutes and records the **worst FPS per wave**, so the result reflects the heaviest waves (e.g. wave 19 with ~183 concurrent enemies) rather than just the early ones. |
-| `scripts/fps-trend.mjs [--metal] [--seconds N]` | Honest per-frame ground truth: records every rAF interval and samples the live enemy/wave/projectile context, then reports avg / p50 / p90 / p95 / p99 / max frame time and the % of frames below 60/30 FPS with a per-10s time series. This is the script that actually validates "≥60 FPS" (windowed averages like `profile-stress` hide frame hitches). |
-| `scripts/cpu-profile.mjs [--metal]` / `scripts/cpu-profile-long.mjs [--metal] [--seconds N]` | CDP `Profiler` (2000 samples/s); `cpu-profile-long` captures a configurable long window so hitches can be correlated with time. |
-| `scripts/analyze-cpu.mjs [file]` | Time-resolved analysis of a saved `.cpuprofile`: splits self-time into 1s buckets, separates "hitch" buckets from calm ones, and prints the top self-time functions per bucket plus the overall top list. |
-| `scripts/dip-find.mjs [--metal] [--seconds N]` | Correlates JS longtasks and rAF hitches with game context (wave, enemies, projectiles, towers, upgrade gate) to identify the trigger of periodic frame drops. |
+| `stress/scripts/profile-stress.mjs [--metal] [--trace]` | Baseline 30 s averages (FPS, frame, draw calls, triangles, programs) plus 5 steady-state samples; `--trace` captures a Chromium performance trace (CPU + GPU slices) via the CDP `Tracing` domain to `profiling/*.trace` (open in chrome://tracing / Perfetto). |
+| `stress/scripts/frame-budget.mjs [--metal]` | Splits frame time into JS longtasks (via `PerformanceObserver`) vs `gl.render` API time vs an **unattributed residual** (non-longtask JS + GPU/present, which it does not measure directly), for the **running** and **paused** simulation. The paused number is an upper bound on GPU cost — if it's near 60 FPS, the GPU has headroom and the rest is CPU/JS. |
+| `stress/scripts/cpu-profile.mjs [--metal]` | CDP `Profiler` (2000 samples/s) over a steady-state window; prints top self-time functions. |
+| `stress/scripts/attribute-layers.mjs [--metal]` | A/B harness: hides scene layers by name (`skybox`, `ground`, `path`, `grid`, `towers`, `enemies`, `rock-decorations`, `shadow-light`) and measures the FPS delta of each, isolating which part of the scene costs what. |
+| `stress/scripts/peak-fps.mjs [--metal] [--minutes N]` | Lets a full run (all 20 waves, restarts) play for N minutes and records the **worst FPS per wave**, so the result reflects the heaviest waves (e.g. wave 19 with ~183 concurrent enemies) rather than just the early ones. |
+| `stress/scripts/fps-trend.mjs [--metal] [--seconds N]` | Honest per-frame ground truth: records every rAF interval and samples the live enemy/wave/projectile context, then reports avg / p50 / p90 / p95 / p99 / max frame time and the % of frames below 60/30 FPS with a per-10s time series. This is the script that actually validates "≥60 FPS" (windowed averages like `profile-stress` hide frame hitches). |
+| `stress/scripts/cpu-profile.mjs [--metal]` / `stress/scripts/cpu-profile-long.mjs [--metal] [--seconds N]` | CDP `Profiler` (2000 samples/s); `cpu-profile-long` captures a configurable long window so hitches can be correlated with time. |
+| `stress/scripts/analyze-cpu.mjs [file]` | Time-resolved analysis of a saved `.cpuprofile`: splits self-time into 1s buckets, separates "hitch" buckets from calm ones, and prints the top self-time functions per bucket plus the overall top list. |
+| `stress/scripts/dip-find.mjs [--metal] [--seconds N]` | Correlates JS longtasks and rAF hitches with game context (wave, enemies, projectiles, towers, upgrade gate) to identify the trigger of periodic frame drops. |
 
 The stress app exposes a small debug bridge on `window`
 (`__stressScene`, `__stressGl`, `__stressGameStore`, `__stressLevelStore`) and

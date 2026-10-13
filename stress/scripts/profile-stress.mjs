@@ -2,8 +2,8 @@
  * Manual profiling harness for the stress test.
  *
  * Usage:
- *   node scripts/profile-stress.mjs            # metrics only
- *   node scripts/profile-stress.mjs --trace    # + CDP performance trace (4s, steady state)
+ *   node stress/scripts/profile-stress.mjs            # metrics only
+ *   node stress/scripts/profile-stress.mjs --trace    # + CDP performance trace (4s, steady state)
  *
  * Waits until the 30s average window has frozen, prints the overlay metrics,
  * then samples a few live frames for steady-state numbers. With --trace it
@@ -15,8 +15,10 @@
 import { chromium } from "@playwright/test";
 import { writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const URL = "http://localhost:5174/index.stress.html";
+import { ensureStressServer, safeClose, STRESS_URL } from "../stress-server.mjs";
+
 const TRACE = process.argv.includes("--trace");
 const TRACE_SECONDS = Number(process.env.TRACE_SECONDS ?? 4);
 
@@ -27,6 +29,8 @@ const readStat = async (page, label) => {
 };
 
 const METAL = process.argv.includes("--metal");
+await ensureStressServer();
+
 const browser = await chromium.launch(
   METAL ? { args: ["--use-angle=metal"] } : undefined
 );
@@ -39,7 +43,7 @@ page.on("console", (msg) => {
   if (msg.type() === "error") pageErrors.push(msg.text());
 });
 
-await page.goto(URL, { waitUntil: "domcontentloaded" });
+await page.goto(STRESS_URL, { waitUntil: "domcontentloaded" });
 await page.getByTestId("game-canvas").waitFor({ timeout: 30_000 });
 console.log("[profile] page loaded, waiting for 30s average window...");
 
@@ -91,7 +95,7 @@ if (TRACE) {
   // Tracing.end may return the last chunk in `value` or nothing (all events
   // already streamed via dataCollected); handle both.
   if (final.value) for (const c of final.value) chunks.push(c);
-  const traceOutDir = path.resolve("profiling");
+  const traceOutDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "profiling");
   mkdirSync(traceOutDir, { recursive: true });
   const traceFile = path.join(traceOutDir, `stress-trace-${Date.now()}.trace`);
   writeFileSync(traceFile, chunks.join(""));
@@ -122,4 +126,4 @@ for (let i = 0; i < 5; i++) {
 console.log("[profile] steady-state samples:");
 for (const s of samples) console.log("  ", JSON.stringify(s));
 
-await browser.close();
+await safeClose(browser);

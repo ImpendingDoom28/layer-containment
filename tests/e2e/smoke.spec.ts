@@ -102,6 +102,64 @@ test("shows all tower types in the shop after starting a run", async ({
   ).toBeVisible();
 });
 
+test("rebinds a control in the Settings Controls section and remembers it", async ({
+  page,
+}) => {
+  const settingsStorageKey = "containment-layer-settings-v1";
+
+  await onOpenMainMenu(page);
+
+  await page.getByRole("button", { name: "Settings" }).click();
+
+  await expect(page.getByText("Controls")).toBeVisible();
+  await expect(page.getByTestId("keybinding-row-cameraForward")).toContainText(
+    "W"
+  );
+  await expect(page.getByTestId("keybinding-row-pause")).toContainText("Space");
+  await expect(page.getByTestId("keybinding-row-toggleDebug")).toContainText(
+    "D"
+  );
+
+  // Clicking a row arms a rebind; the row shows a "press a key" prompt.
+  await page.getByTestId("keybinding-row-cameraForward").click();
+  await expect(page.getByTestId("keybinding-row-cameraForward")).toContainText(
+    "Press a key"
+  );
+
+  // Escape cancels the rebind without changing the binding.
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("keybinding-row-cameraForward")).toContainText(
+    "W"
+  );
+
+  // Rebind again and confirm with a new key.
+  await page.getByTestId("keybinding-row-cameraForward").click();
+  await page.keyboard.press("i");
+  await expect(page.getByTestId("keybinding-row-cameraForward")).toContainText(
+    "I"
+  );
+
+  // Back to the main menu, reload, and confirm the binding persisted.
+  await page.locator('[data-slot="card-title"] button').first().click();
+  await expect(page.getByRole("button", { name: "Play" })).toBeVisible();
+
+  const persisted = await page.evaluate((key) => {
+    const raw = localStorage.getItem(key);
+    return raw
+      ? (JSON.parse(raw).state as { keybindings: Record<string, string> })
+          ?.keybindings
+      : null;
+  }, settingsStorageKey);
+  expect(persisted?.cameraForward).toBe("KeyI");
+
+  await page.reload();
+  await onOpenMainMenu(page);
+  await page.getByRole("button", { name: "Settings" }).click();
+  await expect(page.getByTestId("keybinding-row-cameraForward")).toContainText(
+    "I"
+  );
+});
+
 test("opens the game menu from gameplay with Escape and resumes", async ({
   page,
 }) => {

@@ -25,6 +25,7 @@ A 3D tower defense game built with React, Tailwind CSS, and React Three Fiber.
 - **Tower management** - Click on placed towers to view info and sell them (50% refund)
 - **Audio system** - Sound effects with adjustable volume controls (master, SFX, music, ambient); gameplay SFX use Web Audio spatialization from world positions and the camera, while UI clicks and screen feedback (pause, win, lose, resume) stay non-spatial
 - **Main menu** - Editorial-style start screen with left-rail navigation, large typography, slide-in transitions, and optional GitHub/source icon (`VITE_REPOSITORY_URL` in `.env`)
+- **Menu parallax** - Tilted menu panels (main menu, game menu, settings/almanac/level picker, tower shop, and game stats) follow the cursor with a subtle eased rotation and shift driven by mouse position, adding depth to the angled surfaces
 - **Level picker** - Play opens a sector list with SVG map previews, wave counts, and one-tap start for each playable level (menu-only `level_main` is not listed)
 - **Enemy Almanac** - Bestiary that tracks discovered enemy types with stats and descriptions (persists to localStorage)
 - **Wave controls** - Start waves early or wait for automatic wave progression

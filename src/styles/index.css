@@ -198,6 +198,13 @@
  * right-anchored ones from the right edge. The shadow utilities are
  * separate so transparent panels (e.g. the main menu) can tilt without
  * casting a shadow over an invisible surface.
+ *
+ * On top of the static tilt, panels pick up a subtle mouse parallax:
+ * useMenuParallax writes the --ui-menu-parallax-x/-y custom properties
+ * (unitless, -10..10 around the viewport center) on the document root,
+ * and the tilt utilities below feed them into a small rotation plus
+ * shift. The transform transition on the same utilities eases panels
+ * after the cursor instead of snapping to it.
  */
 @utility ui-menu-tilt {
   transform-style: preserve-3d;
@@ -205,13 +212,23 @@
 }
 
 @utility ui-menu-tilt-left {
-  transform: perspective(1200px) rotateY(5deg);
+  transform: perspective(1200px)
+    rotateY(calc(5deg - var(--ui-menu-parallax-x, 0) * 0.06deg))
+    rotateX(calc(var(--ui-menu-parallax-y, 0) * 0.06deg))
+    translate(calc(var(--ui-menu-parallax-x, 0) * 0.4px),
+      calc(var(--ui-menu-parallax-y, 0) * 0.4px));
   transform-origin: left center;
+  transition: transform 300ms ease-out;
 }
 
 @utility ui-menu-tilt-right {
-  transform: perspective(1200px) rotateY(-5deg);
+  transform: perspective(1200px)
+    rotateY(calc(-5deg + var(--ui-menu-parallax-x, 0) * 0.06deg))
+    rotateX(calc(var(--ui-menu-parallax-y, 0) * 0.06deg))
+    translate(calc(var(--ui-menu-parallax-x, 0) * 0.4px),
+      calc(var(--ui-menu-parallax-y, 0) * 0.4px));
   transform-origin: right center;
+  transition: transform 300ms ease-out;
 }
 
 @utility ui-menu-tilt-shadow-left {

@@ -29,6 +29,7 @@ import { useWaveSystem } from "../../core/hooks/useWaveSystem";
 import { useLevelSystem } from "../../core/hooks/useLevelSystem";
 import { useUpgradesSystem } from "../../core/hooks/useUpgradesSystem";
 import { useHeldClose } from "../../core/hooks/useHeldClose";
+import { useMenuParallax } from "../../core/hooks/useMenuParallax";
 import { PageWrapper } from "./PageWrapper";
 
 type GamePageProps = {
@@ -39,6 +40,8 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
   const [activePlayableLevel, setActivePlayableLevel] =
     useState<PlayableLevelId>(PLAYABLE_LEVEL_IDS[0]);
   const [areShadersReady, setAreShadersReady] = useState(false);
+
+  useMenuParallax();
 
   const gameSystem = useGameSystem();
   const levelSystem = useLevelSystem();

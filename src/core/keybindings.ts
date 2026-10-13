@@ -218,10 +218,15 @@ const ARROW_MOVES: Record<string, CameraMove> = {
   ArrowRight: "right",
 };
 
+const tokenKeyCode = (token: string): string => {
+  const parts = token.split("+");
+  return parts[parts.length - 1] ?? token;
+};
+
 /**
  * Maps a keydown event to the camera movement it drives, if any. Arrow keys
  * are always active; the user-configured bindings are checked for the
- * remaining codes.
+ * remaining codes with their exact modifier state.
  */
 export const getCameraMoveForEvent = (
   config: Partial<KeybindingsConfig>,
@@ -249,4 +254,34 @@ export const getCameraMoveForEvent = (
   }
 
   return null;
+};
+
+/**
+ * Returns every camera movement whose binding is assigned to the given
+ * physical key, ignoring modifier state. Keyup events use this because the
+ * modifiers held when a key is released can differ from when it was pressed
+ * (e.g. releasing a chord's key before its modifiers); matching by code alone
+ * guarantees the movement is always cleared.
+ */
+export const getCameraMovesForKeyCode = (
+  config: Partial<KeybindingsConfig>,
+  code: string
+): CameraMove[] => {
+  const moves: CameraMove[] = [];
+  const arrowMove = ARROW_MOVES[code];
+  if (arrowMove) {
+    moves.push(arrowMove);
+  }
+
+  for (const [move, bindingKey] of Object.entries(CAMERA_MOVE_BINDINGS) as [
+    CameraMove,
+    KeybindingKey,
+  ][]) {
+    const token = resolveKeybinding(config, KEYBINDING_BY_KEY[bindingKey]);
+    if (tokenKeyCode(token) === code) {
+      moves.push(move);
+    }
+  }
+
+  return moves;
 };

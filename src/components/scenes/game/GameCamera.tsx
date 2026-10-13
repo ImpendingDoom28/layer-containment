@@ -26,7 +26,10 @@ import {
   UI_ACTION_DENIED_CAMERA_SHAKE_SCALE_XZ,
   UI_ACTION_DENIED_CAMERA_SHAKE_SCALE_Y,
 } from "../../../constants/uiActionDeniedFeedback";
-import { getCameraMoveForEvent } from "../../../core/keybindings";
+import {
+  getCameraMoveForEvent,
+  getCameraMovesForKeyCode,
+} from "../../../core/keybindings";
 import {
   keybindingsSelector,
   useSettingsStore,
@@ -107,8 +110,10 @@ export const GameCamera = ({
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      const move = getCameraMoveForEvent(keybindings, e.code, e);
-      if (move) {
+      // Keyup matches by physical code only: the modifiers held when a key is
+      // released can differ from when it was pressed, so exact modifier
+      // matching could leave a movement stuck on.
+      for (const move of getCameraMovesForKeyCode(keybindings, e.code)) {
         moveState.current[move] = false;
       }
     };

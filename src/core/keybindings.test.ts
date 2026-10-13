@@ -5,6 +5,7 @@ import {
   KEYBINDING_BY_KEY,
   formatKeyCode,
   getCameraMoveForEvent,
+  getCameraMovesForKeyCode,
   matchesKeybinding,
   normalizeKeyToBinding,
   resolveKeybinding,
@@ -205,5 +206,61 @@ describe("getCameraMoveForEvent", () => {
     expect(
       getCameraMoveForEvent(DEFAULT_KEYBINDINGS, "KeyM", noModifiers)
     ).toBe(null);
+  });
+});
+
+describe("getCameraMovesForKeyCode", () => {
+  it("maps the default camera keys by code only", () => {
+    expect(getCameraMovesForKeyCode(DEFAULT_KEYBINDINGS, "KeyW")).toEqual([
+      "forward",
+    ]);
+    expect(getCameraMovesForKeyCode(DEFAULT_KEYBINDINGS, "KeyS")).toEqual([
+      "backward",
+    ]);
+    expect(getCameraMovesForKeyCode(DEFAULT_KEYBINDINGS, "KeyA")).toEqual([
+      "left",
+    ]);
+    expect(getCameraMovesForKeyCode(DEFAULT_KEYBINDINGS, "KeyD")).toEqual([
+      "right",
+    ]);
+    expect(getCameraMovesForKeyCode(DEFAULT_KEYBINDINGS, "KeyE")).toEqual([
+      "up",
+    ]);
+    expect(getCameraMovesForKeyCode(DEFAULT_KEYBINDINGS, "KeyQ")).toEqual([
+      "down",
+    ]);
+  });
+
+  it("always clears arrow keys regardless of config", () => {
+    expect(getCameraMovesForKeyCode({}, "ArrowUp")).toEqual(["forward"]);
+    expect(getCameraMovesForKeyCode({}, "ArrowRight")).toEqual(["right"]);
+  });
+
+  it("clears the key of a chord binding without modifiers", () => {
+    const config = {
+      ...DEFAULT_KEYBINDINGS,
+      cameraLeft: "Ctrl+KeyL",
+    };
+
+    // Keyup for the chord key must clear "left" even when modifiers no longer
+    // match (the CodeRabbit finding).
+    expect(getCameraMovesForKeyCode(config, "KeyL")).toContain("left");
+    expect(getCameraMovesForKeyCode(config, "KeyL")).toEqual(["left"]);
+  });
+
+  it("clears every movement bound to the same code", () => {
+    const config = {
+      ...DEFAULT_KEYBINDINGS,
+      cameraUp: "KeyW",
+    };
+
+    expect(getCameraMovesForKeyCode(config, "KeyW").sort()).toEqual([
+      "forward",
+      "up",
+    ]);
+  });
+
+  it("returns an empty list for unrelated keys", () => {
+    expect(getCameraMovesForKeyCode(DEFAULT_KEYBINDINGS, "KeyM")).toEqual([]);
   });
 });

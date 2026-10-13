@@ -31,8 +31,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
-      "@/ui": path.resolve(__dirname, "./src/components/ui"),
+      "@": path.resolve(import.meta.dirname, "./src"),
+      "@/ui": path.resolve(import.meta.dirname, "./src/components/ui"),
     },
   },
   build: {
@@ -40,7 +40,7 @@ export default defineConfig({
     // two never clobber each other.
     outDir: "dist-stress",
     rollupOptions: {
-      input: path.resolve(__dirname, "index.stress.html"),
+      input: path.resolve(import.meta.dirname, "index.stress.html"),
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {

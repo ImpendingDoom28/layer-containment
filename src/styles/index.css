@@ -198,6 +198,9 @@
  * right-anchored ones from the right edge. The shadow utilities are
  * separate so transparent panels (e.g. the main menu) can tilt without
  * casting a shadow over an invisible surface.
+ *
+ * The .ui-menu-parallax-on rules below add a subtle mouse parallax and a
+ * canvas-side edge lift, gated by a root class set by useMenuParallax.
  */
 @utility ui-menu-tilt {
   transform-style: preserve-3d;
@@ -205,13 +208,52 @@
 }
 
 @utility ui-menu-tilt-left {
-  transform: perspective(1200px) rotateY(5deg);
   transform-origin: left center;
 }
 
 @utility ui-menu-tilt-right {
-  transform: perspective(1200px) rotateY(-5deg);
   transform-origin: right center;
+}
+
+.ui-menu-parallax-on .ui-menu-tilt-left {
+  --ui-menu-proximity-lift: calc(var(--ui-menu-proximity, 0) * -2deg);
+  transform: perspective(1200px)
+    rotateY(
+      calc(
+        5deg - var(--ui-menu-parallax-x, 0) * 0.06deg +
+          var(--ui-menu-proximity-lift, 0deg)
+      )
+    )
+    rotateX(calc(var(--ui-menu-parallax-y, 0) * 0.06deg))
+    translate(
+      calc(var(--ui-menu-parallax-x, 0) * 0.4px),
+      calc(var(--ui-menu-parallax-y, 0) * 0.4px)
+    );
+  transition: transform 300ms ease-out;
+}
+
+.ui-menu-parallax-on .ui-menu-tilt-right {
+  --ui-menu-proximity-lift: calc(var(--ui-menu-proximity, 0) * 2deg);
+  transform: perspective(1200px)
+    rotateY(
+      calc(
+        -5deg + var(--ui-menu-parallax-x, 0) * 0.06deg +
+          var(--ui-menu-proximity-lift, 0deg)
+      )
+    )
+    rotateX(calc(var(--ui-menu-parallax-y, 0) * 0.06deg))
+    translate(
+      calc(var(--ui-menu-parallax-x, 0) * 0.4px),
+      calc(var(--ui-menu-parallax-y, 0) * 0.4px)
+    );
+  transition: transform 300ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-menu-tilt-left,
+  .ui-menu-tilt-right {
+    transition: none;
+  }
 }
 
 @utility ui-menu-tilt-shadow-left {

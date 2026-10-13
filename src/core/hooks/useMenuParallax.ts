@@ -3,33 +3,18 @@ import { useEffect } from "react";
 import { useGameStore } from "../stores/useGameStore";
 import type { GameStatus } from "../types/game";
 
-// Max value for --ui-menu-parallax-x/-y in px; the tilt utilities scale
-// it down further.
 const PARALLAX_MAX_OFFSET_PX = 6;
-// Pointer distance (px) from the panel's canvas-side edge at which the
-// proximity lift bottoms out.
 const PROXIMITY_FAR_PX = 240;
-// Left-anchored menu panel is w-[45%] max-w-xl; this is its canvas-side
-// (right) edge in px.
+// Left-anchored menu panel is w-[45%] max-w-xl, so its canvas-side edge
+// is min(45% of the viewport, 576px).
 const PANEL_EDGE_RATIO = 0.45;
 const PANEL_EDGE_MAX_PX = 576;
 
-// Parallax only runs in the between-HUD menus (main menu, in-game pause
-// menu), never over the gameplay HUD.
 const PARALLAX_STATUSES: ReadonlySet<GameStatus> = new Set([
   "menu",
   "gameMenu",
 ]);
 
-// Drives the mouse parallax of the tilted menu panels. One pointermove
-// listener on the document root writes three custom properties:
-// --ui-menu-parallax-x/-y (cursor offset around the viewport center) and
-// --ui-menu-proximity (0..1, how close the cursor is to the panel's
-// canvas-side edge). The ui-menu-tilt-* utilities feed them into a small
-// rotation and shift, plus a lift of the canvas-side edge, with their
-// transform transition easing the panels into place. While a gameplay
-// status is active or prefers-reduced-motion is on, the panels keep
-// their static tilt and do not follow the cursor.
 export const useMenuParallax = () => {
   useEffect(() => {
     const root = document.documentElement;
@@ -48,6 +33,7 @@ export const useMenuParallax = () => {
         PARALLAX_STATUSES.has(useGameStore.getState().gameStatus);
       if (next === enabled) return;
       enabled = next;
+      // The CSS gates the parallax transforms on this root class.
       root.classList.toggle("ui-menu-parallax-on", next);
       if (!next) clearVariables();
     };
@@ -62,8 +48,6 @@ export const useMenuParallax = () => {
       root.style.setProperty("--ui-menu-parallax-x", `${x}`);
       root.style.setProperty("--ui-menu-parallax-y", `${y}`);
 
-      // 1 when the cursor is at/past the panel's canvas-side edge, 0
-      // once PROXIMITY_FAR_PX to its left.
       const panelEdgeX = Math.min(
         window.innerWidth * PANEL_EDGE_RATIO,
         PANEL_EDGE_MAX_PX

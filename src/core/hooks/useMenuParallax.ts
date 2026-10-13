@@ -7,12 +7,24 @@ const PARALLAX_MAX_OFFSET_PX = 10;
 // listener on the document root writes --ui-menu-parallax-x/-y
 // (unitless, clamped to -MAX..MAX around the viewport center); the
 // ui-menu-tilt-* utilities feed those into a small rotation and shift,
-// and their transform transition eases the panels into place.
+// and their transform transition eases the panels into place. With
+// prefers-reduced-motion enabled the panels keep their static tilt and
+// do not follow the cursor.
 export const useMenuParallax = () => {
   useEffect(() => {
     const root = document.documentElement;
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    );
+
+    const clearVariables = () => {
+      root.style.removeProperty("--ui-menu-parallax-x");
+      root.style.removeProperty("--ui-menu-parallax-y");
+    };
 
     const onPointerMove = (event: PointerEvent) => {
+      if (reducedMotion.matches) return;
+
       const x = Math.max(
         -1,
         Math.min(1, (event.clientX / window.innerWidth) * 2 - 1)
@@ -31,11 +43,18 @@ export const useMenuParallax = () => {
       );
     };
 
+    // A runtime toggle of the OS setting must also stop the parallax
+    // instead of leaving the last offset frozen on the panels.
+    const onReducedMotionChange = (event: MediaQueryListEvent) => {
+      if (event.matches) clearVariables();
+    };
+
     root.addEventListener("pointermove", onPointerMove);
+    reducedMotion.addEventListener("change", onReducedMotionChange);
     return () => {
       root.removeEventListener("pointermove", onPointerMove);
-      root.style.removeProperty("--ui-menu-parallax-x");
-      root.style.removeProperty("--ui-menu-parallax-y");
+      reducedMotion.removeEventListener("change", onReducedMotionChange);
+      clearVariables();
     };
   }, []);
 };

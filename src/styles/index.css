@@ -231,6 +231,15 @@
   transition: transform 300ms ease-out;
 }
 
+/* Under reduced motion the cursor chase is off: the panels keep their
+ * static tilt with no parallax-driven movement or easing. */
+@media (prefers-reduced-motion: reduce) {
+  .ui-menu-tilt-left,
+  .ui-menu-tilt-right {
+    transition: none;
+  }
+}
+
 @utility ui-menu-tilt-shadow-left {
   box-shadow: 24px 0 48px -12px oklch(0 0 0 / 0.6);
 }

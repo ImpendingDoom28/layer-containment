@@ -10,6 +10,10 @@ import {
   totalWavesSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
+import {
+  nextWaveReadySelector,
+  useWaveStore,
+} from "../../core/stores/useWaveStore";
 import { HUDWrapper } from "./HUDWrapper";
 import { UIMoney } from "../ui/UIMoney";
 
@@ -31,6 +35,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
   onStartWave,
 }) => {
   const totalWaves = useLevelStore(totalWavesSelector);
+  const nextWaveReady = useWaveStore(nextWaveReadySelector);
 
   const getHealthColor = (): string => {
     if (health > 15) return "text-green-400";
@@ -75,7 +80,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
             </div>
 
             <div>
-              {currentWave < totalWaves && remainingEnemies === 0 && (
+              {currentWave < totalWaves && nextWaveReady && (
                 <div className="flex flex-col justify-center flex-1 gap-1">
                   <UIButton onClick={onStartWave} variant="outline">
                     <Play /> Start next wave

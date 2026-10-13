@@ -5,9 +5,12 @@ import { TowerSystem } from "./TowerSystem";
 import { Building } from "../entities/Building";
 import { Water } from "../entities/Water";
 import { Enemy } from "../entities/Enemy";
-import { useLevelSystem } from "../../core/hooks/useLevelSystem";
 import {
   buildingsSelector,
+  gridSizeSelector,
+  gridOffsetSelector,
+  pathWaypointsSelector,
+  towersSelector,
   useLevelStore,
   watersSelector,
 } from "../../core/stores/useLevelStore";
@@ -19,17 +22,20 @@ import type {
 } from "../../core/types/game";
 import type { TileData } from "../../core/types/utils";
 import type { TilePlacementState } from "../../utils/tilePlacement";
+import { getTilePlacementState as getSharedTilePlacementState } from "../../utils/tilePlacement";
 import { Effect } from "../entities/effects/Effect";
 import { useInstancedProjectiles } from "../../core/hooks/useInstancedProjectiles";
 import { MedicHealPulseSystem } from "./MedicHealPulseSystem";
 import { ApplySlowSystem } from "./ApplySlowSystem";
 import { EnemyMovementSystem } from "./EnemyMovementSystem";
 import {
+  pathWidthSelector,
   selectedTowerTypeToPlaceSelector,
   setSelectedTowerSelector,
   setSelectedTowerTypeToPlaceSelector,
+  tileSizeSelector,
+  useGameStore,
 } from "../../core/stores/useGameStore";
-import { useGameStore } from "../../core/stores/useGameStore";
 import { IsEnemy } from "../../core/ecs/traits/enemy";
 import { useSimulationClock } from "../../core/hooks/useSimulationClock";
 
@@ -73,11 +79,34 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
       setSelectedTowerTypeToPlaceSelector
     );
     const setSelectedTower = useGameStore(setSelectedTowerSelector);
-    const levelSystem = useLevelSystem();
     const buildings = useLevelStore(buildingsSelector);
     const waters = useLevelStore(watersSelector);
-    const { getTilePlacementState, updateTower } = levelSystem;
+    const towers = useLevelStore(towersSelector);
+    const gridOffset = useLevelStore(gridOffsetSelector);
+    const pathWaypoints = useLevelStore(pathWaypointsSelector);
+    const tileSize = useGameStore(tileSizeSelector);
+    const pathWidth = useGameStore(pathWidthSelector);
     const getSimulationTime = useSimulationClock(shouldStopMovement);
+
+    // Built from stable level data (not `useLevelSystem`, which subscribes to
+    // towers/money and would re-render this whole subtree on every shot/kill)
+    // so it stays referentially stable while the level is unchanged.
+    const getTilePlacementState = useCallback(
+      (gridX: number, gridZ: number) => {
+        return getSharedTilePlacementState({
+          gridX,
+          gridZ,
+          towers,
+          buildings,
+          waters,
+          gridOffset,
+          tileSize,
+          pathWaypoints,
+          pathWidth,
+        });
+      },
+      [towers, buildings, waters, gridOffset, tileSize, pathWaypoints, pathWidth]
+    );
 
     const { InstancedProjectiles, fireProjectile } = useInstancedProjectiles({
       maxProjectiles: 500,
@@ -133,20 +162,21 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
           <Water key={water.id} water={water} />
         ))}
 
-        {enemyEntities.map((entity) => (
-          <Enemy
-            key={entity}
-            entity={entity}
-            getSimulationTime={getSimulationTime}
-            shouldStopMovement={shouldStopMovement}
-            onSpawnEffect={onSpawnEffect}
-          />
-        ))}
+        <group name="enemies">
+          {enemyEntities.map((entity) => (
+            <Enemy
+              key={entity}
+              entity={entity}
+              getSimulationTime={getSimulationTime}
+              shouldStopMovement={shouldStopMovement}
+              onSpawnEffect={onSpawnEffect}
+            />
+          ))}
+        </group>
 
         {InstancedProjectiles}
 
         <TowerSystem
-          updateTower={updateTower}
           onSellTower={onSellTower}
           hoveredTile={hoveredTile}
           onTowerClick={onTowerClick}

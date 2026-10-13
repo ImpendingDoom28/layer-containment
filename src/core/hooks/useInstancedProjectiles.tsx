@@ -32,7 +32,7 @@ import { useGameStore } from "../stores/useGameStore";
 import { useSettingsStore } from "../stores/useSettingsStore";
 import { useLevelStore } from "../stores/useLevelStore";
 import { world } from "../ecs/world";
-import { getEnemiesById } from "../ecs/selectors/enemySnapshots";
+import { refreshEnemyRegistry } from "../ecs/selectors/enemySnapshots";
 import type { GetSimulationTime } from "./useSimulationClock";
 
 const CHAIN_BOLT_RADIUS = 0.03;
@@ -605,7 +605,7 @@ export const useInstancedProjectiles = (
   }, []);
 
   useFrame((state, delta) => {
-    enemiesByIdRef.current = getEnemiesById(world);
+    enemiesByIdRef.current = refreshEnemyRegistry(world);
     const { gameStatus, isPageVisible } = useGameStore.getState();
     const pauseWhenTabHidden = useSettingsStore.getState().pauseWhenTabHidden;
     const shouldDisableControls =

@@ -162,7 +162,7 @@ export const Path: FC<PathProps> = memo(({ pathIndex }) => {
   if (!path) return null;
 
   return (
-    <group>
+    <group name="path">
       {sphereStrips.map((strip) => (
         <group key={strip.key}>
           <mesh position={strip.position} quaternion={strip.quaternion}>

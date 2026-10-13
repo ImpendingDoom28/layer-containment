@@ -10,8 +10,8 @@ import {
 } from "three";
 
 import { hashGrid2D } from "../../core/tileGridHash";
-import type { PathWaypoint, Tower } from "../../core/types/game";
-import { getTilePlacementState } from "../../utils/tilePlacement";
+import type { PathWaypoint } from "../../core/types/game";
+import { isGridTileOnPath } from "../../utils/pathUtils";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import {
   flatFieldToSphereSurface,
@@ -20,7 +20,6 @@ import {
 } from "../../utils/planetSurfaceMapping";
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import {
-  buildingsSelector,
   gridOffsetSelector,
   gridSizeSelector,
   useLevelStore,
@@ -35,14 +34,16 @@ import {
 
 export type PlanetTileDecorationsProps = {
   pathWaypoints: PathWaypoint[][];
-  towers: Tower[];
 };
 
 const ROCK_SURFACE_FRACTION = 0.32;
 
+// Rock decorations are static per level: they only depend on path geometry
+// and water, never on towers (a tower on a tile does not remove the rock) or
+// on the simulation. The previous `towers` prop re-ran the 4096-tile loop on
+// every tower shot.
 export const PlanetTileDecorations: FC<PlanetTileDecorationsProps> = memo(
-  ({ pathWaypoints, towers }) => {
-    const buildings = useLevelStore(buildingsSelector);
+  ({ pathWaypoints }) => {
     const waters = useLevelStore(watersSelector);
     const gridOffset = useLevelStore(gridOffsetSelector);
     const pathYOffset = useGameStore(pathYOffsetSelector);
@@ -84,18 +85,18 @@ export const PlanetTileDecorations: FC<PlanetTileDecorationsProps> = memo(
 
       for (let gridX = 0; gridX < gridSize; gridX += 1) {
         for (let gridZ = 0; gridZ < gridSize; gridZ += 1) {
-          const placement = getTilePlacementState({
+          const isOnPath = isGridTileOnPath(
             gridX,
             gridZ,
-            towers,
-            buildings,
-            waters,
             gridOffset,
             tileSize,
             pathWaypoints,
-            pathWidth,
-          });
-          if (placement.isOnPath || placement.isWater) continue;
+            pathWidth
+          );
+          const isWater = waters.some(
+            (w) => w.gridX === gridX && w.gridZ === gridZ
+          );
+          if (isOnPath || isWater) continue;
 
           const h0 = hashGrid2D(gridX, gridZ);
           if (h0 > ROCK_SURFACE_FRACTION) continue;
@@ -136,8 +137,6 @@ export const PlanetTileDecorations: FC<PlanetTileDecorationsProps> = memo(
       pathWaypoints,
       pathWidth,
       waters,
-      buildings,
-      towers,
       surfaceHalfHeight,
       dummy,
       rotQuat,
@@ -158,6 +157,7 @@ export const PlanetTileDecorations: FC<PlanetTileDecorationsProps> = memo(
     return (
       <instancedMesh
         key={count}
+        name="rock-decorations"
         ref={meshRef}
         args={[geometry, material, count]}
         castShadow

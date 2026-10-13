@@ -27,7 +27,6 @@ import { EntitiesSystem } from "../../systems/EntitiesSystem";
 import { LevelSystem } from "../../systems/LevelSystem";
 import {
   pathWaypointsSelector,
-  towersSelector,
   useLevelStore,
 } from "../../../core/stores/useLevelStore";
 import { Ground } from "../shared/Ground";
@@ -73,7 +72,6 @@ export const GameScene: React.FC<GameSceneProps> = ({
   playableLevelId,
 }) => {
   const pathWaypoints = useLevelStore(pathWaypointsSelector);
-  const towers = useLevelStore(towersSelector);
   const [hoveredTile, setHoveredTile] = useState<TileData | null>(null);
 
   const handleTileHover = useCallback(
@@ -115,7 +113,7 @@ export const GameScene: React.FC<GameSceneProps> = ({
         onTileHoverEnd={handleTileHoverEnd}
       />
 
-      <PlanetTileDecorations pathWaypoints={pathWaypoints} towers={towers} />
+      <PlanetTileDecorations pathWaypoints={pathWaypoints} />
 
       <PlacementHighlightOverlay hoveredTile={hoveredTile} />
 

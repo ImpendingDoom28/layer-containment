@@ -22,7 +22,7 @@
  * the normal `vite build` never bundles the stress-test code.
  */
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Stats } from "@react-three/drei";
 import { useActions, WorldProvider } from "koota/react";
 
@@ -32,7 +32,7 @@ import { GAME_CANVAS_GL, GAME_CANVAS_STYLE } from "../constants/canvas";
 import { worldBaseActions } from "../core/ecs/actions/baseActions";
 import { isBase } from "../core/ecs/traits/base";
 import { HealthInfo } from "../core/ecs/traits/health";
-import { getLivingEnemySnapshots } from "../core/ecs/selectors/enemySnapshots";
+import { getLivingEnemyCount } from "../core/ecs/selectors/enemySnapshots";
 import { EntityIdProvider } from "../core/contexts/EntityIdContext";
 import { world } from "../core/ecs/world";
 import { useEnemyActions } from "../core/hooks/useEnemyActions";
@@ -183,6 +183,38 @@ const StressStatsCollector = ({
 };
 
 /**
+ * Exposes the three scene and renderer on `window` so external profiling
+ * scripts (Playwright/CDP) can toggle named scene roots and read gl.info
+ * without React. Stress-entry only.
+ */
+const SceneDebugBridge = () => {
+  const { scene, gl } = useThree();
+  // The default directional shadow camera only covers a ~10x10-unit patch at
+  // the origin of this ~32-unit planet, so the shadow pass costs a full extra
+  // render of every scene mesh for almost no visible effect. Stress run only:
+  // disable it once the light has mounted.
+  const shadowDisabledRef = useRef(false);
+  useEffect(() => {
+    const w = window as unknown as Record<string, unknown>;
+    w.__stressScene = scene;
+    w.__stressGl = gl;
+    w.__stressGameStore = useGameStore;
+    w.__stressLevelStore = useLevelStore;
+    w.__stressUpgradeStore = useUpgradeStore;
+    w.__stressLivingCount = () => getLivingEnemyCount(world);
+  }, [scene, gl]);
+  useFrame(() => {
+    if (shadowDisabledRef.current) return;
+    const light = scene.getObjectByName("shadow-light");
+    if (light) {
+      (light as unknown as { castShadow: boolean }).castShadow = false;
+      shadowDisabledRef.current = true;
+    }
+  });
+  return null;
+};
+
+/**
  * Unattended driver: auto-picks upgrade gates, auto-starts waves, and
  * restarts the run forever after a win (or a defeat, just in case).
  */
@@ -245,7 +277,7 @@ const StressOverlay = ({
       const gameStatus = useGameStore.getState().gameStatus;
       const level = useLevelStore.getState();
       const upgrade = useUpgradeStore.getState();
-      const enemiesAlive = getLivingEnemySnapshots(world).length;
+      const enemiesAlive = getLivingEnemyCount(world);
       const base = world.queryFirst(isBase);
       const baseHealth = base ? base.get(HealthInfo) : undefined;
 
@@ -328,6 +360,18 @@ const StressTestGame = () => {
 
   const { spawnBase } = useActions(worldBaseActions);
   const startNewRun = useGameStore(startNewRunSelector);
+
+  // The stress level is fully pre-built and placement is disabled, so this is
+  // a stable no-op. It must be referentially stable: StressTestGame re-renders
+  // on every enemy kill/spawn (money / activeEffects subscriptions), and an
+  // inline `() => {}` here would give `Grid` a new prop each time, defeating
+  // its memo and re-rendering all 4096 tile meshes per kill.
+  const onPlaceTowerNoop = useCallback(
+    () => {
+      /* stress level is fully pre-built; placement is disabled */
+    },
+    []
+  );
   const resetLevelEnemyUpgrades = useUpgradeStore(
     resetLevelEnemyUpgradesSelector
   );
@@ -403,6 +447,7 @@ const StressTestGame = () => {
           onReadyChange={handleReadyChange}
         />
         <StressStatsCollector statsRef={statsRef} readyRef={readyRef} />
+        <SceneDebugBridge />
 
         {isGameConfigLoaded && (
           <Suspense
@@ -413,9 +458,7 @@ const StressTestGame = () => {
             }
           >
             <GameScene
-              placeTower={() => {
-                /* stress level is fully pre-built; placement is disabled */
-              }}
+              placeTower={onPlaceTowerNoop}
               onSpawnEffect={onSpawnEffect}
               onEndEffect={onEndEffect}
               onEffectComplete={onEffectComplete}

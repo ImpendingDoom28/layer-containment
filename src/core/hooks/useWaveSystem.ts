@@ -27,7 +27,7 @@ import { useWaveStore } from "../stores/useWaveStore";
 import { GameEvent } from "../types/enums/events";
 import { gameEvents } from "../../utils/eventEmitter";
 import { world } from "../ecs/world";
-import { getLivingEnemySnapshots } from "../ecs/selectors/enemySnapshots";
+import { getLivingEnemyCount } from "../ecs/selectors/enemySnapshots";
 
 type SpawnQueueItem = {
   type: EnemyType;
@@ -195,7 +195,7 @@ export const useWaveSystem = (gameState: GameState) => {
     if (currentWave >= totalWaves) return;
     if (currentWave > 0) {
       if (spawnQueueIndexRef.current < spawnQueueRef.current.length) return;
-      if (getLivingEnemySnapshots(world).length > 0) return;
+      if (getLivingEnemyCount(world) > 0) return;
     }
     startNextWave();
   }, [currentWave, totalWaves, startNextWave]);
@@ -232,7 +232,7 @@ export const useWaveSystem = (gameState: GameState) => {
 
       const waveCleared =
         spawnQueueIndexRef.current >= spawnQueueRef.current.length &&
-        getLivingEnemySnapshots(world).length === 0;
+        getLivingEnemyCount(world) === 0;
       const nextWaveReady =
         currentWave === 0 || (currentWave < totalWaves && waveCleared);
       if (useWaveStore.getState().nextWaveReady !== nextWaveReady) {
@@ -242,10 +242,7 @@ export const useWaveSystem = (gameState: GameState) => {
       if (currentWave === 0 || currentWave > totalWaves) return;
 
       if (spawnQueueIndexRef.current >= spawnQueueRef.current.length) {
-        if (
-          waveStartedRef.current &&
-          getLivingEnemySnapshots(world).length === 0
-        ) {
+        if (waveStartedRef.current && getLivingEnemyCount(world) === 0) {
           waveStartedRef.current = false;
           if (currentTime - lastSpawnTimeRef.current > 300) {
             if (currentWave < totalWaves) {
@@ -285,7 +282,7 @@ export const useWaveSystem = (gameState: GameState) => {
     return (
       spawnQueueRef.current.length -
       spawnQueueIndexRef.current +
-      getLivingEnemySnapshots(world).length
+      getLivingEnemyCount(world)
     );
   }, [currentWave, totalWaves]);
 

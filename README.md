@@ -108,6 +108,94 @@ The generated level is written to `public/configs/levels/stress.json` by
 `scripts/generate-stress-level.py`; rerun the generator (or commit the result)
 when the scenario parameters change.
 
+### Stress-Test Profiling Tooling
+
+All scripts are standalone Node scripts (no test framework) that drive the
+stress entry at `http://localhost:5174/index.stress.html` with Playwright.
+Start the dev server first (`npm run dev:stress`). Pass `--metal` to force a
+real GPU via ANGLE/Metal (`--use-angle=metal`, e.g. an Apple Silicon Mac);
+without it Chromium falls back to SwiftShader (software GL), which is a
+separate, much slower regime and not representative of the 60 FPS target.
+
+| Script | What it measures |
+| --- | --- |
+| `scripts/profile-stress.mjs [--metal] [--trace]` | Baseline 30 s averages (FPS, frame, draw calls, triangles, programs) plus 5 steady-state samples; `--trace` captures a CDP trace (`context.tracing`) of a few seconds to `profiling/`. |
+| `scripts/frame-budget.mjs [--metal]` | Splits frame time into JS longtasks (via `PerformanceObserver`) vs `gl.render` vs "other", for the **running** and **paused** simulation. The paused number is pure GPU cost — if it's near 60 FPS, the GPU has headroom and the rest is CPU/JS. |
+| `scripts/cpu-profile.mjs [--metal]` | CDP `Profiler` (2000 samples/s) over a steady-state window; prints top self-time functions. |
+| `scripts/attribute-layers.mjs [--metal]` | A/B harness: hides scene layers by name (`skybox`, `ground`, `path`, `grid`, `towers`, `enemies`, `rock-decorations`, `shadow-light`) and measures the FPS delta of each, isolating which part of the scene costs what. |
+| `scripts/peak-fps.mjs [--metal] [--minutes N]` | Lets a full run (all 20 waves, restarts) play for N minutes and records the **worst FPS per wave**, so the result reflects the heaviest waves (e.g. wave 19 with ~183 concurrent enemies) rather than just the early ones. |
+| `scripts/fps-trend.mjs [--metal] [--seconds N]` | Honest per-frame ground truth: records every rAF interval and samples the live enemy/wave/projectile context, then reports avg / p50 / p90 / p95 / p99 / max frame time and the % of frames below 60/30 FPS with a per-10s time series. This is the script that actually validates "≥60 FPS" (windowed averages like `profile-stress` hide frame hitches). |
+| `scripts/cpu-profile.mjs [--metal]` / `scripts/cpu-profile-long.mjs [--metal] [--seconds N]` | CDP `Profiler` (2000 samples/s); `cpu-profile-long` captures a configurable long window so hitches can be correlated with time. |
+| `scripts/analyze-cpu.mjs [file]` | Time-resolved analysis of a saved `.cpuprofile`: splits self-time into 1s buckets, separates "hitch" buckets from calm ones, and prints the top self-time functions per bucket plus the overall top list. |
+| `scripts/dip-find.mjs [--metal] [--seconds N]` | Correlates JS longtasks and rAF hitches with game context (wave, enemies, projectiles, towers, upgrade gate) to identify the trigger of periodic frame drops. |
+
+The stress app exposes a small debug bridge on `window`
+(`__stressScene`, `__stressGl`, `__stressGameStore`, `__stressLevelStore`) and
+names its scene layers, which the layer-hiding and GL-instrumentation scripts
+rely on.
+
+### Stress-Test Optimizations (CPU/JS-bound → 60 FPS target)
+
+Profiling on an Apple M1 Pro (`--metal`) showed the stress scene is
+**CPU/JS-bound, not GPU-bound**: the same ~2,180-draw-call scene renders at
+~75 FPS with the simulation paused, while running it cost ~87 ms of JS per
+frame (≈4 FPS). The optimizations below cut the steady-state JS from
+~87 ms/frame to under 1 ms/frame, bringing the stress test to a stable
+~68 FPS on M1 Pro (the 60 FPS target is met with headroom; p50 ≈75 FPS,
+p90 ≈68 FPS, and only ~6% of frames dip below 60 FPS).
+
+- **Killed the re-render storms.** The biggest single win: the stress entry
+  passed an **inline `placeTower={() => {}}` lambda** to `GameScene`, which
+  re-created the function on every enemy kill/spawn (the parent subscribes to
+  `money`/`activeEffects`). Since `Grid` is `memo` on `placeTower`, every kill
+  re-rendered **all 4,096 tile meshes** (this was the dominant `diffProps` /
+  `commitUpdate` spike in the profiles). It is now a stable `useCallback`
+  no-op. Tower fire-time (`lastFireTime`) also no longer lives in the reactive
+  `towers` zustand array (it was updated on every shot, re-creating the array
+  and re-rendering the grid, decorations, and tower system). It now lives in a
+  ref inside `TowerSystem` and is pruned on place/sell/restart. `Grid` and
+  `PlanetTileDecorations` no longer subscribe to per-frame-mutated state
+  (towers/money/active effects); they subscribe only to static level data
+  (path, water, grid geometry), so a tower shot or enemy kill no longer
+  re-renders 4,096 tiles.
+- **Cached the on-path lookup.** `isGridTileOnPath` (was ~15% of total CPU
+  time) is now cached per path-array identity with a `WeakMap`, so the
+  4,096-tile grid loop is O(1) per tile after the first build.
+- **Precomputed path index.** `src/utils/pathIndex.ts` precomputes segment
+  lengths and does an O(log n) binary-search lookup with zero per-call
+  allocation, replacing the O(n) scan + segment-array allocation in
+  `getPositionAlongPath` that ran per enemy per frame. A
+  `WeakMap`-keyed `getPositionAlongMultiplePathsFast` wraps it for the
+  multi-path movement path. Covered by `src/utils/pathIndex.test.ts`.
+- **Pooled enemy snapshots.** `refreshEnemyRegistry` keeps one `Enemy` object
+  per live entity (object pooling) and refreshes its dynamic fields in place
+  each frame, instead of allocating a fresh `Enemy` per entity per frame.
+  Tower targeting, projectile homing, and the living-enemy reads all use the
+  pooled list. `getLivingEnemyCount` counts the hot trait fields directly for
+  the wave-system "is the field clear?" checks (up to 3× per frame) without
+  building snapshot objects.
+- **Imperative health bar.** `Enemy.tsx` no longer re-renders via
+  `useTrait(EnemyState)` on every health change (which at peak waves meant
+  ~183 React re-renders + new box geometries per frame). It reads the cold
+  state once at mount and updates the health bar imperatively in `useFrame`
+  (scaling a shared unit box + swapping a shared tier material). Enemy bodies
+  and health bars now share one sphere/box geometry and cached materials
+  instead of a unique geometry/material per enemy per render.
+- **Lazy / reduced per-frame allocations.** Projectile hit only builds the
+  full snapshot array for AOE (the common single/beam/chain hits don't), and
+  the per-frame `getEnemiesById` Map + per-enemy snapshot in the instanced
+  projectile system is replaced by the pooled registry.
+
+These are the classic game-dev mechanics applied here: **object pooling**
+(projectiles were already pooled; now enemies too), **instancing / shared
+geometry & materials** (enemies, rocks, path strips), **precomputed path
+lookup**, and **spatially cheap targeting reads** (pooled registry instead of
+fresh snapshot arrays). Remaining known costs (for future work): the ~4,200
+path-strip box meshes and ~450 star meshes are still individual draw calls —
+collapsing them into instanced/merged meshes is the next GPU-side win, and
+targeting could additionally be throttled to ~10–20 Hz or use a uniform-grid
+spatial hash to avoid O(towers × enemies) scans.
+
 ### Live Browser Checks (for AI agents)
 
 Agents can verify the app in a browser using Cursor’s built-in browser MCP (no extra install needed):

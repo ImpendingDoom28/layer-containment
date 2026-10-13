@@ -30,3 +30,6 @@ playwright/.cache
 *.njsproj
 *.sln
 *.sw?
+
+# Stress-test profiling artifacts (cpuprofiles, traces)
+profiling/

@@ -10,11 +10,18 @@ import {
 } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Billboard } from "@react-three/drei";
-import { Quaternion, Vector3, type Group, type Mesh } from "three";
+import {
+  BoxGeometry,
+  MeshStandardMaterial,
+  Quaternion,
+  SphereGeometry,
+  Vector3,
+  type Group,
+  type Mesh,
+} from "three";
 import type { Entity } from "koota";
-import { useTrait } from "koota/react";
 
-import { getPositionAlongMultiplePaths } from "../../utils/pathUtils";
+import { getPositionAlongMultiplePathsFast } from "../../utils/pathIndex";
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import { GUIDebugInfo } from "../gui/GUIDebugInfo";
 import {
@@ -45,6 +52,45 @@ type EnemyProps = {
   debug?: boolean;
 };
 
+// Shared, never-disposed resources: the body is a unit sphere scaled per
+// enemy, the health bar a unit box, and materials are cached per color/tier.
+// The previous per-enemy geometry + per-render JSX args allocated new GPU
+// buffers on every health change, which at peak waves (183 concurrent
+// enemies under fire) was the last significant per-frame cost.
+const sharedUnitSphere = new SphereGeometry(1, 12, 12);
+const sharedUnitBox = new BoxGeometry(1, 1, 1);
+const sharedBlackBarMaterial = new MeshStandardMaterial({
+  color: getCssColorValue("scene-black"),
+});
+
+const enemyBodyMaterialCache = new Map<string, MeshStandardMaterial>();
+const getEnemyBodyMaterial = (color: string): MeshStandardMaterial => {
+  let material = enemyBodyMaterialCache.get(color);
+  if (!material) {
+    material = new MeshStandardMaterial({
+      color,
+      emissive: color,
+      emissiveIntensity: 0.2,
+    });
+    enemyBodyMaterialCache.set(color, material);
+  }
+  return material;
+};
+
+const healthTierMaterials = {
+  high: new MeshStandardMaterial({ color: getCssColorValue("scene-hp-high") }),
+  medium: new MeshStandardMaterial({
+    color: getCssColorValue("scene-hp-medium"),
+  }),
+  low: new MeshStandardMaterial({ color: getCssColorValue("scene-hp-low") }),
+} as const;
+
+const HEALTH_TIER_ORDER = ["low", "medium", "high"] as const;
+type HealthTier = (typeof HEALTH_TIER_ORDER)[number];
+
+const getHealthTier = (percent: number): HealthTier =>
+  percent > 0.5 ? "high" : percent > 0.25 ? "medium" : "low";
+
 export const Enemy: FC<EnemyProps> = memo(
   ({
     entity,
@@ -53,7 +99,12 @@ export const Enemy: FC<EnemyProps> = memo(
     onSpawnEffect,
     debug = false,
   }) => {
-    const enemy = useTrait(entity, EnemyState);
+    // Read the cold state once at mount: every field the JSX uses
+    // (size, color, upgrades, healPulse, maxHealth) is set at spawn and never
+    // mutated afterwards — only health changes over the enemy's lifetime, and
+    // that is handled imperatively in useFrame below instead of through a
+    // `useTrait` re-render on every hit.
+    const [snapshot] = useState(() => entity.get(EnemyState));
 
     const pathWaypoints = useLevelStore(pathWaypointsSelector);
     const gridSize = useLevelStore(gridSizeSelector);
@@ -90,13 +141,17 @@ export const Enemy: FC<EnemyProps> = memo(
     );
 
     const meshRef = useRef<Group>(null);
+    const fillBarRef = useRef<Mesh>(null);
+    const healthTierRef = useRef<HealthTier>("high");
     const upgradeFirstRingRef = useRef<Mesh>(null);
     const hasTriggeredSpawnEffect = useRef(false);
     const [isSlowed, setIsSlowed] = useState(false);
     const isSlowedRef = useRef(false);
 
+    const size = snapshot?.size ?? 0;
+
     useEffect(() => {
-      if (!enemy) return;
+      if (!snapshot) return;
 
       const motionData = entity.get(EnemyMotion);
       if (
@@ -105,9 +160,9 @@ export const Enemy: FC<EnemyProps> = memo(
         motionData &&
         motionData.pathProgress < 0.01
       ) {
-        const spawnPosition = getPositionAlongMultiplePaths(
+        const spawnPosition = getPositionAlongMultiplePathsFast(
           pathWaypoints,
-          enemy.pathIndex,
+          snapshot.pathIndex,
           0
         );
         flatFieldToSphereSurface(
@@ -126,11 +181,11 @@ export const Enemy: FC<EnemyProps> = memo(
             scratchGroupPos.current.y,
             scratchGroupPos.current.z,
           ],
-          enemy.color
+          snapshot.color
         );
         hasTriggeredSpawnEffect.current = true;
       }
-    }, [enemy, entity, onSpawnEffect, pathWaypoints, radius]);
+    }, [snapshot, entity, onSpawnEffect, pathWaypoints, radius]);
 
     useLayoutEffect(() => {
       const live = entity.get(EnemyState);
@@ -154,18 +209,32 @@ export const Enemy: FC<EnemyProps> = memo(
         meshRef.current.quaternion.copy(footing.quaternion);
       }
 
+      // Imperative health bar: scale the shared unit box instead of
+      // re-rendering JSX with new geometry args on every hit.
+      const fillBar = fillBarRef.current;
+      if (fillBar) {
+        const percent = Math.max(0, Math.min(1, live.health / live.maxHealth));
+        fillBar.scale.set(size * 2 * percent, 0.08, 0.06);
+        fillBar.position.set(-size * (1 - percent), 0, 0.01);
+        const tier = getHealthTier(percent);
+        if (healthTierRef.current !== tier) {
+          healthTierRef.current = tier;
+          fillBar.material = healthTierMaterials[tier];
+        }
+      }
+
       const now = state.clock.elapsedTime;
       const adjustedTime = getSimulationTime(now);
 
       if (
         !shouldStopMovement &&
-        live.upgrades.length > 0 &&
+        (snapshot?.upgrades.length ?? 0) > 0 &&
         upgradeFirstRingRef.current
       ) {
         const time = state.clock.elapsedTime;
         upgradeFirstRingRef.current.rotation.y = time * 1.5;
         const pulse = Math.sin(time * 2) * 0.05 + 1;
-        const baseRadius = live.size * 1.1;
+        const baseRadius = size * 1.1;
         upgradeFirstRingRef.current.scale.setScalar(baseRadius * pulse);
       }
 
@@ -180,18 +249,16 @@ export const Enemy: FC<EnemyProps> = memo(
       }
     });
 
-    if (!enemy || enemy.health <= 0) return null;
-
-    const healthPercent = enemy.health / enemy.maxHealth;
+    if (!snapshot) return null;
 
     return (
       <group ref={meshRef}>
         {/* Upgrade indicators */}
-        {enemy.upgrades.length > 0 &&
-          (enemy.upgradeIndicatorColors?.length ?? 0) > 0 && (
+        {snapshot.upgrades.length > 0 &&
+          (snapshot.upgradeIndicatorColors?.length ?? 0) > 0 && (
             <UpgradeEffect
-              enemySize={enemy.size}
-              indicatorColors={enemy.upgradeIndicatorColors!}
+              enemySize={size}
+              indicatorColors={snapshot.upgradeIndicatorColors!}
               firstRingRef={upgradeFirstRingRef}
             />
           )}
@@ -199,56 +266,49 @@ export const Enemy: FC<EnemyProps> = memo(
         {/* Slow effect indicator */}
         {isSlowed && (
           <SlowEffect
-            enemySize={enemy.size}
+            enemySize={size}
             shouldStopMovement={shouldStopMovement}
           />
         )}
 
-        {enemy.healPulse && (
+        {snapshot.healPulse && (
           <MedicHealBurstEffect
             entity={entity}
-            healPulse={enemy.healPulse}
+            healPulse={snapshot.healPulse}
             shouldStopMovement={shouldStopMovement}
-            color={enemy.color}
+            color={snapshot.color}
           />
         )}
 
         {/* Enemy body */}
-        <mesh position={[0, enemy.size / 2, 0]}>
-          <sphereGeometry args={[enemy.size, 12, 12]} />
-          <meshStandardMaterial
-            color={enemy.color}
-            emissive={enemy.color}
-            emissiveIntensity={0.2}
-          />
-        </mesh>
+        <mesh
+          position={[0, size / 2, 0]}
+          scale={[size, size, size]}
+          geometry={sharedUnitSphere}
+          material={getEnemyBodyMaterial(snapshot.color)}
+        />
 
         {/* Health bar - always faces camera */}
-        <Billboard position={[0, enemy.size + 0.3, 0]}>
+        <Billboard position={[0, size + 0.3, 0]}>
           <group>
-            <mesh position={[0, 0, 0]}>
-              <boxGeometry args={[enemy.size * 2, 0.1, 0.05]} />
-              <meshStandardMaterial color={getCssColorValue("scene-black")} />
-            </mesh>
-            <mesh position={[-(enemy.size * (1 - healthPercent)), 0, 0.01]}>
-              <boxGeometry
-                args={[enemy.size * 2 * healthPercent, 0.08, 0.06]}
-              />
-              <meshStandardMaterial
-                color={
-                  healthPercent > 0.5
-                    ? getCssColorValue("scene-hp-high")
-                    : healthPercent > 0.25
-                      ? getCssColorValue("scene-hp-medium")
-                      : getCssColorValue("scene-hp-low")
-                }
-              />
-            </mesh>
+            <mesh
+              position={[0, 0, 0]}
+              geometry={sharedUnitBox}
+              material={sharedBlackBarMaterial}
+              scale={[size * 2, 0.1, 0.05]}
+            />
+            <mesh
+              ref={fillBarRef}
+              geometry={sharedUnitBox}
+              material={healthTierMaterials.high}
+              scale={[size * 2, 0.08, 0.06]}
+              position={[0, 0, 0.01]}
+            />
           </group>
         </Billboard>
 
         {/* Debug info */}
-        {debug && <GUIDebugInfo entity={enemy} offsetY={enemy.size + 0.7} />}
+        {debug && <GUIDebugInfo entity={entity} offsetY={size + 0.7} />}
       </group>
     );
   }

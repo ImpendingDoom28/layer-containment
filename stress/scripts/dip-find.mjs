@@ -7,13 +7,10 @@
  */
 import { chromium } from "@playwright/test";
 
-import { ensureStressServer, safeClose, STRESS_URL } from "../stress-server.mjs";
+import { ensureStressServer, readDurationArg, safeClose, STRESS_URL } from "../stress-server.mjs";
 
 const METAL = process.argv.includes("--metal");
-const idx = process.argv.indexOf("--seconds");
-// Without the flag, indexOf is -1 and argv[0] (the node path) would yield
-// NaN; default to 90s.
-const SECONDS = idx === -1 ? 90 : Number(process.argv[idx + 1]);
+const SECONDS = readDurationArg("--seconds", 90);
 
 await ensureStressServer();
 

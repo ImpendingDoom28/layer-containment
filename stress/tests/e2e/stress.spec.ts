@@ -49,7 +49,7 @@ const readAverages = async (
   };
 };
 
-test("loads the stress scene with canvas, stats overlay and banner", async ({
+test("loads the stress scene with canvas and stats overlay", async ({
   page,
 }) => {
   // The 64x64 scene can take a while to shader-compile before it renders
@@ -58,11 +58,7 @@ test("loads the stress scene with canvas, stats overlay and banner", async ({
 
   await onOpenStressScene(page);
 
-  await expect(page.getByTestId("stress-banner")).toBeVisible();
   await expect(page.getByTestId("stress-stats-overlay")).toBeVisible();
-  await expect(
-    page.getByText(/64x64 grid · 150 towers · 20 waves/)
-  ).toBeVisible();
 
   // The 64x64 grid shader compile can take a while; wait until the scene is
   // actually rendering frames.

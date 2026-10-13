@@ -1,4 +1,4 @@
-import { FC, memo, useMemo, useRef } from "react";
+import { FC, memo, useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useWorld } from "koota/react";
 
@@ -29,6 +29,7 @@ import {
 } from "../../core/stores/useGameStore";
 import {
   gridSizeSelector,
+  isLevelConfigLoadedSelector,
   pathWaypointsSelector,
   towersSelector,
   useLevelStore,
@@ -74,9 +75,7 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     // of the zustand `towers` array: updating `lastFireTime` no longer
     // re-renders the 150-tower list and the O(towers^2) combat-stats memo on
     // every shot. The towers array reference still changes on place/sell, so
-    // a shot after a placement naturally reads the fresh array; on restart
-    // the stale ref is ignored (its timestamps are in the past) and the map
-    // is pruned to the current tower ids.
+    // a shot after a placement naturally reads the fresh array.
     const fireTimesRef = useRef(new Map<number, number>());
 
     const towerTypes = useGameStore(towerTypesSelector);
@@ -86,11 +85,22 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     const gridSize = useLevelStore(gridSizeSelector);
     const pathWaypoints = useLevelStore(pathWaypointsSelector);
     const towers = useLevelStore(towersSelector);
+    const isLevelConfigLoaded = useLevelStore(isLevelConfigLoadedSelector);
 
     const towerIds = useMemo(
       () => new Set(towers.map((t) => t.id)),
       [towers]
     );
+
+    // Tower ids are re-issued from 1 when a level (re)loads, so a reused id
+    // would otherwise carry the previous level's fire timestamp. Clear the
+    // ref when the level (re)loads; the per-frame prune below only drops ids
+    // that no longer exist, which a reused id does not.
+    useEffect(() => {
+      if (isLevelConfigLoaded) {
+        fireTimesRef.current.clear();
+      }
+    }, [isLevelConfigLoaded]);
 
     const pauseWhenTabHidden = useSettingsStore(pauseWhenTabHiddenSelector);
 

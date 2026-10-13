@@ -487,15 +487,6 @@ const StressTestGame = () => {
         )}
       </Canvas>
 
-      <div
-        data-testid="stress-banner"
-        className="pointer-events-none fixed right-3 top-3 z-50 rounded-md bg-black/70 px-3 py-2 text-[12px] leading-5 text-amber-300"
-      >
-        <div className="font-semibold">LAYER CONTAINMENT — STRESS TEST</div>
-        <div>64x64 grid · 150 towers · 20 waves · unattended loop</div>
-        <div className="text-gray-400">base health {STRESS_BASE_HEALTH}</div>
-      </div>
-
       <StressOverlay statsRef={statsRef} runCount={runCount} />
 
       {!areShadersReady && (

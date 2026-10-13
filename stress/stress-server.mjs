@@ -32,6 +32,20 @@ const REPO_ROOT = path.resolve(HERE, "..");
 const PORT = Number(process.env.STRESS_PORT ?? 5174);
 export const STRESS_URL = `http://localhost:${PORT}/stress/index.stress.html`;
 
+/**
+ * Reads a positive numeric `--flag <n>` duration argument, falling back to
+ * `fallback` when the flag is absent, its operand is missing/non-numeric, or
+ * not a positive number (a bare `Number(argv[idx + 1])` would yield NaN).
+ */
+export const readDurationArg = (flag, fallback) => {
+  const idx = process.argv.indexOf(flag);
+  const raw = idx === -1 ? undefined : process.argv[idx + 1];
+  const value = Number(raw);
+  return raw !== undefined && Number.isFinite(value) && value > 0
+    ? value
+    : fallback;
+};
+
 const serverProc = { proc: null, started: false };
 
 const portBusy = async () => {
@@ -150,7 +164,7 @@ export const ensureStressServer = async () => {
 export const safeClose = async (browser, timeoutMs = 15_000) => {
   await Promise.race([
     browser.close().catch(() => {}),
-    new Promise((r) => setTimeout(() => {}, timeoutMs)),
+    new Promise((r) => setTimeout(r, timeoutMs)),
   ]);
   stopServer();
   process.exit(0);

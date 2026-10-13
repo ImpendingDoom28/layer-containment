@@ -81,9 +81,9 @@ if (TRACE) {
   // Events stream back as `Tracing.dataCollected` payloads; we collect them
   // and reassemble the Chrome-trace JSON at the end.
   const cdp = await context.newCDPSession(page);
-  const chunks = [];
+  const events = [];
   cdp.on("Tracing.dataCollected", (payload) => {
-    for (const c of payload.value ?? []) chunks.push(c);
+    for (const e of payload.value ?? []) events.push(e);
   });
   await cdp.send("Tracing.start", {
     categories: "devtools.timeline",
@@ -91,16 +91,30 @@ if (TRACE) {
   });
   console.log(`[profile] capturing CDP trace ${TRACE_SECONDS}s of steady state...`);
   await page.waitForTimeout(TRACE_SECONDS * 1000);
+  // Tracing.end stops collection, but CDP streams the remaining
+  // Tracing.dataCollected payloads before a separate Tracing.tracingComplete
+  // event; await that event so the file contains the full trace.
+  const tracingComplete = new Promise((resolve) =>
+    cdp.on("Tracing.tracingComplete", resolve)
+  );
   const final = await cdp.send("Tracing.end");
-  // Tracing.end may return the last chunk in `value` or nothing (all events
+  // Tracing.end may return the last batch in `value` or nothing (all events
   // already streamed via dataCollected); handle both.
-  if (final.value) for (const c of final.value) chunks.push(c);
+  if (final.value) for (const e of final.value) events.push(e);
+  await tracingComplete;
+  // Tracing.dataCollected delivers trace events as objects (this Playwright
+  // version), not pre-serialized text, so serialize them into a Chrome-trace
+  // JSON array; a pre-serialized fragment is kept verbatim.
+  const traceJson =
+    "[" +
+    events.map((e) => (typeof e === "string" ? e : JSON.stringify(e))).join(",") +
+    "]";
   const traceOutDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "profiling");
   mkdirSync(traceOutDir, { recursive: true });
   const traceFile = path.join(traceOutDir, `stress-trace-${Date.now()}.trace`);
-  writeFileSync(traceFile, chunks.join(""));
+  writeFileSync(traceFile, traceJson);
   console.log(
-    `[profile] trace written to ${traceFile} (${chunks.length} chunks, ${(Buffer.byteLength(chunks.join("")) / 1024 / 1024).toFixed(1)} MB)`
+    `[profile] trace written to ${traceFile} (${events.length} events, ${(Buffer.byteLength(traceJson) / 1024 / 1024).toFixed(1)} MB)`
   );
   await cdp.detach();
 }

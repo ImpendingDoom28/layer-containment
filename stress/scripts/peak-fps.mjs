@@ -10,13 +10,10 @@
  */
 import { chromium } from "@playwright/test";
 
-import { ensureStressServer, safeClose, STRESS_URL } from "../stress-server.mjs";
+import { ensureStressServer, readDurationArg, safeClose, STRESS_URL } from "../stress-server.mjs";
 
 const METAL = process.argv.includes("--metal");
-const idx = process.argv.indexOf("--minutes");
-// Without the flag, indexOf is -1 and argv[0] (the node path) would yield
-// NaN; default to 4 minutes.
-const MINUTES = idx === -1 ? 4 : Number(process.argv[idx + 1]);
+const MINUTES = readDurationArg("--minutes", 4);
 
 const readStat = async (page, label) => {
   const text = await page.getByTestId("stress-stats-overlay").textContent();

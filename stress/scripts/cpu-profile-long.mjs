@@ -10,13 +10,10 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ensureStressServer, safeClose, STRESS_URL } from "../stress-server.mjs";
+import { ensureStressServer, readDurationArg, safeClose, STRESS_URL } from "../stress-server.mjs";
 
 const METAL = process.argv.includes("--metal");
-const idx = process.argv.indexOf("--seconds");
-// Without the flag, indexOf is -1 and argv[0] (the node path) would yield
-// NaN; default to 25s.
-const SECONDS = idx === -1 ? 25 : Number(process.argv[idx + 1]);
+const SECONDS = readDurationArg("--seconds", 25);
 
 await ensureStressServer();
 

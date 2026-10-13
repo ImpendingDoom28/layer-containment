@@ -1,8 +1,10 @@
 import { useCallback } from "react";
 import { useActions } from "koota/react";
 
-import type { Enemy } from "../types/game";
-import { enemyActions } from "../ecs/actions/enemyActions";
+import {
+  enemyActions,
+  type EnemyRuntimeUpdates,
+} from "../ecs/actions/enemyActions";
 
 export const useEnemyActions = () => {
   const actions = useActions(enemyActions);
@@ -15,7 +17,7 @@ export const useEnemyActions = () => {
   );
 
   const onEnemyUpdate = useCallback(
-    (enemyId: number, updates: Partial<Enemy>) => {
+    (enemyId: number, updates: EnemyRuntimeUpdates) => {
       actions.updateEnemy(enemyId, updates);
     },
     [actions]

@@ -7,7 +7,10 @@
  *
  * Waits until the 30s average window has frozen, prints the overlay metrics,
  * then samples a few live frames for steady-state numbers. With --trace it
- * also captures a CDP trace (CPU + GPU slices) to profiling/stress-trace-*.
+ * captures a Chromium performance trace (CPU + GPU slices) through the CDP
+ * `Tracing` domain (NOT Playwright's `context.tracing`, which records browser
+ * operations, not performance data) and writes it as Chrome-trace JSON to
+ * profiling/stress-trace-*.trace (open in chrome://tracing or Perfetto).
  */
 import { chromium } from "@playwright/test";
 import { writeFileSync, mkdirSync } from "node:fs";
@@ -69,14 +72,33 @@ console.log(overlayText);
 console.log("=========================================\n");
 
 if (TRACE) {
+  // CDP `Tracing` domain: real Chromium performance trace (CPU + GPU slices),
+  // unlike Playwright's `context.tracing` which records browser operations.
+  // Events stream back as `Tracing.dataCollected` payloads; we collect them
+  // and reassemble the Chrome-trace JSON at the end.
+  const cdp = await context.newCDPSession(page);
+  const chunks = [];
+  cdp.on("Tracing.dataCollected", (payload) => {
+    for (const c of payload.value ?? []) chunks.push(c);
+  });
+  await cdp.send("Tracing.start", {
+    categories: "devtools.timeline",
+    options: "runAsSoonAsPossible,sampling",
+  });
+  console.log(`[profile] capturing CDP trace ${TRACE_SECONDS}s of steady state...`);
+  await page.waitForTimeout(TRACE_SECONDS * 1000);
+  const final = await cdp.send("Tracing.end");
+  // Tracing.end may return the last chunk in `value` or nothing (all events
+  // already streamed via dataCollected); handle both.
+  if (final.value) for (const c of final.value) chunks.push(c);
   const traceOutDir = path.resolve("profiling");
   mkdirSync(traceOutDir, { recursive: true });
-  const traceFile = path.join(traceOutDir, `stress-trace-${Date.now()}.trace.zip`);
-  await context.tracing.start({ screenshots: false, snapshots: false });
-  console.log(`[profile] tracing ${TRACE_SECONDS}s of steady state...`);
-  await page.waitForTimeout(TRACE_SECONDS * 1000);
-  await context.tracing.stop({ path: traceFile });
-  console.log(`[profile] trace written to ${traceFile}`);
+  const traceFile = path.join(traceOutDir, `stress-trace-${Date.now()}.trace`);
+  writeFileSync(traceFile, chunks.join(""));
+  console.log(
+    `[profile] trace written to ${traceFile} (${chunks.length} chunks, ${(Buffer.byteLength(chunks.join("")) / 1024 / 1024).toFixed(1)} MB)`
+  );
+  await cdp.detach();
 }
 
 if (pageErrors.length) {

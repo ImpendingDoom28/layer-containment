@@ -9,9 +9,10 @@ import { chromium } from "@playwright/test";
 
 const URL = "http://localhost:5174/index.stress.html";
 const METAL = process.argv.includes("--metal");
-const SECONDS = Number(
-  process.argv[process.argv.indexOf("--seconds") + 1] ?? 150
-);
+const idx = process.argv.indexOf("--seconds");
+// Without the flag, indexOf is -1 and argv[0] (the node path) would yield
+// NaN; default to 150s.
+const SECONDS = idx === -1 ? 150 : Number(process.argv[idx + 1]);
 
 const browser = await chromium.launch(
   METAL ? { args: ["--use-angle=metal"] } : undefined
@@ -31,25 +32,28 @@ await page.evaluate(() => {
   const upgradeStore = () => w.__stressUpgradeStore?.getState();
   let prev = performance.now();
   let frameCount = 0;
+  // Retain the most recently sampled context between frames so every frame
+  // record carries the latest known wave/enemy/proj/gate (the context is
+  // sampled every 15 frames to bound per-frame cost; reading a store per
+  // frame would add overhead).
+  let ctxEnemies = 0, ctxWave = 0, ctxProj = 0, ctxGate = 0;
   const tick = () => {
     const now = performance.now();
     const dt = now - prev;
     prev = now;
     frameCount += 1;
-    // Sample context at low frequency (every 15 frames) to bound per-frame cost.
-    let enemies = 0, wave = 0, proj = 0, gate = 0;
     if (frameCount % 15 === 1) {
       try {
         const s = store();
-        if (s) { wave = s.currentWave; proj = s.projectiles.length; }
+        if (s) { ctxWave = s.currentWave; ctxProj = s.projectiles.length; }
         const u = upgradeStore();
-        gate = u && u.pendingEnemyUpgradeGate ? 1 : 0;
-        if (w.__stressLivingCount) enemies = w.__stressLivingCount();
+        ctxGate = u && u.pendingEnemyUpgradeGate ? 1 : 0;
+        if (w.__stressLivingCount) ctxEnemies = w.__stressLivingCount();
       } catch { /* stores not ready yet */ }
     }
     // Record every frame's dt (bounded: only keep last ~20000 to bound memory)
     if (w.__frames.length < 20000) {
-      w.__frames.push({ t: Math.round(now), dt: Math.round(dt * 100) / 100, enemies, wave, proj, gate });
+      w.__frames.push({ t: Math.round(now), dt: Math.round(dt * 100) / 100, enemies: ctxEnemies, wave: ctxWave, proj: ctxProj, gate: ctxGate });
     }
     requestAnimationFrame(tick);
   };

@@ -35,48 +35,67 @@ export const getLivingEnemySnapshots = (world: World): Enemy[] =>
 
 /**
  * Pooled enemy registry (object pooling): one `Enemy` object per live entity
- * is created on spawn and then only its dynamic fields (health, position,
- * path progress) are refreshed in place each frame, so the hot per-frame
- * consumers (tower targeting, projectile homing) allocate nothing in steady
- * state instead of one object per entity per frame.
+ * is created on spawn and then all its fields are re-copied in place each
+ * frame, so the hot per-frame consumers (tower targeting, projectile homing)
+ * allocate nothing in steady state instead of one object per entity per frame.
  *
  * The registry is refreshed per call by re-reading the hot traits; consumers
  * must use it within a single system pass (the values are live references,
  * not frozen snapshots).
+ *
+ * One registry per `World` (held in a WeakMap so a destroyed world's registry
+ * is garbage-collected with it): refreshing a world only mutates that world's
+ * registry, so two worlds sharing enemy ids cannot clobber each other.
  */
-const enemyRegistry = new Map<number, Enemy>();
+const enemyRegistries = new WeakMap<World, Map<number, Enemy>>();
 
 export const refreshEnemyRegistry = (world: World): Map<number, Enemy> => {
+  let registry = enemyRegistries.get(world);
+  if (!registry) {
+    registry = new Map();
+    enemyRegistries.set(world, registry);
+  }
   const seenIds = new Set<number>();
   world
     .query(IsEnemy, EnemyState, EnemyMotion, Position)
     .readEach(([state, motion, position]) => {
       seenIds.add(state.id);
-      let enemy = enemyRegistry.get(state.id);
+      let enemy = registry.get(state.id);
       if (!enemy) {
         enemy = toEnemySnapshot(state, motion, position);
-        enemyRegistry.set(state.id, enemy);
+        registry.set(state.id, enemy);
       } else {
-        // Refresh every field in place: static fields are re-copied so a
-        // restart that reuses an enemy id (id counter resets to 1) never
-        // serves a stale color/size/maxHealth from the previous run.
+        // Re-copy every field in place (mirrors toEnemySnapshot): static
+        // fields are re-copied too, so a restart that reuses an enemy id
+        // (the id counter resets to 1) never serves a stale type/name/color/
+        // size/upgrades/healthLoss from the previous run. Array fields are
+        // re-pointed at the live trait references (read-only downstream).
+        enemy.name = state.name;
+        enemy.type = state.type;
         enemy.health = state.health;
         enemy.maxHealth = state.maxHealth;
         enemy.speed = state.speed;
+        enemy.reward = state.reward;
+        enemy.color = state.color;
+        enemy.size = state.size;
+        enemy.healthLoss = state.healthLoss;
+        enemy.description = state.description;
         enemy.pathProgress = motion.pathProgress;
         enemy.pathIndex = state.pathIndex;
         enemy.x = position.x;
         enemy.z = position.z;
+        enemy.upgrades = state.upgrades;
+        enemy.upgradeIndicatorColors = state.upgradeIndicatorColors;
+        enemy.regeneration = state.regeneration;
+        enemy.slowResistance = state.slowResistance;
         enemy.nextHealPulseAt = state.nextHealPulseAt;
-        enemy.color = state.color;
-        enemy.size = state.size;
-        enemy.reward = state.reward;
+        enemy.healPulse = state.healPulse;
       }
     });
-  for (const id of enemyRegistry.keys()) {
-    if (!seenIds.has(id)) enemyRegistry.delete(id);
+  for (const id of registry.keys()) {
+    if (!seenIds.has(id)) registry.delete(id);
   }
-  return enemyRegistry;
+  return registry;
 };
 
 // Reused across frames so targeting/homing reads allocate no list in steady

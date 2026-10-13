@@ -1,6 +1,10 @@
 /**
- * Frame-budget probe: splits frame time into JS work vs GL render vs "other"
- * (GPU/present), and compares paused vs running simulation.
+ * Frame-budget probe: splits frame time into main-thread JS work (longtasks),
+ * GL render API time, and the unattributed residual (non-longtask JS plus
+ * GPU/present time, which this probe does not measure directly), comparing the
+ * running vs paused simulation. The paused number is an upper bound on pure
+ * GPU cost — if it's near 60 FPS, the GPU has headroom and the rest is
+ * CPU/JS.
  *
  * Usage: node scripts/frame-budget.mjs [--metal]
  */
@@ -115,7 +119,10 @@ const summary = (r) => ({
   intervalMs: r.intervalMs.toFixed(0),
   jsLongtaskMsPerFrame: (r.longtaskTotalMs / r.frames).toFixed(1),
   glRenderMsPerFrame: r.renderAvgMs.toFixed(1),
-  otherMsPerFrame: (
+  // Unattributed residual: the longtask counter misses JS that does not
+  // qualify as a long task, so this remainder is a mix of non-longtask main
+  // thread work and GPU/present time — not a GPU measurement by itself.
+  unattributedMsPerFrame: (
     r.intervalMs - r.longtaskTotalMs / r.frames - r.renderAvgMs
   ).toFixed(1),
 });

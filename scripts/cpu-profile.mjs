@@ -35,10 +35,10 @@ while (Date.now() - t0 < 200_000) {
 
 console.log(`[cpu] profiling ${DURATION_S}s of steady state...`);
 await client.send("Profiler.enable");
-await client.send("Profiler.start", {
-  samplesPerSecond: 2000,
-  profileRuntimeCallStacks: false,
-});
+// Profiler.start takes no sampling parameter; set the interval explicitly
+// (microseconds; 2000 samples/s = 500us).
+await client.send("Profiler.setSamplingInterval", { interval: 500 });
+await client.send("Profiler.start");
 await page.waitForTimeout(DURATION_S * 1000);
 const { profile } = await client.send("Profiler.stop");
 
@@ -62,10 +62,13 @@ const rate = profile.endTime - profile.startTime; // duration in us
 const totalUs = rate;
 
 // Aggregate "total time" per function = own hitCount + sum of descendants.
+// CDP profile nodes expose child ids (node.children), not a parent reference.
 const childrenMap = new Map();
 for (const n of nodes) {
-  if (!childrenMap.has(n.parent?.id)) childrenMap.set(n.parent?.id, []);
-  if (n.parent?.id) childrenMap.get(n.parent?.id).push(n.id);
+  for (const c of n.children ?? []) {
+    if (!childrenMap.has(n.id)) childrenMap.set(n.id, []);
+    childrenMap.get(n.id).push(c);
+  }
 }
 const totalUsPerNode = new Map();
 const computeTotal = (id) => {

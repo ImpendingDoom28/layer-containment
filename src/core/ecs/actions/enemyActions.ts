@@ -23,6 +23,21 @@ import { slowRequest } from "../traits/slow";
 /** Enemy id → entity registry; internal to the enemy domain. */
 const enemyEntitiesById = new Map<number, Entity>();
 
+/**
+ * Fields that may be mutated on a *live* enemy through `updateEnemy`.
+ *
+ * The `Enemy` render component snapshots the cold visual fields (color, size,
+ * upgrades, healPulse, maxHealth, ...) once at mount and updates health
+ * imperatively per frame. If a caller could pass those visual fields here,
+ * the stored trait would change while the renderer kept the mount-time copy —
+ * a stale render. So the update API is restricted to the fields the renderer
+ * is already correct about: runtime health, the heal-pulse clock, and the hot
+ * position/progress values the movement system owns.
+ */
+export type EnemyRuntimeUpdates = Partial<
+  Pick<Enemy, "health" | "nextHealPulseAt" | "x" | "z" | "pathProgress">
+>;
+
 const enemyToState = (enemyData: Enemy): EnemyStateData => ({
   id: enemyData.id,
   type: enemyData.type,
@@ -100,7 +115,7 @@ export const enemyActions = createActions((world) => ({
     return entity;
   },
 
-  updateEnemy: (enemyId: number, updates: Partial<Enemy>): boolean => {
+  updateEnemy: (enemyId: number, updates: EnemyRuntimeUpdates): boolean => {
     const entity = enemyEntitiesById.get(enemyId);
     if (!entity) return false;
 
@@ -113,13 +128,14 @@ export const enemyActions = createActions((world) => ({
     const position = entity.get(Position);
     if (!position) return false;
 
-    const updateKeys = Object.keys(updates) as Array<keyof Enemy>;
+    const updateKeys = Object.keys(updates) as Array<keyof EnemyRuntimeUpdates>;
     if (updateKeys.length === 0) return false;
 
-    const currentFor = (key: keyof Enemy) => {
+    const currentFor = (key: keyof EnemyRuntimeUpdates) => {
       if (key === "x" || key === "z") return position[key];
       if (key === "pathProgress") return motion.pathProgress;
-      return (state as Partial<Enemy>)[key];
+      if (key === "health") return state.health;
+      return state.nextHealPulseAt;
     };
 
     const hasChanges = updateKeys.some(

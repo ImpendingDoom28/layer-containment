@@ -12,9 +12,10 @@ import { chromium } from "@playwright/test";
 
 const URL = "http://localhost:5174/index.stress.html";
 const METAL = process.argv.includes("--metal");
-const MINUTES = Number(
-  process.argv[process.argv.indexOf("--minutes") + 1] ?? 4
-);
+const idx = process.argv.indexOf("--minutes");
+// Without the flag, indexOf is -1 and argv[0] (the node path) would yield
+// NaN; default to 4 minutes.
+const MINUTES = idx === -1 ? 4 : Number(process.argv[idx + 1]);
 
 const readStat = async (page, label) => {
   const text = await page.getByTestId("stress-stats-overlay").textContent();

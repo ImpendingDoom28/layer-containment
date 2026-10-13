@@ -119,8 +119,8 @@ separate, much slower regime and not representative of the 60 FPS target.
 
 | Script | What it measures |
 | --- | --- |
-| `scripts/profile-stress.mjs [--metal] [--trace]` | Baseline 30 s averages (FPS, frame, draw calls, triangles, programs) plus 5 steady-state samples; `--trace` captures a CDP trace (`context.tracing`) of a few seconds to `profiling/`. |
-| `scripts/frame-budget.mjs [--metal]` | Splits frame time into JS longtasks (via `PerformanceObserver`) vs `gl.render` vs "other", for the **running** and **paused** simulation. The paused number is pure GPU cost — if it's near 60 FPS, the GPU has headroom and the rest is CPU/JS. |
+| `scripts/profile-stress.mjs [--metal] [--trace]` | Baseline 30 s averages (FPS, frame, draw calls, triangles, programs) plus 5 steady-state samples; `--trace` captures a Chromium performance trace (CPU + GPU slices) via the CDP `Tracing` domain to `profiling/*.trace` (open in chrome://tracing / Perfetto). |
+| `scripts/frame-budget.mjs [--metal]` | Splits frame time into JS longtasks (via `PerformanceObserver`) vs `gl.render` API time vs an **unattributed residual** (non-longtask JS + GPU/present, which it does not measure directly), for the **running** and **paused** simulation. The paused number is an upper bound on GPU cost — if it's near 60 FPS, the GPU has headroom and the rest is CPU/JS. |
 | `scripts/cpu-profile.mjs [--metal]` | CDP `Profiler` (2000 samples/s) over a steady-state window; prints top self-time functions. |
 | `scripts/attribute-layers.mjs [--metal]` | A/B harness: hides scene layers by name (`skybox`, `ground`, `path`, `grid`, `towers`, `enemies`, `rock-decorations`, `shadow-light`) and measures the FPS delta of each, isolating which part of the scene costs what. |
 | `scripts/peak-fps.mjs [--metal] [--minutes N]` | Lets a full run (all 20 waves, restarts) play for N minutes and records the **worst FPS per wave**, so the result reflects the heaviest waves (e.g. wave 19 with ~183 concurrent enemies) rather than just the early ones. |

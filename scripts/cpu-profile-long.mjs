@@ -5,13 +5,14 @@
  * Usage: node scripts/cpu-profile-long.mjs [--metal] [--seconds 25]
  */
 import { chromium } from "@playwright/test";
-import { readdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 
 const URL = "http://localhost:5174/index.stress.html";
 const METAL = process.argv.includes("--metal");
-const SECONDS = Number(
-  process.argv[process.argv.indexOf("--seconds") + 1] ?? 25
-);
+const idx = process.argv.indexOf("--seconds");
+// Without the flag, indexOf is -1 and argv[0] (the node path) would yield
+// NaN; default to 25s.
+const SECONDS = idx === -1 ? 25 : Number(process.argv[idx + 1]);
 
 const browser = await chromium.launch(
   METAL ? { args: ["--use-angle=metal"] } : undefined
@@ -28,15 +29,17 @@ console.log("[cpu-long] waiting 35s for steady state...");
 await page.waitForTimeout(35_000);
 
 await cdp.send("Profiler.enable");
-await cdp.send("Profiler.start", { samplingInterval: 2000 });
+// Profiler.start takes no sampling parameter; set the interval explicitly
+// (microseconds; 2000 samples/s = 500us).
+await cdp.send("Profiler.setSamplingInterval", { interval: 500 });
+await cdp.send("Profiler.start");
 console.log(`[cpu-long] profiling ${SECONDS}s...`);
 await page.waitForTimeout(SECONDS * 1000);
 const { profile } = await cdp.send("Profiler.stop");
 await cdp.send("Profiler.disable");
 
-const files = readdirSync("profiling").filter((f) => f.endsWith(".cpuprofile"));
+mkdirSync("profiling", { recursive: true });
 const out = `profiling/cpu-long-${Date.now()}.cpuprofile`;
-const fs = await import("node:fs");
-fs.writeFileSync(out, JSON.stringify(profile));
+writeFileSync(out, JSON.stringify(profile));
 console.log(`[cpu-long] wrote ${out} (${profile.samples.length} samples)`);
 await browser.close();

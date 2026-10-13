@@ -1,13 +1,14 @@
 // Time-resolved CPU profile analyzer: finds the "hitch" buckets (seconds with
 // ~3x median CPU work) and shows which functions dominate them vs calm buckets.
 import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 
 const dir = "profiling";
 const argFile = process.argv[2];
 const files = readdirSync(dir).filter((f) => f.endsWith(".cpuprofile")).sort();
 const f = argFile
   ? (argFile.startsWith("profiling/") ? argFile : `${dir}/${argFile}`)
-  : files[files.length - 1];
+  : path.join(dir, files[files.length - 1]);
 const prof = JSON.parse(readFileSync(f, "utf8"));
 
 const nodes = new Map(prof.nodes.map((n) => [n.id, n]));
@@ -17,16 +18,21 @@ const nameOf = (id) => {
   return n.callFrame.functionName || "(anon)";
 };
 
+// CDP `timeDeltas` are the intervals (in microseconds) between adjacent
+// samples, not timestamps. Accumulate them into a running total (ms) to get
+// each sample's elapsed time from the profile start.
 const bucketMs = 1000;
 const buckets = new Map();
+let elapsedUs = 0;
 for (let i = 0; i < prof.samples.length; i++) {
-  const tMs = prof.timeDeltas[i] - prof.timeDeltas[0];
-  const b = Math.floor(tMs / bucketMs);
+  elapsedUs += prof.timeDeltas[i];
+  const b = Math.floor(elapsedUs / 1000 / bucketMs);
   if (!buckets.has(b)) buckets.set(b, new Map());
   const fn = nameOf(prof.samples[i]);
   const m = buckets.get(b);
   m.set(fn, (m.get(fn) || 0) + 1);
 }
+const totalMs = Math.round(elapsedUs / 1000);
 
 const totals = [...buckets.values()]
   .map((m) => [...m.values()].reduce((s, v) => s + v, 0))
@@ -41,7 +47,7 @@ const topOf = (m, n) =>
     .join(" ");
 
 console.log(`profile: ${f}`);
-console.log(`samples: ${prof.samples.length}  span: ${Math.round((prof.timeDeltas[prof.timeDeltas.length - 1] - prof.timeDeltas[0]) / 1000)}s  median CPU/bucket: ${median} samples`);
+console.log(`samples: ${prof.samples.length}  span: ${totalMs}ms  median CPU/bucket: ${median} samples`);
 console.log("");
 
 const bucketsArr = [...buckets.entries()].sort((a, x) => a[0] - x[0]);

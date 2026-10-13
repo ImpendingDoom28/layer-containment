@@ -12,26 +12,23 @@ const KEYBINDING_KEYS = [
 
 export type KeybindingKey = (typeof KEYBINDING_KEYS)[number];
 
-export type KeybindingKind = "key" | "chord";
-
 export type KeybindingDefinition = {
   key: KeybindingKey;
   label: string;
-  kind: KeybindingKind;
 };
 
 export type KeybindingsConfig = Record<KeybindingKey, string>;
 
 export const KEYBINDING_DEFINITIONS: readonly KeybindingDefinition[] = [
-  { key: "cameraForward", label: "Move forward", kind: "key" },
-  { key: "cameraBackward", label: "Move backward", kind: "key" },
-  { key: "cameraLeft", label: "Move left", kind: "key" },
-  { key: "cameraRight", label: "Move right", kind: "key" },
-  { key: "cameraUp", label: "Move up", kind: "key" },
-  { key: "cameraDown", label: "Move down", kind: "key" },
-  { key: "pause", label: "Pause / Resume", kind: "key" },
-  { key: "menu", label: "Open / close menu", kind: "key" },
-  { key: "toggleDebug", label: "Toggle debug overlay", kind: "chord" },
+  { key: "cameraForward", label: "Move forward" },
+  { key: "cameraBackward", label: "Move backward" },
+  { key: "cameraLeft", label: "Move left" },
+  { key: "cameraRight", label: "Move right" },
+  { key: "cameraUp", label: "Move up" },
+  { key: "cameraDown", label: "Move down" },
+  { key: "pause", label: "Pause / Resume" },
+  { key: "menu", label: "Open / close menu" },
+  { key: "toggleDebug", label: "Toggle debug overlay" },
 ];
 
 export const KEYBINDING_BY_KEY = Object.fromEntries(

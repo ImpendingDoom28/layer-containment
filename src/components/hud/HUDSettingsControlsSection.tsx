@@ -17,6 +17,7 @@ import {
 } from "../../core/stores/useSettingsStore";
 import { UIButton } from "../ui/buttons/UIButton";
 import { UITypography } from "../ui/UITypography";
+import clsx from "clsx";
 
 const isAtDefaults = (config: KeybindingsConfig): boolean =>
   KEYBINDING_DEFINITIONS.every(
@@ -30,10 +31,6 @@ export const HUDSettingsControlsSection: FC = () => {
   const resetKeybindings = useSettingsStore(resetKeybindingsSelector);
   const [rebindingKey, setRebindingKey] = useState<KeybindingKey | null>(null);
 
-  // Capture the next key press while a row is being rebound. Escape cancels
-  // the rebind; any other key (or chord) becomes the new binding. The capture
-  // phase + stopPropagation keeps the pressed key from also firing game
-  // controls or closing an open menu.
   useEffect(() => {
     if (!rebindingKey) {
       return;
@@ -55,9 +52,9 @@ export const HUDSettingsControlsSection: FC = () => {
       setRebindingKey(null);
     };
 
-    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    globalThis.addEventListener("keydown", handleKeyDown, { capture: true });
     return () =>
-      window.removeEventListener("keydown", handleKeyDown, {
+      globalThis.removeEventListener("keydown", handleKeyDown, {
         capture: true,
       });
   }, [rebindingKey, setKeybinding]);
@@ -65,39 +62,17 @@ export const HUDSettingsControlsSection: FC = () => {
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <UITypography variant="medium">Controls</UITypography>
+        <UITypography variant="body">Controls</UITypography>
         <UIButton
           onClick={resetKeybindings}
           variant="ghost"
           size="xs"
-          disabled={isAtDefaults(keybindings)}
+          disabled={isAtDefaults(keybindings) || !!rebindingKey}
         >
           Reset
         </UIButton>
       </div>
       <table className="w-full border-collapse">
-        <thead>
-          <tr>
-            <th className="py-1.5 pr-4 text-left">
-              <UITypography
-                variant="medium"
-                as="span"
-                className="text-muted-foreground"
-              >
-                Control
-              </UITypography>
-            </th>
-            <th className="py-1.5 text-right">
-              <UITypography
-                variant="medium"
-                as="span"
-                className="text-muted-foreground"
-              >
-                Keybinding
-              </UITypography>
-            </th>
-          </tr>
-        </thead>
         <tbody>
           {VISIBLE_KEYBINDING_DEFINITIONS.map((definition) => {
             const isRebinding = rebindingKey === definition.key;
@@ -116,18 +91,21 @@ export const HUDSettingsControlsSection: FC = () => {
                     data-testid={`keybinding-row-${definition.key}`}
                     aria-label={`Rebind ${definition.label}`}
                     onClick={() => setRebindingKey(definition.key)}
-                    className={
+                    className={clsx(
+                      "inline-flex min-w-[88px] items-center justify-center gap-1 rounded-none border px-2.5 py-1 text-xs",
                       isRebinding
-                        ? "inline-flex min-w-[88px] items-center justify-center gap-1 rounded-none border border-primary bg-primary/15 px-2.5 py-1 text-xs text-primary-foreground"
-                        : "inline-flex min-w-[88px] items-center justify-center gap-1 rounded-none border border-border bg-input/30 px-2.5 py-1 text-xs hover:bg-input/50"
-                    }
+                        ? "border-primary bg-primary/15  text-primary-foreground"
+                        : " border-border bg-input/30  hover:bg-input/50"
+                    )}
                   >
                     {isRebinding ? (
-                      <span>Press a key…</span>
+                      <UITypography variant="buttons1">
+                        Press a key…
+                      </UITypography>
                     ) : (
-                      <kbd className="font-medium">
+                      <UITypography as={"kbd"} variant="buttons1">
                         {formatKeyCode(binding)}
-                      </kbd>
+                      </UITypography>
                     )}
                   </button>
                 </td>

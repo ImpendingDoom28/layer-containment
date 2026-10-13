@@ -10,20 +10,16 @@ import {
 
 export const HUDSettingsGeneralSection: FC = () => {
   const pauseWhenTabHidden = useSettingsStore(pauseWhenTabHiddenSelector);
-  const setPauseWhenTabHidden = useSettingsStore(
-    setPauseWhenTabHiddenSelector
-  );
+  const setPauseWhenTabHidden = useSettingsStore(setPauseWhenTabHiddenSelector);
 
   return (
     <section className="flex flex-col gap-4">
-      <UITypography variant="medium">General</UITypography>
+      <UITypography variant="body">General</UITypography>
       <div className="flex items-start gap-2">
         <UICheckbox
           id="pause-when-tab-hidden"
           checked={pauseWhenTabHidden}
-          onCheckedChange={(checked) =>
-            setPauseWhenTabHidden(checked === true)
-          }
+          onCheckedChange={(checked) => setPauseWhenTabHidden(checked === true)}
         />
         <div className="flex flex-col gap-1">
           <label

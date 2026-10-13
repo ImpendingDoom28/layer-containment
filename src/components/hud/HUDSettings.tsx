@@ -37,10 +37,10 @@ export const HUDSettings: FC<HUDSettingsProps> = ({
           <UIButton onClick={handleBack} variant="ghost" size="icon">
             <ArrowLeft />
           </UIButton>
-          <UITypography variant="body">Settings</UITypography>
+          <UITypography variant="h4">Settings</UITypography>
         </UICardTitle>
       </UICardHeader>
-      <UICardContent className="min-h-0 flex-1 gap-8 overflow-y-auto">
+      <UICardContent className="flex-1 min-h-0 gap-8 overflow-y-auto">
         <HUDSettingsGeneralSection />
         <HUDSettingsAudioSection />
         <HUDSettingsControlsSection />

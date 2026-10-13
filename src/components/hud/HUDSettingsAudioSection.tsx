@@ -73,7 +73,7 @@ export const HUDSettingsAudioSection: FC = () => {
   return (
     <section className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <UITypography variant="medium">Audio</UITypography>
+        <UITypography variant="body">Audio</UITypography>
         <UIButton
           onClick={toggleMute}
           variant={muted ? "destructive" : "outline"}

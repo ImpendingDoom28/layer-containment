@@ -3,6 +3,7 @@ import { useEffect, useState, type FC } from "react";
 import {
   DEFAULT_KEYBINDINGS,
   KEYBINDING_DEFINITIONS,
+  VISIBLE_KEYBINDING_DEFINITIONS,
   formatKeyCode,
   normalizeKeyToBinding,
   type KeybindingKey,
@@ -74,26 +75,38 @@ export const HUDSettingsControlsSection: FC = () => {
           Reset
         </UIButton>
       </div>
-      <table className="w-full border-collapse text-sm">
+      <table className="w-full border-collapse">
         <thead>
           <tr>
-            <th className="py-1.5 pr-4 text-left font-medium text-muted-foreground">
-              Control
+            <th className="py-1.5 pr-4 text-left">
+              <UITypography
+                variant="medium"
+                as="span"
+                className="text-muted-foreground"
+              >
+                Control
+              </UITypography>
             </th>
-            <th className="py-1.5 text-right font-medium text-muted-foreground">
-              Keybinding
+            <th className="py-1.5 text-right">
+              <UITypography
+                variant="medium"
+                as="span"
+                className="text-muted-foreground"
+              >
+                Keybinding
+              </UITypography>
             </th>
           </tr>
         </thead>
         <tbody>
-          {KEYBINDING_DEFINITIONS.map((definition) => {
+          {VISIBLE_KEYBINDING_DEFINITIONS.map((definition) => {
             const isRebinding = rebindingKey === definition.key;
             const binding = keybindings[definition.key];
 
             return (
               <tr key={definition.key}>
                 <td className="py-1.5 pr-4">
-                  <UITypography variant="body" as="span">
+                  <UITypography variant="medium" as="span">
                     {definition.label}
                   </UITypography>
                 </td>

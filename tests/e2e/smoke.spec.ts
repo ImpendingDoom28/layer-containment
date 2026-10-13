@@ -116,9 +116,9 @@ test("rebinds a control in the Settings Controls section and remembers it", asyn
     "W"
   );
   await expect(page.getByTestId("keybinding-row-pause")).toContainText("Space");
-  await expect(page.getByTestId("keybinding-row-toggleDebug")).toContainText(
-    "D"
-  );
+
+  // The debug toggle is a development-only keybinding and stays hidden.
+  await expect(page.getByTestId("keybinding-row-toggleDebug")).toBeHidden();
 
   // Clicking a row arms a rebind; the row shows a "press a key" prompt.
   await page.getByTestId("keybinding-row-cameraForward").click();

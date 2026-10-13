@@ -4,8 +4,7 @@ import {
   DEFAULT_KEYBINDINGS,
   KEYBINDING_BY_KEY,
   formatKeyCode,
-  getCameraMoveForEvent,
-  getCameraMovesForKeyCode,
+  getCameraMovesForEvent,
   matchesKeybinding,
   normalizeKeyToBinding,
   resolveKeybinding,
@@ -156,87 +155,76 @@ describe("resolveKeybinding", () => {
   });
 });
 
-describe("getCameraMoveForEvent", () => {
+describe("getCameraMovesForEvent", () => {
+  it("maps the default WASD/QE bindings on key down", () => {
+    expect(
+      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, "KeyW", noModifiers, "down")
+    ).toEqual(["forward"]);
+    expect(
+      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, "KeyS", noModifiers, "down")
+    ).toEqual(["backward"]);
+    expect(
+      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, "KeyA", noModifiers, "down")
+    ).toEqual(["left"]);
+    expect(
+      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, "KeyD", noModifiers, "down")
+    ).toEqual(["right"]);
+    expect(
+      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, "KeyE", noModifiers, "down")
+    ).toEqual(["up"]);
+    expect(
+      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, "KeyQ", noModifiers, "down")
+    ).toEqual(["down"]);
+  });
+
   it("always maps arrow keys to camera moves", () => {
-    expect(getCameraMoveForEvent({}, "ArrowUp", noModifiers)).toBe("forward");
-    expect(getCameraMoveForEvent({}, "ArrowDown", noModifiers)).toBe(
-      "backward"
-    );
-    expect(getCameraMoveForEvent({}, "ArrowLeft", noModifiers)).toBe("left");
-    expect(getCameraMoveForEvent({}, "ArrowRight", noModifiers)).toBe("right");
+    expect(getCameraMovesForEvent({}, "ArrowUp", noModifiers, "down")).toEqual([
+      "forward",
+    ]);
+    expect(
+      getCameraMovesForEvent({}, "ArrowDown", noModifiers, "down")
+    ).toEqual(["backward"]);
+    expect(
+      getCameraMovesForEvent({}, "ArrowLeft", noModifiers, "down")
+    ).toEqual(["left"]);
+    expect(
+      getCameraMovesForEvent({}, "ArrowRight", noModifiers, "down")
+    ).toEqual(["right"]);
   });
 
-  it("maps the default WASD/QE bindings", () => {
-    expect(
-      getCameraMoveForEvent(DEFAULT_KEYBINDINGS, "KeyW", noModifiers)
-    ).toBe("forward");
-    expect(
-      getCameraMoveForEvent(DEFAULT_KEYBINDINGS, "KeyS", noModifiers)
-    ).toBe("backward");
-    expect(
-      getCameraMoveForEvent(DEFAULT_KEYBINDINGS, "KeyA", noModifiers)
-    ).toBe("left");
-    expect(
-      getCameraMoveForEvent(DEFAULT_KEYBINDINGS, "KeyD", noModifiers)
-    ).toBe("right");
-    expect(
-      getCameraMoveForEvent(DEFAULT_KEYBINDINGS, "KeyE", noModifiers)
-    ).toBe("up");
-    expect(
-      getCameraMoveForEvent(DEFAULT_KEYBINDINGS, "KeyQ", noModifiers)
-    ).toBe("down");
-  });
-
-  it("respects user-configured bindings", () => {
+  it("respects user-configured bindings with exact modifier matching on down", () => {
     const config = {
       ...DEFAULT_KEYBINDINGS,
       cameraForward: "KeyI",
       cameraLeft: "Ctrl+KeyL",
     };
 
-    expect(getCameraMoveForEvent(config, "KeyI", noModifiers)).toBe("forward");
-    expect(getCameraMoveForEvent(config, "KeyW", noModifiers)).toBe(null);
+    expect(getCameraMovesForEvent(config, "KeyI", noModifiers, "down")).toEqual(
+      ["forward"]
+    );
+    expect(getCameraMovesForEvent(config, "KeyW", noModifiers, "down")).toEqual(
+      []
+    );
     expect(
-      getCameraMoveForEvent(config, "KeyL", modifiers({ ctrlKey: true }))
-    ).toBe("left");
-    expect(getCameraMoveForEvent(config, "KeyL", noModifiers)).toBe(null);
+      getCameraMovesForEvent(
+        config,
+        "KeyL",
+        modifiers({ ctrlKey: true }),
+        "down"
+      )
+    ).toEqual(["left"]);
+    expect(getCameraMovesForEvent(config, "KeyL", noModifiers, "down")).toEqual(
+      []
+    );
   });
 
-  it("returns null for unrelated keys", () => {
+  it("returns an empty list for unrelated keys", () => {
     expect(
-      getCameraMoveForEvent(DEFAULT_KEYBINDINGS, "KeyM", noModifiers)
-    ).toBe(null);
-  });
-});
-
-describe("getCameraMovesForKeyCode", () => {
-  it("maps the default camera keys by code only", () => {
-    expect(getCameraMovesForKeyCode(DEFAULT_KEYBINDINGS, "KeyW")).toEqual([
-      "forward",
-    ]);
-    expect(getCameraMovesForKeyCode(DEFAULT_KEYBINDINGS, "KeyS")).toEqual([
-      "backward",
-    ]);
-    expect(getCameraMovesForKeyCode(DEFAULT_KEYBINDINGS, "KeyA")).toEqual([
-      "left",
-    ]);
-    expect(getCameraMovesForKeyCode(DEFAULT_KEYBINDINGS, "KeyD")).toEqual([
-      "right",
-    ]);
-    expect(getCameraMovesForKeyCode(DEFAULT_KEYBINDINGS, "KeyE")).toEqual([
-      "up",
-    ]);
-    expect(getCameraMovesForKeyCode(DEFAULT_KEYBINDINGS, "KeyQ")).toEqual([
-      "down",
-    ]);
+      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, "KeyM", noModifiers, "down")
+    ).toEqual([]);
   });
 
-  it("always clears arrow keys regardless of config", () => {
-    expect(getCameraMovesForKeyCode({}, "ArrowUp")).toEqual(["forward"]);
-    expect(getCameraMovesForKeyCode({}, "ArrowRight")).toEqual(["right"]);
-  });
-
-  it("clears the key of a chord binding without modifiers", () => {
+  it("clears the key of a chord binding without modifiers on up", () => {
     const config = {
       ...DEFAULT_KEYBINDINGS,
       cameraLeft: "Ctrl+KeyL",
@@ -244,23 +232,32 @@ describe("getCameraMovesForKeyCode", () => {
 
     // Keyup for the chord key must clear "left" even when modifiers no longer
     // match (the CodeRabbit finding).
-    expect(getCameraMovesForKeyCode(config, "KeyL")).toContain("left");
-    expect(getCameraMovesForKeyCode(config, "KeyL")).toEqual(["left"]);
+    expect(getCameraMovesForEvent(config, "KeyL", noModifiers, "up")).toEqual([
+      "left",
+    ]);
   });
 
-  it("clears every movement bound to the same code", () => {
+  it("clears the movement on key up even with mismatched modifiers", () => {
+    // Hold W, press Shift, release W: keyup fires with shiftKey true, so a
+    // modifier-aware match would leave "forward" stuck on.
+    expect(
+      getCameraMovesForEvent(
+        DEFAULT_KEYBINDINGS,
+        "KeyW",
+        modifiers({ shiftKey: true }),
+        "up"
+      )
+    ).toContain("forward");
+  });
+
+  it("clears every movement bound to the same code on up", () => {
     const config = {
       ...DEFAULT_KEYBINDINGS,
       cameraUp: "KeyW",
     };
 
-    expect(getCameraMovesForKeyCode(config, "KeyW").sort()).toEqual([
-      "forward",
-      "up",
-    ]);
-  });
-
-  it("returns an empty list for unrelated keys", () => {
-    expect(getCameraMovesForKeyCode(DEFAULT_KEYBINDINGS, "KeyM")).toEqual([]);
+    expect(
+      getCameraMovesForEvent(config, "KeyW", noModifiers, "up").sort()
+    ).toEqual(["forward", "up"]);
   });
 });

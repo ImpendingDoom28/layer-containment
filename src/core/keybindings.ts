@@ -15,6 +15,7 @@ export type KeybindingKey = (typeof KEYBINDING_KEYS)[number];
 export type KeybindingDefinition = {
   key: KeybindingKey;
   label: string;
+  visible?: boolean;
 };
 
 export type KeybindingsConfig = Record<KeybindingKey, string>;
@@ -28,8 +29,14 @@ export const KEYBINDING_DEFINITIONS: readonly KeybindingDefinition[] = [
   { key: "cameraDown", label: "Move down" },
   { key: "pause", label: "Pause / Resume" },
   { key: "menu", label: "Open / close menu" },
-  { key: "toggleDebug", label: "Toggle debug overlay" },
+  { key: "toggleDebug", label: "Toggle debug overlay", visible: false },
 ];
+
+// Bindings that can be changed from the Settings panel. The debug toggle is
+// development-only and stays out of the UI.
+export const VISIBLE_KEYBINDING_DEFINITIONS = KEYBINDING_DEFINITIONS.filter(
+  (definition) => definition.visible !== false
+);
 
 export const KEYBINDING_BY_KEY = Object.fromEntries(
   KEYBINDING_DEFINITIONS.map((definition) => [definition.key, definition])
@@ -224,48 +231,18 @@ const tokenKeyCode = (token: string): string => {
 };
 
 /**
- * Maps a keydown event to the camera movement it drives, if any. Arrow keys
- * are always active; the user-configured bindings are checked for the
- * remaining codes with their exact modifier state.
+ * Returns every camera movement bound to the given physical key for the given
+ * event phase. Arrow keys are always active. On "down" a binding is matched
+ * with its exact modifier state; on "up" only the physical key is matched,
+ * because the modifiers held when a key is released can differ from when it was
+ * pressed (e.g. releasing a chord's key before its modifiers) and a
+ * modifier-aware match would leave the movement stuck on.
  */
-export const getCameraMoveForEvent = (
+export const getCameraMovesForEvent = (
   config: Partial<KeybindingsConfig>,
   code: string,
-  modifiers: KeyModifiers
-): CameraMove | null => {
-  const arrowMove = ARROW_MOVES[code];
-  if (arrowMove) {
-    return arrowMove;
-  }
-
-  for (const [move, bindingKey] of Object.entries(CAMERA_MOVE_BINDINGS) as [
-    CameraMove,
-    KeybindingKey,
-  ][]) {
-    if (
-      matchesKeybinding(
-        resolveKeybinding(config, KEYBINDING_BY_KEY[bindingKey]),
-        code,
-        modifiers
-      )
-    ) {
-      return move;
-    }
-  }
-
-  return null;
-};
-
-/**
- * Returns every camera movement whose binding is assigned to the given
- * physical key, ignoring modifier state. Keyup events use this because the
- * modifiers held when a key is released can differ from when it was pressed
- * (e.g. releasing a chord's key before its modifiers); matching by code alone
- * guarantees the movement is always cleared.
- */
-export const getCameraMovesForKeyCode = (
-  config: Partial<KeybindingsConfig>,
-  code: string
+  modifiers: KeyModifiers,
+  phase: "down" | "up"
 ): CameraMove[] => {
   const moves: CameraMove[] = [];
   const arrowMove = ARROW_MOVES[code];
@@ -278,7 +255,11 @@ export const getCameraMovesForKeyCode = (
     KeybindingKey,
   ][]) {
     const token = resolveKeybinding(config, KEYBINDING_BY_KEY[bindingKey]);
-    if (tokenKeyCode(token) === code) {
+    const matches =
+      phase === "up"
+        ? tokenKeyCode(token) === code
+        : matchesKeybinding(token, code, modifiers);
+    if (matches) {
       moves.push(move);
     }
   }

@@ -18,7 +18,9 @@ import { defineConfig } from "vite";
  *   npm run build:stress   (outputs stress/dist/ with only the stress bundle,
  *                           leaving the default build's dist/ untouched)
  */
-const root = path.resolve(__dirname, "..");
+// import.meta.dirname (not __dirname): this file is loaded as an ES module by
+// the Vite config loader, matching the native config loader that Vite 8 prefers.
+const root = path.resolve(import.meta.dirname, "..");
 
 export default defineConfig({
   // Explicit repo root: this config lives in `stress/`, so Vite's default
@@ -45,7 +47,7 @@ export default defineConfig({
     // two never clobber each other.
     outDir: path.resolve(root, "stress/dist"),
     rollupOptions: {
-      input: path.resolve(__dirname, "index.stress.html"),
+      input: path.resolve(import.meta.dirname, "index.stress.html"),
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {

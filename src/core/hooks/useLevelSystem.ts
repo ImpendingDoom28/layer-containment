@@ -50,6 +50,7 @@ import { getUpgradeIndicatorColors } from "../../utils/enemyUpgradeVisuals";
 import {
   getStackTierForEnemy,
   getTieredUpgradeEffect,
+  getTotalRewardMultiplierFromStack,
   getUniqueUpgradeIdsInStackOrder,
 } from "../../utils/enemyUpgradeTierEffects";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
@@ -235,9 +236,15 @@ export const useLevelSystem = () => {
 
       let health = enemyConfig.health;
       let speed = enemyConfig.speed;
-      let reward = enemyConfig.reward;
       let regeneration: number | undefined;
       let slowResistance: number | undefined;
+
+      // Gold scales with every pick taken (per-pick tier product), matching
+      // the "Stacked bonus: +X% gold" total the upgrade UI promises.
+      const reward = Math.round(
+        enemyConfig.reward *
+          getTotalRewardMultiplierFromStack(applyUpgrades, enemyUpgrades)
+      );
 
       const uniqueUpgradeIds = getUniqueUpgradeIdsInStackOrder(applyUpgrades);
       for (const upgradeId of uniqueUpgradeIds) {
@@ -253,7 +260,6 @@ export const useLevelSystem = () => {
         if (effect.speedMultiplier) {
           speed = speed * effect.speedMultiplier;
         }
-        reward = Math.round(reward * effect.rewardMultiplier);
 
         if (effect.regeneration) {
           regeneration = (regeneration ?? 0) + effect.regeneration;

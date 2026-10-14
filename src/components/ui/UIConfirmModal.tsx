@@ -76,6 +76,7 @@ export const UIConfirmModal: FC<UIConfirmModalProps> = ({
       title={title}
       icon={<AlertTriangle className="size-4 text-destructive" />}
       className={className}
+      role="alertdialog"
       footer={
         <>
           <UIButton variant="ghost" onClick={() => onOpenChange?.(false)}>

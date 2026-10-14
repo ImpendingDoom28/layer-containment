@@ -30,6 +30,12 @@ export type UIModalProps = {
    */
   className?: string;
   /**
+   * ARIA role of the dialog content. Defaults to "dialog"; use
+   * "alertdialog" for modals that interrupt the flow and demand a decision
+   * (e.g. confirm dialogs).
+   */
+  role?: "dialog" | "alertdialog";
+  /**
    * Body content shown under the title.
    */
   children: ReactNode;
@@ -48,10 +54,7 @@ export type UIModalProps = {
  * A shared centered modal dialog.
  *
  * Renders a card on top of a dimmed backdrop with an optional icon, a title,
- * body content, and an optional footer (typically action buttons). Escape or
- * a backdrop click dismiss the modal through `onOpenChange` — components that
- * must not be dismissed that way (e.g. confirm dialogs) pass a handler that
- * ignores the event.
+ * body content, and an optional footer (typically action buttons).
  *
  * @example
  *  <UIModal
@@ -69,6 +72,7 @@ export const UIModal: FC<UIModalProps> = ({
   title,
   icon,
   className,
+  role = "dialog",
   children,
   footer,
   onOpenChange,
@@ -83,6 +87,10 @@ export const UIModal: FC<UIModalProps> = ({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-(--z-modal) bg-black/60" />
         <DialogPrimitive.Content
+          role={role}
+          // Keep the Escape keydown from bubbling to window listeners (e.g.
+          // the game's keyboard system), so dismissing a modal does not also
+          // toggle the game menu.
           onEscapeKeyDown={(e) => e.stopPropagation()}
           className="fixed left-1/2 top-1/2 z-(--z-modal) -translate-x-1/2 -translate-y-1/2 w-[min(100%-2rem,20rem)] outline-none"
         >

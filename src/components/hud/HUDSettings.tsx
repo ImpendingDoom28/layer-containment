@@ -2,12 +2,7 @@ import { FC } from "react";
 import { ArrowLeft } from "lucide-react";
 
 import { UIButton } from "../ui/buttons/UIButton";
-import {
-  UICard,
-  UICardContent,
-  UICardHeader,
-  UICardTitle,
-} from "../ui/UICard";
+import { UICard, UICardContent, UICardHeader, UICardTitle } from "../ui/UICard";
 import {
   setShowSettingsSelector,
   showSettingsSelector,
@@ -15,6 +10,7 @@ import {
 } from "../../core/stores/useGameStore";
 import { UITypography } from "../ui/UITypography";
 import { HUDSettingsAudioSection } from "./HUDSettingsAudioSection";
+import { HUDSettingsControlsSection } from "./HUDSettingsControlsSection";
 import { HUDSettingsGeneralSection } from "./HUDSettingsGeneralSection";
 import { cn } from "../ui/lib/twUtils";
 
@@ -38,19 +34,16 @@ export const HUDSettings: FC<HUDSettingsProps> = ({
     <UICard className={cn("h-full w-full bg-transparent", className)}>
       <UICardHeader>
         <UICardTitle>
-          <UIButton
-            onClick={handleBack}
-            variant="ghost"
-            size="icon"
-          >
+          <UIButton onClick={handleBack} variant="ghost" size="icon">
             <ArrowLeft />
           </UIButton>
-          <UITypography variant="body">Settings</UITypography>
+          <UITypography variant="h4">Settings</UITypography>
         </UICardTitle>
       </UICardHeader>
-      <UICardContent className="min-h-0 flex-1 gap-8 overflow-y-auto">
+      <UICardContent className="flex-1 min-h-0 gap-8 overflow-y-auto">
         <HUDSettingsGeneralSection />
         <HUDSettingsAudioSection />
+        <HUDSettingsControlsSection />
       </UICardContent>
     </UICard>
   );

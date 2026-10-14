@@ -1,10 +1,16 @@
 import { useEffect } from "react";
 import { useGameSystem } from "../../core/hooks/useGameSystem";
+import { matchesKeybinding, resolveKeybinding } from "../../core/keybindings";
+import { KEYBINDING_BY_KEY } from "../../core/keybindingsConstants";
 import {
   selectedTowerTypeToPlaceSelector,
   setSelectedTowerTypeToPlaceSelector,
   useGameStore,
 } from "../../core/stores/useGameStore";
+import {
+  keybindingsSelector,
+  useSettingsStore,
+} from "../../core/stores/useSettingsStore";
 
 type KeyboardHandlingSystemProps = {
   onGameMenuEscape: () => void;
@@ -17,6 +23,8 @@ export const KeyboardHandlingSystem = ({
   const setSelectedTowerType = useGameStore(
     setSelectedTowerTypeToPlaceSelector
   );
+
+  const keybindings = useSettingsStore(keybindingsSelector);
 
   const {
     gameStatus,
@@ -34,7 +42,12 @@ export const KeyboardHandlingSystem = ({
     }
 
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (
+        matchesKeybinding(
+          resolveKeybinding(keybindings, KEYBINDING_BY_KEY.menu),
+          e
+        )
+      ) {
         if (gameStatus === "gameMenu") {
           onGameMenuEscape();
         } else if (selectedTowerType) {
@@ -44,12 +57,22 @@ export const KeyboardHandlingSystem = ({
         } else if (gameStatus === "playing" || gameStatus === "paused") {
           openGameMenu();
         }
-      } else if (e.key === " ") {
+      } else if (
+        matchesKeybinding(
+          resolveKeybinding(keybindings, KEYBINDING_BY_KEY.pause),
+          e
+        )
+      ) {
         e.preventDefault();
         if (gameStatus === "playing" || gameStatus === "paused") {
           pauseGame();
         }
-      } else if (e.ctrlKey && e.shiftKey && e.altKey && e.key === "D") {
+      } else if (
+        matchesKeybinding(
+          resolveKeybinding(keybindings, KEYBINDING_BY_KEY.toggleDebug),
+          e
+        )
+      ) {
         e.preventDefault();
         e.stopPropagation();
         toggleDebug();
@@ -68,6 +91,7 @@ export const KeyboardHandlingSystem = ({
     setSelectedTowerType,
     setSelectedTower,
     toggleDebug,
+    keybindings,
   ]);
 
   return null;

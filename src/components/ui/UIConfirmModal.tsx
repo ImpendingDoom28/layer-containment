@@ -1,18 +1,9 @@
 import type { FC, ReactNode } from "react";
 
-import { Dialog as DialogPrimitive } from "radix-ui";
 import { AlertTriangle } from "lucide-react";
 
-import { cn } from "./lib/twUtils";
 import { UIButton } from "./buttons/UIButton";
-import { UITypography } from "./UITypography";
-import {
-  UICard,
-  UICardContent,
-  UICardFooter,
-  UICardHeader,
-  UICardTitle,
-} from "./UICard";
+import { UIModal } from "./UIModal";
 
 export type UIConfirmModalProps = {
   /**
@@ -51,7 +42,7 @@ export type UIConfirmModalProps = {
 };
 
 /**
- * A shared confirm dialog.
+ * A shared confirm dialog built on top of the common modal.
  *
  * Renders a centered card on top of a dimmed backdrop with a title,
  * a message, and two buttons: a confirm action and a cancel action.
@@ -79,57 +70,25 @@ export const UIConfirmModal: FC<UIConfirmModalProps> = ({
   onConfirm,
   onOpenChange,
 }) => {
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen) return;
-    onOpenChange?.(false);
-  };
-
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-(--z-modal) bg-black/60" />
-        <DialogPrimitive.Content
-          role="alertdialog"
-          onEscapeKeyDown={(e) => e.stopPropagation()}
-          className="fixed left-1/2 top-1/2 z-(--z-modal) -translate-x-1/2 -translate-y-1/2 w-[min(100%-2rem,20rem)] outline-none"
-        >
-          <UICard
-            className={cn(
-              "w-full max-w-sm animate-in fade-in zoom-in-95 duration-150",
-              className
-            )}
-          >
-            <UICardHeader>
-              <UICardTitle className="gap-x-2">
-                <AlertTriangle className="size-4 text-destructive" />
-                <DialogPrimitive.Title>
-                  <UITypography variant="h4" className="text-base">
-                    {title}
-                  </UITypography>
-                </DialogPrimitive.Title>
-              </UICardTitle>
-            </UICardHeader>
-            <UICardContent>
-              <DialogPrimitive.Description>
-                <UITypography
-                  variant="small"
-                  className="leading-relaxed text-muted-foreground"
-                >
-                  {message}
-                </UITypography>
-              </DialogPrimitive.Description>
-            </UICardContent>
-            <UICardFooter className="justify-end gap-6">
-              <DialogPrimitive.Close asChild>
-                <UIButton variant="ghost">{cancelLabel}</UIButton>
-              </DialogPrimitive.Close>
-              <UIButton variant="destructive" onClick={onConfirm}>
-                {confirmLabel}
-              </UIButton>
-            </UICardFooter>
-          </UICard>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
+    <UIModal
+      open={open}
+      title={title}
+      icon={<AlertTriangle className="size-4 text-destructive" />}
+      className={className}
+      footer={
+        <>
+          <UIButton variant="ghost" onClick={() => onOpenChange?.(false)}>
+            {cancelLabel}
+          </UIButton>
+          <UIButton variant="destructive" onClick={onConfirm}>
+            {confirmLabel}
+          </UIButton>
+        </>
+      }
+      onOpenChange={onOpenChange}
+    >
+      {message}
+    </UIModal>
   );
 };

@@ -193,7 +193,9 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
               onProjectileRemove={onProjectileRemove}
               onSellTower={sellTower}
               shouldDisableControls={shouldDisableControls}
-              shouldStopMovement={shouldStopMovement}
+              // While the first-run controls intro is open the camera must not
+              // follow the (still active) camera keybindings.
+              shouldStopMovement={shouldStopMovement || controlsIntroOpen}
               playableLevelId={activePlayableLevel}
             />
           )}

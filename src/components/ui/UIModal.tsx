@@ -110,7 +110,9 @@ export const UIModal: FC<UIModalProps> = ({
                 </DialogPrimitive.Title>
               </UICardTitle>
             </UICardHeader>
-            <UICardContent>{children}</UICardContent>
+            <DialogPrimitive.Description asChild>
+              <UICardContent>{children}</UICardContent>
+            </DialogPrimitive.Description>
             {footer !== undefined && (
               <UICardFooter className="justify-end gap-6">
                 {footer}

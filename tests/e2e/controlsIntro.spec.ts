@@ -47,7 +47,12 @@ test("does not show the controls intro to a returning player", async ({
 }) => {
   // onOpenGame marks the intro as already seen (the default), simulating a
   // player who saw it in an earlier session.
-  await onOpenGame(page);
+  await onOpenGame(page, { waitForTowerShop: true });
 
-  await expect(introTitle(page)).not.toBeVisible({ timeout: 10_000 });
+  // The run is confirmed active before asserting the absence of the modal,
+  // so the test cannot pass while the game is still loading.
+  await expect(
+    page.getByRole("button", { name: "Start next wave" })
+  ).toBeVisible();
+  await expect(introTitle(page)).not.toBeVisible();
 });

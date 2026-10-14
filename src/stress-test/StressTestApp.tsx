@@ -430,6 +430,7 @@ const StressTestGame = () => {
               onSellTower={sellTower}
               shouldDisableControls={shouldDisableControls}
               shouldStopMovement={shouldStopMovement}
+              shouldStopCamera={shouldStopMovement}
               playableLevelId={STRESS_LEVEL_ID}
             />
             <Stats showPanel={0} className="top-[calc(100%-48px)]!" />

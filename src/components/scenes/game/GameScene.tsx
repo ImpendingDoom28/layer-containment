@@ -43,6 +43,7 @@ type GameSceneProps = {
   selectedTower: TowerInstance | null;
   shouldDisableControls: boolean;
   shouldStopMovement: boolean;
+  shouldStopCamera: boolean;
   gameStatus: GameStatus;
   waveSystem: WaveSystem;
   money: number;
@@ -65,6 +66,7 @@ export const GameScene: React.FC<GameSceneProps> = ({
   onEffectComplete,
   selectedTower,
   shouldStopMovement,
+  shouldStopCamera,
   waveSystem,
   onEnemyReachEnd,
   onProjectileHit,
@@ -98,7 +100,7 @@ export const GameScene: React.FC<GameSceneProps> = ({
       <GameCamera
         movementSpeed={10}
         rotationSensitivity={0.002}
-        shouldStopMovement={shouldStopMovement}
+        shouldStopCamera={shouldStopCamera}
       />
 
       <AudioListenerSync />

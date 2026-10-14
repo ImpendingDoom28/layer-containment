@@ -1,133 +1,55 @@
-const KEYBINDING_KEYS = [
-  "cameraForward",
-  "cameraBackward",
-  "cameraLeft",
-  "cameraRight",
-  "cameraUp",
-  "cameraDown",
-  "pause",
-  "menu",
-  "toggleDebug",
-] as const;
-
-export type KeybindingKey = (typeof KEYBINDING_KEYS)[number];
-
-export type KeybindingDefinition = {
-  key: KeybindingKey;
-  label: string;
-  visible?: boolean;
-};
-
-export type KeybindingsConfig = Record<KeybindingKey, string>;
-
-export const KEYBINDING_DEFINITIONS: readonly KeybindingDefinition[] = [
-  { key: "cameraForward", label: "Move forward" },
-  { key: "cameraBackward", label: "Move backward" },
-  { key: "cameraLeft", label: "Move left" },
-  { key: "cameraRight", label: "Move right" },
-  { key: "cameraUp", label: "Move up" },
-  { key: "cameraDown", label: "Move down" },
-  { key: "pause", label: "Pause / Resume" },
-  { key: "menu", label: "Open / close menu" },
-  { key: "toggleDebug", label: "Toggle debug overlay", visible: false },
-];
-
-// Bindings that can be changed from the Settings panel. The debug toggle is
-// development-only and stays out of the UI.
-export const VISIBLE_KEYBINDING_DEFINITIONS = KEYBINDING_DEFINITIONS.filter(
-  (definition) => definition.visible !== false
-);
-
-export const KEYBINDING_BY_KEY = Object.fromEntries(
-  KEYBINDING_DEFINITIONS.map((definition) => [definition.key, definition])
-) as Record<KeybindingKey, KeybindingDefinition>;
+import {
+  ARROW_MOVES,
+  CAMERA_MOVE_BINDINGS,
+  CHORD_FORBIDDEN_CODES,
+  DEFAULT_KEYBINDINGS,
+  KEYBINDING_BY_KEY,
+  KEY_CODE_LABELS,
+  MODIFIER_CODES,
+  type CameraMove,
+  type KeybindingDefinition,
+  type KeybindingEvent,
+  type KeybindingKey,
+  type KeybindingsConfig,
+} from "./keybindingsConstants";
 
 /**
- * Binding tokens are physical key codes (`e.code`) so bindings behave
- * identically across keyboard layouts. A bare code is a single key
- * ("KeyW", "Space"); a chord is "Ctrl+Shift+Alt+KeyD"-style with the key
- * code last. Any control may hold either form.
- */
-export const DEFAULT_KEYBINDINGS: KeybindingsConfig = {
-  cameraForward: "KeyW",
-  cameraBackward: "KeyS",
-  cameraLeft: "KeyA",
-  cameraRight: "KeyD",
-  cameraUp: "KeyE",
-  cameraDown: "KeyQ",
-  pause: "Space",
-  menu: "Escape",
-  toggleDebug: "Ctrl+Shift+Alt+KeyD",
-};
-
-const MODIFIER_CODES = new Set([
-  "ShiftLeft",
-  "ShiftRight",
-  "ControlLeft",
-  "ControlRight",
-  "AltLeft",
-  "AltRight",
-  "MetaLeft",
-  "MetaRight",
-]);
-
-// Keys that already carry system/panel semantics; keep them out of chords so
-// a rebind can never swallow Escape (used to cancel rebinds) or the spacebar.
-const CHORD_FORBIDDEN_CODES = new Set([
-  "Space",
-  "Escape",
-  "Enter",
-  "Tab",
-  "ArrowUp",
-  "ArrowDown",
-  "ArrowLeft",
-  "ArrowRight",
-]);
-
-type KeyModifiers = Pick<
-  KeyboardEvent,
-  "ctrlKey" | "shiftKey" | "altKey" | "metaKey"
->;
-
-/**
- * Normalizes a keydown event into a binding token. Returns null for bare
+ * Normalizes a key input into a binding token. Returns null for bare
  * modifier presses and for forbidden chords so the caller can ignore them.
  */
 export const normalizeKeyToBinding = (
-  code: string,
-  modifiers: KeyModifiers
+  event: KeybindingEvent
 ): string | null => {
-  if (MODIFIER_CODES.has(code)) {
+  if (MODIFIER_CODES.has(event.code)) {
     return null;
   }
 
   const parts: string[] = [];
-  if (modifiers.ctrlKey) parts.push("Ctrl");
-  if (modifiers.shiftKey) parts.push("Shift");
-  if (modifiers.altKey) parts.push("Alt");
-  if (modifiers.metaKey) parts.push("Meta");
+  if (event.ctrlKey) parts.push("Ctrl");
+  if (event.shiftKey) parts.push("Shift");
+  if (event.altKey) parts.push("Alt");
+  if (event.metaKey) parts.push("Meta");
 
   if (parts.length === 0) {
-    return code;
+    return event.code;
   }
 
-  if (CHORD_FORBIDDEN_CODES.has(code)) {
+  if (CHORD_FORBIDDEN_CODES.has(event.code)) {
     return null;
   }
 
-  return `${parts.join("+")}+${code}`;
+  return `${parts.join("+")}+${event.code}`;
 };
 
 /**
- * Whether a keydown event matches a stored binding token (a bare key code
- * or a "Ctrl+Shift+Alt+KeyD"-style chord). Bare keys require no modifiers;
- * chords require exactly the listed modifiers. Used by every consumer so
- * matching behavior stays identical.
+ * Whether a key input matches a stored binding token (a bare key code or a
+ * "Ctrl+Shift+Alt+KeyD"-style chord). Bare keys require no modifiers; chords
+ * require exactly the listed modifiers. Used by every consumer so matching
+ * behavior stays identical.
  */
 export const matchesKeybinding = (
   token: string,
-  code: string,
-  modifiers: KeyModifiers
+  event: KeybindingEvent
 ): boolean => {
   if (token.includes("+")) {
     const parts = token.split("+");
@@ -135,20 +57,20 @@ export const matchesKeybinding = (
     const chord = parts.slice(0, -1).join("+");
 
     const expected: string[] = [];
-    if (modifiers.ctrlKey) expected.push("Ctrl");
-    if (modifiers.shiftKey) expected.push("Shift");
-    if (modifiers.altKey) expected.push("Alt");
-    if (modifiers.metaKey) expected.push("Meta");
+    if (event.ctrlKey) expected.push("Ctrl");
+    if (event.shiftKey) expected.push("Shift");
+    if (event.altKey) expected.push("Alt");
+    if (event.metaKey) expected.push("Meta");
 
-    return code === keyCode && chord === expected.join("+");
+    return event.code === keyCode && chord === expected.join("+");
   }
 
   return (
-    code === token &&
-    !modifiers.ctrlKey &&
-    !modifiers.shiftKey &&
-    !modifiers.altKey &&
-    !modifiers.metaKey
+    event.code === token &&
+    !event.ctrlKey &&
+    !event.shiftKey &&
+    !event.altKey &&
+    !event.metaKey
   );
 };
 
@@ -167,31 +89,6 @@ export const resolveKeybinding = (
     : DEFAULT_KEYBINDINGS[definition.key];
 };
 
-const KEY_CODE_LABELS: Record<string, string> = {
-  ArrowUp: "↑",
-  ArrowDown: "↓",
-  ArrowLeft: "←",
-  ArrowRight: "→",
-  Space: "Space",
-  Escape: "Esc",
-  Enter: "Enter",
-  Backspace: "Bksp",
-  Delete: "Del",
-  Tab: "Tab",
-  CapsLock: "Caps",
-  Backquote: "`",
-  Minus: "-",
-  Equal: "=",
-  BracketLeft: "[",
-  BracketRight: "]",
-  Backslash: "\\",
-  Semicolon: ";",
-  Quote: "'",
-  Comma: ",",
-  Period: ".",
-  Slash: "/",
-};
-
 export const formatKeyCode = (code: string): string =>
   code
     .split("+")
@@ -203,27 +100,6 @@ export const formatKeyCode = (code: string): string =>
           : part.replace(/^Key/, ""))
     )
     .join(" + ");
-
-export type CameraMove =
-  "forward" | "backward" | "left" | "right" | "up" | "down";
-
-export const CAMERA_MOVE_BINDINGS: Record<CameraMove, KeybindingKey> = {
-  forward: "cameraForward",
-  backward: "cameraBackward",
-  left: "cameraLeft",
-  right: "cameraRight",
-  up: "cameraUp",
-  down: "cameraDown",
-};
-
-// Arrow keys always steer the camera (as before the bindings were
-// configurable) on top of whatever keys the user has assigned.
-const ARROW_MOVES: Record<string, CameraMove> = {
-  ArrowUp: "forward",
-  ArrowDown: "backward",
-  ArrowLeft: "left",
-  ArrowRight: "right",
-};
 
 const tokenKeyCode = (token: string): string => {
   const parts = token.split("+");
@@ -240,12 +116,11 @@ const tokenKeyCode = (token: string): string => {
  */
 export const getCameraMovesForEvent = (
   config: Partial<KeybindingsConfig>,
-  code: string,
-  modifiers: KeyModifiers,
+  event: KeybindingEvent,
   phase: "down" | "up"
 ): CameraMove[] => {
   const moves: CameraMove[] = [];
-  const arrowMove = ARROW_MOVES[code];
+  const arrowMove = ARROW_MOVES[event.code];
   if (arrowMove) {
     moves.push(arrowMove);
   }
@@ -257,8 +132,8 @@ export const getCameraMovesForEvent = (
     const token = resolveKeybinding(config, KEYBINDING_BY_KEY[bindingKey]);
     const matches =
       phase === "up"
-        ? tokenKeyCode(token) === code
-        : matchesKeybinding(token, code, modifiers);
+        ? tokenKeyCode(token) === event.code
+        : matchesKeybinding(token, event);
     if (matches) {
       moves.push(move);
     }

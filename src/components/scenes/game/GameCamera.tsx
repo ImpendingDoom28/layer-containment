@@ -100,18 +100,13 @@ export const GameCamera = ({
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      for (const move of getCameraMovesForEvent(
-        keybindings,
-        e.code,
-        e,
-        "down"
-      )) {
+      for (const move of getCameraMovesForEvent(keybindings, e, "down")) {
         moveState.current[move] = true;
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      for (const move of getCameraMovesForEvent(keybindings, e.code, e, "up")) {
+      for (const move of getCameraMovesForEvent(keybindings, e, "up")) {
         moveState.current[move] = false;
       }
     };

@@ -6,7 +6,7 @@ import {
   DEFAULT_KEYBINDINGS,
   type KeybindingsConfig,
   type KeybindingKey,
-} from "../keybindings";
+} from "../keybindingsConstants";
 
 type SettingsStoreState = {
   pauseWhenTabHidden: boolean;

@@ -1,10 +1,7 @@
 import { useEffect } from "react";
 import { useGameSystem } from "../../core/hooks/useGameSystem";
-import {
-  KEYBINDING_BY_KEY,
-  matchesKeybinding,
-  resolveKeybinding,
-} from "../../core/keybindings";
+import { matchesKeybinding, resolveKeybinding } from "../../core/keybindings";
+import { KEYBINDING_BY_KEY } from "../../core/keybindingsConstants";
 import {
   selectedTowerTypeToPlaceSelector,
   setSelectedTowerTypeToPlaceSelector,
@@ -48,7 +45,6 @@ export const KeyboardHandlingSystem = ({
       if (
         matchesKeybinding(
           resolveKeybinding(keybindings, KEYBINDING_BY_KEY.menu),
-          e.code,
           e
         )
       ) {
@@ -64,7 +60,6 @@ export const KeyboardHandlingSystem = ({
       } else if (
         matchesKeybinding(
           resolveKeybinding(keybindings, KEYBINDING_BY_KEY.pause),
-          e.code,
           e
         )
       ) {
@@ -75,7 +70,6 @@ export const KeyboardHandlingSystem = ({
       } else if (
         matchesKeybinding(
           resolveKeybinding(keybindings, KEYBINDING_BY_KEY.toggleDebug),
-          e.code,
           e
         )
       ) {

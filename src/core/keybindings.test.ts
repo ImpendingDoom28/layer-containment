@@ -1,31 +1,27 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  DEFAULT_KEYBINDINGS,
-  KEYBINDING_BY_KEY,
   formatKeyCode,
   getCameraMovesForEvent,
   matchesKeybinding,
   normalizeKeyToBinding,
   resolveKeybinding,
 } from "./keybindings";
+import {
+  DEFAULT_KEYBINDINGS,
+  KEYBINDING_BY_KEY,
+  type KeybindingEvent,
+} from "./keybindingsConstants";
 
-type Modifiers = {
-  ctrlKey: boolean;
-  shiftKey: boolean;
-  altKey: boolean;
-  metaKey: boolean;
-};
-
-const noModifiers: Modifiers = {
+const event = (
+  code: string,
+  partial: Partial<KeybindingEvent> = {}
+): KeybindingEvent => ({
+  code,
   ctrlKey: false,
   shiftKey: false,
   altKey: false,
   metaKey: false,
-};
-
-const modifiers = (partial: Partial<Modifiers> = {}): Modifiers => ({
-  ...noModifiers,
   ...partial,
 });
 
@@ -42,6 +38,13 @@ describe("formatKeyCode", () => {
     expect(formatKeyCode("BracketLeft")).toBe("[");
   });
 
+  it("formats digit codes as plain digits", () => {
+    expect(formatKeyCode("Digit1")).toBe("1");
+    expect(formatKeyCode("Digit0")).toBe("0");
+    expect(formatKeyCode("Numpad7")).toBe("7");
+    expect(formatKeyCode("Ctrl+Digit1")).toBe("Ctrl + 1");
+  });
+
   it("joins chord modifiers with plus signs", () => {
     expect(formatKeyCode("Ctrl+Shift+Alt+KeyD")).toBe("Ctrl + Shift + Alt + D");
     expect(formatKeyCode("Ctrl+KeyP")).toBe("Ctrl + P");
@@ -50,47 +53,46 @@ describe("formatKeyCode", () => {
 
 describe("normalizeKeyToBinding", () => {
   it("returns the bare code for a single key", () => {
-    expect(normalizeKeyToBinding("KeyW", noModifiers)).toBe("KeyW");
+    expect(normalizeKeyToBinding(event("KeyW"))).toBe("KeyW");
   });
 
   it("ignores bare modifier presses", () => {
     expect(
-      normalizeKeyToBinding("ShiftLeft", modifiers({ shiftKey: true }))
+      normalizeKeyToBinding(event("ShiftLeft", { shiftKey: true }))
     ).toBeNull();
     expect(
-      normalizeKeyToBinding("ControlLeft", modifiers({ ctrlKey: true }))
+      normalizeKeyToBinding(event("ControlLeft", { ctrlKey: true }))
     ).toBeNull();
   });
 
   it("builds chords with modifiers in a stable order", () => {
     expect(
       normalizeKeyToBinding(
-        "KeyD",
-        modifiers({ ctrlKey: true, shiftKey: true, altKey: true })
+        event("KeyD", { ctrlKey: true, shiftKey: true, altKey: true })
       )
     ).toBe("Ctrl+Shift+Alt+KeyD");
     expect(
-      normalizeKeyToBinding("KeyX", modifiers({ altKey: true, ctrlKey: true }))
+      normalizeKeyToBinding(event("KeyX", { altKey: true, ctrlKey: true }))
     ).toBe("Ctrl+Alt+KeyX");
   });
 
   it("forbids chords on system-sensitive keys", () => {
     expect(
-      normalizeKeyToBinding("Escape", modifiers({ ctrlKey: true }))
+      normalizeKeyToBinding(event("Escape", { ctrlKey: true }))
     ).toBeNull();
     expect(
-      normalizeKeyToBinding("Space", modifiers({ shiftKey: true }))
+      normalizeKeyToBinding(event("Space", { shiftKey: true }))
     ).toBeNull();
   });
 });
 
 describe("matchesKeybinding", () => {
   it("matches bare keys only without modifiers", () => {
-    expect(matchesKeybinding("KeyW", "KeyW", noModifiers)).toBe(true);
-    expect(
-      matchesKeybinding("KeyW", "KeyW", modifiers({ shiftKey: true }))
-    ).toBe(false);
-    expect(matchesKeybinding("KeyW", "KeyA", noModifiers)).toBe(false);
+    expect(matchesKeybinding("KeyW", event("KeyW"))).toBe(true);
+    expect(matchesKeybinding("KeyW", event("KeyW", { shiftKey: true }))).toBe(
+      false
+    );
+    expect(matchesKeybinding("KeyW", event("KeyA"))).toBe(false);
   });
 
   it("matches chords with exactly the listed modifiers", () => {
@@ -99,22 +101,16 @@ describe("matchesKeybinding", () => {
     expect(
       matchesKeybinding(
         chord,
-        "KeyD",
-        modifiers({ ctrlKey: true, shiftKey: true, altKey: true })
+        event("KeyD", { ctrlKey: true, shiftKey: true, altKey: true })
       )
     ).toBe(true);
     expect(
-      matchesKeybinding(
-        chord,
-        "KeyD",
-        modifiers({ ctrlKey: true, shiftKey: true })
-      )
+      matchesKeybinding(chord, event("KeyD", { ctrlKey: true, shiftKey: true }))
     ).toBe(false);
     expect(
       matchesKeybinding(
         chord,
-        "KeyD",
-        modifiers({
+        event("KeyD", {
           ctrlKey: true,
           shiftKey: true,
           altKey: true,
@@ -126,9 +122,9 @@ describe("matchesKeybinding", () => {
 
   it("distinguishes different chords", () => {
     expect(
-      matchesKeybinding("Ctrl+KeyP", "KeyP", modifiers({ ctrlKey: true }))
+      matchesKeybinding("Ctrl+KeyP", event("KeyP", { ctrlKey: true }))
     ).toBe(true);
-    expect(matchesKeybinding("Ctrl+KeyP", "KeyP", noModifiers)).toBe(false);
+    expect(matchesKeybinding("Ctrl+KeyP", event("KeyP"))).toBe(false);
   });
 });
 
@@ -158,38 +154,38 @@ describe("resolveKeybinding", () => {
 describe("getCameraMovesForEvent", () => {
   it("maps the default WASD/QE bindings on key down", () => {
     expect(
-      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, "KeyW", noModifiers, "down")
+      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, event("KeyW"), "down")
     ).toEqual(["forward"]);
     expect(
-      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, "KeyS", noModifiers, "down")
+      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, event("KeyS"), "down")
     ).toEqual(["backward"]);
     expect(
-      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, "KeyA", noModifiers, "down")
+      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, event("KeyA"), "down")
     ).toEqual(["left"]);
     expect(
-      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, "KeyD", noModifiers, "down")
+      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, event("KeyD"), "down")
     ).toEqual(["right"]);
     expect(
-      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, "KeyE", noModifiers, "down")
+      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, event("KeyE"), "down")
     ).toEqual(["up"]);
     expect(
-      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, "KeyQ", noModifiers, "down")
+      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, event("KeyQ"), "down")
     ).toEqual(["down"]);
   });
 
   it("always maps arrow keys to camera moves", () => {
-    expect(getCameraMovesForEvent({}, "ArrowUp", noModifiers, "down")).toEqual([
+    expect(getCameraMovesForEvent({}, event("ArrowUp"), "down")).toEqual([
       "forward",
     ]);
-    expect(
-      getCameraMovesForEvent({}, "ArrowDown", noModifiers, "down")
-    ).toEqual(["backward"]);
-    expect(
-      getCameraMovesForEvent({}, "ArrowLeft", noModifiers, "down")
-    ).toEqual(["left"]);
-    expect(
-      getCameraMovesForEvent({}, "ArrowRight", noModifiers, "down")
-    ).toEqual(["right"]);
+    expect(getCameraMovesForEvent({}, event("ArrowDown"), "down")).toEqual([
+      "backward",
+    ]);
+    expect(getCameraMovesForEvent({}, event("ArrowLeft"), "down")).toEqual([
+      "left",
+    ]);
+    expect(getCameraMovesForEvent({}, event("ArrowRight"), "down")).toEqual([
+      "right",
+    ]);
   });
 
   it("respects user-configured bindings with exact modifier matching on down", () => {
@@ -199,28 +195,19 @@ describe("getCameraMovesForEvent", () => {
       cameraLeft: "Ctrl+KeyL",
     };
 
-    expect(getCameraMovesForEvent(config, "KeyI", noModifiers, "down")).toEqual(
-      ["forward"]
-    );
-    expect(getCameraMovesForEvent(config, "KeyW", noModifiers, "down")).toEqual(
-      []
-    );
+    expect(getCameraMovesForEvent(config, event("KeyI"), "down")).toEqual([
+      "forward",
+    ]);
+    expect(getCameraMovesForEvent(config, event("KeyW"), "down")).toEqual([]);
     expect(
-      getCameraMovesForEvent(
-        config,
-        "KeyL",
-        modifiers({ ctrlKey: true }),
-        "down"
-      )
+      getCameraMovesForEvent(config, event("KeyL", { ctrlKey: true }), "down")
     ).toEqual(["left"]);
-    expect(getCameraMovesForEvent(config, "KeyL", noModifiers, "down")).toEqual(
-      []
-    );
+    expect(getCameraMovesForEvent(config, event("KeyL"), "down")).toEqual([]);
   });
 
   it("returns an empty list for unrelated keys", () => {
     expect(
-      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, "KeyM", noModifiers, "down")
+      getCameraMovesForEvent(DEFAULT_KEYBINDINGS, event("KeyM"), "down")
     ).toEqual([]);
   });
 
@@ -232,7 +219,7 @@ describe("getCameraMovesForEvent", () => {
 
     // Keyup for the chord key must clear "left" even when modifiers no longer
     // match (the CodeRabbit finding).
-    expect(getCameraMovesForEvent(config, "KeyL", noModifiers, "up")).toEqual([
+    expect(getCameraMovesForEvent(config, event("KeyL"), "up")).toEqual([
       "left",
     ]);
   });
@@ -243,8 +230,7 @@ describe("getCameraMovesForEvent", () => {
     expect(
       getCameraMovesForEvent(
         DEFAULT_KEYBINDINGS,
-        "KeyW",
-        modifiers({ shiftKey: true }),
+        event("KeyW", { shiftKey: true }),
         "up"
       )
     ).toContain("forward");
@@ -256,8 +242,9 @@ describe("getCameraMovesForEvent", () => {
       cameraUp: "KeyW",
     };
 
-    expect(
-      getCameraMovesForEvent(config, "KeyW", noModifiers, "up").sort()
-    ).toEqual(["forward", "up"]);
+    expect(getCameraMovesForEvent(config, event("KeyW"), "up").sort()).toEqual([
+      "forward",
+      "up",
+    ]);
   });
 });

@@ -1,14 +1,13 @@
 import { useEffect, useState, type FC } from "react";
 
+import { formatKeyCode, normalizeKeyToBinding } from "../../core/keybindings";
 import {
   DEFAULT_KEYBINDINGS,
   KEYBINDING_DEFINITIONS,
   VISIBLE_KEYBINDING_DEFINITIONS,
-  formatKeyCode,
-  normalizeKeyToBinding,
   type KeybindingKey,
   type KeybindingsConfig,
-} from "../../core/keybindings";
+} from "../../core/keybindingsConstants";
 import {
   keybindingsSelector,
   resetKeybindingsSelector,
@@ -45,7 +44,7 @@ export const HUDSettingsControlsSection: FC = () => {
         return;
       }
 
-      const binding = normalizeKeyToBinding(e.code, e);
+      const binding = normalizeKeyToBinding(e);
       if (binding) {
         setKeybinding(rebindingKey, binding);
       }

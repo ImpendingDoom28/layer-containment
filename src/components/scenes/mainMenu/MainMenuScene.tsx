@@ -14,7 +14,7 @@ import {
   useGameStore,
 } from "../../../core/stores/useGameStore";
 import { useGameSystem } from "../../../core/hooks/useGameSystem";
-import { getLivingEnemyCount } from "../../../core/ecs/actions/enemyActions";
+import { enemyActions } from "../../../core/ecs/actions/enemyActions";
 import { Path } from "../../entities/Path";
 import { MainMenuCamera } from "./MainMenuCamera";
 import { MAIN_MENU_ENEMY_SPAWN_CONFIG } from "./constants";
@@ -89,7 +89,7 @@ export const MainMenuScene: FC = () => {
 
     if (
       timeSinceLastSpawn >= spawnInterval &&
-      getLivingEnemyCount(world) <
+      enemyActions(world).getLivingEnemyCount() <
         MAIN_MENU_ENEMY_SPAWN_CONFIG.maxEnemies
     ) {
       spawnEnemy(enemyWeights);

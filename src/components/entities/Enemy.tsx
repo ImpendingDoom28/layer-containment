@@ -21,7 +21,7 @@ import {
 } from "three";
 import type { Entity } from "koota";
 
-import { getPositionAlongMultiplePathsFast } from "../../utils/pathIndex";
+import { getPositionAlongMultiplePaths } from "../../utils/pathUtils";
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import { GUIDebugInfo } from "../gui/GUIDebugInfo";
 import {
@@ -160,7 +160,7 @@ export const Enemy: FC<EnemyProps> = memo(
         motionData &&
         motionData.pathProgress < 0.01
       ) {
-        const spawnPosition = getPositionAlongMultiplePathsFast(
+        const spawnPosition = getPositionAlongMultiplePaths(
           pathWaypoints,
           snapshot.pathIndex,
           0

@@ -45,11 +45,11 @@ export const getTilePlacementState = ({
     (building) => building.gridX === gridX && building.gridZ === gridZ
   );
   const isOnPath = isGridTileOnPath(
+    pathWaypoints,
     gridX,
     gridZ,
     gridOffset,
     tileSize,
-    pathWaypoints,
     pathWidth
   );
   const isWater = waters.some((w) => w.gridX === gridX && w.gridZ === gridZ);

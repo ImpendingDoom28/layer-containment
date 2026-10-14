@@ -4,8 +4,10 @@ import { Vector3 } from "three";
 import { EnemyMotion, EnemyState } from "../traits/enemy";
 import { EnemySlow } from "../traits/slow";
 import { Position } from "../traits/position";
-import { isAtPathEnd } from "../../../utils/pathUtils";
-import { getPositionAlongMultiplePathsFast } from "../../../utils/pathIndex";
+import {
+  isAtPathEnd,
+  getPositionAlongMultiplePaths,
+} from "../../../utils/pathUtils";
 import {
   flatFieldToSphereSurface,
   getPlanetRadius,
@@ -84,7 +86,7 @@ export const runEnemyMovementSystem = (
         // Clamp the motion to the path end. The hasReachedEnd flag (hot
         // trait) guards the one-shot end effect and removal against
         // re-firing every frame — mirroring the old per-entity ref.
-        const endPos = getPositionAlongMultiplePathsFast(
+        const endPos = getPositionAlongMultiplePaths(
           pathWaypoints,
           state.pathIndex,
           1
@@ -118,7 +120,7 @@ export const runEnemyMovementSystem = (
         return;
       }
 
-      const waypoint = getPositionAlongMultiplePathsFast(
+      const waypoint = getPositionAlongMultiplePaths(
         pathWaypoints,
         state.pathIndex,
         motion.pathProgress

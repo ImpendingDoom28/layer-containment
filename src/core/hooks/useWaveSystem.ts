@@ -27,7 +27,9 @@ import { useWaveStore } from "../stores/useWaveStore";
 import { GameEvent } from "../types/enums/events";
 import { gameEvents } from "../../utils/eventEmitter";
 import { world } from "../ecs/world";
-import { getLivingEnemyCount } from "../ecs/actions/enemyActions";
+import { enemyActions } from "../ecs/actions/enemyActions";
+
+const getLivingEnemyCount = enemyActions(world).getLivingEnemyCount;
 
 type SpawnQueueItem = {
   type: EnemyType;
@@ -195,7 +197,7 @@ export const useWaveSystem = (gameState: GameState) => {
     if (currentWave >= totalWaves) return;
     if (currentWave > 0) {
       if (spawnQueueIndexRef.current < spawnQueueRef.current.length) return;
-      if (getLivingEnemyCount(world) > 0) return;
+      if (getLivingEnemyCount() > 0) return;
     }
     startNextWave();
   }, [currentWave, totalWaves, startNextWave]);
@@ -232,7 +234,7 @@ export const useWaveSystem = (gameState: GameState) => {
 
       const waveCleared =
         spawnQueueIndexRef.current >= spawnQueueRef.current.length &&
-        getLivingEnemyCount(world) === 0;
+        getLivingEnemyCount() === 0;
       const nextWaveReady =
         currentWave === 0 || (currentWave < totalWaves && waveCleared);
       if (useWaveStore.getState().nextWaveReady !== nextWaveReady) {
@@ -242,7 +244,7 @@ export const useWaveSystem = (gameState: GameState) => {
       if (currentWave === 0 || currentWave > totalWaves) return;
 
       if (spawnQueueIndexRef.current >= spawnQueueRef.current.length) {
-        if (waveStartedRef.current && getLivingEnemyCount(world) === 0) {
+        if (waveStartedRef.current && getLivingEnemyCount() === 0) {
           waveStartedRef.current = false;
           if (currentTime - lastSpawnTimeRef.current > 300) {
             if (currentWave < totalWaves) {
@@ -282,7 +284,7 @@ export const useWaveSystem = (gameState: GameState) => {
     return (
       spawnQueueRef.current.length -
       spawnQueueIndexRef.current +
-      getLivingEnemyCount(world)
+      getLivingEnemyCount()
     );
   }, [currentWave, totalWaves]);
 

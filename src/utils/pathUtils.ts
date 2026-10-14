@@ -1,4 +1,5 @@
 import type { PathWaypoint } from "../core/types/game";
+import { withCache } from "./withCache";
 
 export type PathSegment = {
   p1: PathWaypoint;
@@ -154,57 +155,22 @@ export function isPointInTile(
 }
 
 /**
- * The on-path test depends only on the path geometry (plus grid offset /
- * tile size / path width) — never on towers, buildings or water. The path
- * array reference is stable for the lifetime of a level (zustand keeps the
- * same array), so caching per `pathWaypoints` identity is safe: a level
- * reload produces a new array and therefore a fresh cache, and an abandoned
- * level's cache is reclaimed by GC via the WeakMap.
+ * Check if a grid tile intersects with the path.
  *
- * Without the cache this is O(waypoints + segments * 5) per tile, and the
- * grid re-renders all ~4096 tiles several times a second, which made it the
- * single hottest function in the CPU profile.
+ * The result depends only on the path geometry (plus grid offset / tile size /
+ * path width) — never on towers, buildings or water. Caching per
+ * `pathWaypoints` identity is safe: zustand keeps the same array for the
+ * lifetime of a level, a level reload produces a new array (and therefore a
+ * fresh cache), and an abandoned level's cache is reclaimed by GC via the
+ * WeakMap. Without the cache this is O(waypoints + segments * 5) per tile,
+ * which made it the single hottest function in the CPU profile.
  */
-const onPathCache = new WeakMap<object, Map<string, boolean>>();
-
-/**
- * Check if a grid tile intersects with the path
- */
-export function isGridTileOnPath(
+export const isGridTileOnPath = withCache((
+  pathWaypoints: PathWaypoint[][],
   gridX: number,
   gridZ: number,
   gridOffset: number,
   tileSize: number,
-  pathWaypoints: PathWaypoint[][],
-  pathWidth: number
-): boolean {
-  const tileKey = `${gridOffset}|${tileSize}|${pathWidth}|${gridX}|${gridZ}`;
-  let inner = onPathCache.get(pathWaypoints);
-  if (!inner) {
-    inner = new Map<string, boolean>();
-    onPathCache.set(pathWaypoints, inner);
-  }
-  const cached = inner.get(tileKey);
-  if (cached !== undefined) return cached;
-
-  const result = computeIsGridTileOnPath(
-    gridX,
-    gridZ,
-    gridOffset,
-    tileSize,
-    pathWaypoints,
-    pathWidth
-  );
-  inner.set(tileKey, result);
-  return result;
-}
-
-const computeIsGridTileOnPath = (
-  gridX: number,
-  gridZ: number,
-  gridOffset: number,
-  tileSize: number,
-  pathWaypoints: PathWaypoint[][],
   pathWidth: number
 ): boolean => {
   // Convert grid coordinates to world coordinates (tile center)
@@ -266,7 +232,7 @@ const computeIsGridTileOnPath = (
   }
 
   return false;
-}
+});
 
 export const getPositionAlongMultiplePaths = (
   paths: PathWaypoint[][],

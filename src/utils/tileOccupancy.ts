@@ -58,11 +58,11 @@ export const computeTileOccupancyMasks = (
     for (let gridZ = 0; gridZ < gridSize; gridZ += 1) {
       if (
         isGridTileOnPath(
+          pathWaypoints,
           gridX,
           gridZ,
           gridOffset,
           tileSize,
-          pathWaypoints,
           pathWidth
         )
       ) {

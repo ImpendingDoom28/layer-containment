@@ -33,7 +33,7 @@ import { GAME_CANVAS_GL, GAME_CANVAS_STYLE } from "../../src/constants/canvas";
 import { worldBaseActions } from "../../src/core/ecs/actions/baseActions";
 import { isBase } from "../../src/core/ecs/traits/base";
 import { HealthInfo } from "../../src/core/ecs/traits/health";
-import { getLivingEnemyCount } from "../../src/core/ecs/actions/enemyActions";
+import { enemyActions } from "../../src/core/ecs/actions/enemyActions";
 import { EntityIdProvider } from "../../src/core/contexts/EntityIdContext";
 import { world } from "../../src/core/ecs/world";
 import { useEnemyActions } from "../../src/core/hooks/useEnemyActions";
@@ -202,7 +202,7 @@ const SceneDebugBridge = () => {
     w.__stressGameStore = useGameStore;
     w.__stressLevelStore = useLevelStore;
     w.__stressUpgradeStore = useUpgradeStore;
-    w.__stressLivingCount = () => getLivingEnemyCount(world);
+    w.__stressLivingCount = () => enemyActions(world).getLivingEnemyCount();
   }, [scene, gl]);
   useFrame(() => {
     if (shadowDisabledRef.current) return;
@@ -278,7 +278,7 @@ const StressOverlay = ({
       const gameStatus = useGameStore.getState().gameStatus;
       const level = useLevelStore.getState();
       const upgrade = useUpgradeStore.getState();
-      const enemiesAlive = getLivingEnemyCount(world);
+      const enemiesAlive = enemyActions(world).getLivingEnemyCount();
       const base = world.queryFirst(isBase);
       const baseHealth = base ? base.get(HealthInfo) : undefined;
 

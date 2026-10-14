@@ -1,4 +1,4 @@
-import { FC, Suspense, useCallback, useMemo, useState } from "react";
+import { FC, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import { cn } from "../ui/lib/twUtils";
 import { Canvas } from "@react-three/fiber";
@@ -11,6 +11,7 @@ import { HUDGameStats } from "../hud/HUDGameStats";
 import { HUDGameOver } from "../hud/HUDGameOver";
 import { HUDMainMenu } from "../hud/main/HUDMainMenu";
 import { HUDGameMenu } from "../hud/HUDGameMenu";
+import { HUDControlsIntroModal } from "../hud/HUDControlsIntroModal";
 import { HUDUpgradePanel } from "../hud/HUDUpgradePanel";
 import { HUDLoading } from "../hud/HUDLoading";
 import { KeyboardHandlingSystem } from "../systems/KeyboardHandlingSystem";
@@ -30,6 +31,10 @@ import { useLevelSystem } from "../../core/hooks/useLevelSystem";
 import { useUpgradesSystem } from "../../core/hooks/useUpgradesSystem";
 import { useHeldClose } from "../../core/hooks/useHeldClose";
 import { useMenuParallax } from "../../core/hooks/useMenuParallax";
+import {
+  hasSeenControlsIntro,
+  markControlsIntroSeen,
+} from "../../core/hasSeenControlsIntro";
 import { PageWrapper } from "./PageWrapper";
 
 type GamePageProps = {
@@ -108,6 +113,23 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
   const remainingEnemies = getRemainingEnemiesInWave();
   const isMenu = gameStatus === "menu";
 
+  const [controlsIntroOpen, setControlsIntroOpen] = useState(false);
+
+  // Show the controls intro when a run starts on the player's first visit.
+  // It only ever shows once: closing it remembers itself in localStorage.
+  useEffect(() => {
+    if (gameStatus !== "playing") return;
+
+    if (!hasSeenControlsIntro()) {
+      setControlsIntroOpen(true);
+    }
+  }, [gameStatus]);
+
+  const closeControlsIntro = useCallback(() => {
+    markControlsIntroSeen();
+    setControlsIntroOpen(false);
+  }, []);
+
   const shaderGateKey = useMemo(() => {
     if (!isGameConfigLoaded) {
       return null;
@@ -172,6 +194,9 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
               onSellTower={sellTower}
               shouldDisableControls={shouldDisableControls}
               shouldStopMovement={shouldStopMovement}
+              // The intro only freezes the camera (it would otherwise follow
+              // the still-active camera keybindings), never the simulation.
+              shouldStopCamera={shouldStopMovement || controlsIntroOpen}
               playableLevelId={activePlayableLevel}
             />
           )}
@@ -246,6 +271,11 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
           />
         </>
       )}
+
+      <HUDControlsIntroModal
+        open={controlsIntroOpen}
+        onClose={closeControlsIntro}
+      />
     </PageWrapper>
   );
 };

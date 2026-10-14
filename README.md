@@ -24,6 +24,8 @@ A 3D tower defense game built with React, Tailwind CSS, and React Three Fiber.
 - **Economy system** - Earn money by killing enemies, spend it on towers
 - **Tower management** - Click on placed towers to view info and sell them (50% refund)
 - **Audio system** - Sound effects with adjustable volume controls (master, SFX, music, ambient); gameplay SFX use Web Audio spatialization from world positions and the camera, while UI clicks and screen feedback (pause, win, lose, resume) stay non-spatial
+- **Rebindable controls** - A "Controls" section in Settings (main menu and in-game menu) lists the player-facing keyboard controls in a table; click a row and press a key (or chord) to rebind it, press Escape to cancel, and a Reset button restores defaults. Bindings use physical key codes so they behave the same across keyboard layouts, and persist to localStorage
+- **First-run controls intro** - The first time a level is started, a "How to play" modal explains the mouse and keyboard controls (showing the player's current bindings) and notes that controls can be reviewed later in Settings / Controls. It appears only once — the flag is remembered in localStorage, so returning players start straight into gameplay
 - **Main menu** - Editorial-style start screen with left-rail navigation, large typography, slide-in transitions, and optional GitHub/source icon (`VITE_REPOSITORY_URL` in `.env`)
 - **Menu parallax** - In the main menu and in-game pause menu, the tilted panels follow the cursor with a subtle eased rotation and shift, and their canvas-side edge lifts toward the viewer as the pointer nears (receding when it moves away). Off during gameplay and under `prefers-reduced-motion`
 - **Level picker** - Play opens a sector list with SVG map previews, wave counts, and one-tap start for each playable level (menu-only `level_main` is not listed)
@@ -110,8 +112,10 @@ The dev server uses a fixed port (`5173`) and `strictPort: true`, so the URL is 
   - Click tiles to place selected towers
   - Click placed towers to select/view info
   - Drag to rotate camera
+- **WASD / Q+E** (and arrow keys): Move the camera
 - **ESC**: Deselect tower or open game menu
-- **P**: Pause/Resume game
+- **Space**: Pause/Resume game
+- All keyboard controls are rebindable in **Settings → Controls** (defaults listed above; changes persist across sessions)
 
 ## Game Mechanics
 
@@ -147,7 +151,7 @@ The dev server uses a fixed port (`5173`) and `strictPort: true`, so the URL is 
 
 ## UI & HUD Architecture
 
-- **UI primitives**: Reusable components under `src/components/ui` (`UIButton`, `UICard`, `UISlider`, `UITypography`, `UIMoney`) provide a consistent design system (variants, sizes, spacing) and are used across all HUD screens for buttons, cards, text, sliders, and money display.
+- **UI primitives**: Reusable components under `src/components/ui` (`UIButton`, `UICard`, `UISlider`, `UITypography`, `UIMoney`, `UIModal`, `UIConfirmModal`) provide a consistent design system (variants, sizes, spacing) and are used across all HUD screens for buttons, cards, text, sliders, money display, and modals. `UIModal` is the shared centered dialog (Radix `Dialog` + `UICard`) that `UIConfirmModal` builds on.
 - **HUD layout**: HUD screens use structured wrappers in `src/components/hud`:
   - `HUDWrapper` as the root HUD overlay container on top of the 3D canvas.
   - `HUDOverlay` for centered modal-style overlays (game menu, game over).

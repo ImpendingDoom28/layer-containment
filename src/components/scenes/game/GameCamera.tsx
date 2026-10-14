@@ -26,6 +26,11 @@ import {
   UI_ACTION_DENIED_CAMERA_SHAKE_SCALE_XZ,
   UI_ACTION_DENIED_CAMERA_SHAKE_SCALE_Y,
 } from "../../../constants/uiActionDeniedFeedback";
+import { getCameraMovesForEvent } from "../../../core/keybindings";
+import {
+  keybindingsSelector,
+  useSettingsStore,
+} from "../../../core/stores/useSettingsStore";
 
 // Reusable vectors to avoid GC pressure in useFrame
 const forwardVector = new Vector3();
@@ -36,13 +41,13 @@ const upVector = new Vector3(0, 1, 0);
 type GameCameraProps = {
   movementSpeed?: number;
   rotationSensitivity?: number;
-  shouldStopMovement: boolean;
+  shouldStopCamera: boolean;
 };
 
 export const GameCamera = ({
   movementSpeed = 10,
   rotationSensitivity = 0.002,
-  shouldStopMovement,
+  shouldStopCamera,
 }: GameCameraProps) => {
   const gridSize = useLevelStore(gridSizeSelector);
   const tileSize = useGameStore(tileSizeSelector);
@@ -64,6 +69,7 @@ export const GameCamera = ({
   const shakeOffsetRef = useRef(new Vector3());
   const shakeRemainingMsRef = useRef(0);
   const incrementDenyPulse = useGameStore(incrementDenyPulseSelector);
+  const keybindings = useSettingsStore(keybindingsSelector);
 
   useEffect(() => {
     const unsubscribe = gameEvents.on<AudioEventData<"ui_action_denied">>(
@@ -80,7 +86,7 @@ export const GameCamera = ({
   }, [incrementDenyPulse]);
 
   useEffect(() => {
-    if (shouldStopMovement) {
+    if (shouldStopCamera) {
       moveState.current = {
         forward: false,
         backward: false,
@@ -94,66 +100,14 @@ export const GameCamera = ({
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore D key when Ctrl+Shift are pressed (for debug toggle)
-      if (e.code === "KeyD" && e.ctrlKey && e.shiftKey) {
-        return;
-      }
-
-      switch (e.code) {
-        case "ArrowUp":
-        case "KeyW":
-          moveState.current.forward = true;
-          break;
-        case "ArrowDown":
-        case "KeyS":
-          moveState.current.backward = true;
-          break;
-        case "ArrowLeft":
-        case "KeyA":
-          moveState.current.left = true;
-          break;
-        case "ArrowRight":
-        case "KeyD":
-          moveState.current.right = true;
-          break;
-        case "KeyQ":
-          moveState.current.down = true;
-          break;
-        case "KeyE":
-          moveState.current.up = true;
-          break;
+      for (const move of getCameraMovesForEvent(keybindings, e, "down")) {
+        moveState.current[move] = true;
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      // Ignore D key when Ctrl+Shift are pressed (for debug toggle)
-      if (e.code === "KeyD" && e.ctrlKey && e.shiftKey) {
-        return;
-      }
-
-      switch (e.code) {
-        case "ArrowUp":
-        case "KeyW":
-          moveState.current.forward = false;
-          break;
-        case "ArrowDown":
-        case "KeyS":
-          moveState.current.backward = false;
-          break;
-        case "ArrowLeft":
-        case "KeyA":
-          moveState.current.left = false;
-          break;
-        case "ArrowRight":
-        case "KeyD":
-          moveState.current.right = false;
-          break;
-        case "KeyQ":
-          moveState.current.down = false;
-          break;
-        case "KeyE":
-          moveState.current.up = false;
-          break;
+      for (const move of getCameraMovesForEvent(keybindings, e, "up")) {
+        moveState.current[move] = false;
       }
     };
 
@@ -207,7 +161,7 @@ export const GameCamera = ({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [rotationSensitivity, shouldStopMovement]);
+  }, [rotationSensitivity, shouldStopCamera, keybindings]);
 
   useEffect(() => {
     camera.rotation.order = "YXZ";
@@ -222,7 +176,7 @@ export const GameCamera = ({
   }, [camera]);
 
   useFrame((state, delta) => {
-    if (!initialized.current || shouldStopMovement) {
+    if (!initialized.current || shouldStopCamera) {
       return;
     }
 

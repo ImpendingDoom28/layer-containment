@@ -93,12 +93,8 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
                 </UIButton>
                 <UITypography variant="h4">Game Menu</UITypography>
               </UICardTitle>
-              <UICardDescription>
-                Paused — resume combat, restart the mission, or return to
-                headquarters.
-              </UICardDescription>
             </UICardHeader>
-            <UICardContent className="min-h-0 flex-1 flex flex-col gap-1 overflow-y-auto">
+            <UICardContent className="flex flex-col flex-1 min-h-0 gap-1 overflow-y-auto">
               <UIButton
                 onClick={() => startClose(onResume)}
                 className="justify-between text-sm text-left group text-foreground"
@@ -111,7 +107,7 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
               <UIButton
                 onClick={() => setShowRestartConfirm(true)}
                 variant="secondary"
-                className="mt-2 justify-between text-sm text-left group text-foreground hover:border-primary/30"
+                className="justify-between mt-2 text-sm text-left group text-foreground hover:border-primary/30"
               >
                 <span className="transition-transform group-hover:translate-x-1">
                   Restart

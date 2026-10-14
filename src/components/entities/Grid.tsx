@@ -4,28 +4,18 @@ import {
   memo,
   SetStateAction,
   useCallback,
-  useMemo,
 } from "react";
 
+import type { TileOccupancyMasks } from "../../utils/tileOccupancy";
 import { Tile } from "./Tile";
 import type { TileData } from "../../core/types/utils";
 import {
-  gridOffsetSelector,
-  gridSizeSelector,
-  pathWaypointsSelector,
-  useLevelStore,
-  watersSelector,
-} from "../../core/stores/useLevelStore";
-import {
   gameStatusSelector,
-  pathWidthSelector,
   selectedTowerSelector,
   selectedTowerTypeToPlaceSelector,
   setSelectedTowerSelector,
-  tileSizeSelector,
   useGameStore,
 } from "../../core/stores/useGameStore";
-import { isGridTileOnPath } from "../../utils/pathUtils";
 import { TowerType } from "../../core/types/game";
 
 type GridProps = {
@@ -34,37 +24,23 @@ type GridProps = {
   placeTower: (gridX: number, gridZ: number, towerType: TowerType) => void;
   onTileHover?: (gridX: number, gridZ: number) => void;
   onTileHoverEnd?: () => void;
-};
-
-type GridTileData = {
-  gridX: number;
-  gridZ: number;
-  isWater: boolean;
-  isOnPath: boolean;
+  occupancy: TileOccupancyMasks;
 };
 
 /**
- * The grid is static per level: water and path occupancy depend only on the
- * level data (path geometry, water bodies), never on towers or the
- * simulation. Subscribing here to the per-frame-mutated state (towers,
- * money, active effects via the parent) is what turned every tower shot and
- * enemy kill into a 4096-tile re-render; with only static subscriptions the
- * grid re-renders solely on hover / selection changes.
+ * The grid is static per level: the water/path occupancy masks arrive from
+ * the parent (computed once per level load) and none of the remaining
+ * subscriptions mutate per frame, so the grid re-renders solely on hover /
+ * selection changes, never on tower shots or enemy kills.
  */
 export const Grid: FC<GridProps> = memo(
-  ({ hoveredTile, setHoveredTile, placeTower }) => {
+  ({ hoveredTile, setHoveredTile, placeTower, occupancy }) => {
     const selectedTowerTypeToPlace = useGameStore(
       selectedTowerTypeToPlaceSelector
     );
-    const gridSize = useLevelStore(gridSizeSelector);
-    const waters = useLevelStore(watersSelector);
-    const gridOffset = useLevelStore(gridOffsetSelector);
-    const pathWaypoints = useLevelStore(pathWaypointsSelector);
     const gameStatus = useGameStore(gameStatusSelector);
     const selectedTower = useGameStore(selectedTowerSelector);
     const setSelectedTower = useGameStore(setSelectedTowerSelector);
-    const tileSize = useGameStore(tileSizeSelector);
-    const pathWidth = useGameStore(pathWidthSelector);
 
     const onTileClick = useCallback(
       (gridX: number, gridZ: number) => {
@@ -85,34 +61,6 @@ export const Grid: FC<GridProps> = memo(
         setSelectedTower,
       ]
     );
-
-    const tiles = useMemo<GridTileData[]>(() => {
-      const tileArray: GridTileData[] = [];
-      for (let x = 0; x < gridSize; x++) {
-        for (let z = 0; z < gridSize; z++) {
-          const isWater = waters.some(
-            (w) => w.gridX === x && w.gridZ === z
-          );
-          const isOnPath = isGridTileOnPath(
-            x,
-            z,
-            gridOffset,
-            tileSize,
-            pathWaypoints,
-            pathWidth
-          );
-          tileArray.push({ gridX: x, gridZ: z, isWater, isOnPath });
-        }
-      }
-      return tileArray;
-    }, [
-      gridSize,
-      waters,
-      gridOffset,
-      tileSize,
-      pathWaypoints,
-      pathWidth,
-    ]);
 
     const canPlaceTower = useCallback(
       (isBlocked: boolean) => {
@@ -136,28 +84,31 @@ export const Grid: FC<GridProps> = memo(
 
     return (
       <group name="grid">
-        {tiles.map(({ gridX, gridZ, isWater, isOnPath }) => {
-          const canPlace = canPlaceTower(false);
-          const isHovered =
-            hoveredTile?.gridX === gridX &&
-            hoveredTile?.gridZ === gridZ &&
-            selectedTowerTypeToPlace !== null;
+        {Array.from({ length: occupancy.gridSize }, (_, gridX) =>
+          Array.from({ length: occupancy.gridSize }, (_, gridZ) => {
+            const index = gridZ * occupancy.gridSize + gridX;
+            const canPlace = canPlaceTower(false);
+            const isHovered =
+              hoveredTile?.gridX === gridX &&
+              hoveredTile?.gridZ === gridZ &&
+              selectedTowerTypeToPlace !== null;
 
-          return (
-            <Tile
-              key={`${gridX}-${gridZ}`}
-              gridX={gridX}
-              gridZ={gridZ}
-              isWater={isWater}
-              isOnPath={isOnPath}
-              isHovered={isHovered}
-              canPlace={canPlace}
-              onClick={() => onTileClick(gridX, gridZ)}
-              onHover={handleTileHover}
-              onHoverEnd={handleTileHoverEnd}
-            />
-          );
-        })}
+            return (
+              <Tile
+                key={`${gridX}-${gridZ}`}
+                gridX={gridX}
+                gridZ={gridZ}
+                isWater={occupancy.water[index] === 1}
+                isOnPath={occupancy.onPath[index] === 1}
+                isHovered={isHovered}
+                canPlace={canPlace}
+                onClick={() => onTileClick(gridX, gridZ)}
+                onHover={handleTileHover}
+                onHoverEnd={handleTileHoverEnd}
+              />
+            );
+          })
+        )}
       </group>
     );
   }

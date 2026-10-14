@@ -26,9 +26,18 @@ import { TileData } from "../../../core/types/utils";
 import { EntitiesSystem } from "../../systems/EntitiesSystem";
 import { LevelSystem } from "../../systems/LevelSystem";
 import {
+  gridOffsetSelector,
+  gridSizeSelector,
   pathWaypointsSelector,
   useLevelStore,
+  watersSelector,
 } from "../../../core/stores/useLevelStore";
+import {
+  pathWidthSelector,
+  tileSizeSelector,
+  useGameStore,
+} from "../../../core/stores/useGameStore";
+import { useTileOccupancyMasks } from "../../../core/hooks/utils/useTileOccupancyMasks";
 import { Ground } from "../shared/Ground";
 import { Light } from "../shared/Light";
 import { Skybox } from "../shared/Skybox";
@@ -72,7 +81,21 @@ export const GameScene: React.FC<GameSceneProps> = ({
   playableLevelId,
 }) => {
   const pathWaypoints = useLevelStore(pathWaypointsSelector);
+  const gridSize = useLevelStore(gridSizeSelector);
+  const waters = useLevelStore(watersSelector);
+  const gridOffset = useLevelStore(gridOffsetSelector);
+  const tileSize = useGameStore(tileSizeSelector);
+  const pathWidth = useGameStore(pathWidthSelector);
   const [hoveredTile, setHoveredTile] = useState<TileData | null>(null);
+
+  const occupancy = useTileOccupancyMasks({
+    gridSize,
+    gridOffset,
+    tileSize,
+    pathWaypoints,
+    pathWidth,
+    waters,
+  });
 
   const handleTileHover = useCallback(
     (gridX: number, gridZ: number) => {
@@ -111,9 +134,10 @@ export const GameScene: React.FC<GameSceneProps> = ({
         onTileHover={handleTileHover}
         setHoveredTile={setHoveredTile}
         onTileHoverEnd={handleTileHoverEnd}
+        occupancy={occupancy}
       />
 
-      <PlanetTileDecorations pathWaypoints={pathWaypoints} />
+      <PlanetTileDecorations occupancy={occupancy} />
 
       <PlacementHighlightOverlay hoveredTile={hoveredTile} />
 

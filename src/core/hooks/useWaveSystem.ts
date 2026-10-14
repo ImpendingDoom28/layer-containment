@@ -27,7 +27,7 @@ import { useWaveStore } from "../stores/useWaveStore";
 import { GameEvent } from "../types/enums/events";
 import { gameEvents } from "../../utils/eventEmitter";
 import { world } from "../ecs/world";
-import { getLivingEnemyCount } from "../ecs/selectors/enemySnapshots";
+import { getLivingEnemyCount } from "../ecs/actions/enemyActions";
 
 type SpawnQueueItem = {
   type: EnemyType;

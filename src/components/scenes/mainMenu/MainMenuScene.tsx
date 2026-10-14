@@ -14,7 +14,7 @@ import {
   useGameStore,
 } from "../../../core/stores/useGameStore";
 import { useGameSystem } from "../../../core/hooks/useGameSystem";
-import { getLivingEnemyCount } from "../../../core/ecs/selectors/enemySnapshots";
+import { getLivingEnemyCount } from "../../../core/ecs/actions/enemyActions";
 import { Path } from "../../entities/Path";
 import { MainMenuCamera } from "./MainMenuCamera";
 import { MAIN_MENU_ENEMY_SPAWN_CONFIG } from "./constants";

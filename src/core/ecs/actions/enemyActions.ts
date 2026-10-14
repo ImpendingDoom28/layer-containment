@@ -1,4 +1,4 @@
-import { createActions, type Entity } from "koota";
+import { createActions, type Entity, type World } from "koota";
 
 import { useAlmanacStore } from "../../stores/useAlmanacStore";
 import { useLevelStore } from "../../stores/useLevelStore";
@@ -90,6 +90,21 @@ const handleEnemyDeath = (enemy: Enemy): void => {
       z: enemy.z,
     },
   });
+};
+
+/**
+ * Alive-enemy count without building snapshot objects. The wave system checks
+ * "is the field clear" up to three times per frame; counting the hot trait
+ * fields directly is far cheaper than allocating one `Enemy` per entity.
+ */
+export const getLivingEnemyCount = (world: World): number => {
+  let count = 0;
+  world
+    .query(IsEnemy, EnemyState, EnemyMotion, Position)
+    .readEach(([state]) => {
+      if (state.health > 0) count += 1;
+    });
+  return count;
 };
 
 export const enemyActions = createActions((world) => ({

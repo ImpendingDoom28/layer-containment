@@ -23,6 +23,7 @@ import {
   getLevelGridOffset,
   withRecalculatedWaterCoordinates,
 } from "../../../utils/levelEditor";
+import { useTileOccupancyMasks } from "../../../core/hooks/utils/useTileOccupancyMasks";
 import { getCssColorValue } from "../../ui/lib/cssUtils";
 import { LevelEditorCamera } from "./LevelEditorCamera";
 import { LevelEditorTerrainTile } from "./LevelEditorTerrainTile";
@@ -59,6 +60,15 @@ export const LevelEditorScene = () => {
     () => getLevelGridOffset(draftLevel.gridSize, tileSize),
     [draftLevel.gridSize, tileSize]
   );
+
+  const occupancy = useTileOccupancyMasks({
+    gridSize: draftLevel.gridSize,
+    gridOffset,
+    tileSize,
+    pathWaypoints: draftLevel.pathWaypoints,
+    pathWidth,
+    waters: draftLevel.waters,
+  });
 
   const tiles = useMemo(() => {
     const tileEntries: Array<{ gridX: number; gridZ: number }> = [];
@@ -158,17 +168,7 @@ export const LevelEditorScene = () => {
         })}
       </group>
 
-      <PlanetTileDecorations
-        //gridSize={draftLevel.gridSize}
-        //tileSize={tileSize}
-        //gridOffset={gridOffset}
-        pathWaypoints={draftLevel.pathWaypoints}
-        //pathWidth={pathWidth}
-        //waters={draftLevel.waters}
-        //buildings={draftLevel.buildings}
-        towers={[]}
-        //surfaceHalfHeight={LEVEL_EDITOR_TILE_HEIGHT / 2}
-      />
+      <PlanetTileDecorations occupancy={occupancy} />
 
       <group>
         {draftLevel.pathWaypoints.map((path, pathIndex) => {

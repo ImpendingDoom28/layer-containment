@@ -33,7 +33,7 @@ import { GAME_CANVAS_GL, GAME_CANVAS_STYLE } from "../../src/constants/canvas";
 import { worldBaseActions } from "../../src/core/ecs/actions/baseActions";
 import { isBase } from "../../src/core/ecs/traits/base";
 import { HealthInfo } from "../../src/core/ecs/traits/health";
-import { getLivingEnemyCount } from "../../src/core/ecs/selectors/enemySnapshots";
+import { getLivingEnemyCount } from "../../src/core/ecs/actions/enemyActions";
 import { EntityIdProvider } from "../../src/core/contexts/EntityIdContext";
 import { world } from "../../src/core/ecs/world";
 import { useEnemyActions } from "../../src/core/hooks/useEnemyActions";

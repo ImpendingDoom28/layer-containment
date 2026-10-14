@@ -1,4 +1,5 @@
 import { useCallback, useRef, useEffect, useLayoutEffect } from "react";
+import { useActions } from "koota/react";
 
 import type {
   EnemyType,
@@ -26,10 +27,7 @@ import { useUpgradeStore } from "../stores/useUpgradeStore";
 import { useWaveStore } from "../stores/useWaveStore";
 import { GameEvent } from "../types/enums/events";
 import { gameEvents } from "../../utils/eventEmitter";
-import { world } from "../ecs/world";
 import { enemyActions } from "../ecs/actions/enemyActions";
-
-const getLivingEnemyCount = enemyActions(world).getLivingEnemyCount;
 
 type SpawnQueueItem = {
   type: EnemyType;
@@ -73,6 +71,7 @@ export const useWaveSystem = (gameState: GameState) => {
   const { winGame, gameStatus: initialGameStatus } = gameState;
   const isPageVisible = useGameStore(isPageVisibleSelector);
   const pauseWhenTabHidden = useSettingsStore(pauseWhenTabHiddenSelector);
+  const getLivingEnemyCount = useActions(enemyActions).getLivingEnemyCount;
 
   const totalWaves = useLevelStore(totalWavesSelector);
   const waveConfigs = useLevelStore(waveConfigsSelector);
@@ -200,7 +199,7 @@ export const useWaveSystem = (gameState: GameState) => {
       if (getLivingEnemyCount() > 0) return;
     }
     startNextWave();
-  }, [currentWave, totalWaves, startNextWave]);
+  }, [currentWave, totalWaves, startNextWave, getLivingEnemyCount]);
 
   const updateWaveSpawning = useCallback(
     (currentTime: number) => {
@@ -276,7 +275,7 @@ export const useWaveSystem = (gameState: GameState) => {
         spawnQueueIndexRef.current += 1;
       }
     },
-    [currentWave, totalWaves, winGame, addEnemy]
+    [currentWave, totalWaves, winGame, addEnemy, getLivingEnemyCount]
   );
 
   const getRemainingEnemiesInWave = useCallback((): number => {
@@ -286,7 +285,7 @@ export const useWaveSystem = (gameState: GameState) => {
       spawnQueueIndexRef.current +
       getLivingEnemyCount()
     );
-  }, [currentWave, totalWaves]);
+  }, [currentWave, totalWaves, getLivingEnemyCount]);
 
   return {
     updateWaveSpawning,

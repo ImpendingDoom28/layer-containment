@@ -190,6 +190,7 @@ const StressStatsCollector = ({
  */
 const SceneDebugBridge = () => {
   const { scene, gl } = useThree();
+  const { getLivingEnemyCount } = useActions(enemyActions);
   // The default directional shadow camera only covers a ~10x10-unit patch at
   // the origin of this ~32-unit planet, so the shadow pass costs a full extra
   // render of every scene mesh for almost no visible effect. Stress run only:
@@ -202,8 +203,8 @@ const SceneDebugBridge = () => {
     w.__stressGameStore = useGameStore;
     w.__stressLevelStore = useLevelStore;
     w.__stressUpgradeStore = useUpgradeStore;
-    w.__stressLivingCount = () => enemyActions(world).getLivingEnemyCount();
-  }, [scene, gl]);
+    w.__stressLivingCount = getLivingEnemyCount;
+  }, [scene, gl, getLivingEnemyCount]);
   useFrame(() => {
     if (shadowDisabledRef.current) return;
     const light = scene.getObjectByName("shadow-light");
@@ -270,6 +271,7 @@ const StressOverlay = ({
   runCount: number;
 }) => {
   const textRef = useRef<HTMLPreElement>(null);
+  const { getLivingEnemyCount } = useActions(enemyActions);
 
   useEffect(() => {
     let raf = 0;
@@ -278,7 +280,7 @@ const StressOverlay = ({
       const gameStatus = useGameStore.getState().gameStatus;
       const level = useLevelStore.getState();
       const upgrade = useUpgradeStore.getState();
-      const enemiesAlive = enemyActions(world).getLivingEnemyCount();
+      const enemiesAlive = getLivingEnemyCount();
       const base = world.queryFirst(isBase);
       const baseHealth = base ? base.get(HealthInfo) : undefined;
 
@@ -327,7 +329,7 @@ const StressOverlay = ({
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [statsRef, runCount]);
+  }, [statsRef, runCount, getLivingEnemyCount]);
 
   return (
     <pre

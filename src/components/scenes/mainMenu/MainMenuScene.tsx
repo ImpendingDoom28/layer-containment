@@ -1,6 +1,6 @@
 import { FC, useRef, useCallback } from "react";
 import { useFrame } from "@react-three/fiber";
-import { useWorld } from "koota/react";
+import { useActions } from "koota/react";
 
 import type { EnemyType } from "../../../core/types/game";
 import { LevelSystem } from "../../systems/LevelSystem";
@@ -60,7 +60,7 @@ export const MainMenuScene: FC = () => {
 
   const { pathWaypoints, enemyWeights } = useLevelStore();
   const { addEnemy, removeEnemy } = levelSystem;
-  const world = useWorld();
+  const { getLivingEnemyCount } = useActions(enemyActions);
 
   const lastSpawnTime = useRef(0);
   const clockRef = useRef(0);
@@ -89,8 +89,7 @@ export const MainMenuScene: FC = () => {
 
     if (
       timeSinceLastSpawn >= spawnInterval &&
-      enemyActions(world).getLivingEnemyCount() <
-        MAIN_MENU_ENEMY_SPAWN_CONFIG.maxEnemies
+      getLivingEnemyCount() < MAIN_MENU_ENEMY_SPAWN_CONFIG.maxEnemies
     ) {
       spawnEnemy(enemyWeights);
       lastSpawnTime.current = clockRef.current;

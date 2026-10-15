@@ -36,6 +36,7 @@ import {
   keybindingsSelector,
   useSettingsStore,
 } from "../../../core/stores/useSettingsStore";
+import { useReducedMotion } from "../../../core/hooks/useReducedMotion";
 
 // Reusable vectors to avoid GC pressure in useFrame
 const forwardVector = new Vector3();
@@ -79,6 +80,7 @@ export const GameCamera = ({
   const fovRef = useRef(PAUSE_FOV_BASE);
   const incrementDenyPulse = useGameStore(incrementDenyPulseSelector);
   const keybindings = useSettingsStore(keybindingsSelector);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     const unsubscribe = gameEvents.on<AudioEventData<"ui_action_denied">>(
@@ -186,15 +188,13 @@ export const GameCamera = ({
 
   // Ease the field of view into a tighter frame while paused (and back on
   // resume). Kept separate from the movement frame below so the zoom works
-  // even when the camera is locked (menu, game-over, controls intro).
+  // even when the camera is locked. Under reduced motion the fov snaps to
+  // its target instead of animating.
   useFrame((_, delta) => {
     const target = paused ? PAUSE_FOV_MIN : PAUSE_FOV_BASE;
-    const next = MathUtils.damp(
-      fovRef.current,
-      target,
-      PAUSE_FOV_DAMP_LAMBDA,
-      delta
-    );
+    const next = reducedMotion
+      ? target
+      : MathUtils.damp(fovRef.current, target, PAUSE_FOV_DAMP_LAMBDA, delta);
     if (Math.abs(next - fovRef.current) < 0.001) {
       return;
     }

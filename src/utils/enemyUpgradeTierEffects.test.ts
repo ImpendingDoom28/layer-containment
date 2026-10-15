@@ -4,6 +4,7 @@ import type { EnemyUpgradeConfig, EnemyUpgradeId } from "../core/types/game";
 
 import {
   countUpgradePicks,
+  formatTieredUpgradeSummary,
   getStackTierForEnemy,
   getTieredUpgradeEffect,
   getTotalRewardMultiplierFromStack,
@@ -30,18 +31,20 @@ const swiftBase: EnemyUpgradeConfig = {
   indicatorColor: "#fbbf24",
 };
 
+const slowResistanceBase: EnemyUpgradeConfig = {
+  id: "slowResistance",
+  name: "Unstoppable",
+  description: "",
+  displayRank: 2,
+  rewardMultiplier: 1.5,
+  resistances: { slow: 0.25 },
+  indicatorColor: "#8b5cf6",
+};
+
 const allUpgrades: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
   armored: armoredBase,
   swift: swiftBase,
-  slowImmune: {
-    id: "slowImmune",
-    name: "Unstoppable",
-    description: "",
-    displayRank: 2,
-    rewardMultiplier: 1.5,
-    resistances: { slow: 1 },
-    indicatorColor: "#8b5cf6",
-  },
+  slowResistance: slowResistanceBase,
   regenerating: {
     id: "regenerating",
     name: "Regenerating",
@@ -74,6 +77,41 @@ describe("getTieredUpgradeEffect", () => {
     const t3 = getTieredUpgradeEffect(swiftBase, 3);
     expect(t1.speedMultiplier).toBe(1.3);
     expect(t3.speedMultiplier!).toBeGreaterThan(1.3);
+  });
+
+  it("scales Unstoppable slow resistance by tier and caps at full immunity", () => {
+    const t1 = getTieredUpgradeEffect(slowResistanceBase, 1);
+    const t2 = getTieredUpgradeEffect(slowResistanceBase, 2);
+    const t3 = getTieredUpgradeEffect(slowResistanceBase, 3);
+    expect(t1.slowResistance).toBe(0.25);
+    expect(t2.slowResistance).toBeCloseTo(0.66);
+    expect(t3.slowResistance).toBe(1);
+  });
+
+  it("grants full immunity at tier 3 even for a low base resistance", () => {
+    const lowBase = { ...slowResistanceBase, resistances: { slow: 0.2 } };
+    expect(getTieredUpgradeEffect(lowBase, 1).slowResistance).toBe(0.2);
+    expect(getTieredUpgradeEffect(lowBase, 2).slowResistance).toBeCloseTo(0.528);
+    expect(getTieredUpgradeEffect(lowBase, 3).slowResistance).toBe(1);
+  });
+
+  it("keeps full immunity for a base resistance of 1 at every tier", () => {
+    const fullImmune = { ...slowResistanceBase, resistances: { slow: 1 } };
+    for (const tier of [1, 2, 3] as const) {
+      expect(getTieredUpgradeEffect(fullImmune, tier).slowResistance).toBe(1);
+    }
+  });
+
+  it("describes Unstoppable as % slow resistance below full immunity", () => {
+    expect(formatTieredUpgradeSummary(slowResistanceBase, 1)).toContain(
+      "+25% slow resistance"
+    );
+    expect(formatTieredUpgradeSummary(slowResistanceBase, 2)).toContain(
+      "+66% slow resistance"
+    );
+    expect(formatTieredUpgradeSummary(slowResistanceBase, 3)).toContain(
+      "Slow immune"
+    );
   });
 });
 

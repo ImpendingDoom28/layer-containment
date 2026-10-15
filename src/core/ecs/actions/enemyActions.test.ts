@@ -158,4 +158,25 @@ describe("enemyActions", () => {
     expect(getEffectiveGameTime(72, clock)).toBe(12);
     expect(entity.get(slowRequest)!.expiresAt).toBe(12);
   });
+
+  it("scales the slow effect down with slow resistance", () => {
+    const actions = enemyActions(testWorld);
+    const resisted = actions.spawnEnemy({
+      ...baseEnemy(1, 100),
+      slowResistance: 0.5,
+    });
+    const immune = actions.spawnEnemy({
+      ...baseEnemy(2, 100),
+      slowResistance: 1,
+    });
+
+    actions.slowEnemy(1, 0.4, 2, 0);
+    actions.slowEnemy(2, 0.4, 2, 0);
+
+    // 1 - (1 - 0.4) * (1 - 0.5): half the slow strength, half the duration.
+    expect(resisted.get(slowRequest)!.multiplier).toBeCloseTo(0.7);
+    expect(resisted.get(slowRequest)!.expiresAt).toBe(1);
+    // A fully resistant enemy (tier 3 Unstoppable) takes no slow at all.
+    expect(immune.has(slowRequest)).toBe(false);
+  });
 });

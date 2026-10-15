@@ -21,8 +21,8 @@ const sampleUpgrades: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     rewardMultiplier: 1,
     indicatorColor: "#00ff00",
   },
-  slowImmune: {
-    id: "slowImmune",
+  slowResistance: {
+    id: "slowResistance",
     name: "si",
     description: "",
     displayRank: 2,

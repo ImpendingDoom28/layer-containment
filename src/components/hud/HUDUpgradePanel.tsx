@@ -39,7 +39,7 @@ const UpgradeIcon: FC<UpgradeIconProps> = ({ upgradeId, className, size }) => {
       return <Shield className={className} size={size} />;
     case "swift":
       return <Wind className={className} size={size} />;
-    case "slowImmune":
+    case "slowResistance":
       return <Zap className={className} size={size} />;
     case "regenerating":
       return <Heart className={className} size={size} />;

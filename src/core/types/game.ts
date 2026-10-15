@@ -19,7 +19,7 @@ export type HealPulseConfig = {
 
 // Enemy upgrade types
 export type EnemyUpgradeId =
-  "armored" | "swift" | "slowImmune" | "regenerating";
+  "armored" | "swift" | "slowResistance" | "regenerating";
 
 export type EnemyUpgradeStackTier = 1 | 2 | 3;
 

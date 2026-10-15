@@ -69,11 +69,16 @@ export const getTieredUpgradeEffect = (
       const reward = tier === 1 ? r1 : tier === 2 ? r1 * 1.08 : r1 * 1.2;
       return { speedMultiplier: speed, rewardMultiplier: reward };
     }
-    case "slowImmune":
+    case "slowResistance": {
+      // Tiers 1-2 scale the base slow resistance (capped); tier 3 grants
+      // full immunity no matter what base value the config carries.
+      const resistance =
+        tier === 3 ? 1 : tier === 2 ? Math.min(slow1 * 2.64, 1) : slow1;
       return {
         rewardMultiplier: tier === 1 ? r1 : tier === 2 ? r1 * 1.1 : r1 * 1.22,
-        slowResistance: slow1 >= 1 ? 1 : slow1,
+        slowResistance: resistance,
       };
+    }
     case "regenerating": {
       const regen =
         tier === 1 ? regen1 : tier === 2 ? regen1 * 1.5 : regen1 * 2.25;
@@ -103,6 +108,8 @@ export const formatTieredUpgradeSummary = (
   }
   if (e.slowResistance !== undefined && e.slowResistance >= 1) {
     parts.push("Slow immune");
+  } else if (e.slowResistance !== undefined && e.slowResistance > 0) {
+    parts.push(`+${Math.round(e.slowResistance * 100)}% slow resistance`);
   }
   parts.push(`+${Math.round((e.rewardMultiplier - 1) * 100)}% gold`);
   return parts.join(" · ");

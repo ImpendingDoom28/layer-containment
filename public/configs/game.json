@@ -72,14 +72,14 @@
       "name": "Regenerating",
       "rewardMultiplier": 1.3
     },
-    "slowImmune": {
-      "description": "Resistance to slow effects",
+    "slowResistance": {
+      "description": "Enemies gain slow resistance, weakening slow effects from towers. Each additional pick strengthens it; at tier 3 they are immune to slow.",
       "displayRank": 2,
-      "id": "slowImmune",
+      "id": "slowResistance",
       "indicatorColor": "#8b5cf6",
       "name": "Unstoppable",
       "resistances": {
-        "slow": 0.5
+        "slow": 0.25
       },
       "rewardMultiplier": 1.25
     },

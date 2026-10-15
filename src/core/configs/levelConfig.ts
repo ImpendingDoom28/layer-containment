@@ -99,7 +99,7 @@ const towerSchema = z.object({
 const enemyUpgradeIdSchema = z.enum([
   "armored",
   "swift",
-  "slowImmune",
+  "slowResistance",
   "regenerating",
 ]);
 

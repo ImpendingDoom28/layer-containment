@@ -4,12 +4,15 @@ import { useWorld } from "koota/react";
 
 import { runEnemyMovementFrame } from "../../core/ecs/systems/enemyMovementSystem";
 import type { GetSimulationTime } from "../../core/hooks/useSimulationClock";
+import { useSettingsStore } from "../../core/stores/useSettingsStore";
+import { clampFrameDelta } from "../../utils/gameDelta";
 
 type EnemyMovementSystemProps = {
   shouldStopMovement: boolean;
   getSimulationTime: GetSimulationTime;
   onEnemyReachEnd: ((enemyId: number) => void) | null;
-  onEndEffect: ((position: [number, number, number], color: string) => void) | null;
+  onEndEffect:
+    ((position: [number, number, number], color: string) => void) | null;
 };
 
 /**
@@ -28,7 +31,11 @@ export const EnemyMovementSystem: FC<EnemyMovementSystemProps> = ({
   useFrame((state, delta) => {
     if (shouldStopMovement) return;
 
-    runEnemyMovementFrame(world, state, delta, getSimulationTime, {
+    const clampedDelta = clampFrameDelta(
+      delta,
+      useSettingsStore.getState().pauseWhenTabHidden
+    );
+    runEnemyMovementFrame(world, state, clampedDelta, getSimulationTime, {
       onEnemyReachEnd,
       onEndEffect,
     });

@@ -70,6 +70,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
     onEndEffect,
     onEffectComplete,
     shouldStopMovement,
+    shouldLockCamera,
     debug,
     isGameConfigLoaded,
   } = gameSystem;
@@ -195,9 +196,10 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
               onSellTower={sellTower}
               shouldDisableControls={shouldDisableControls}
               shouldStopMovement={shouldStopMovement}
-              // The intro only freezes the camera (it would otherwise follow
-              // the still-active camera keybindings), never the simulation.
-              shouldStopCamera={shouldStopMovement || controlsIntroOpen}
+              // The camera stays controllable while paused so the held frame
+              // can be inspected from any angle; only menu, intro, and
+              // tab-hidden states lock it.
+              shouldStopCamera={shouldLockCamera || controlsIntroOpen}
               playableLevelId={activePlayableLevel}
             />
           )}
@@ -229,7 +231,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
 
       {isGameReady && !isMenu && (
         <>
-          <HUDPauseOverlay active={gameStatus === "paused"} />
+          <HUDPauseOverlay gameStatus={gameStatus} />
 
           {(shouldDisableControls ? gameMenuClose.closing : true) && (
             <>

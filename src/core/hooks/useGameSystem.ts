@@ -2,7 +2,10 @@ import { useCallback, useEffect, useLayoutEffect } from "react";
 import { useActions } from "koota/react";
 
 import { worldBaseActions } from "../ecs/actions/baseActions";
-import { getShouldStopMovement } from "../getShouldStopMovement";
+import {
+  getShouldStopMovement,
+  shouldPauseForTabHidden,
+} from "../getShouldStopMovement";
 import {
   activeEffectsSelector,
   debugSelector,
@@ -79,6 +82,12 @@ export const useGameSystem = () => {
     isPageVisible,
     pauseWhenTabHidden
   );
+  // The camera locks for the same states as the simulation, except paused —
+  // while paused the frame is held but the player should still be able to
+  // orbit and pan it to inspect the board.
+  const shouldLockCamera =
+    shouldDisableControls ||
+    shouldPauseForTabHidden(isPageVisible, pauseWhenTabHidden);
 
   // Load game config
   useEffect(() => {
@@ -177,6 +186,7 @@ export const useGameSystem = () => {
     activeEffects,
     shouldDisableControls,
     shouldStopMovement,
+    shouldLockCamera,
     canPause,
     debug,
     isGameConfigLoaded,

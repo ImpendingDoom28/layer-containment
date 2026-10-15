@@ -27,6 +27,7 @@ import {
 } from "../../utils/planetSurfaceMapping";
 import { useEntityIds } from "../contexts/EntityIdContext";
 import { useInstancedEntity } from "./useInstancedEntity";
+import { clampFrameDelta } from "../../utils/gameDelta";
 import { getShouldStopMovement } from "../getShouldStopMovement";
 import { useGameStore } from "../stores/useGameStore";
 import { useSettingsStore } from "../stores/useSettingsStore";
@@ -621,7 +622,10 @@ export const useInstancedProjectiles = (
       )
     )
       return;
-    updateProjectilesFrame(getSimulationTime(state.clock.elapsedTime), delta);
+    updateProjectilesFrame(
+      getSimulationTime(state.clock.elapsedTime),
+      clampFrameDelta(delta, pauseWhenTabHidden)
+    );
   });
 
   const InstancedProjectiles = (

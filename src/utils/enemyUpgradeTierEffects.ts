@@ -69,9 +69,9 @@ export const getTieredUpgradeEffect = (
       const reward = tier === 1 ? r1 : tier === 2 ? r1 * 1.08 : r1 * 1.2;
       return { speedMultiplier: speed, rewardMultiplier: reward };
     }
-    case "slowImmune": {
+    case "slowResistance": {
       // Each tier scales the base slow resistance, capped at full immunity.
-      const factor = tier === 1 ? 1 : tier === 2 ? 1.75 : 2.5;
+      const factor = tier === 1 ? 1 : tier === 2 ? 2.64 : 4;
       return {
         rewardMultiplier: tier === 1 ? r1 : tier === 2 ? r1 * 1.1 : r1 * 1.22,
         slowResistance: Math.min(slow1 * factor, 1),

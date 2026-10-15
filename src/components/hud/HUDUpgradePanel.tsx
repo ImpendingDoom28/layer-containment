@@ -39,7 +39,7 @@ const UpgradeIcon: FC<UpgradeIconProps> = ({ upgradeId, className, size }) => {
       return <Shield className={className} size={size} />;
     case "swift":
       return <Wind className={className} size={size} />;
-    case "slowImmune":
+    case "slowResistance":
       return <Zap className={className} size={size} />;
     case "regenerating":
       return <Heart className={className} size={size} />;
@@ -179,14 +179,6 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
                   >
                     {tierSummary}
                   </UITypography>
-                  {upgrade.description && (
-                    <UITypography
-                      className="text-muted-foreground/80 text-left leading-snug"
-                      variant="small"
-                    >
-                      {upgrade.description}
-                    </UITypography>
-                  )}
                   <UITypography
                     className="mt-auto"
                     style={{ color: upgrade.indicatorColor }}

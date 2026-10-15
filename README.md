@@ -146,7 +146,7 @@ The dev server uses a fixed port (`5173`) and `strictPort: true`, so the URL is 
     - Waves 11+: All tiers, max 3 upgrades
   - Upgrade effects stack multiplicatively for gold rewards
   - Upgraded enemies display colored rings indicating their active upgrades
-  - Unstoppable enemies resist slows: each tier adds slow resistance (50% / 88% / 100%), fully negating Slow Tower effects at tier 3
+  - Unstoppable enemies resist slows: each tier adds slow resistance (25% / 66% / 100%), fully negating Slow Tower effects at tier 3
   - Regenerating enemies heal over time (can be countered with burst damage)
 
 ## UI & HUD Architecture

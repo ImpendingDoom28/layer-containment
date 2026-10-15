@@ -31,20 +31,20 @@ const swiftBase: EnemyUpgradeConfig = {
   indicatorColor: "#fbbf24",
 };
 
-const slowImmuneBase: EnemyUpgradeConfig = {
-  id: "slowImmune",
+const slowResistanceBase: EnemyUpgradeConfig = {
+  id: "slowResistance",
   name: "Unstoppable",
   description: "",
   displayRank: 2,
   rewardMultiplier: 1.5,
-  resistances: { slow: 0.5 },
+  resistances: { slow: 0.25 },
   indicatorColor: "#8b5cf6",
 };
 
 const allUpgrades: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
   armored: armoredBase,
   swift: swiftBase,
-  slowImmune: slowImmuneBase,
+  slowResistance: slowResistanceBase,
   regenerating: {
     id: "regenerating",
     name: "Regenerating",
@@ -80,29 +80,29 @@ describe("getTieredUpgradeEffect", () => {
   });
 
   it("scales Unstoppable slow resistance by tier and caps at full immunity", () => {
-    const t1 = getTieredUpgradeEffect(slowImmuneBase, 1);
-    const t2 = getTieredUpgradeEffect(slowImmuneBase, 2);
-    const t3 = getTieredUpgradeEffect(slowImmuneBase, 3);
-    expect(t1.slowResistance).toBe(0.5);
-    expect(t2.slowResistance).toBeCloseTo(0.875);
+    const t1 = getTieredUpgradeEffect(slowResistanceBase, 1);
+    const t2 = getTieredUpgradeEffect(slowResistanceBase, 2);
+    const t3 = getTieredUpgradeEffect(slowResistanceBase, 3);
+    expect(t1.slowResistance).toBe(0.25);
+    expect(t2.slowResistance).toBeCloseTo(0.66);
     expect(t3.slowResistance).toBe(1);
   });
 
   it("keeps full immunity for a base resistance of 1 at every tier", () => {
-    const fullImmune = { ...slowImmuneBase, resistances: { slow: 1 } };
+    const fullImmune = { ...slowResistanceBase, resistances: { slow: 1 } };
     for (const tier of [1, 2, 3] as const) {
       expect(getTieredUpgradeEffect(fullImmune, tier).slowResistance).toBe(1);
     }
   });
 
   it("describes Unstoppable as % slow resistance below full immunity", () => {
-    expect(formatTieredUpgradeSummary(slowImmuneBase, 1)).toContain(
-      "+50% slow resistance"
+    expect(formatTieredUpgradeSummary(slowResistanceBase, 1)).toContain(
+      "+25% slow resistance"
     );
-    expect(formatTieredUpgradeSummary(slowImmuneBase, 2)).toContain(
-      "+88% slow resistance"
+    expect(formatTieredUpgradeSummary(slowResistanceBase, 2)).toContain(
+      "+66% slow resistance"
     );
-    expect(formatTieredUpgradeSummary(slowImmuneBase, 3)).toContain(
+    expect(formatTieredUpgradeSummary(slowResistanceBase, 3)).toContain(
       "Slow immune"
     );
   });

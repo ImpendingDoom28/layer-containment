@@ -42,6 +42,22 @@ test("shows the controls intro modal on the first run and remembers it", async (
   expect(seen).toBe("1");
 });
 
+test("keeps the controls intro open until the player explicitly closes it", async ({
+  page,
+}) => {
+  await onOpenGameOnFirstRun(page);
+
+  await expectIntroVisible(page);
+
+  // Clicking the backdrop must not dismiss the intro; only an explicit
+  // action (the Got it button) closes it.
+  await page.mouse.click(5, 5);
+  await expect(introTitle(page)).toBeVisible();
+
+  await page.getByRole("button", { name: "Got it" }).click();
+  await expect(introTitle(page)).toBeHidden();
+});
+
 test("does not show the controls intro to a returning player", async ({
   page,
 }) => {

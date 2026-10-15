@@ -78,6 +78,7 @@ export const HUDControlsIntroModal: FC<HUDControlsIntroModalProps> = ({
       title="How to play"
       icon={<Keyboard className="size-4 text-primary" />}
       className="max-w-md"
+      dismissible={false}
       footer={
         <UIButton variant="secondary" onClick={onClose}>
           Got it

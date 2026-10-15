@@ -9,8 +9,9 @@ export const REPOSITORY_URL =
 
 /**
  * Cadence of the background game-loop worker (ms) — the fixed target
- * frame rate of the simulation. A frame must never integrate more than
- * one tick of simulation time, so this is also the upper bound for
- * frame deltas (see `clampFrameDelta` in `utils/gameDelta`).
+ * frame rate of the simulation. When `pauseWhenTabHidden` is enabled, a
+ * frame must not integrate more than one tick of simulation time, so this
+ * is the upper bound for frame deltas (see `clampFrameDelta` in
+ * `utils/gameDelta`).
  */
 export const BACKGROUND_TICK_INTERVAL_MS = 50;

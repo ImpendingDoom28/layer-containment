@@ -50,7 +50,7 @@ const selectWeightedEnemyType = (
 export const MainMenuScene: FC = () => {
   const gameSystem = useGameSystem();
   const levelSystem = useLevelSystem();
-  const enemySystem = useEnemyActions(levelSystem);
+  const enemySystem = useEnemyActions();
   const { onProjectileHit, onProjectileRemove } =
     useProjectileSystem(enemySystem);
 
@@ -59,7 +59,7 @@ export const MainMenuScene: FC = () => {
     gameSystem;
 
   const { pathWaypoints, enemyWeights } = useLevelStore();
-  const { addEnemy, removeEnemy } = levelSystem;
+  const { addEnemy } = levelSystem;
   const { getLivingEnemyCount } = useActions(enemyActions);
 
   const lastSpawnTime = useRef(0);
@@ -117,7 +117,7 @@ export const MainMenuScene: FC = () => {
         shouldStopMovement={false}
         onProjectileHit={onProjectileHit}
         onProjectileRemove={onProjectileRemove}
-        onEnemyReachEnd={removeEnemy}
+        onEnemyReachEnd={enemySystem.onEnemyReachEnd}
         onSpawnEffect={onSpawnEffect}
         onEndEffect={onEndEffect}
         activeEffects={activeEffects}

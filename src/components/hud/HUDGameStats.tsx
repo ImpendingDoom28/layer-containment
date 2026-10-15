@@ -46,7 +46,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
 
   return (
     <HUDWrapper className="bottom-auto left-auto w-80 top-4 right-4">
-      <div className="ui-menu-tilt ui-menu-tilt-right flex h-full w-full flex-col">
+      <div className="flex flex-col w-full h-full ui-menu-tilt ui-menu-tilt-right">
         <UICard className="flex-1">
           <UICardContent className="gap-4">
             <div className="flex flex-row items-center justify-between gap-4">
@@ -92,7 +92,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
                 <UIButton
                   variant="default"
                   size={"icon-sm"}
-                  className="cursor-default w-fit"
+                  className="px-1 w-fit"
                   data-testid="paused-indicator"
                 >
                   <PauseIcon />

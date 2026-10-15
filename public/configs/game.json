@@ -73,7 +73,7 @@
       "rewardMultiplier": 1.3
     },
     "slowImmune": {
-      "description": "Resistance to slow effects",
+      "description": "Enemies gain slow resistance, weakening slow effects from towers. Each additional pick strengthens it; at tier 3 they are immune to slow.",
       "displayRank": 2,
       "id": "slowImmune",
       "indicatorColor": "#8b5cf6",

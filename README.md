@@ -20,7 +20,7 @@ A 3D tower defense game built with React, Tailwind CSS, and React Three Fiber.
 - **Enemy wave system** - 7 waves of increasing difficulty with configurable enemy compositions
 - **Level creator** - Dedicated `/editor` route with a mode rail, contextual inspector, and unified publish flow for placing buildings, drawing paths, painting non-buildable water bodies (same schema shape as buildings; stored in `waters` in level JSON), configuring waves, and exporting schema-compatible level JSON files
 - **Terrain** - Buildable land tiles use a procedural regolith-style surface (shader speckle / micro-patches on the top face only) plus sparse instanced rock props; path cells and water stay visually distinct; level editor matches the same treatment on land tiles
-- **Enemy upgrade system** - After each wave (except before wave 1), pick one of three random upgrades; choices stack for the rest of the level and apply to all spawns. Full-screen blur modal blocks other UI until you choose. The same upgrade can be taken up to three times with stronger effects each tier; at three tiers it is maxed and removed from the pool. Upgrades: Armored (+health), Swift (+speed), Unstoppable (slow immune), Regenerating (HP regen), with tier-scaled gold rewards
+- **Enemy upgrade system** - After each wave (except before wave 1), pick one of three random upgrades; choices stack for the rest of the level and apply to all spawns. Full-screen blur modal blocks other UI until you choose. The same upgrade can be taken up to three times with stronger effects each tier; at three tiers it is maxed and removed from the pool. Upgrades: Armored (+health), Swift (+speed), Unstoppable (slow resistance per tier, full slow immunity at tier 3), Regenerating (HP regen), with tier-scaled gold rewards
 - **Economy system** - Earn money by killing enemies, spend it on towers
 - **Tower management** - Click on placed towers to view info and sell them (50% refund)
 - **Audio system** - Sound effects with adjustable volume controls (master, SFX, music, ambient); gameplay SFX use Web Audio spatialization from world positions and the camera, while UI clicks and screen feedback (pause, win, lose, resume) stay non-spatial
@@ -146,7 +146,7 @@ The dev server uses a fixed port (`5173`) and `strictPort: true`, so the URL is 
     - Waves 11+: All tiers, max 3 upgrades
   - Upgrade effects stack multiplicatively for gold rewards
   - Upgraded enemies display colored rings indicating their active upgrades
-  - Slow-immune enemies cannot be slowed by Slow Towers
+  - Unstoppable enemies resist slows: each tier adds slow resistance (50% / 88% / 100%), fully negating Slow Tower effects at tier 3
   - Regenerating enemies heal over time (can be countered with burst damage)
 
 ## UI & HUD Architecture

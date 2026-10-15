@@ -179,6 +179,14 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
                   >
                     {tierSummary}
                   </UITypography>
+                  {upgrade.description && (
+                    <UITypography
+                      className="text-muted-foreground/80 text-left leading-snug"
+                      variant="small"
+                    >
+                      {upgrade.description}
+                    </UITypography>
+                  )}
                   <UITypography
                     className="mt-auto"
                     style={{ color: upgrade.indicatorColor }}

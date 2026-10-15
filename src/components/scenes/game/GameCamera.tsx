@@ -1,6 +1,6 @@
 import { useThree, useFrame } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
-import { Vector3 } from "three";
+import { MathUtils, PerspectiveCamera as ThreePerspectiveCamera, Vector3 } from "three";
 import { PerspectiveCamera } from "@react-three/drei";
 import {
   gridOffsetSelector,
@@ -26,6 +26,11 @@ import {
   UI_ACTION_DENIED_CAMERA_SHAKE_SCALE_XZ,
   UI_ACTION_DENIED_CAMERA_SHAKE_SCALE_Y,
 } from "../../../constants/uiActionDeniedFeedback";
+import {
+  PAUSE_FOV_BASE,
+  PAUSE_FOV_DAMP_LAMBDA,
+  PAUSE_FOV_MIN,
+} from "../../../constants/pauseVisuals";
 import { getCameraMovesForEvent } from "../../../core/keybindings";
 import {
   keybindingsSelector,
@@ -42,12 +47,15 @@ type GameCameraProps = {
   movementSpeed?: number;
   rotationSensitivity?: number;
   shouldStopCamera: boolean;
+  /** Eases the field of view into a tighter frame while paused. */
+  paused: boolean;
 };
 
 export const GameCamera = ({
   movementSpeed = 10,
   rotationSensitivity = 0.002,
   shouldStopCamera,
+  paused,
 }: GameCameraProps) => {
   const gridSize = useLevelStore(gridSizeSelector);
   const tileSize = useGameStore(tileSizeSelector);
@@ -68,6 +76,7 @@ export const GameCamera = ({
   const initialized = useRef(false);
   const shakeOffsetRef = useRef(new Vector3());
   const shakeRemainingMsRef = useRef(0);
+  const fovRef = useRef(PAUSE_FOV_BASE);
   const incrementDenyPulse = useGameStore(incrementDenyPulseSelector);
   const keybindings = useSettingsStore(keybindingsSelector);
 
@@ -174,6 +183,27 @@ export const GameCamera = ({
     rotation.current.pitch = camera.rotation.x;
     initialized.current = true;
   }, [camera]);
+
+  // Ease the field of view into a tighter frame while paused (and back on
+  // resume). Kept separate from the movement frame below so the zoom works
+  // even when the camera is locked (menu, game-over, controls intro).
+  useFrame((_, delta) => {
+    const target = paused ? PAUSE_FOV_MIN : PAUSE_FOV_BASE;
+    const next = MathUtils.damp(
+      fovRef.current,
+      target,
+      PAUSE_FOV_DAMP_LAMBDA,
+      delta
+    );
+    if (Math.abs(next - fovRef.current) < 0.001) {
+      return;
+    }
+    fovRef.current = next;
+    if (camera instanceof ThreePerspectiveCamera) {
+      camera.fov = next;
+      camera.updateProjectionMatrix();
+    }
+  });
 
   useFrame((state, delta) => {
     if (!initialized.current || shouldStopCamera) {

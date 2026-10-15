@@ -13,6 +13,7 @@ import { HUDMainMenu } from "../hud/main/HUDMainMenu";
 import { HUDGameMenu } from "../hud/HUDGameMenu";
 import { HUDControlsIntroModal } from "../hud/HUDControlsIntroModal";
 import { HUDUpgradePanel } from "../hud/HUDUpgradePanel";
+import { HUDPauseOverlay } from "../hud/HUDPauseOverlay";
 import { HUDLoading } from "../hud/HUDLoading";
 import { KeyboardHandlingSystem } from "../systems/KeyboardHandlingSystem";
 import { ShaderReadyGate } from "../systems/ShaderReadyGate";
@@ -228,6 +229,8 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
 
       {isGameReady && !isMenu && (
         <>
+          <HUDPauseOverlay active={gameStatus === "paused"} />
+
           {(shouldDisableControls ? gameMenuClose.closing : true) && (
             <>
               <div

@@ -1,4 +1,4 @@
-const BACKGROUND_TICK_INTERVAL_MS = 50;
+import { BACKGROUND_TICK_INTERVAL_MS } from "../../constants/game";
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
 

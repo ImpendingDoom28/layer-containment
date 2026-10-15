@@ -28,6 +28,7 @@ import { useInstancedProjectiles } from "../../core/hooks/useInstancedProjectile
 import { MedicHealPulseSystem } from "./MedicHealPulseSystem";
 import { ApplySlowSystem } from "./ApplySlowSystem";
 import { EnemyMovementSystem } from "./EnemyMovementSystem";
+import { EnemyDeathSystem } from "./EnemyDeathSystem";
 import {
   pathWidthSelector,
   selectedTowerTypeToPlaceSelector,
@@ -141,6 +142,13 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
           shouldStopMovement={shouldStopMovement}
           getSimulationTime={getSimulationTime}
         />
+
+        {/*
+         * Death is settled in the shared scene system (not per scene) so that
+         * any scene rendering enemies — game and main menu alike — clears
+         * requestEnemyDeath and destroys the entity.
+         */}
+        <EnemyDeathSystem />
 
         <EnemyMovementSystem
           shouldStopMovement={shouldStopMovement}

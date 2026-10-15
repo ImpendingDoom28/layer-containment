@@ -9,7 +9,7 @@ import {
   findEnemiesInLine,
   findEnemiesInRange,
 } from "../../utils/mathUtils";
-import { computeChainAdditionalHits } from "../../core/chainLightning";
+import { computeChainAdditionalHits } from "../../core/ecs/systems/chainLightningSystem";
 import { getEffectiveTowerCombatStats } from "../../core/relayBuffs";
 import { gameEvents } from "../../utils/eventEmitter";
 import type {
@@ -229,8 +229,8 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
           const maxHops = tower.maxChainHops ?? 3;
           const mult = tower.chainDamageMultiplierPerHop ?? 0.85;
           chainAdditionalHits = computeChainAdditionalHits(
+            world,
             tower,
-            enemies,
             target,
             eff.damage,
             eff.range,

@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
-import { computeChainAdditionalHits } from "./chainLightning";
-import type { Enemy, Tower } from "./types/game";
+import { computeChainAdditionalHits } from "./chainLightningSystem";
+import { enemyActions } from "../actions/enemyActions";
+import { testWorld } from "../world";
+import type { Enemy, Tower } from "../../types/game";
 
 const mkTower = (): Tower => ({
   id: 1,
@@ -25,7 +27,7 @@ const mkTower = (): Tower => ({
   chainDamageMultiplierPerHop: 0.85,
 });
 
-const mkEnemy = (id: number, x: number, z: number, health = 50): Enemy => ({
+const makeEnemy = (id: number, x: number, z: number, health = 50): Enemy => ({
   id,
   type: "basic",
   name: "E",
@@ -44,17 +46,24 @@ const mkEnemy = (id: number, x: number, z: number, health = 50): Enemy => ({
 });
 
 describe("computeChainAdditionalHits", () => {
+  beforeEach(() => {
+    enemyActions(testWorld).clearAllEnemies();
+  });
+
   it("chains up to 3 hops with 0.85 multiplier", () => {
-    const tower = mkTower();
-    const first = mkEnemy(1, 2, 0);
-    const second = mkEnemy(2, 4, 0);
-    const third = mkEnemy(3, 6, 0);
-    const fourth = mkEnemy(4, 8, 0);
-    const enemies = [first, second, third, fourth];
+    const first = makeEnemy(1, 2, 0);
+    const second = makeEnemy(2, 4, 0);
+    const third = makeEnemy(3, 6, 0);
+    const fourth = makeEnemy(4, 8, 0);
+
+    enemyActions(testWorld).spawnEnemy(first);
+    enemyActions(testWorld).spawnEnemy(second);
+    enemyActions(testWorld).spawnEnemy(third);
+    enemyActions(testWorld).spawnEnemy(fourth);
 
     const hits = computeChainAdditionalHits(
-      tower,
-      enemies,
+      testWorld,
+      mkTower(),
       first,
       100,
       10,
@@ -70,12 +79,15 @@ describe("computeChainAdditionalHits", () => {
   });
 
   it("stops early when no next target in tower range", () => {
-    const tower = mkTower();
-    const first = mkEnemy(1, 2, 0);
-    const far = mkEnemy(2, 50, 0);
+    const first = makeEnemy(1, 2, 0);
+    const far = makeEnemy(2, 50, 0);
+
+    enemyActions(testWorld).spawnEnemy(first);
+    enemyActions(testWorld).spawnEnemy(far);
+
     const hits = computeChainAdditionalHits(
-      tower,
-      [first, far],
+      testWorld,
+      mkTower(),
       first,
       100,
       10,
@@ -86,12 +98,15 @@ describe("computeChainAdditionalHits", () => {
   });
 
   it("chains to an enemy outside tower range but within hop range of previous target", () => {
-    const tower = mkTower();
-    const first = mkEnemy(1, 2, 0);
-    const outsideTowerRing = mkEnemy(2, 11.5, 0);
+    const first = makeEnemy(1, 2, 0);
+    const outsideTowerRing = makeEnemy(2, 11.5, 0);
+
+    enemyActions(testWorld).spawnEnemy(first);
+    enemyActions(testWorld).spawnEnemy(outsideTowerRing);
+
     const hits = computeChainAdditionalHits(
-      tower,
-      [first, outsideTowerRing],
+      testWorld,
+      mkTower(),
       first,
       100,
       10,

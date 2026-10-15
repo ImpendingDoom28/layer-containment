@@ -18,7 +18,7 @@ import {
 } from "../../utils/InstancedPool";
 import { patchEmissiveByInstanceColor } from "../../utils/instancedEmissivePatch";
 import { getCssColorValue } from "../../components/ui/lib/cssUtils";
-import type { ChainAdditionalHit } from "../chainLightning";
+import type { ChainAdditionalHit } from "../ecs/systems/chainLightningSystem";
 import type { Projectile, Enemy } from "../types/game";
 import { getPositionAlongMultiplePaths } from "../../utils/pathUtils";
 import {

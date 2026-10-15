@@ -1,5 +1,5 @@
 import { FC } from "react";
-import { HeartPulse, Pause, Play } from "lucide-react";
+import { HeartPulse, Play } from "lucide-react";
 
 import { UIButton } from "@/components/ui/buttons/UIButton";
 
@@ -16,6 +16,7 @@ import {
 } from "../../core/stores/useWaveStore";
 import { HUDWrapper } from "./HUDWrapper";
 import { UIMoney } from "../ui/UIMoney";
+import { PauseIcon } from "../ui/assets/PauseIcon";
 
 type HUDGameStatsProps = {
   money: number;
@@ -94,7 +95,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
                   className="cursor-default w-fit"
                   data-testid="paused-indicator"
                 >
-                  <Pause />
+                  <PauseIcon />
                 </UIButton>
               )}
             </div>

@@ -88,6 +88,13 @@ describe("getTieredUpgradeEffect", () => {
     expect(t3.slowResistance).toBe(1);
   });
 
+  it("grants full immunity at tier 3 even for a low base resistance", () => {
+    const lowBase = { ...slowResistanceBase, resistances: { slow: 0.2 } };
+    expect(getTieredUpgradeEffect(lowBase, 1).slowResistance).toBe(0.2);
+    expect(getTieredUpgradeEffect(lowBase, 2).slowResistance).toBeCloseTo(0.528);
+    expect(getTieredUpgradeEffect(lowBase, 3).slowResistance).toBe(1);
+  });
+
   it("keeps full immunity for a base resistance of 1 at every tier", () => {
     const fullImmune = { ...slowResistanceBase, resistances: { slow: 1 } };
     for (const tier of [1, 2, 3] as const) {

@@ -1,6 +1,6 @@
 name: Stress test
 
-# The dedicated stress-test entry (index.stress.html / src/stress-test) is
+# The dedicated stress-test entry (stress/index.stress.html / stress/app) is
 # verified in CI on every pull request so it runs before merging. The repo is
 # public, so these runs are free. The default e2e suite stays a local
 # pre-push gate (husky) and is intentionally not duplicated here.
@@ -37,7 +37,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       # Build both entries: the default app and the stress-test entry
-      # (vite.stress.config.ts is not covered by the default build).
+      # (stress/vite.config.ts is not covered by the default build).
       - name: Build (default + stress)
         run: npm run build && npm run build:stress
 

@@ -41,6 +41,7 @@ export const Ground: FC = memo(() => {
 
   return (
     <mesh
+      name="ground"
       geometry={geometry}
       material={material}
       position={[0, getPlanetSphereMeshPositionY(radius), 0]}

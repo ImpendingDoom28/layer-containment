@@ -1,4 +1,5 @@
 import type { PathWaypoint } from "../core/types/game";
+import { withCache } from "./withCache";
 
 export type PathSegment = {
   p1: PathWaypoint;
@@ -154,16 +155,24 @@ export function isPointInTile(
 }
 
 /**
- * Check if a grid tile intersects with the path
+ * Check if a grid tile intersects with the path.
+ *
+ * The result depends only on the path geometry (plus grid offset / tile size /
+ * path width) — never on towers, buildings or water. Caching per
+ * `pathWaypoints` identity is safe: zustand keeps the same array for the
+ * lifetime of a level, a level reload produces a new array (and therefore a
+ * fresh cache), and an abandoned level's cache is reclaimed by GC via the
+ * WeakMap. Without the cache this is O(waypoints + segments * 5) per tile,
+ * which made it the single hottest function in the CPU profile.
  */
-export function isGridTileOnPath(
+export const isGridTileOnPath = withCache((
+  pathWaypoints: PathWaypoint[][],
   gridX: number,
   gridZ: number,
   gridOffset: number,
   tileSize: number,
-  pathWaypoints: PathWaypoint[][],
   pathWidth: number
-): boolean {
+): boolean => {
   // Convert grid coordinates to world coordinates (tile center)
   const tileCenterX = gridOffset + gridX + tileSize / 2;
   const tileCenterZ = gridOffset + gridZ + tileSize / 2;
@@ -223,7 +232,7 @@ export function isGridTileOnPath(
   }
 
   return false;
-}
+});
 
 export const getPositionAlongMultiplePaths = (
   paths: PathWaypoint[][],

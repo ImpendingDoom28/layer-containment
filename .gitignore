@@ -12,7 +12,6 @@ lerna-debug.log*
 .env
 node_modules
 dist
-dist-stress
 dist-ssr
 *.local
 playwright-report
@@ -30,3 +29,7 @@ playwright/.cache
 *.njsproj
 *.sln
 *.sw?
+
+# Stress-test profiling artifacts (cpuprofiles, traces; written to
+# profiling/ at the repo root by the stress/scripts tooling)
+profiling/

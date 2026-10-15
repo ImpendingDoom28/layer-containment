@@ -77,38 +77,10 @@ npm run build
 
 ### Performance Stress Test
 
-A dedicated, unattended stress-test entry saturates the renderer and simulation
-on a generated `64x64` level: 4096 shader-compiled grid tiles, a 64-waypoint
-serpentine path (~2,080 strip segments, each a pair of box meshes), 150
-pre-placed towers of all six types, and 20 waves totalling ~2,330 enemies. The
-run loops forever with a very high base health so it never ends, and a live
-overlay shows FPS, frame time, draw calls, triangles, JS heap, and wave/entity
-counts. After 30 seconds of steady rendering it freezes a **30-second average**
-block (FPS, frame, draw calls, triangles, programs) for baseline measurement —
-no thresholds are enforced yet, the numbers are reported so limits can be set
-later.
-
-The stress app lives under `src/stress-test/` and is only reachable through its
-own Vite entry (`index.stress.html` / `vite.stress.config.ts`). It is **not**
-imported by the default `index.html` entry, so `npm run build` never bundles
-any stress-test code.
-
-```bash
-npm run dev:stress          # serve http://localhost:5174/index.stress.html
-npm run build:stress        # build only the stress entry into dist-stress/
-npm run test:e2e:stress     # Playwright smoke test + 30s averages (port 5174)
-npm run generate:stress-level  # regenerate public/configs/levels/stress.json
-```
-
-The stress e2e suite is **not** part of the local `npm run verify` pre-push
-gate; instead it runs in GitHub Actions (`.github/workflows/stress-test.yml`)
-on every pull request — so it runs before anything is merged — and on pushes
-to `master`. The repo is public, so those runs are free. The 30-second average
-numbers are printed to the CI test output (`[stress-averages] ...`).
-
-The generated level is written to `public/configs/levels/stress.json` by
-`scripts/generate-stress-level.py`; rerun the generator (or commit the result)
-when the scenario parameters change.
+A dedicated, unattended stress-test entry for renderer/simulation
+saturating. See [`stress/README.md`](stress/README.md) for the scenario, the
+`dev:stress` / `build:stress` / `test:e2e:stress` commands, the profiling
+tooling, and the optimization notes.
 
 ### Live Browser Checks (for AI agents)
 

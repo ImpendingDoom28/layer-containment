@@ -177,17 +177,6 @@ export const useLevelSystem = () => {
     ]
   );
 
-  const updateTower = useCallback(
-    (towerId: number, updates: Partial<Tower>) => {
-      setTowers((prev) =>
-        prev.map((tower) =>
-          tower.id === towerId ? { ...tower, ...updates } : tower
-        )
-      );
-    },
-    [setTowers]
-  );
-
   const removeTower = useCallback(
     (towerId: number) => {
       setTowers((prev) => prev.filter((t) => t.id !== towerId));
@@ -344,7 +333,6 @@ export const useLevelSystem = () => {
 
   return {
     placeTower,
-    updateTower,
     removeTower,
     sellTower,
 

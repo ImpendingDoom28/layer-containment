@@ -15,13 +15,14 @@ export const useProjectileSystem = (enemyActions: EnemyActions) => {
 
   const onProjectileHit = useCallback(
     (projectile: Projectile, targetEnemy: Enemy, currentTime: number = 0) => {
-      const enemies = getEnemySnapshots(world);
-
       if (projectile.projectileType === "beam") {
         damageEnemy(targetEnemy.id, projectile.damage);
       } else if (projectile.projectileType === "chain") {
         damageEnemy(targetEnemy.id, projectile.damage);
       } else if (projectile.projectileType === "aoe" && projectile.aoeRadius) {
+        // Only AOE needs the full snapshot array; allocate it lazily so the
+        // far more common single/beam/chain hits don't allocate per hit.
+        const enemies = getEnemySnapshots(world);
         const enemiesInRange = findEnemiesInRange(
           enemies,
           targetEnemy.x,

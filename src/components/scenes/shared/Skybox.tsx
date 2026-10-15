@@ -46,7 +46,7 @@ export const Skybox: FC<SkyboxProps> = ({
   }, [starCount]);
 
   return (
-    <group>
+    <group name="skybox">
       <mesh renderOrder={-1}>
         <sphereGeometry args={[SKYBOX_RADIUS, 32, 32]} />
         <meshBasicMaterial

@@ -1,7 +1,8 @@
 /**
  * Dedicated performance stress-test harness for LAYER CONTAINMENT.
  *
- * This entry (served via `index.stress.html` / `vite.stress.config.ts`) boots
+ * This entry (served via `stress/index.stress.html` /
+ * `stress/vite.config.ts`) boots
  * the full game scene on the generated "stress" level:
  *
  *   - 64x64 grid (4096 shader-compiled tiles)
@@ -22,30 +23,30 @@
  * the normal `vite build` never bundles the stress-test code.
  */
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Stats } from "@react-three/drei";
 import { useActions, WorldProvider } from "koota/react";
 
-import { GameScene } from "../components/scenes/game/GameScene";
-import { ShaderReadyGate } from "../components/systems/ShaderReadyGate";
-import { GAME_CANVAS_GL, GAME_CANVAS_STYLE } from "../constants/canvas";
-import { worldBaseActions } from "../core/ecs/actions/baseActions";
-import { isBase } from "../core/ecs/traits/base";
-import { HealthInfo } from "../core/ecs/traits/health";
-import { getLivingEnemySnapshots } from "../core/ecs/selectors/enemySnapshots";
-import { EntityIdProvider } from "../core/contexts/EntityIdContext";
-import { world } from "../core/ecs/world";
-import { useEnemyActions } from "../core/hooks/useEnemyActions";
-import { useGameSystem } from "../core/hooks/useGameSystem";
-import { useLevelSystem } from "../core/hooks/useLevelSystem";
-import { useProjectileSystem } from "../core/hooks/useProjectileSystem";
-import { useWaveSystem } from "../core/hooks/useWaveSystem";
-import { startNewRunSelector, useGameStore } from "../core/stores/useGameStore";
-import { useLevelStore } from "../core/stores/useLevelStore";
+import { GameScene } from "../../src/components/scenes/game/GameScene";
+import { ShaderReadyGate } from "../../src/components/systems/ShaderReadyGate";
+import { GAME_CANVAS_GL, GAME_CANVAS_STYLE } from "../../src/constants/canvas";
+import { worldBaseActions } from "../../src/core/ecs/actions/baseActions";
+import { isBase } from "../../src/core/ecs/traits/base";
+import { HealthInfo } from "../../src/core/ecs/traits/health";
+import { enemyActions } from "../../src/core/ecs/actions/enemyActions";
+import { EntityIdProvider } from "../../src/core/contexts/EntityIdContext";
+import { world } from "../../src/core/ecs/world";
+import { useEnemyActions } from "../../src/core/hooks/useEnemyActions";
+import { useGameSystem } from "../../src/core/hooks/useGameSystem";
+import { useLevelSystem } from "../../src/core/hooks/useLevelSystem";
+import { useProjectileSystem } from "../../src/core/hooks/useProjectileSystem";
+import { useWaveSystem } from "../../src/core/hooks/useWaveSystem";
+import { startNewRunSelector, useGameStore } from "../../src/core/stores/useGameStore";
+import { useLevelStore } from "../../src/core/stores/useLevelStore";
 import {
   resetLevelEnemyUpgradesSelector,
   useUpgradeStore,
-} from "../core/stores/useUpgradeStore";
+} from "../../src/core/stores/useUpgradeStore";
 
 const STRESS_LEVEL_ID = "stress" as const;
 const STRESS_BASE_HEALTH = 1_000_000;
@@ -183,6 +184,39 @@ const StressStatsCollector = ({
 };
 
 /**
+ * Exposes the three scene and renderer on `window` so external profiling
+ * scripts (Playwright/CDP) can toggle named scene roots and read gl.info
+ * without React. Stress-entry only.
+ */
+const SceneDebugBridge = () => {
+  const { scene, gl } = useThree();
+  const { getLivingEnemyCount } = useActions(enemyActions);
+  // The default directional shadow camera only covers a ~10x10-unit patch at
+  // the origin of this ~32-unit planet, so the shadow pass costs a full extra
+  // render of every scene mesh for almost no visible effect. Stress run only:
+  // disable it once the light has mounted.
+  const shadowDisabledRef = useRef(false);
+  useEffect(() => {
+    const w = window as unknown as Record<string, unknown>;
+    w.__stressScene = scene;
+    w.__stressGl = gl;
+    w.__stressGameStore = useGameStore;
+    w.__stressLevelStore = useLevelStore;
+    w.__stressUpgradeStore = useUpgradeStore;
+    w.__stressLivingCount = getLivingEnemyCount;
+  }, [scene, gl, getLivingEnemyCount]);
+  useFrame(() => {
+    if (shadowDisabledRef.current) return;
+    const light = scene.getObjectByName("shadow-light");
+    if (light) {
+      (light as unknown as { castShadow: boolean }).castShadow = false;
+      shadowDisabledRef.current = true;
+    }
+  });
+  return null;
+};
+
+/**
  * Unattended driver: auto-picks upgrade gates, auto-starts waves, and
  * restarts the run forever after a win (or a defeat, just in case).
  */
@@ -237,6 +271,7 @@ const StressOverlay = ({
   runCount: number;
 }) => {
   const textRef = useRef<HTMLPreElement>(null);
+  const { getLivingEnemyCount } = useActions(enemyActions);
 
   useEffect(() => {
     let raf = 0;
@@ -245,7 +280,7 @@ const StressOverlay = ({
       const gameStatus = useGameStore.getState().gameStatus;
       const level = useLevelStore.getState();
       const upgrade = useUpgradeStore.getState();
-      const enemiesAlive = getLivingEnemySnapshots(world).length;
+      const enemiesAlive = getLivingEnemyCount();
       const base = world.queryFirst(isBase);
       const baseHealth = base ? base.get(HealthInfo) : undefined;
 
@@ -294,7 +329,7 @@ const StressOverlay = ({
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [statsRef, runCount]);
+  }, [statsRef, runCount, getLivingEnemyCount]);
 
   return (
     <pre
@@ -328,6 +363,18 @@ const StressTestGame = () => {
 
   const { spawnBase } = useActions(worldBaseActions);
   const startNewRun = useGameStore(startNewRunSelector);
+
+  // The stress level is fully pre-built and placement is disabled, so this is
+  // a stable no-op. It must be referentially stable: StressTestGame re-renders
+  // on every enemy kill/spawn (money / activeEffects subscriptions), and an
+  // inline `() => {}` here would give `Grid` a new prop each time, defeating
+  // its memo and re-rendering all 4096 tile meshes per kill.
+  const onPlaceTowerNoop = useCallback(
+    () => {
+      /* stress level is fully pre-built; placement is disabled */
+    },
+    []
+  );
   const resetLevelEnemyUpgrades = useUpgradeStore(
     resetLevelEnemyUpgradesSelector
   );
@@ -403,6 +450,7 @@ const StressTestGame = () => {
           onReadyChange={handleReadyChange}
         />
         <StressStatsCollector statsRef={statsRef} readyRef={readyRef} />
+        <SceneDebugBridge />
 
         {isGameConfigLoaded && (
           <Suspense
@@ -413,9 +461,7 @@ const StressTestGame = () => {
             }
           >
             <GameScene
-              placeTower={() => {
-                /* stress level is fully pre-built; placement is disabled */
-              }}
+              placeTower={onPlaceTowerNoop}
               onSpawnEffect={onSpawnEffect}
               onEndEffect={onEndEffect}
               onEffectComplete={onEffectComplete}
@@ -443,15 +489,6 @@ const StressTestGame = () => {
           </Suspense>
         )}
       </Canvas>
-
-      <div
-        data-testid="stress-banner"
-        className="pointer-events-none fixed right-3 top-3 z-50 rounded-md bg-black/70 px-3 py-2 text-[12px] leading-5 text-amber-300"
-      >
-        <div className="font-semibold">LAYER CONTAINMENT — STRESS TEST</div>
-        <div>64x64 grid · 150 towers · 20 waves · unattended loop</div>
-        <div className="text-gray-400">base health {STRESS_BASE_HEALTH}</div>
-      </div>
 
       <StressOverlay statsRef={statsRef} runCount={runCount} />
 

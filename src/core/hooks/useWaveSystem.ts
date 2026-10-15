@@ -1,4 +1,5 @@
 import { useCallback, useRef, useEffect, useLayoutEffect } from "react";
+import { useActions } from "koota/react";
 
 import type {
   EnemyType,
@@ -26,8 +27,7 @@ import { useUpgradeStore } from "../stores/useUpgradeStore";
 import { useWaveStore } from "../stores/useWaveStore";
 import { GameEvent } from "../types/enums/events";
 import { gameEvents } from "../../utils/eventEmitter";
-import { world } from "../ecs/world";
-import { getLivingEnemySnapshots } from "../ecs/selectors/enemySnapshots";
+import { enemyActions } from "../ecs/actions/enemyActions";
 
 type SpawnQueueItem = {
   type: EnemyType;
@@ -71,6 +71,7 @@ export const useWaveSystem = (gameState: GameState) => {
   const { winGame, gameStatus: initialGameStatus } = gameState;
   const isPageVisible = useGameStore(isPageVisibleSelector);
   const pauseWhenTabHidden = useSettingsStore(pauseWhenTabHiddenSelector);
+  const getLivingEnemyCount = useActions(enemyActions).getLivingEnemyCount;
 
   const totalWaves = useLevelStore(totalWavesSelector);
   const waveConfigs = useLevelStore(waveConfigsSelector);
@@ -195,10 +196,10 @@ export const useWaveSystem = (gameState: GameState) => {
     if (currentWave >= totalWaves) return;
     if (currentWave > 0) {
       if (spawnQueueIndexRef.current < spawnQueueRef.current.length) return;
-      if (getLivingEnemySnapshots(world).length > 0) return;
+      if (getLivingEnemyCount() > 0) return;
     }
     startNextWave();
-  }, [currentWave, totalWaves, startNextWave]);
+  }, [currentWave, totalWaves, startNextWave, getLivingEnemyCount]);
 
   const updateWaveSpawning = useCallback(
     (currentTime: number) => {
@@ -232,7 +233,7 @@ export const useWaveSystem = (gameState: GameState) => {
 
       const waveCleared =
         spawnQueueIndexRef.current >= spawnQueueRef.current.length &&
-        getLivingEnemySnapshots(world).length === 0;
+        getLivingEnemyCount() === 0;
       const nextWaveReady =
         currentWave === 0 || (currentWave < totalWaves && waveCleared);
       if (useWaveStore.getState().nextWaveReady !== nextWaveReady) {
@@ -242,10 +243,7 @@ export const useWaveSystem = (gameState: GameState) => {
       if (currentWave === 0 || currentWave > totalWaves) return;
 
       if (spawnQueueIndexRef.current >= spawnQueueRef.current.length) {
-        if (
-          waveStartedRef.current &&
-          getLivingEnemySnapshots(world).length === 0
-        ) {
+        if (waveStartedRef.current && getLivingEnemyCount() === 0) {
           waveStartedRef.current = false;
           if (currentTime - lastSpawnTimeRef.current > 300) {
             if (currentWave < totalWaves) {
@@ -277,7 +275,7 @@ export const useWaveSystem = (gameState: GameState) => {
         spawnQueueIndexRef.current += 1;
       }
     },
-    [currentWave, totalWaves, winGame, addEnemy]
+    [currentWave, totalWaves, winGame, addEnemy, getLivingEnemyCount]
   );
 
   const getRemainingEnemiesInWave = useCallback((): number => {
@@ -285,9 +283,9 @@ export const useWaveSystem = (gameState: GameState) => {
     return (
       spawnQueueRef.current.length -
       spawnQueueIndexRef.current +
-      getLivingEnemySnapshots(world).length
+      getLivingEnemyCount()
     );
-  }, [currentWave, totalWaves]);
+  }, [currentWave, totalWaves, getLivingEnemyCount]);
 
   return {
     updateWaveSpawning,

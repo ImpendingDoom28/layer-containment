@@ -8,17 +8,24 @@ import { defineConfig } from "vite";
  *
  * This entry is intentionally separate from the default `vite build`:
  * - `index.html`  -> main game (default build)
- * - `index.stress.html` -> stress-test harness (this build)
+ * - `stress/index.stress.html` -> stress-test harness (this build)
  *
- * The stress app (`src/stress-test/`) is only reachable through this entry,
- * so the default build never bundles any stress-test code.
+ * The stress app (`stress/app/`) is only reachable through this entry, so the
+ * default build never bundles any stress-test code.
  *
- * Run:
+ * Run from the repo root:
  *   npm run dev:stress     (open http://localhost:5174/index.stress.html)
- *   npm run build:stress   (outputs dist-stress/ with only the stress bundle,
+ *   npm run build:stress   (outputs stress/dist/ with only the stress bundle,
  *                           leaving the default build's dist/ untouched)
  */
+// import.meta.dirname (not __dirname): this file is loaded as an ES module by
+// the Vite config loader, matching the native config loader that Vite 8 prefers.
+const root = path.resolve(import.meta.dirname, "..");
+
 export default defineConfig({
+  // Explicit repo root: this config lives in `stress/`, so Vite's default
+  // root (the config directory) would miss the public assets and entry.
+  root,
   plugins: [react(), tailwindcss()],
   server: {
     port: 5174,
@@ -31,14 +38,14 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "./src"),
-      "@/ui": path.resolve(import.meta.dirname, "./src/components/ui"),
+      "@": path.resolve(root, "src"),
+      "@/ui": path.resolve(root, "src/components/ui"),
     },
   },
   build: {
     // Keep the stress build isolated from the default build's dist/ so the
     // two never clobber each other.
-    outDir: "dist-stress",
+    outDir: path.resolve(root, "stress/dist"),
     rollupOptions: {
       input: path.resolve(import.meta.dirname, "index.stress.html"),
       output: {

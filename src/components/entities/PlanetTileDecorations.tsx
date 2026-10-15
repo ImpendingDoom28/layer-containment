@@ -10,8 +10,7 @@ import {
 } from "three";
 
 import { hashGrid2D } from "../../core/tileGridHash";
-import type { PathWaypoint, Tower } from "../../core/types/game";
-import { getTilePlacementState } from "../../utils/tilePlacement";
+import type { TileOccupancyMasks } from "../../utils/tileOccupancy";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import {
   flatFieldToSphereSurface,
@@ -19,35 +18,26 @@ import {
   getSurfaceQuaternion,
 } from "../../utils/planetSurfaceMapping";
 import { getCssColorValue } from "../ui/lib/cssUtils";
+import { gridSizeSelector, useLevelStore } from "../../core/stores/useLevelStore";
 import {
-  buildingsSelector,
-  gridOffsetSelector,
-  gridSizeSelector,
-  useLevelStore,
-  watersSelector,
-} from "../../core/stores/useLevelStore";
-import {
-  pathWidthSelector,
   pathYOffsetSelector,
   tileSizeSelector,
   useGameStore,
 } from "../../core/stores/useGameStore";
 
 export type PlanetTileDecorationsProps = {
-  pathWaypoints: PathWaypoint[][];
-  towers: Tower[];
+  occupancy: TileOccupancyMasks;
 };
 
 const ROCK_SURFACE_FRACTION = 0.32;
 
+// Rock decorations are static per level: they only depend on path geometry
+// and water (via the shared occupancy masks), never on towers or on the
+// simulation, so the mesh is built once per level load.
 export const PlanetTileDecorations: FC<PlanetTileDecorationsProps> = memo(
-  ({ pathWaypoints, towers }) => {
-    const buildings = useLevelStore(buildingsSelector);
-    const waters = useLevelStore(watersSelector);
-    const gridOffset = useLevelStore(gridOffsetSelector);
+  ({ occupancy }) => {
     const pathYOffset = useGameStore(pathYOffsetSelector);
     const surfaceHalfHeight = useMemo(() => pathYOffset / 2, [pathYOffset]);
-    const pathWidth = useGameStore(pathWidthSelector);
     const tileSize = useGameStore(tileSizeSelector);
     const gridSize = useLevelStore(gridSizeSelector);
 
@@ -84,18 +74,13 @@ export const PlanetTileDecorations: FC<PlanetTileDecorationsProps> = memo(
 
       for (let gridX = 0; gridX < gridSize; gridX += 1) {
         for (let gridZ = 0; gridZ < gridSize; gridZ += 1) {
-          const placement = getTilePlacementState({
-            gridX,
-            gridZ,
-            towers,
-            buildings,
-            waters,
-            gridOffset,
-            tileSize,
-            pathWaypoints,
-            pathWidth,
-          });
-          if (placement.isOnPath || placement.isWater) continue;
+          const index = gridZ * occupancy.gridSize + gridX;
+          if (
+            occupancy.onPath[index] === 1 ||
+            occupancy.water[index] === 1
+          ) {
+            continue;
+          }
 
           const h0 = hashGrid2D(gridX, gridZ);
           if (h0 > ROCK_SURFACE_FRACTION) continue;
@@ -132,12 +117,7 @@ export const PlanetTileDecorations: FC<PlanetTileDecorationsProps> = memo(
     }, [
       gridSize,
       tileSize,
-      gridOffset,
-      pathWaypoints,
-      pathWidth,
-      waters,
-      buildings,
-      towers,
+      occupancy,
       surfaceHalfHeight,
       dummy,
       rotQuat,
@@ -158,6 +138,7 @@ export const PlanetTileDecorations: FC<PlanetTileDecorationsProps> = memo(
     return (
       <instancedMesh
         key={count}
+        name="rock-decorations"
         ref={meshRef}
         args={[geometry, material, count]}
         castShadow

@@ -1,4 +1,4 @@
-import { FC, memo, useMemo } from "react";
+import { FC, memo, useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useWorld } from "koota/react";
 
@@ -29,11 +29,12 @@ import {
 } from "../../core/stores/useGameStore";
 import {
   gridSizeSelector,
+  isLevelConfigLoadedSelector,
   pathWaypointsSelector,
   towersSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
-import { getLivingEnemySnapshots } from "../../core/ecs/selectors/enemySnapshots";
+import { getLivingEnemyList } from "../../core/ecs/selectors/enemySnapshots";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import {
   flatCombatPointToWorldPosition,
@@ -52,7 +53,6 @@ type TowerSystemProps = {
   fireProjectile: (
     projectile: Omit<ProjectileInstance, "id">
   ) => ProjectileInstance;
-  updateTower: (towerId: number, updates: Partial<TowerInstance>) => void;
   selectedTower: TowerInstance | null;
   onTowerClick: ((tower: TowerInstance) => void) | null;
   onSellTower: ((towerId: number) => void) | null;
@@ -64,7 +64,6 @@ type TowerSystemProps = {
 export const TowerSystem: FC<TowerSystemProps> = memo(
   ({
     fireProjectile,
-    updateTower,
     selectedTower,
     onTowerClick,
     onSellTower,
@@ -72,6 +71,13 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     selectedTowerType,
     hoveredTilePlacementState,
   }) => {
+    // Fire timing is a pure simulation concern, so it lives in a ref instead
+    // of the zustand `towers` array: updating `lastFireTime` no longer
+    // re-renders the 150-tower list and the O(towers^2) combat-stats memo on
+    // every shot. The towers array reference still changes on place/sell, so
+    // a shot after a placement naturally reads the fresh array.
+    const fireTimesRef = useRef(new Map<number, number>());
+
     const towerTypes = useGameStore(towerTypesSelector);
     const tileSize = useGameStore(tileSizeSelector);
     const towerHeight = useGameStore(towerHeightSelector);
@@ -79,6 +85,22 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     const gridSize = useLevelStore(gridSizeSelector);
     const pathWaypoints = useLevelStore(pathWaypointsSelector);
     const towers = useLevelStore(towersSelector);
+    const isLevelConfigLoaded = useLevelStore(isLevelConfigLoadedSelector);
+
+    const towerIds = useMemo(
+      () => new Set(towers.map((t) => t.id)),
+      [towers]
+    );
+
+    // Tower ids are re-issued from 1 when a level (re)loads, so a reused id
+    // would otherwise carry the previous level's fire timestamp. Clear the
+    // ref when the level (re)loads; the per-frame prune below only drops ids
+    // that no longer exist, which a reused id does not.
+    useEffect(() => {
+      if (isLevelConfigLoaded) {
+        fireTimesRef.current.clear();
+      }
+    }, [isLevelConfigLoaded]);
 
     const pauseWhenTabHidden = useSettingsStore(pauseWhenTabHiddenSelector);
 
@@ -153,12 +175,19 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
       if (gameStatus !== "playing" && gameStatus !== "menu") return;
 
       const currentTime = state.clock.elapsedTime;
-      const enemies = getLivingEnemySnapshots(world);
+      const enemies = getLivingEnemyList(world);
+      const fireTimes = fireTimesRef.current;
+      // Prune entries for towers that no longer exist (sold / level restart)
+      // so the map stays the size of the current level.
+      for (const id of fireTimes.keys()) {
+        if (!towerIds.has(id)) fireTimes.delete(id);
+      }
 
       towers.forEach((tower) => {
         if (tower.type === "relay") return;
 
-        const timeSinceLastFire = currentTime - tower.lastFireTime;
+        const lastFireTime = fireTimes.get(tower.id) ?? 0;
+        const timeSinceLastFire = currentTime - lastFireTime;
         if (timeSinceLastFire < tower.fireRate) return;
 
         const towerConfig = towerTypes?.[tower.type];
@@ -295,27 +324,29 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
           },
         });
 
-        updateTower(tower.id, { lastFireTime: currentTime });
+        fireTimes.set(tower.id, currentTime);
       });
     });
 
     return (
       <>
-        {towers.map((tower) => {
-          const eff = combatStatsByTowerId.get(tower.id) ?? {
-            damage: tower.damage,
-            range: tower.range,
-          };
-          return (
-            <Tower
-              key={tower.id}
-              tower={tower}
-              effectiveRange={eff.range}
-              isSelected={selectedTower?.id === tower.id}
-              onClick={() => onTowerClick?.(tower)}
-            />
-          );
-        })}
+        <group name="towers">
+          {towers.map((tower) => {
+            const eff = combatStatsByTowerId.get(tower.id) ?? {
+              damage: tower.damage,
+              range: tower.range,
+            };
+            return (
+              <Tower
+                key={tower.id}
+                tower={tower}
+                effectiveRange={eff.range}
+                isSelected={selectedTower?.id === tower.id}
+                onClick={() => onTowerClick?.(tower)}
+              />
+            );
+          })}
+        </group>
 
         {previewTower && towerTypes && (
           <Tower

@@ -19,3 +19,6 @@
 
 ## React Three Fiber
 - When working on three.js/R3F features, follow `.cursor/rules/react-three-fiber.mdc` (share geometries/materials, avoid unnecessary mounts).
+
+## koota
+- When using entity actions (e.g. `enemyActions`), use them through koota's `useActions` hook so the code looks cleaner.

@@ -45,10 +45,10 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
 
   return (
     <HUDWrapper className="bottom-auto left-auto w-80 top-4 right-4">
-      <div className="ui-menu-tilt ui-menu-tilt-right flex h-full flex-col">
+      <div className="ui-menu-tilt ui-menu-tilt-right flex h-full w-full flex-col">
         <UICard className="flex-1">
           <UICardContent className="gap-4">
-            <div className="flex flex-row gap-4">
+            <div className="flex flex-row items-center justify-between gap-4">
               <div className="flex items-center">
                 <UIMoney money={money} variant="h4" iconSize={20} />
               </div>
@@ -59,10 +59,10 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
                 </UITypography>
               </div>
             </div>
-            <div className="flex items-center">
-              <div className="flex flex-row items-center justify-center gap-1">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-row items-center gap-1">
                 <UITypography variant="body">Wave:</UITypography>
-                <UITypography variant="medium">
+                <UITypography variant="medium" whiteSpace="nowrap">
                   {`${currentWave} / ${totalWaves}`}
                 </UITypography>
               </div>
@@ -70,9 +70,9 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
               {currentWave > 0 &&
                 currentWave <= totalWaves &&
                 remainingEnemies > 0 && (
-                  <div className="flex flex-row items-center justify-center flex-1 gap-1">
+                  <div className="flex flex-row items-center gap-1">
                     <UITypography variant="body">Enemies:</UITypography>
-                    <UITypography variant="medium">
+                    <UITypography variant="medium" whiteSpace="nowrap">
                       {remainingEnemies}
                     </UITypography>
                   </div>

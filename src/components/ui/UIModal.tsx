@@ -92,11 +92,11 @@ export const UIModal: FC<UIModalProps> = ({
           // the game's keyboard system), so dismissing a modal does not also
           // toggle the game menu.
           onEscapeKeyDown={(e) => e.stopPropagation()}
-          className="fixed left-1/2 top-1/2 z-(--z-modal) -translate-x-1/2 -translate-y-1/2 w-[min(100%-2rem,20rem)] outline-none"
+          className="fixed left-1/2 top-1/2 z-(--z-modal) -translate-x-1/2 -translate-y-1/2 w-[min(100%-2rem,28rem)] outline-none"
         >
           <UICard
             className={cn(
-              "w-full max-w-sm animate-in fade-in zoom-in-95 duration-150",
+              "mx-auto w-full max-w-sm animate-in fade-in zoom-in-95 duration-150",
               className
             )}
           >

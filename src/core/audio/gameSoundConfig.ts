@@ -149,7 +149,7 @@ export type AudioEventDataMap = {
     worldPosition: WorldPosition;
   };
   ui_action_denied: {
-    reason: "insufficient_funds";
+    reason: "insufficient_funds" | "blocked_tile";
     towerType: TowerType;
   };
   ui_action_hold_start: Record<string, never>;

@@ -75,11 +75,10 @@ export const GameCamera = ({
     const unsubscribe = gameEvents.on<AudioEventData<"ui_action_denied">>(
       GameEvent.UI_ACTION_DENIED,
       (data) => {
-        if (data.reason === "insufficient_funds") {
-          shakeRemainingMsRef.current =
-            UI_ACTION_DENIED_CAMERA_SHAKE_DURATION_MS;
-          incrementDenyPulse(data.towerType);
+        if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          shakeRemainingMsRef.current = UI_ACTION_DENIED_CAMERA_SHAKE_DURATION_MS;
         }
+        incrementDenyPulse(data.towerType);
       }
     );
     return unsubscribe;

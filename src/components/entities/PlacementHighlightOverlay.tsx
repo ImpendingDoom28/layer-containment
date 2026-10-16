@@ -8,6 +8,7 @@ import {
   pathYOffsetSelector,
   selectedTowerTypeToPlaceSelector,
   tileSizeSelector,
+  towerTypesSelector,
   useGameStore,
 } from "../../core/stores/useGameStore";
 import {
@@ -32,6 +33,7 @@ type PlacementHighlightOverlayProps = {
 export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
   memo(({ hoveredTile }) => {
     const selectedTowerType = useGameStore(selectedTowerTypeToPlaceSelector);
+    const towerTypes = useGameStore(towerTypesSelector);
     const gridSize = useLevelStore(gridSizeSelector);
     const tileSize = useGameStore(tileSizeSelector);
     const pathYOffset = useGameStore(pathYOffsetSelector);
@@ -106,6 +108,48 @@ export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
       invalidColor,
     ]);
 
+    // Range disc for the tile under the cursor while placing a tower, so the
+    // player sees the combat reach before committing (mirrors the selected
+    // tower's range ring).
+    const rangeRing = useMemo(() => {
+      if (!selectedTowerType || !hoveredTile) return null;
+
+      const range = towerTypes?.[selectedTowerType]?.range;
+      if (!range || range <= 0.01) return null;
+
+      const placementState = getTilePlacementState(
+        hoveredTile.gridX,
+        hoveredTile.gridZ
+      );
+      const wx = tileToWorldCoordinate(hoveredTile.gridX, gridSize, tileSize);
+      const wz = tileToWorldCoordinate(hoveredTile.gridZ, gridSize, tileSize);
+
+      const { position, quaternion } = flatFieldToSphereOverlayPlanePose(
+        wx,
+        wz,
+        planetRadius,
+        pathYOffset + PLACEMENT_OVERLAY_Y_EPSILON + 0.004
+      );
+
+      return {
+        position,
+        quaternion,
+        range,
+        color: placementState.isBlocked ? invalidColor : validColor,
+      };
+    }, [
+      selectedTowerType,
+      hoveredTile,
+      towerTypes,
+      getTilePlacementState,
+      gridSize,
+      tileSize,
+      planetRadius,
+      pathYOffset,
+      validColor,
+      invalidColor,
+    ]);
+
     if (!selectedTowerType || cells.length === 0) {
       return null;
     }
@@ -121,6 +165,22 @@ export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
             color={color}
           />
         ))}
+        {rangeRing && (
+          <mesh
+            position={rangeRing.position}
+            quaternion={rangeRing.quaternion}
+            raycast={() => null}
+          >
+            <ringGeometry args={[rangeRing.range * 0.94, rangeRing.range, 48]} />
+            <meshBasicMaterial
+              color={rangeRing.color}
+              transparent
+              opacity={0.45}
+              side={2}
+              depthWrite={false}
+            />
+          </mesh>
+        )}
       </group>
     );
   });

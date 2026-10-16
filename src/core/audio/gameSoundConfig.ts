@@ -103,6 +103,9 @@ export type AudioEventDataMap = {
   enemy_killed: {
     enemyId: number;
     enemyType: EnemyType;
+    reward: number;
+    size: number;
+    color: string;
     worldPosition: WorldPosition;
   };
   enemy_reached_end: {
@@ -115,6 +118,7 @@ export type AudioEventDataMap = {
     enemyId: number;
     towerType: TowerType;
     projectileType: ProjectileType;
+    damage: number;
     worldPosition: WorldPosition;
   };
   wave_started: {

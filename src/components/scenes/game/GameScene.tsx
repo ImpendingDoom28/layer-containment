@@ -23,6 +23,7 @@ import { ApplyBaseDefeatSystem } from "../../systems/ApplyBaseDefeatSystem";
 import { WaveSystem } from "../../../core/hooks/useWaveSystem";
 import { TileData } from "../../../core/types/utils";
 import { EntitiesSystem } from "../../systems/EntitiesSystem";
+import { CombatJuice } from "../../entities/effects/CombatJuice";
 import { LevelSystem } from "../../systems/LevelSystem";
 import {
   gridOffsetSelector,
@@ -162,6 +163,8 @@ export const GameScene: React.FC<GameSceneProps> = ({
         activeEffects={activeEffects}
         onEffectComplete={onEffectComplete}
       />
+
+      <CombatJuice shouldStopMovement={shouldStopMovement} />
 
       <WaveLoopSystem waveSystem={waveSystem} />
 

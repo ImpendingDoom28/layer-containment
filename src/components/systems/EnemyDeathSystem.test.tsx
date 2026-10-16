@@ -84,10 +84,19 @@ describe("EnemyDeathSystem", () => {
 
       await advance(renderer);
 
-      // Kill settled: reward, kill count, event.
+      // Kill settled: reward, kill count, event (now carrying the reward and
+      // visual fields the combat-juice layer renders).
       expect(useLevelStore.getState().money).toBe(3);
       expect(useLevelStore.getState().enemiesKilled).toBe(1);
       expect(killedSpy).toHaveBeenCalledTimes(1);
+      expect(killedSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          enemyId: 1,
+          reward: 3,
+          size: 0.4,
+          color: "#fff",
+        })
+      );
 
       // Entity destroyed and request acknowledged.
       expect(getEnemySnapshots(testWorld)).toHaveLength(0);

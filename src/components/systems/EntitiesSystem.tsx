@@ -116,6 +116,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
       maxBeams: 50,
       projectileSize: 0.1,
       getSimulationTime,
+      getTimeScale,
       onHit: onProjectileHit,
       onRemove: onProjectileRemove,
     });

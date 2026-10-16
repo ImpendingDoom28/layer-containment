@@ -38,7 +38,10 @@ import {
 import { EnemyMotion, EnemyState } from "../../core/ecs/traits/enemy";
 import { EnemySlow } from "../../core/ecs/traits/slow";
 import { Position } from "../../core/ecs/traits/position";
-import type { GetSimulationTime } from "../../core/hooks/useSimulationClock";
+import type {
+  GetSimulationTime,
+  GetTimeScale,
+} from "../../core/hooks/useSimulationClock";
 import { MedicHealBurstEffect } from "./effects/MedicHealBurstEffect";
 import { SlowEffect } from "./effects/SlowEffect";
 import { UpgradeEffect } from "./effects/UpgradeEffect";
@@ -46,7 +49,7 @@ import { UpgradeEffect } from "./effects/UpgradeEffect";
 type EnemyProps = {
   entity: Entity;
   getSimulationTime: GetSimulationTime;
-  shouldStopMovement: boolean;
+  getTimeScale: GetTimeScale;
   onSpawnEffect:
     ((position: [number, number, number], color: string) => void) | null;
   debug?: boolean;
@@ -95,7 +98,7 @@ export const Enemy: FC<EnemyProps> = memo(
   ({
     entity,
     getSimulationTime,
-    shouldStopMovement,
+    getTimeScale,
     onSpawnEffect,
     debug = false,
   }) => {
@@ -147,6 +150,7 @@ export const Enemy: FC<EnemyProps> = memo(
     const hasTriggeredSpawnEffect = useRef(false);
     const [isSlowed, setIsSlowed] = useState(false);
     const isSlowedRef = useRef(false);
+    const ringTimeRef = useRef(0);
 
     const size = snapshot?.size ?? 0;
 
@@ -196,7 +200,7 @@ export const Enemy: FC<EnemyProps> = memo(
       meshRef.current.quaternion.copy(footing.quaternion);
     }, [entity, applySphereFooting]);
 
-    useFrame((state) => {
+    useFrame((state, delta) => {
       const live = entity.get(EnemyState);
       const pos = entity.get(Position);
       if (!live || !pos || live.health <= 0) return;
@@ -226,14 +230,11 @@ export const Enemy: FC<EnemyProps> = memo(
       const now = state.clock.elapsedTime;
       const adjustedTime = getSimulationTime(now);
 
-      if (
-        !shouldStopMovement &&
-        (snapshot?.upgrades.length ?? 0) > 0 &&
-        upgradeFirstRingRef.current
-      ) {
-        const time = state.clock.elapsedTime;
-        upgradeFirstRingRef.current.rotation.y = time * 1.5;
-        const pulse = Math.sin(time * 2) * 0.05 + 1;
+      ringTimeRef.current += delta * getTimeScale();
+      const ringTime = ringTimeRef.current;
+      if ((snapshot?.upgrades.length ?? 0) > 0 && upgradeFirstRingRef.current) {
+        upgradeFirstRingRef.current.rotation.y = ringTime * 1.5;
+        const pulse = Math.sin(ringTime * 2) * 0.05 + 1;
         const baseRadius = size * 1.1;
         upgradeFirstRingRef.current.scale.setScalar(baseRadius * pulse);
       }
@@ -265,17 +266,14 @@ export const Enemy: FC<EnemyProps> = memo(
 
         {/* Slow effect indicator */}
         {isSlowed && (
-          <SlowEffect
-            enemySize={size}
-            shouldStopMovement={shouldStopMovement}
-          />
+          <SlowEffect enemySize={size} getTimeScale={getTimeScale} />
         )}
 
         {snapshot.healPulse && (
           <MedicHealBurstEffect
             entity={entity}
             healPulse={snapshot.healPulse}
-            shouldStopMovement={shouldStopMovement}
+            getTimeScale={getTimeScale}
             color={snapshot.color}
           />
         )}

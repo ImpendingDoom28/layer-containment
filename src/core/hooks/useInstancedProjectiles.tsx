@@ -34,7 +34,7 @@ import { useSettingsStore } from "../stores/useSettingsStore";
 import { useLevelStore } from "../stores/useLevelStore";
 import { world } from "../ecs/world";
 import { refreshEnemyRegistry } from "../ecs/selectors/enemySnapshots";
-import type { GetSimulationTime } from "./useSimulationClock";
+import type { GetSimulationTime, GetTimeScale } from "./useSimulationClock";
 
 const CHAIN_BOLT_RADIUS = 0.03;
 const CHAIN_BOLT_LENGTH = 0.5;
@@ -102,6 +102,13 @@ type PooledProjectile = Projectile & {
   velocityZ: number;
   beamElapsedTime: number;
   beamProcessed: boolean;
+  /**
+   * Set when the projectile crosses the hit threshold while paused (hits
+   * deferred). It is held at the strike point — no further movement or
+   * range expiry — until movement resumes, so the deferred hit is always
+   * settled exactly once instead of being lost to overshoot or cleanup.
+   */
+  pendingHit: boolean;
   /** Remaining chain hops (primary target is separate); only used for chain bolts. */
   chainQueue?: ChainAdditionalHit[];
 };
@@ -206,6 +213,11 @@ type NonBeamStepContext = {
   hitThreshold: number;
   onHit: (p: Projectile, e: Enemy, t: number) => void;
   toRemove: number[];
+  /**
+   * When false (movement stopped), the projectile keeps drifting but cannot
+   * resolve its hit yet — it strikes on the first resumable frame.
+   */
+  canHit: boolean;
 };
 
 const stepNonBeamProjectile = (
@@ -221,7 +233,38 @@ const stepNonBeamProjectile = (
     hitThreshold,
     onHit,
     toRemove,
+    canHit,
   } = ctx;
+
+  // A projectile that crossed the hit threshold while paused is held at its
+  // strike point: no movement, no range expiry — only settlement once hits
+  // are live again (or cleanup if its target died in the meantime).
+  if (projectile.pendingHit) {
+    const pendingTarget = enemiesById.get(projectile.targetId);
+    if (!pendingTarget || pendingTarget.health <= 0) {
+      toRemove.push(projectile.id);
+      return;
+    }
+    if (!canHit) return;
+
+    onHit(projectile, pendingTarget, currentTime);
+
+    if (
+      projectile.visualPool === "bolt" &&
+      tryContinueChainBoltAfterHit(
+        projectile,
+        pendingTarget,
+        boltPool,
+        enemiesById
+      )
+    ) {
+      projectile.pendingHit = false;
+      return;
+    }
+
+    toRemove.push(projectile.id);
+    return;
+  }
 
   projectile.currentX += projectile.velocityX * delta;
   projectile.currentY += projectile.velocityY * delta;
@@ -275,6 +318,15 @@ const stepNonBeamProjectile = (
   );
 
   if (distToTarget < hitThreshold) {
+    // Deferred hit while paused: the projectile has arrived but deals no
+    // damage until movement resumes, mirroring the enemy end-of-path gate.
+    // The flag holds it at this strike point (no further movement or range
+    // expiry), so the settlement is guaranteed on the first resumable frame.
+    if (!canHit) {
+      projectile.pendingHit = true;
+      return;
+    }
+
     onHit(projectile, targetEnemy, currentTime);
 
     if (
@@ -334,6 +386,7 @@ type InstancedProjectilesConfig = {
   hitThreshold?: number;
   beamDuration?: number;
   getSimulationTime: GetSimulationTime;
+  getTimeScale: GetTimeScale;
   onHit: (projectile: Projectile, enemy: Enemy, currentTime: number) => void;
   onRemove: (projectileId: number) => void;
 };
@@ -358,6 +411,7 @@ export const useInstancedProjectiles = (
     hitThreshold = 0.3,
     beamDuration = 0.15,
     getSimulationTime,
+    getTimeScale,
     onHit,
     onRemove,
   } = config;
@@ -514,6 +568,7 @@ export const useInstancedProjectiles = (
         velocityZ,
         beamElapsedTime: 0,
         beamProcessed: false,
+        pendingHit: false,
         chainQueue:
           visualPool === "bolt"
             ? [...(params.chainAdditionalHits ?? [])]
@@ -555,22 +610,26 @@ export const useInstancedProjectiles = (
   );
 
   const updateProjectilesFrame = useCallback(
-    (currentTime: number, delta: number): void => {
+    (currentTime: number, delta: number, canHit: boolean): void => {
       const toRemove = toRemoveRef.current;
       toRemove.length = 0;
 
       projectilesRef.current.forEach((projectile) => {
         if (projectile.visualPool === "beam") {
-          processBeamProjectileHits(
-            projectile,
-            enemiesByIdRef.current,
-            onHit,
-            currentTime
-          );
-
-          projectile.beamElapsedTime += delta;
-          if (projectile.beamElapsedTime >= beamDuration) {
-            toRemove.push(projectile.id);
+          // Beams are instant lines whose damage is settled the frame they
+          // are fired, so they hard-freeze with the pause clock rather than
+          // dilating (only projectiles that travel toward a target slow in).
+          if (canHit) {
+            processBeamProjectileHits(
+              projectile,
+              enemiesByIdRef.current,
+              onHit,
+              currentTime
+            );
+            projectile.beamElapsedTime += delta;
+            if (projectile.beamElapsedTime >= beamDuration) {
+              toRemove.push(projectile.id);
+            }
           }
         } else {
           stepNonBeamProjectile(projectile, {
@@ -582,6 +641,7 @@ export const useInstancedProjectiles = (
             hitThreshold,
             onHit,
             toRemove,
+            canHit,
           });
         }
       });
@@ -613,18 +673,20 @@ export const useInstancedProjectiles = (
       gameStatus === "gameOver" ||
       gameStatus === "won" ||
       gameStatus === "gameMenu";
-    if (
-      getShouldStopMovement(
-        gameStatus,
-        shouldDisableControls,
-        isPageVisible,
-        pauseWhenTabHidden
-      )
-    )
-      return;
+    const shouldStopMovement = getShouldStopMovement(
+      gameStatus,
+      shouldDisableControls,
+      isPageVisible,
+      pauseWhenTabHidden
+    );
+    // The frame keeps running through the pause so travelling projectiles
+    // ease to a stop and ramp back with the time-dilation scale; hit
+    // resolution (and beam timing) is gated by `canHit` so no damage lands
+    // while the world is paused.
     updateProjectilesFrame(
       getSimulationTime(state.clock.elapsedTime),
-      clampFrameDelta(delta, pauseWhenTabHidden)
+      clampFrameDelta(delta, pauseWhenTabHidden) * getTimeScale(),
+      !shouldStopMovement
     );
   });
 

@@ -87,7 +87,9 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
     const pathWaypoints = useLevelStore(pathWaypointsSelector);
     const tileSize = useGameStore(tileSizeSelector);
     const pathWidth = useGameStore(pathWidthSelector);
-    const getSimulationTime = useSimulationClock(shouldStopMovement);
+    const [getSimulationTime, getTimeScale] = useSimulationClock(
+      shouldStopMovement
+    );
 
     // Built from stable level data (not `useLevelSystem`, which subscribes to
     // towers/money and would re-render this whole subtree on every shot/kill)
@@ -114,6 +116,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
       maxBeams: 50,
       projectileSize: 0.1,
       getSimulationTime,
+      getTimeScale,
       onHit: onProjectileHit,
       onRemove: onProjectileRemove,
     });
@@ -153,6 +156,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
         <EnemyMovementSystem
           shouldStopMovement={shouldStopMovement}
           getSimulationTime={getSimulationTime}
+          getTimeScale={getTimeScale}
           onEnemyReachEnd={onEnemyReachEnd}
           onEndEffect={onEndEffect}
         />
@@ -176,7 +180,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
               key={entity}
               entity={entity}
               getSimulationTime={getSimulationTime}
-              shouldStopMovement={shouldStopMovement}
+              getTimeScale={getTimeScale}
               onSpawnEffect={onSpawnEffect}
             />
           ))}

@@ -102,6 +102,13 @@ type PooledProjectile = Projectile & {
   velocityZ: number;
   beamElapsedTime: number;
   beamProcessed: boolean;
+  /**
+   * Set when the projectile crosses the hit threshold while paused (hits
+   * deferred). It is held at the strike point — no further movement or
+   * range expiry — until movement resumes, so the deferred hit is always
+   * settled exactly once instead of being lost to overshoot or cleanup.
+   */
+  pendingHit: boolean;
   /** Remaining chain hops (primary target is separate); only used for chain bolts. */
   chainQueue?: ChainAdditionalHit[];
 };
@@ -229,6 +236,36 @@ const stepNonBeamProjectile = (
     canHit,
   } = ctx;
 
+  // A projectile that crossed the hit threshold while paused is held at its
+  // strike point: no movement, no range expiry — only settlement once hits
+  // are live again (or cleanup if its target died in the meantime).
+  if (projectile.pendingHit) {
+    const pendingTarget = enemiesById.get(projectile.targetId);
+    if (!pendingTarget || pendingTarget.health <= 0) {
+      toRemove.push(projectile.id);
+      return;
+    }
+    if (!canHit) return;
+
+    onHit(projectile, pendingTarget, currentTime);
+
+    if (
+      projectile.visualPool === "bolt" &&
+      tryContinueChainBoltAfterHit(
+        projectile,
+        pendingTarget,
+        boltPool,
+        enemiesById
+      )
+    ) {
+      projectile.pendingHit = false;
+      return;
+    }
+
+    toRemove.push(projectile.id);
+    return;
+  }
+
   projectile.currentX += projectile.velocityX * delta;
   projectile.currentY += projectile.velocityY * delta;
   projectile.currentZ += projectile.velocityZ * delta;
@@ -283,7 +320,12 @@ const stepNonBeamProjectile = (
   if (distToTarget < hitThreshold) {
     // Deferred hit while paused: the projectile has arrived but deals no
     // damage until movement resumes, mirroring the enemy end-of-path gate.
-    if (!canHit) return;
+    // The flag holds it at this strike point (no further movement or range
+    // expiry), so the settlement is guaranteed on the first resumable frame.
+    if (!canHit) {
+      projectile.pendingHit = true;
+      return;
+    }
 
     onHit(projectile, targetEnemy, currentTime);
 
@@ -526,6 +568,7 @@ export const useInstancedProjectiles = (
         velocityZ,
         beamElapsedTime: 0,
         beamProcessed: false,
+        pendingHit: false,
         chainQueue:
           visualPool === "bolt"
             ? [...(params.chainAdditionalHits ?? [])]

@@ -55,7 +55,6 @@ export const useProjectileSystem = (enemyActions: EnemyActions) => {
         enemyId: targetEnemy.id,
         projectileType: projectile.projectileType,
         towerType: projectile.towerType,
-        damage: projectile.damage,
         worldPosition: {
           x: targetEnemy.x,
           y: targetEnemy.size / 2,

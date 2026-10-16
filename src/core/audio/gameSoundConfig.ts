@@ -118,7 +118,6 @@ export type AudioEventDataMap = {
     enemyId: number;
     towerType: TowerType;
     projectileType: ProjectileType;
-    damage: number;
     worldPosition: WorldPosition;
   };
   wave_started: {

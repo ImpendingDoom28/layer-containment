@@ -12,8 +12,8 @@ import { CanvasTexture, Sprite, SpriteMaterial, Texture } from "three";
 import { useSimulationClock } from "../../../core/hooks/useSimulationClock";
 
 /**
- * Camera-facing text sprites that rise and fade in world space (damage numbers,
- * gold rewards). Managed imperatively via a fixed pool so high-frequency combat
+ * Camera-facing text sprites that rise and fade in world space (gold rewards).
+ * Managed imperatively via a fixed pool so high-frequency combat events never
  * events never trigger React re-renders; `useFrame` advances and recycles slots.
  * The pool is built in an effect and a ready flag forces one re-render so the
  * sprite nodes commit into the scene graph.

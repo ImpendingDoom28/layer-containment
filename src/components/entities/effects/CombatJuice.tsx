@@ -29,10 +29,9 @@ let burstId = 0;
 const nextBurstId = () => ++burstId;
 
 /**
- * Subscribes to combat game events and renders their juice: floating damage
- * numbers and gold rewards (camera-facing sprites), plus a small burst when an
- * enemy dies. Event payload positions are flat-field coordinates, mapped onto
- * the planet surface here.
+ * Subscribes to combat game events and renders their juice: gold reward floats
+ * (camera-facing sprites) and a small burst when an enemy dies. Event payload
+ * positions are flat-field coordinates, mapped onto the planet surface here.
  */
 export const CombatJuice = memo(({ shouldStopMovement }: CombatJuiceProps) => {
   const floatingTextsRef = useRef<FloatingTextsHandle>(null);
@@ -44,25 +43,6 @@ export const CombatJuice = memo(({ shouldStopMovement }: CombatJuiceProps) => {
   const reducedMotion = useReducedMotion();
 
   useEffect(() => {
-    const onProjectileHit = (data: {
-      damage?: number;
-      worldPosition: { x: number; y: number; z: number };
-    }) => {
-      const damage = data.damage ?? 0;
-      if (damage <= 0) return;
-      const position = flatCombatPointToWorldPosition(
-        data.worldPosition.x,
-        data.worldPosition.z,
-        0.2,
-        planetRadius
-      );
-      floatingTextsRef.current?.spawn(
-        String(Math.round(damage)),
-        [position.x, position.y, position.z],
-        getCssColorValue("scene-white")
-      );
-    };
-
     const onEnemyKilled = (data: {
       reward: number;
       worldPosition: { x: number; y: number; z: number };
@@ -89,10 +69,8 @@ export const CombatJuice = memo(({ shouldStopMovement }: CombatJuiceProps) => {
       ]);
     };
 
-    gameEvents.on(GameEvent.PROJECTILE_HIT, onProjectileHit);
     gameEvents.on(GameEvent.ENEMY_KILLED, onEnemyKilled);
     return () => {
-      gameEvents.off(GameEvent.PROJECTILE_HIT, onProjectileHit);
       gameEvents.off(GameEvent.ENEMY_KILLED, onEnemyKilled);
     };
   }, [planetRadius]);

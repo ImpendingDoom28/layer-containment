@@ -25,7 +25,7 @@ type MedicHealBurstEffectProps = EnemyAttachedEffectProps & {
 const BURST_DURATION = 0.45;
 
 export const MedicHealBurstEffect: FC<MedicHealBurstEffectProps> = memo(
-  ({ entity, healPulse, shouldStopMovement, color }) => {
+  ({ entity, healPulse, getTimeScale, color }) => {
     const ring1Ref = useRef<Mesh>(null);
     const ring2Ref = useRef<Mesh>(null);
     const prevNextAtRef = useRef<number | undefined>(undefined);
@@ -51,9 +51,7 @@ export const MedicHealBurstEffect: FC<MedicHealBurstEffectProps> = memo(
 
       if (!burstingRef.current) return;
 
-      if (!shouldStopMovement) {
-        animElapsedRef.current += delta;
-      }
+      animElapsedRef.current += delta * getTimeScale();
 
       const progress = Math.min(animElapsedRef.current / BURST_DURATION, 1);
       const radiusScale =

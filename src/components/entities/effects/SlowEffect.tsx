@@ -13,14 +13,14 @@ type SlowEffectProps = EnemyAttachedEffectProps & {
 };
 
 export const SlowEffect: FC<SlowEffectProps> = memo(
-  ({ enemySize, shouldStopMovement }) => {
+  ({ enemySize, getTimeScale }) => {
     const ringRef = useRef<Mesh>(null);
     const particlesRef = useRef<(Mesh | null)[]>([]);
+    const timeRef = useRef(0);
 
-    useFrame((state) => {
-      if (shouldStopMovement) return;
-
-      const time = state.clock.elapsedTime;
+    useFrame((_, delta) => {
+      timeRef.current += delta * getTimeScale();
+      const time = timeRef.current;
 
       if (ringRef.current) {
         ringRef.current.rotation.y = time * 2;

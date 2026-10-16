@@ -42,6 +42,12 @@ export type EnemyMovementSystemOptions = {
    */
   onEnemyReachEnd: ((enemyId: number) => void) | null;
   onEndEffect: ((position: [number, number, number], color: string) => void) | null;
+  /**
+   * When false, enemies clamped at the path end do not settle the end
+   * (effect + removal) yet — they finish it on the first frame where it
+   * is true again (resume). Defaults to true.
+   */
+  canFinish?: boolean;
 };
 
 /**
@@ -61,7 +67,8 @@ export const runEnemyMovementSystem = (
 ): void => {
   if (delta <= 0) return;
 
-  const { pathWaypoints, radius, onEnemyReachEnd, onEndEffect } = options;
+  const { pathWaypoints, radius, onEnemyReachEnd, onEndEffect, canFinish = true } =
+    options;
   const reachedEndIds: number[] = [];
 
   world
@@ -96,26 +103,28 @@ export const runEnemyMovementSystem = (
         position.y = endPos.y;
         position.z = endPos.z;
 
-        if (!motion.hasReachedEnd) {
-          motion.hasReachedEnd = true;
+        // Deferred end while paused: the enemy is clamped but the end
+        // (effect + base damage) settles on the first resumable frame.
+        if (!canFinish || motion.hasReachedEnd) return;
 
-          if (onEndEffect) {
-            flatFieldToSphereSurface(
-              endPos.x,
-              endPos.z,
-              radius,
-              scratchSurface,
-              scratchNormal
-            );
-            scratchEndPos
-              .copy(scratchSurface)
-              .addScaledVector(scratchNormal, endPos.y + 0.1);
-            onEndEffect([scratchEndPos.x, scratchEndPos.y, scratchEndPos.z], state.color);
-          }
+        motion.hasReachedEnd = true;
 
-          if (onEnemyReachEnd) {
-            reachedEndIds.push(state.id);
-          }
+        if (onEndEffect) {
+          flatFieldToSphereSurface(
+            endPos.x,
+            endPos.z,
+            radius,
+            scratchSurface,
+            scratchNormal
+          );
+          scratchEndPos
+            .copy(scratchSurface)
+            .addScaledVector(scratchNormal, endPos.y + 0.1);
+          onEndEffect([scratchEndPos.x, scratchEndPos.y, scratchEndPos.z], state.color);
+        }
+
+        if (onEnemyReachEnd) {
+          reachedEndIds.push(state.id);
         }
         return;
       }
@@ -165,7 +174,10 @@ export const runEnemyMovementFrame = (
   state: { clock: { elapsedTime: number } },
   delta: number,
   getSimulationTime: (rawNow: number) => number,
-  callbacks: Pick<EnemyMovementSystemOptions, "onEnemyReachEnd" | "onEndEffect">
+  callbacks: Pick<
+    EnemyMovementSystemOptions,
+    "onEnemyReachEnd" | "onEndEffect" | "canFinish"
+  >
 ): void => {
   const { pathWaypoints, gridSize } = useLevelStore.getState();
   const { tileSize } = useGameStore.getState();
@@ -176,5 +188,6 @@ export const runEnemyMovementFrame = (
     radius,
     onEnemyReachEnd: callbacks.onEnemyReachEnd,
     onEndEffect: callbacks.onEndEffect,
+    canFinish: callbacks.canFinish,
   });
 };

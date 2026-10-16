@@ -1,5 +1,11 @@
-import { FC, useMemo } from "react";
-import { Zap, Shield, Wind, Heart, LucideProps } from "lucide-react";
+import {
+  FC,
+  useEffect,
+  useMemo,
+  useState,
+  type AnimationEvent,
+} from "react";
+import { Zap, Shield, Wind, Heart, type LucideProps } from "lucide-react";
 
 import type { EnemyUpgradeId } from "../../core/types/game";
 import { UIButton } from "@/components/ui/buttons/UIButton";
@@ -16,13 +22,14 @@ import {
 } from "../../core/stores/useGameStore";
 import {
   levelEnemyUpgradeStackSelector,
+  pendingEnemyUpgradeGateSelector,
   upgradeChoiceOptionsSelector,
   useUpgradeStore,
 } from "../../core/stores/useUpgradeStore";
 import {
   formatTieredUpgradeSummary,
   getPickTierForUpgrade,
-  getTieredUpgradeEffect,
+  getTierRewardBonusPercent,
   getTotalRewardMultiplierFromStack,
 } from "../../utils/enemyUpgradeTierEffects";
 import { cn } from "../ui/lib/twUtils";
@@ -82,6 +89,36 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
     levelEnemyUpgradeStackSelector
   );
   const upgradeChoiceOptions = useUpgradeStore(upgradeChoiceOptionsSelector);
+  const isOpen = useUpgradeStore(pendingEnemyUpgradeGateSelector);
+
+  // Keep the panel mounted through its exit animation: `hasOpened` stays true
+  // while the card slides out, then everything resets and the panel unmounts.
+  const [hasOpened, setHasOpened] = useState(false);
+  const [closing, setClosing] = useState(false);
+  // Confirmed picks clear the choice list; remember the last set so the
+  // cards stay visible while the panel animates out.
+  const [frozenChoices, setFrozenChoices] = useState<EnemyUpgradeId[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setHasOpened(true);
+      setClosing(false);
+      setFrozenChoices(upgradeChoiceOptions);
+    } else if (hasOpened) {
+      setClosing(true);
+    }
+  }, [isOpen, hasOpened, upgradeChoiceOptions]);
+
+  const displayChoices = isOpen ? upgradeChoiceOptions : frozenChoices;
+
+  const handleCardAnimationEnd = (event: AnimationEvent<HTMLDivElement>) => {
+    // Only the card's own exit animation unmounts the panel (child animations
+    // bubble up, so check the target).
+    if (event.target === event.currentTarget && event.animationName === "exit") {
+      setHasOpened(false);
+      setClosing(false);
+    }
+  };
 
   const totalRewardMultiplier = useMemo(() => {
     return getTotalRewardMultiplierFromStack(
@@ -94,7 +131,7 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
     return Math.round((totalRewardMultiplier - 1) * 100);
   }, [totalRewardMultiplier]);
 
-  if (!enemyUpgrades || upgradeChoiceOptions.length === 0) {
+  if (!hasOpened || !enemyUpgrades) {
     return null;
   }
 
@@ -104,14 +141,37 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-auto p-4"
+      className={cn(
+        "fixed inset-0 z-(--z-modal) flex items-center justify-center p-4",
+        closing ? "pointer-events-none" : "pointer-events-auto"
+      )}
       data-game-camera-block
     >
+      {/* Backdrop mirrors the game's BlurBackdrop treatment: a full-screen
+          backdrop blur plus a dark gradient vignette, so the centered card
+          reads as a consistent game menu surface. */}
       <div
-        className="absolute inset-0 bg-black/75 backdrop-blur-xl"
         aria-hidden
-      />
-      <UICard className="relative z-10 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        className={cn(
+          "absolute inset-0",
+          closing
+            ? "animate-out fade-out duration-200 ease-in"
+            : "animate-in fade-in duration-300 ease-out"
+        )}
+      >
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-xl" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/50" />
+      </div>
+
+      <UICard
+        className={cn(
+          "relative z-10 w-full max-w-3xl max-h-[90vh] overflow-y-auto",
+          closing
+            ? "animate-out fade-out slide-out-to-bottom-10 duration-200 ease-in"
+            : "animate-in fade-in slide-in-from-bottom-10 zoom-in-95 duration-300 ease-out"
+        )}
+        onAnimationEnd={handleCardAnimationEnd}
+      >
         <UICardHeader>
           <UICardTitle className="flex flex-row items-center gap-2">
             <Zap className="w-5 h-5 text-yellow-400 shrink-0" />
@@ -129,7 +189,7 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
 
         <UICardContent>
           <div className="flex flex-row flex-wrap gap-3 justify-center">
-            {upgradeChoiceOptions.map((upgradeId) => {
+            {displayChoices.map((upgradeId) => {
               const upgrade = enemyUpgrades[upgradeId];
               if (!upgrade) return null;
 
@@ -141,7 +201,7 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
                 upgrade,
                 nextStackTier
               );
-              const nextPickEffect = getTieredUpgradeEffect(
+              const rewardBonus = getTierRewardBonusPercent(
                 upgrade,
                 nextStackTier
               );
@@ -173,20 +233,20 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
                     </UITypography>
                   </div>
 
-                  <UITypography
-                    className="text-muted-foreground text-left"
-                    variant="small"
-                  >
-                    {tierSummary}
-                  </UITypography>
+                  {tierSummary !== "" && (
+                    <UITypography
+                      className="text-muted-foreground text-left"
+                      variant="small"
+                    >
+                      {tierSummary}
+                    </UITypography>
+                  )}
                   <UITypography
                     className="mt-auto"
                     style={{ color: upgrade.indicatorColor }}
                     variant="small"
                   >
-                    +
-                    {Math.round((nextPickEffect.rewardMultiplier - 1) * 100)}%
-                    gold this pick
+                    +{rewardBonus}% gold this pick
                   </UITypography>
                 </UIButton>
               );

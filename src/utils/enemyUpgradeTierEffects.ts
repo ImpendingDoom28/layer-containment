@@ -91,6 +91,15 @@ export const getTieredUpgradeEffect = (
   }
 };
 
+export const getTierRewardBonusPercent = (
+  config: EnemyUpgradeConfig,
+  tier: EnemyUpgradeStackTier
+): number => {
+  return Math.round(
+    (getTieredUpgradeEffect(config, tier).rewardMultiplier - 1) * 100
+  );
+};
+
 export const formatTieredUpgradeSummary = (
   config: EnemyUpgradeConfig,
   tier: EnemyUpgradeStackTier
@@ -111,7 +120,6 @@ export const formatTieredUpgradeSummary = (
   } else if (e.slowResistance !== undefined && e.slowResistance > 0) {
     parts.push(`+${Math.round(e.slowResistance * 100)}% slow resistance`);
   }
-  parts.push(`+${Math.round((e.rewardMultiplier - 1) * 100)}% gold`);
   return parts.join(" · ");
 };
 

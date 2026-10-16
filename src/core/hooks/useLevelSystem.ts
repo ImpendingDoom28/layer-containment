@@ -58,6 +58,7 @@ import { getTilePlacementState as getSharedTilePlacementState } from "../../util
 import { useEntityIds } from "../contexts/EntityIdContext";
 import { gameEvents } from "../../utils/eventEmitter";
 import { GameEvent } from "../types/enums/events";
+import { getTowerPlacementDenyReason } from "../utils/towerPlacementDenyReason";
 import { enemyActions } from "../ecs/actions/enemyActions";
 
 export const useLevelSystem = () => {
@@ -125,10 +126,18 @@ export const useLevelSystem = () => {
       const towerConfig = towerTypes?.[towerType];
       if (!towerConfig) return false;
 
-      if (money < towerConfig.cost) return false;
-
       const placementState = getTilePlacementState(gridX, gridZ);
-      if (placementState.isBlocked) return false;
+      const denyReason = getTowerPlacementDenyReason(
+        money >= towerConfig.cost,
+        placementState
+      );
+      if (denyReason) {
+        gameEvents.emit(GameEvent.UI_ACTION_DENIED, {
+          reason: denyReason,
+          towerType,
+        });
+        return false;
+      }
 
       const worldX = tileToWorldCoordinate(gridX, gridSize, tileSize);
       const worldZ = tileToWorldCoordinate(gridZ, gridSize, tileSize);

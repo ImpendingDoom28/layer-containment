@@ -252,9 +252,12 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
                 />
               </div>
 
-              {showUpgradePanel && (
-                <HUDUpgradePanel onEnemyUpgradePick={onEnemyUpgradePick} />
-              )}
+              {/*
+                Rendered unconditionally so the panel can play its exit
+                animation; it self-gates via the upgrade store and returns
+                null when the gate is closed and no exit is in flight.
+              */}
+              <HUDUpgradePanel onEnemyUpgradePick={onEnemyUpgradePick} />
             </>
           )}
 

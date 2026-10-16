@@ -1,5 +1,5 @@
 import { FC } from "react";
-import { HeartPulse, Pause, Play } from "lucide-react";
+import { HeartPulse, Play } from "lucide-react";
 
 import { UIButton } from "@/components/ui/buttons/UIButton";
 
@@ -16,6 +16,7 @@ import {
 } from "../../core/stores/useWaveStore";
 import { HUDWrapper } from "./HUDWrapper";
 import { UIMoney } from "../ui/UIMoney";
+import { PauseIcon } from "../ui/assets/PauseIcon";
 
 type HUDGameStatsProps = {
   money: number;
@@ -45,10 +46,10 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
 
   return (
     <HUDWrapper className="bottom-auto left-auto w-80 top-4 right-4">
-      <div className="ui-menu-tilt ui-menu-tilt-right flex h-full flex-col">
+      <div className="flex flex-col w-full h-full ui-menu-tilt ui-menu-tilt-right">
         <UICard className="flex-1">
           <UICardContent className="gap-4">
-            <div className="flex flex-row gap-4">
+            <div className="flex flex-row items-center justify-between gap-4">
               <div className="flex items-center">
                 <UIMoney money={money} variant="h4" iconSize={20} />
               </div>
@@ -59,10 +60,10 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
                 </UITypography>
               </div>
             </div>
-            <div className="flex items-center">
-              <div className="flex flex-row items-center justify-center gap-1">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-row items-center gap-1">
                 <UITypography variant="body">Wave:</UITypography>
-                <UITypography variant="medium">
+                <UITypography variant="medium" whiteSpace="nowrap">
                   {`${currentWave} / ${totalWaves}`}
                 </UITypography>
               </div>
@@ -70,9 +71,9 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
               {currentWave > 0 &&
                 currentWave <= totalWaves &&
                 remainingEnemies > 0 && (
-                  <div className="flex flex-row items-center justify-center flex-1 gap-1">
+                  <div className="flex flex-row items-center gap-1">
                     <UITypography variant="body">Enemies:</UITypography>
-                    <UITypography variant="medium">
+                    <UITypography variant="medium" whiteSpace="nowrap">
                       {remainingEnemies}
                     </UITypography>
                   </div>
@@ -91,10 +92,10 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
                 <UIButton
                   variant="default"
                   size={"icon-sm"}
-                  className="cursor-default w-fit"
+                  className="px-1 w-fit"
                   data-testid="paused-indicator"
                 >
-                  <Pause />
+                  <PauseIcon />
                 </UIButton>
               )}
             </div>

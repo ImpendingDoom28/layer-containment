@@ -7,6 +7,7 @@ import {
   formatTieredUpgradeSummary,
   getStackTierForEnemy,
   getTieredUpgradeEffect,
+  getTierRewardBonusPercent,
   getTotalRewardMultiplierFromStack,
   getUniqueUpgradeIdsInStackOrder,
 } from "./enemyUpgradeTierEffects";
@@ -112,6 +113,20 @@ describe("getTieredUpgradeEffect", () => {
     expect(formatTieredUpgradeSummary(slowResistanceBase, 3)).toContain(
       "Slow immune"
     );
+  });
+
+  it("omits the gold bonus from the summary (it is shown separately per pick)", () => {
+    expect(formatTieredUpgradeSummary(slowResistanceBase, 1)).not.toContain(
+      "% gold"
+    );
+    expect(formatTieredUpgradeSummary(armoredBase, 1)).not.toContain("% gold");
+    expect(formatTieredUpgradeSummary(armoredBase, 1)).toBe("+50% HP");
+  });
+
+  it("reports the per-pick gold bonus percentage", () => {
+    expect(getTierRewardBonusPercent(slowResistanceBase, 1)).toBe(50);
+    expect(getTierRewardBonusPercent(armoredBase, 1)).toBe(40);
+    expect(getTierRewardBonusPercent(armoredBase, 2)).toBe(54);
   });
 });
 

@@ -95,15 +95,21 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
   // while the card slides out, then everything resets and the panel unmounts.
   const [hasOpened, setHasOpened] = useState(false);
   const [closing, setClosing] = useState(false);
+  // Confirmed picks clear the choice list; remember the last set so the
+  // cards stay visible while the panel animates out.
+  const [frozenChoices, setFrozenChoices] = useState<EnemyUpgradeId[]>([]);
 
   useEffect(() => {
     if (isOpen) {
       setHasOpened(true);
       setClosing(false);
+      setFrozenChoices(upgradeChoiceOptions);
     } else if (hasOpened) {
       setClosing(true);
     }
-  }, [isOpen, hasOpened]);
+  }, [isOpen, hasOpened, upgradeChoiceOptions]);
+
+  const displayChoices = isOpen ? upgradeChoiceOptions : frozenChoices;
 
   const handleCardAnimationEnd = (event: AnimationEvent<HTMLDivElement>) => {
     // Only the card's own exit animation unmounts the panel (child animations
@@ -183,7 +189,7 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
 
         <UICardContent>
           <div className="flex flex-row flex-wrap gap-3 justify-center">
-            {upgradeChoiceOptions.map((upgradeId) => {
+            {displayChoices.map((upgradeId) => {
               const upgrade = enemyUpgrades[upgradeId];
               if (!upgrade) return null;
 

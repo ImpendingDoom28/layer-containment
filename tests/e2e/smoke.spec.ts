@@ -202,16 +202,17 @@ test("shows Empower Next Wave after wave 1 completes and clears after pick", asy
 
   // The per-pick gold bonus must appear exactly once per upgrade card (no
   // doubled "% gold" lines).
-  const firstUpgradeCard = page
-    .getByRole("button", {
-      name: /Armored|Swift|Unstoppable|Regenerating/,
-    })
-    .first();
-  await expect(firstUpgradeCard).toBeVisible();
-  const cardText = await firstUpgradeCard.innerText();
-  expect((cardText.match(/gold this pick/g) ?? []).length).toBe(1);
+  const upgradeCards = page.getByRole("button", {
+    name: /Armored|Swift|Unstoppable|Regenerating/,
+  });
+  const cardCount = await upgradeCards.count();
+  expect(cardCount).toBeGreaterThan(0);
+  for (let i = 0; i < cardCount; i++) {
+    const cardText = await upgradeCards.nth(i).innerText();
+    expect((cardText.match(/gold this pick/g) ?? []).length).toBe(1);
+  }
 
-  await firstUpgradeCard.click();
+  await upgradeCards.first().click();
 
   await expect(page.getByText("Empower Next Wave")).toBeHidden();
 });

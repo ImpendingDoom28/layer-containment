@@ -23,7 +23,7 @@ type HUDPauseOverlayProps = {
  */
 const PAUSE_BACKDROP_FILTER = "brightness(0.9) saturate(0.86)";
 const PAUSE_VIGNETTE =
-  "radial-gradient(ellipse at center, transparent 45%, rgb(2 6 17 / 0.45) 100%)";
+  "radial-gradient(ellipse at center, transparent 62%, rgb(2 6 17 / 0.45) 100%)";
 
 export const HUDPauseOverlay: FC<HUDPauseOverlayProps> = ({ gameStatus }) => {
   const reducedMotion = useReducedMotion();

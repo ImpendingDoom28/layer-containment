@@ -21,7 +21,7 @@ type HUDPauseOverlayProps = {
  * opens from a paused state the status flips instantly, so the overlay is
  * already below the menu by the time it fades out. Never intercepts input.
  */
-const PAUSE_BACKDROP_FILTER = "brightness(0.9) saturate(0.72)";
+const PAUSE_BACKDROP_FILTER = "brightness(0.9) saturate(0.86)";
 const PAUSE_VIGNETTE =
   "radial-gradient(ellipse at center, transparent 45%, rgb(2 6 17 / 0.45) 100%)";
 

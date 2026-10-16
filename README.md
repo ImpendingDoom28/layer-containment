@@ -5,7 +5,7 @@ A 3D tower defense game built with React, Tailwind CSS, and React Three Fiber.
 ## Features
 
 - **Tile-based tower placement system** - Click tiles on the grid to place towers; invalid path placement shows red tower preview
-- **Denied-action feedback** - Trying to place a tower that can't be placed (unaffordable, or on a blocked tile — occupied by a tower/building, on the path, or water) shakes the camera and the tower shop row and plays a short noise cue; the shop row also shakes when a tower card is tapped while unaffordable
+- **Denied-action feedback** - Trying to place a tower that can't be placed (unaffordable, or on a blocked tile — occupied by a tower/building, on the path, or water) shakes the camera and the tower shop row and plays a short noise cue; the shop row also shakes when a tower card is tapped while unaffordable. Camera and HUD shake are skipped under `prefers-reduced-motion`
 - **Six tower types**:
   - Basic Tower: Fast firing, single target damage (targets nearest enemy)
   - Slow Tower: Slows enemies on hit with debuff effects

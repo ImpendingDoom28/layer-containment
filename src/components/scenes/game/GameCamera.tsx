@@ -75,7 +75,9 @@ export const GameCamera = ({
     const unsubscribe = gameEvents.on<AudioEventData<"ui_action_denied">>(
       GameEvent.UI_ACTION_DENIED,
       (data) => {
-        shakeRemainingMsRef.current = UI_ACTION_DENIED_CAMERA_SHAKE_DURATION_MS;
+        if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          shakeRemainingMsRef.current = UI_ACTION_DENIED_CAMERA_SHAKE_DURATION_MS;
+        }
         incrementDenyPulse(data.towerType);
       }
     );

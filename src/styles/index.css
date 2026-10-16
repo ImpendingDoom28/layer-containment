@@ -254,6 +254,10 @@
   .ui-menu-tilt-right {
     transition: none;
   }
+
+  .animate-hud-denied-shake {
+    animation: none;
+  }
 }
 
 @utility ui-menu-tilt-shadow-left {

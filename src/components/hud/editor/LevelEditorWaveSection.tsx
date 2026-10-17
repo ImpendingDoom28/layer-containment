@@ -78,7 +78,9 @@ export const LevelEditorWaveSection = () => {
                   <UITypography variant="verySmall" className="text-muted-foreground">
                     {t("editor.waveSummary", {
                       enemies: wave.totalEnemies,
+                      enemiesPlural: t("editor.waveEnemies", { count: wave.totalEnemies }),
                       groups: wave.enemies.length,
+                      groupsPlural: t("editor.waveGroups", { count: wave.enemies.length }),
                     })}
                   </UITypography>
                 </button>

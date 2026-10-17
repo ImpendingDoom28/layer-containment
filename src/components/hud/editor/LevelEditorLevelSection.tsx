@@ -49,7 +49,7 @@ export const LevelEditorLevelSection = () => {
           <UIInput
             value={draftLevel.name}
             onChange={(event) => setLevelName(event.target.value)}
-            placeholder="custom"
+            placeholder={t("editor.namePlaceholder")}
           />
         </EditorField>
 

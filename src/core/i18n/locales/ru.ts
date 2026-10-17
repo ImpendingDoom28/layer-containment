@@ -166,7 +166,7 @@ const ruValues = {
     level: "Уровень",
     name: "Имя",
     nameDescription: "Используется в имени выгружаемого файла.",
-    namePlaceholder: "custom",
+    namePlaceholder: "Пользовательский",
     startingMoney: "Начальные деньги",
     gridSize: "Размер сетки",
     tileColor: "Цвет плиток",

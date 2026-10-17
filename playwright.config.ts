@@ -1,6 +1,14 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const baseURL = "http://localhost:5173";
+const baseURL =
+  process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:5173";
+
+// Vite's default port matches the default baseURL; when PLAYWRIGHT_BASE_URL
+// points elsewhere, start the dev server on the same port so the webServer
+// readiness check (url: baseURL) resolves.
+const serverCommand = new URL(baseURL).port
+  ? `npm run dev -- --port ${new URL(baseURL).port}`
+  : "npm run dev";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -32,7 +40,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev",
+    command: serverCommand,
     url: baseURL,
     reuseExistingServer: true,
     stdout: "pipe",

@@ -1,5 +1,6 @@
 import { FC } from "react";
 import { ArrowLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { UIButton } from "../ui/buttons/UIButton";
 import { UICard, UICardContent, UICardHeader, UICardTitle } from "../ui/UICard";
@@ -23,6 +24,7 @@ export const HUDSettings: FC<HUDSettingsProps> = ({
   className = "",
   onBack,
 }) => {
+  const { t } = useTranslation();
   const showSettings = useGameStore(showSettingsSelector);
   const setShowSettings = useGameStore(setShowSettingsSelector);
 
@@ -37,7 +39,7 @@ export const HUDSettings: FC<HUDSettingsProps> = ({
           <UIButton onClick={handleBack} variant="ghost" size="icon">
             <ArrowLeft />
           </UIButton>
-          <UITypography variant="h4">Settings</UITypography>
+          <UITypography variant="h4">{t("settings.title")}</UITypography>
         </UICardTitle>
       </UICardHeader>
       <UICardContent className="flex-1 min-h-0 gap-8 overflow-y-auto">

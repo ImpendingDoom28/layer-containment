@@ -8,6 +8,7 @@ import type { ThreeEvent } from "@react-three/fiber";
 
 import { getEffectiveTowerCombatStats } from "../../core/relayBuffs";
 import type { Tower as TowerInstance } from "../../core/types/game";
+import { useTranslationInCanvas } from "../../core/i18n/useTranslationInCanvas";
 import {
   towerSellPriceMultiplierSelector,
   towerTypesSelector,
@@ -34,6 +35,7 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
   tower,
   onSell,
 }) => {
+  const t = useTranslationInCanvas();
   const towerSellPriceMultiplier = useGameStore(
     towerSellPriceMultiplierSelector
   );
@@ -50,12 +52,15 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
       const dmgPct = (tpl?.relayNeighborDamageBonusFraction ?? 0) * 100;
       const rngPct = (tpl?.relayNeighborRangeBonusFraction ?? 0) * 100;
       return [
-        { label: "Role", value: "Support" },
+        { label: t("towerInfo.role"), value: t("towerInfo.support") },
         {
-          label: "Neighbor buff",
-          value: `+${dmgPct.toFixed(0)}% dmg / +${rngPct.toFixed(0)}% rng`,
+          label: t("towerInfo.neighborBuff"),
+          value: t("towerInfo.neighborBuffValue", {
+            damage: dmgPct.toFixed(0),
+            range: rngPct.toFixed(0),
+          }),
         },
-        { label: "Adjacency", value: "4-neighbor" },
+        { label: t("towerInfo.adjacency"), value: t("towerInfo.fourNeighbor") },
       ];
     }
 
@@ -64,11 +69,11 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
       : { damage: tower.damage, range: tower.range };
 
     return [
-      { label: "Damage", value: eff.damage.toFixed(1) },
-      { label: "Range", value: eff.range.toFixed(1) },
-      { label: "Fire Rate", value: `${tower.fireRate.toFixed(1)}s` },
+      { label: t("towerInfo.damage"), value: eff.damage.toFixed(1) },
+      { label: t("towerInfo.range"), value: eff.range.toFixed(1) },
+      { label: t("towerInfo.fireRate"), value: `${tower.fireRate.toFixed(1)}s` },
     ];
-  }, [tower, towerTypes, towers]);
+  }, [tower, towerTypes, towers, t]);
 
   const onStopScenePropagation = (
     event: ThreeEvent<MouseEvent> | ThreeEvent<PointerEvent>
@@ -110,10 +115,10 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
                     variant="verySmall"
                     className="text-primary uppercase tracking-[0.22em]"
                   >
-                    Selected Tower
+                    {t("towerInfo.selectedTower")}
                   </UITypography>
                   <UITypography variant="medium" className="mt-1 font-semibold">
-                    {tower.name}
+                    {t(`towers.${tower.type}.name`)}
                   </UITypography>
                 </div>
                 <UITypography
@@ -127,7 +132,7 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
 
             <UICardContent className="gap-2">
               <UITypography variant="small" className="text-muted-foreground">
-                {tower.description}
+                {t(`towers.${tower.type}.description`)}
               </UITypography>
 
               <div className="grid grid-cols-3 gap-1.5">
@@ -156,8 +161,8 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
             <UICardFooter className="p-0 border-border/70">
               <UIHoldButton
                 onConfirm={onSell}
-                label={`Sell $${sellPrice}`}
-                holdingLabel="Selling..."
+                label={t("towerInfo.sell", { price: sellPrice })}
+                holdingLabel={t("towerInfo.selling")}
                 variant="destructive"
                 size="sm"
                 className="w-full h-8 border-0"

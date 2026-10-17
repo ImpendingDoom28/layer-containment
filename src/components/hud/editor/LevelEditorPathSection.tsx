@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Plus, Trash2 } from "lucide-react";
 
@@ -23,16 +24,22 @@ import { EditorGridPositionFields } from "./EditorGridPositionFields";
 import { EditorSection } from "./EditorSection";
 import { EditorEmptyState } from "./EditorEmptyState";
 
-const PATH_SUB_TOOLS: Array<{ tool: LevelEditorTool; label: string }> = [
-  { tool: "drawPath", label: "Draw" },
-  { tool: "setSpawn", label: "Spawn" },
-  { tool: "setBase", label: "Base" },
+type PathSubToolKey =
+  | "editor.pathSubToolDraw"
+  | "editor.pathSubToolSpawn"
+  | "editor.pathSubToolBase";
+
+const PATH_SUB_TOOLS: Array<{ tool: LevelEditorTool; label: PathSubToolKey }> = [
+  { tool: "drawPath", label: "editor.pathSubToolDraw" },
+  { tool: "setSpawn", label: "editor.pathSubToolSpawn" },
+  { tool: "setBase", label: "editor.pathSubToolBase" },
 ];
 
 const getPathButtonKey = (pathIndex: number, pathLength: number) =>
   `path-button-${pathIndex}-${pathLength}`;
 
 export const LevelEditorPathSection = () => {
+  const { t } = useTranslation();
   const tileSize = useGameStore(tileSizeSelector);
   const pathWidth = useGameStore(pathWidthSelector);
   const {
@@ -73,7 +80,7 @@ export const LevelEditorPathSection = () => {
 
   return (
     <UIAccordionItem value="path">
-      <UIAccordionTrigger>Path</UIAccordionTrigger>
+      <UIAccordionTrigger>{t("editor.pathTab")}</UIAccordionTrigger>
       <UIAccordionContent className="flex flex-col gap-3">
         <div className="flex items-center gap-1.5">
           {PATH_SUB_TOOLS.map(({ tool, label }) => (
@@ -86,7 +93,7 @@ export const LevelEditorPathSection = () => {
                 activeTool === tool ? EDITOR_PATH_SUBTOOL_ACTIVE_CLASS : ""
               }
             >
-              {label}
+              {t(label)}
             </UIButton>
           ))}
         </div>
@@ -94,7 +101,7 @@ export const LevelEditorPathSection = () => {
         <div className="flex gap-2">
           <UIButton size="sm" variant="outline" onClick={addPath}>
             <Plus />
-            Add Path
+            {t("editor.addPath")}
           </UIButton>
           <UIButton
             size="sm"
@@ -102,7 +109,7 @@ export const LevelEditorPathSection = () => {
             onClick={removeSelectedPath}
           >
             <Trash2 />
-            Remove
+            {t("editor.remove")}
           </UIButton>
         </div>
 
@@ -117,7 +124,7 @@ export const LevelEditorPathSection = () => {
                 }
                 onClick={() => selectPath(pathIndex)}
               >
-                P{pathIndex + 1} ({path.length})
+                {t("editor.pathButton", { index: pathIndex + 1, count: path.length })}
               </UIButton>
             ))}
           </div>
@@ -125,24 +132,26 @@ export const LevelEditorPathSection = () => {
 
         <EditorSection>
           <UITypography variant="medium">
-            Path {selectedPathIndex + 1}
+            {t("editor.pathNumber", { index: selectedPathIndex + 1 })}
           </UITypography>
           <UITypography
             variant="verySmall"
             className="mt-1 text-muted-foreground"
           >
             {isPathTool
-              ? "Click tiles on the canvas to add waypoints."
-              : "Switch to a path tool above to edit."}
+              ? t("editor.clickTilesToWaypoint")
+              : t("editor.switchPathTool")}
           </UITypography>
           <UITypography variant="small" className="mt-2">
-            Waypoints: {selectedPath.length}
+            {t("editor.waypoints", { count: selectedPath.length })}
           </UITypography>
         </EditorSection>
 
         {selectedWaypoint && selectedWaypointTile ? (
           <EditorSection className="flex flex-col gap-3">
-            <UITypography variant="medium">Waypoint</UITypography>
+            <UITypography variant="medium">
+              {t("editor.waypoint")}
+            </UITypography>
             <EditorGridPositionFields
               gridX={selectedWaypointTile.gridX}
               gridZ={selectedWaypointTile.gridZ}
@@ -167,11 +176,11 @@ export const LevelEditorPathSection = () => {
               onClick={removeSelectedWaypoint}
             >
               <Trash2 />
-              Remove Waypoint
+              {t("editor.removeWaypoint")}
             </UIButton>
           </EditorSection>
         ) : (
-          <EditorEmptyState message="No waypoint selected." />
+          <EditorEmptyState message={t("editor.noWaypointSelected")} />
         )}
       </UIAccordionContent>
     </UIAccordionItem>

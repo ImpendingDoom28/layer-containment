@@ -6,6 +6,7 @@ import {
   type AnimationEvent,
 } from "react";
 import { Zap, Shield, Wind, Heart, type LucideProps } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import type { EnemyUpgradeId } from "../../core/types/game";
 import { UIButton } from "@/components/ui/buttons/UIButton";
@@ -84,6 +85,7 @@ type HUDUpgradePanelProps = {
 export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
   onEnemyUpgradePick,
 }) => {
+  const { t } = useTranslation();
   const enemyUpgrades = useGameStore(enemyUpgradesSelector);
   const levelEnemyUpgradeStack = useUpgradeStore(
     levelEnemyUpgradeStackSelector
@@ -175,14 +177,14 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
         <UICardHeader>
           <UICardTitle className="flex flex-row items-center gap-2">
             <Zap className="w-5 h-5 text-yellow-400 shrink-0" />
-            <UITypography variant="medium">Empower Next Wave</UITypography>
+            <UITypography variant="medium">{t("upgrade.title")}</UITypography>
           </UICardTitle>
           {bonusPercentage > 0 && (
             <UITypography
               variant="small"
               className="text-green-400 font-semibold"
             >
-              Stacked bonus: +{bonusPercentage}% gold
+              {t("upgrade.stackedBonus", { percent: bonusPercentage })}
             </UITypography>
           )}
         </UICardHeader>
@@ -223,7 +225,7 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
                   />
                   <div className="flex items-center justify-between w-full gap-1">
                     <UITypography variant="medium" className="font-semibold">
-                      {upgrade.name}
+                      {t(`enemyUpgrades.${upgradeId}.name`)}
                     </UITypography>
                     <UITypography
                       className={`font-bold shrink-0 ${getTierColor(nextStackTier)}`}
@@ -246,7 +248,7 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
                     style={{ color: upgrade.indicatorColor }}
                     variant="small"
                   >
-                    +{rewardBonus}% gold this pick
+                    {t("upgrade.goldThisPick", { percent: rewardBonus })}
                   </UITypography>
                 </UIButton>
               );

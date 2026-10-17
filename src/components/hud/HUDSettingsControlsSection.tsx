@@ -1,12 +1,13 @@
 import { useEffect, useState, type FC } from "react";
+import { useTranslation } from "react-i18next";
 
 import { formatKeyCode, normalizeKeyToBinding } from "../../core/keybindings";
 import {
   DEFAULT_KEYBINDINGS,
   KEYBINDING_DEFINITIONS,
   VISIBLE_KEYBINDING_DEFINITIONS,
-  type KeybindingKey,
   type KeybindingsConfig,
+  type KeybindingKey,
 } from "../../core/keybindingsConstants";
 import {
   keybindingsSelector,
@@ -25,6 +26,7 @@ const isAtDefaults = (config: KeybindingsConfig): boolean =>
   );
 
 export const HUDSettingsControlsSection: FC = () => {
+  const { t } = useTranslation();
   const keybindings = useSettingsStore(keybindingsSelector);
   const setKeybinding = useSettingsStore(setKeybindingSelector);
   const resetKeybindings = useSettingsStore(resetKeybindingsSelector);
@@ -61,14 +63,14 @@ export const HUDSettingsControlsSection: FC = () => {
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <UITypography variant="body">Controls</UITypography>
+        <UITypography variant="body">{t("settings.controls")}</UITypography>
         <UIButton
           onClick={resetKeybindings}
           variant="ghost"
           size="xs"
           disabled={isAtDefaults(keybindings) || !!rebindingKey}
         >
-          Reset
+          {t("settings.reset")}
         </UIButton>
       </div>
       <table className="w-full border-collapse">
@@ -81,14 +83,16 @@ export const HUDSettingsControlsSection: FC = () => {
               <tr key={definition.key}>
                 <td className="py-1.5 pr-4">
                   <UITypography variant="medium" as="span">
-                    {definition.label}
+                    {t(definition.label)}
                   </UITypography>
                 </td>
                 <td className="py-1.5 text-right">
                   <button
                     type="button"
                     data-testid={`keybinding-row-${definition.key}`}
-                    aria-label={`Rebind ${definition.label}`}
+                    aria-label={t("controls.rebind", {
+                      label: t(definition.label),
+                    })}
                     onClick={() => setRebindingKey(definition.key)}
                     className={clsx(
                       "inline-flex min-w-[88px] items-center justify-center gap-1 rounded-none border px-2.5 py-1 text-xs",
@@ -99,7 +103,7 @@ export const HUDSettingsControlsSection: FC = () => {
                   >
                     {isRebinding ? (
                       <UITypography variant="buttons1">
-                        Press a key…
+                        {t("settings.pressAKey")}
                       </UITypography>
                     ) : (
                       <UITypography as={"kbd"} variant="buttons1">

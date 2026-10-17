@@ -1,5 +1,6 @@
 import { FC, useMemo } from "react";
 import { ArrowLeft, DollarSign, Gauge, HeartPulse, Skull } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { UIButton } from "../ui/buttons/UIButton";
 import { UITypography } from "../ui/UITypography";
@@ -30,6 +31,7 @@ const AlmanacEnemyCard: FC<AlmanacEnemyCardProps> = ({
   enemyConfig,
   isDiscovered,
 }) => {
+  const { t } = useTranslation();
   return (
     <UICard
       className={`relative ${
@@ -59,7 +61,9 @@ const AlmanacEnemyCard: FC<AlmanacEnemyCardProps> = ({
             )}
           </div>
           <UITypography variant="medium">
-            {isDiscovered ? enemyConfig.name : "???"}
+            {isDiscovered
+              ? t(`enemies.${enemyConfig.id}.name`)
+              : t("almanac.undiscoveredName")}
           </UITypography>
         </UICardTitle>
         <UICardAction>
@@ -71,7 +75,7 @@ const AlmanacEnemyCard: FC<AlmanacEnemyCardProps> = ({
                 : "bg-muted text-muted-foreground"
             }`}
           >
-            {isDiscovered ? "DISCOVERED" : "UNKNOWN"}
+            {isDiscovered ? t("almanac.discovered") : t("almanac.unknown")}
           </div>
         </UICardAction>
       </UICardHeader>
@@ -80,13 +84,15 @@ const AlmanacEnemyCard: FC<AlmanacEnemyCardProps> = ({
         {isDiscovered ? (
           <>
             {enemyConfig.description && (
-              <UICardDescription>{enemyConfig.description}</UICardDescription>
+              <UICardDescription>
+                {t(`enemies.${enemyConfig.id}.description`)}
+              </UICardDescription>
             )}
             <div className="grid grid-cols-2 gap-0.5 mt-2">
               <div className="flex items-center gap-1">
                 <HeartPulse size={12} className="text-red-400" />
                 <UITypography variant="small" className="text-muted-foreground">
-                  Health:
+                  {t("almanac.health")}:
                 </UITypography>
                 <UITypography variant="small">
                   {enemyConfig.health}
@@ -95,7 +101,7 @@ const AlmanacEnemyCard: FC<AlmanacEnemyCardProps> = ({
               <div className="flex items-center gap-1">
                 <Gauge size={12} className="text-orange-400" />
                 <UITypography variant="small" className="text-muted-foreground">
-                  Speed:
+                  {t("almanac.speed")}:
                 </UITypography>
                 <UITypography variant="small">
                   {enemyConfig.speed.toFixed(1)}
@@ -104,7 +110,7 @@ const AlmanacEnemyCard: FC<AlmanacEnemyCardProps> = ({
               <div className="flex items-center gap-1">
                 <DollarSign size={12} className="text-green-400" />
                 <UITypography variant="small" className="text-muted-foreground">
-                  Reward:
+                  {t("almanac.reward")}:
                 </UITypography>
                 <UITypography variant="small">
                   {enemyConfig.reward}
@@ -113,7 +119,7 @@ const AlmanacEnemyCard: FC<AlmanacEnemyCardProps> = ({
               <div className="flex items-center gap-1">
                 <Skull size={12} className="text-white-400" />
                 <UITypography variant="small" className="text-muted-foreground">
-                  Damage:
+                  {t("almanac.damage")}:
                 </UITypography>
                 <UITypography variant="small">
                   {enemyConfig.healthLoss}
@@ -128,7 +134,7 @@ const AlmanacEnemyCard: FC<AlmanacEnemyCardProps> = ({
               variant="small"
               className="italic text-muted-foreground"
             >
-              Encounter this enemy in battle to reveal its secrets...
+              {t("almanac.undiscovered")}
             </UITypography>
           </div>
         )}
@@ -142,6 +148,7 @@ type HUDAlmanacProps = {
 };
 
 export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
+  const { t } = useTranslation();
   const enemyTypes = useGameStore(enemyTypesSelector);
   const discoveredEnemies = useAlmanacStore(discoveredEnemiesSelector);
 
@@ -160,10 +167,10 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
           <UIButton onClick={onBack} variant="ghost" size="icon">
             <ArrowLeft />
           </UIButton>
-          <UITypography variant="h4">Enemy Almanac</UITypography>
+          <UITypography variant="h4">{t("almanac.title")}</UITypography>
         </UICardTitle>
         <UICardDescription>
-          {"Discover enemies by encountering them in battle"}
+          {t("almanac.description")}
         </UICardDescription>
       </UICardHeader>
       <UICardContent className="min-h-0 flex-1 gap-4 overflow-y-auto">
@@ -180,7 +187,10 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
             />
           </div>
           <UITypography variant="small" className="w-full py-1 text-end">
-            {discoveryCount} / {totalCount} discovered
+            {t("almanac.discoveredCount", {
+              found: discoveryCount,
+              total: totalCount,
+            })}
           </UITypography>
         </div>
 
@@ -199,8 +209,7 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
         {enemyEntries.length === 0 && (
           <div className="flex flex-col items-center justify-center flex-1 py-12 text-center">
             <UITypography variant="body" className="text-muted-foreground">
-              No enemy data available. Start a game to load enemy
-              configurations.
+              {t("almanac.noData")}
             </UITypography>
           </div>
         )}

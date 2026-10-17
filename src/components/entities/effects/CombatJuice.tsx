@@ -8,6 +8,7 @@ import { getPlanetRadius, flatCombatPointToWorldPosition } from "../../../utils/
 import { useReducedMotion } from "../../../core/hooks/useReducedMotion";
 import { useNextId } from "../../../core/hooks/utils/useNextId";
 import { getCssColorValue } from "../../ui/lib/cssUtils";
+import { useTranslationInCanvas } from "../../../core/i18n/useTranslationInCanvas";
 
 import { Effect } from "./Effect";
 import { FloatingTexts, type FloatingTextsHandle } from "./FloatingTexts";
@@ -40,6 +41,7 @@ export const CombatJuice = memo(({ shouldStopMovement }: CombatJuiceProps) => {
   const tileSize = useGameStore((state) => state.tileSize);
   const planetRadius = getPlanetRadius(gridSize, tileSize);
   const reducedMotion = useReducedMotion();
+  const t = useTranslationInCanvas();
 
   useEffect(() => {
     const onEnemyKilled = (data: {
@@ -54,7 +56,7 @@ export const CombatJuice = memo(({ shouldStopMovement }: CombatJuiceProps) => {
         planetRadius
       );
       floatingTextsRef.current?.spawn(
-        `+$${data.reward}`,
+        t("rewardText", { amount: data.reward }),
         [position.x, position.y + REWARD_TEXT_HEIGHT, position.z],
         getCssColorValue("scene-hp-high")
       );
@@ -72,7 +74,7 @@ export const CombatJuice = memo(({ shouldStopMovement }: CombatJuiceProps) => {
     return () => {
       gameEvents.off(GameEvent.ENEMY_KILLED, onEnemyKilled);
     };
-  }, [planetRadius]);
+  }, [planetRadius, t]);
 
   const onBurstComplete = (id: number) => {
     setBursts((prev) => prev.filter((burst) => burst.id !== id));

@@ -1,4 +1,5 @@
 import { FC, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 import { UIButton } from "@/components/ui/buttons/UIButton";
 import { UITypography } from "../ui/UITypography";
@@ -20,6 +21,7 @@ type HUDTowerShopProps = {
 };
 
 export const HUDTowerShop: FC<HUDTowerShopProps> = ({ money }) => {
+  const { t } = useTranslation();
   const setSelectedTowerType = useGameStore(
     setSelectedTowerTypeToPlaceSelector
   );
@@ -40,7 +42,9 @@ export const HUDTowerShop: FC<HUDTowerShopProps> = ({ money }) => {
         <UICard className="flex-1">
           <UICardHeader>
             <UICardTitle>
-              <UITypography variant="h4">Tower Shop</UITypography>
+              <UITypography variant="h4">
+                {t("towerShop.title")}
+              </UITypography>
             </UICardTitle>
           </UICardHeader>
           <UICardContent className="gap-2">
@@ -96,9 +100,11 @@ export const HUDTowerShop: FC<HUDTowerShopProps> = ({ money }) => {
                     deniedData={deniedData}
                     variant={towerButtonVariant}
                   >
-                    <UITypography variant="medium">{tower.name}</UITypography>
+                    <UITypography variant="medium">
+                      {t(`towers.${tower.id}.name`)}
+                    </UITypography>
                     <UITypography className="text-gray-300" variant={"small"}>
-                      {tower.description}
+                      {t(`towers.${tower.id}.description`)}
                     </UITypography>
                   </UIButton>
                 </div>
@@ -106,7 +112,7 @@ export const HUDTowerShop: FC<HUDTowerShopProps> = ({ money }) => {
             })}
             {selectedTowerType && (
               <UIButton onClick={onCancelSelection} variant="destructive">
-                Cancel Selection
+                {t("towerShop.cancelSelection")}
               </UIButton>
             )}
           </UICardContent>

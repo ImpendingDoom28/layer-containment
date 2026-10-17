@@ -1,4 +1,5 @@
 import { Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { UIAccordionContent, UIAccordionItem, UIAccordionTrigger } from "../../ui/UIAccordion";
 import { UIButton } from "../../ui/buttons/UIButton";
@@ -14,6 +15,7 @@ import { EditorSection } from "./EditorSection";
 import { EditorEmptyState } from "./EditorEmptyState";
 
 export const LevelEditorBuildingSection = () => {
+  const { t } = useTranslation();
   const tileSize = useGameStore(tileSizeSelector);
   const { draftLevel, selected, updateSelectedBuilding, removeSelectedBuilding } =
     useLevelEditorStore();
@@ -25,7 +27,7 @@ export const LevelEditorBuildingSection = () => {
 
   return (
     <UIAccordionItem value="building">
-      <UIAccordionTrigger>Building</UIAccordionTrigger>
+      <UIAccordionTrigger>{t("editor.building")}</UIAccordionTrigger>
       <UIAccordionContent className="flex flex-col gap-3">
         {selectedBuilding ? (
           <EditorSection className="flex flex-col gap-3">
@@ -36,7 +38,7 @@ export const LevelEditorBuildingSection = () => {
               onChangeGridZ={(gridZ) => updateSelectedBuilding({ gridZ }, tileSize)}
             />
 
-            <EditorField label="Shape">
+            <EditorField label={t("editor.shape")}>
               <UISelect
                 value={selectedBuilding.shape}
                 onChange={(event) =>
@@ -46,13 +48,13 @@ export const LevelEditorBuildingSection = () => {
                   )
                 }
               >
-                <option value="box">Box</option>
-                <option value="cylinder">Cylinder</option>
+                <option value="box">{t("editor.box")}</option>
+                <option value="cylinder">{t("editor.cylinder")}</option>
               </UISelect>
             </EditorField>
 
             <div className="grid grid-cols-3 gap-2">
-              <EditorField label="Width">
+              <EditorField label={t("editor.width")}>
                 <UIInput
                   type="number"
                   step="0.1"
@@ -65,7 +67,7 @@ export const LevelEditorBuildingSection = () => {
                   }
                 />
               </EditorField>
-              <EditorField label="Depth">
+              <EditorField label={t("editor.depth")}>
                 <UIInput
                   type="number"
                   step="0.1"
@@ -78,7 +80,7 @@ export const LevelEditorBuildingSection = () => {
                   }
                 />
               </EditorField>
-              <EditorField label="Height">
+              <EditorField label={t("editor.height")}>
                 <UIInput
                   type="number"
                   step="0.1"
@@ -93,7 +95,7 @@ export const LevelEditorBuildingSection = () => {
               </EditorField>
             </div>
 
-            <EditorField label="Color">
+            <EditorField label={t("editor.color")}>
               <UIInput
                 value={selectedBuilding.color}
                 onChange={(event) =>
@@ -104,11 +106,11 @@ export const LevelEditorBuildingSection = () => {
 
             <UIButton variant="destructive" size="sm" onClick={removeSelectedBuilding}>
               <Trash2 />
-              Remove Building
+              {t("editor.removeBuilding")}
             </UIButton>
           </EditorSection>
         ) : (
-          <EditorEmptyState message="Select a building in the scene to edit." />
+          <EditorEmptyState message={t("editor.selectBuildingToEdit")} />
         )}
       </UIAccordionContent>
     </UIAccordionItem>

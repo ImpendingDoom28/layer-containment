@@ -1,4 +1,5 @@
 import type { FC } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Keyboard } from "lucide-react";
 
@@ -16,6 +17,11 @@ type HUDControlsIntroModalProps = {
   onClose: () => void;
 };
 
+type ControlRow = {
+  labelKey: string;
+  keys: string[];
+};
+
 /**
  * A first-run modal that explains the game controls so a new player knows
  * what to press. Shown once per level (on the first run of a level) and
@@ -26,17 +32,18 @@ export const HUDControlsIntroModal: FC<HUDControlsIntroModalProps> = ({
   open,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const keybindings = useSettingsStore(keybindingsSelector);
 
-  const mouseControls = [
-    { label: "Place a tower", keys: ["Click a tile"] },
-    { label: "View or sell a tower", keys: ["Click a tower"] },
-    { label: "Rotate the camera", keys: ["Drag"] },
+  const mouseControls: ControlRow[] = [
+    { labelKey: "controlsIntro.placeTower", keys: [t("controlsIntro.clickATile")] },
+    { labelKey: "controlsIntro.viewOrSellTower", keys: [t("controlsIntro.clickATower")] },
+    { labelKey: "controlsIntro.rotateCamera", keys: [t("controlsIntro.drag")] },
   ];
 
-  const keyboardControls = [
+  const keyboardControls: ControlRow[] = [
     {
-      label: "Move the camera",
+      labelKey: "controlsIntro.moveCamera",
       keys: [
         keybindings.cameraForward,
         keybindings.cameraBackward,
@@ -46,14 +53,14 @@ export const HUDControlsIntroModal: FC<HUDControlsIntroModalProps> = ({
         keybindings.cameraDown,
       ],
     },
-    { label: "Pause / Resume", keys: [keybindings.pause] },
-    { label: "Open / close menu", keys: [keybindings.menu] },
+    { labelKey: "controlsIntro.pauseResume", keys: [keybindings.pause] },
+    { labelKey: "controlsIntro.openCloseMenu", keys: [keybindings.menu] },
   ];
 
-  const renderRow = (row: { label: string; keys: string[] }) => (
-    <div key={row.label} className="flex items-center justify-between gap-4">
+  const renderRow = (row: ControlRow) => (
+    <div key={row.labelKey} className="flex items-center justify-between gap-4">
       <UITypography variant="medium" className="text-left">
-        {row.label}
+        {t(row.labelKey as "controlsIntro.placeTower")}
       </UITypography>
       <div className="flex flex-wrap justify-end gap-1">
         {row.keys.map((key) => (
@@ -75,13 +82,13 @@ export const HUDControlsIntroModal: FC<HUDControlsIntroModalProps> = ({
   return (
     <UIModal
       open={open}
-      title="How to play"
+      title={t("controlsIntro.title")}
       icon={<Keyboard className="size-4 text-primary" />}
       className="max-w-md"
       dismissible={false}
       footer={
         <UIButton variant="secondary" onClick={onClose}>
-          Got it
+          {t("common.gotIt")}
         </UIButton>
       }
       onOpenChange={onClose}
@@ -97,8 +104,10 @@ export const HUDControlsIntroModal: FC<HUDControlsIntroModalProps> = ({
           variant="small"
           className="leading-relaxed text-muted-foreground"
         >
-          You can watch controls later in &quot;Settings&quot; /
-          &quot;Controls&quot;.
+          {t("controlsIntro.laterInSettings", {
+            settings: t("settings.title"),
+            controls: t("settings.controls"),
+          })}
         </UITypography>
       </div>
     </UIModal>

@@ -18,12 +18,15 @@ const getSnapshot = (): string => i18n.resolvedLanguage ?? "";
  * Re-render subscription for i18next that works outside of React context —
  * including inside the R3F canvas, which is a separate reconciler root that
  * does not receive the DOM tree's context (so `useTranslation` is not usable
- * in canvas components). Returns a stable `t` that reads from the i18next
- * singleton.
+ * in canvas components). Returns a `t` that reads from the i18next singleton
+ * and re-renders consumers on language changes.
  */
 export const useTranslationInCanvas = (): TFunction<"translation", undefined> => {
-  useSyncExternalStore(subscribe, getSnapshot);
-  // `i18n.t` is already the fully-typed `TFunction` for the default
-  // ("translation") namespace; bind it so it can be passed around safely.
-  return useCallback(i18n.t.bind(i18n), []) as TFunction<"translation", undefined>;
+  const language = useSyncExternalStore(subscribe, getSnapshot);
+  // The identity follows the language snapshot, so memos that depend on `t`
+  // recompute their translations when the language changes.
+  return useCallback(i18n.t.bind(i18n), [language]) as TFunction<
+    "translation",
+    undefined
+  >;
 };

@@ -1,5 +1,6 @@
 import { FC, memo, useCallback } from "react";
 import { ArrowRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { UIButton, UIButtonProps } from "../../ui/buttons/UIButton";
 import { UITypography } from "../../ui/UITypography";
@@ -22,8 +23,15 @@ type HUDMainMenuProps = MenuActions;
 
 type ClosingView = "settings" | "almanac" | "levelPicker";
 
+type MenuAction = Omit<UIButtonProps, "children" | "onClick"> & {
+  // Locale key of the button label.
+  labelKey: "menu.play" | "menu.enemyAlmanac" | "menu.settings" | "menu.levelCreator";
+  onClick: () => void;
+};
+
 export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
   ({ onStartGameWithLevel, onOpenLevelEditor }) => {
+    const { t } = useTranslation();
     const { menuRef, blurDimensions, setBlurDimensions } = useBlurBackdrop();
 
     const {
@@ -56,9 +64,9 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
       finishClose();
     }, [finishClose]);
 
-    const actions: Partial<UIButtonProps>[] = [
+    const actions: MenuAction[] = [
       {
-        children: "Play",
+        labelKey: "menu.play",
         onClick: () => {
           cancelClose();
           onOpenLevelPicker();
@@ -66,21 +74,21 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
         variant: "default",
       },
       {
-        children: "Enemy Almanac",
+        labelKey: "menu.enemyAlmanac",
         onClick: () => {
           cancelClose();
           onOpenAlmanac();
         },
       },
       {
-        children: "Settings",
+        labelKey: "menu.settings",
         onClick: () => {
           cancelClose();
           onOpenSettings();
         },
       },
       {
-        children: "Level Creator",
+        labelKey: "menu.levelCreator",
         onClick: onOpenLevelEditor,
         className: "mt-8",
       },
@@ -104,7 +112,7 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
             className="ui-menu-tilt ui-menu-tilt-left relative flex h-full w-[45%] max-w-xl flex-col justify-between p-8 md:p-12"
             ref={menuRef}
           >
-            <UIBadge text="Systems Online" />
+            <UIBadge text={t("menu.systemsOnline")} />
 
             <div className="flex flex-col gap-6">
               <div className="min-w-0">
@@ -126,17 +134,18 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
                 variant="body"
                 className="max-w-xs leading-relaxed tracking-widest text-muted-foreground"
               >
-                you’re not winning a war; — you’re holding a boundary.
+                {t("menu.tagline")}
               </UITypography>
             </div>
 
             <nav className="flex flex-col gap-1">
-              {actions.map(({ children, onClick, variant, className }) => {
+              {actions.map(({ labelKey, onClick, variant, className }) => {
                 const isDefault = variant === "default";
+                const label = t(labelKey);
 
                 return (
                   <UIButton
-                    key={children as string}
+                    key={labelKey}
                     onClick={onClick}
                     variant={variant ?? "ghost"}
                     className={cn(
@@ -145,7 +154,7 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
                     )}
                   >
                     <span className="transition-transform group-hover:translate-x-1">
-                      {children}
+                      {label}
                     </span>
                     <ArrowRight
                       className={cn(

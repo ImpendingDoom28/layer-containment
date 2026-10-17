@@ -1,5 +1,6 @@
 import { FC } from "react";
 import { Volume2, VolumeX } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import {
   GAME_AUDIO_CATEGORIES,
@@ -18,10 +19,13 @@ type AudioSliderProps = {
   sliderId: string;
 };
 
-const CATEGORY_LABELS: Record<GameAudioCategory, string> = {
-  sfx: "Sound Effects",
-  music: "Music",
-  ambient: "Ambient",
+const CATEGORY_LABEL_KEYS: Record<
+  GameAudioCategory,
+  "settings.soundEffects" | "settings.music" | "settings.ambient"
+> = {
+  sfx: "settings.soundEffects",
+  music: "settings.music",
+  ambient: "settings.ambient",
 };
 
 const defaultSliderProps = {
@@ -63,6 +67,7 @@ const AudioSlider: FC<AudioSliderProps> = ({
 };
 
 export const HUDSettingsAudioSection: FC = () => {
+  const { t } = useTranslation();
   const masterVolume = useAudioStore((state) => state.masterVolume);
   const categoryVolumes = useAudioStore((state) => state.categoryVolumes);
   const muted = useAudioStore((state) => state.muted);
@@ -73,12 +78,12 @@ export const HUDSettingsAudioSection: FC = () => {
   return (
     <section className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <UITypography variant="body">Audio</UITypography>
+        <UITypography variant="body">{t("settings.audio")}</UITypography>
         <UIButton
           onClick={toggleMute}
           variant={muted ? "destructive" : "outline"}
           size="icon"
-          aria-label={muted ? "Unmute" : "Mute"}
+          aria-label={t(muted ? "settings.unmute" : "settings.mute")}
         >
           {muted ? (
             <VolumeX className="size-4" />
@@ -91,7 +96,7 @@ export const HUDSettingsAudioSection: FC = () => {
         volume={masterVolume}
         setVolume={setMasterVolume}
         disabled={muted}
-        label="Master Volume"
+        label={t("settings.masterVolume")}
         sliderId="master-volume"
       />
       {GAME_AUDIO_CATEGORIES.map((category) => (
@@ -100,7 +105,7 @@ export const HUDSettingsAudioSection: FC = () => {
           volume={categoryVolumes[category]}
           setVolume={(volume) => setCategoryVolume(category, volume)}
           disabled={muted}
-          label={CATEGORY_LABELS[category]}
+          label={t(CATEGORY_LABEL_KEYS[category])}
           sliderId={`${category}-volume`}
         />
       ))}

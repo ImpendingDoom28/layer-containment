@@ -1,5 +1,6 @@
 import { Suspense, useCallback } from "react";
 import { Canvas } from "@react-three/fiber";
+import { useTranslation } from "react-i18next";
 
 import { HUDLoading } from "../hud/HUDLoading";
 import { HUDLevelEditor } from "../hud/HUDLevelEditor";
@@ -13,6 +14,7 @@ type LevelEditorPageProps = {
 };
 
 export const LevelEditorPage = ({ onBackToGame }: LevelEditorPageProps) => {
+  const { t } = useTranslation();
   const { isGameConfigLoaded } = useGameSystem();
 
   const onNavigateBack = useCallback(() => {
@@ -21,7 +23,9 @@ export const LevelEditorPage = ({ onBackToGame }: LevelEditorPageProps) => {
 
   return (
     <PageWrapper>
-      {isGameConfigLoaded ? null : <HUDLoading message="Loading editor..." />}
+      {isGameConfigLoaded ? null : (
+        <HUDLoading message={t("common.loadingEditor")} />
+      )}
 
       <Canvas
         data-testid="editor-canvas"

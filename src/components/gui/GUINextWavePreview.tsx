@@ -20,6 +20,7 @@ import {
   useUpgradeStore,
 } from "../../core/stores/useUpgradeStore";
 import { EnemyConfig, EnemyUpgradeStackTier } from "../../core/types/game";
+import { useI18nT } from "../../core/i18n/useI18nT";
 import {
   getPickTierForStackEntryIndex,
   getTotalRewardMultiplierFromStack,
@@ -51,6 +52,7 @@ const EnemyPreviewModel: FC<EnemyPreviewModelProps> = ({
   name,
   count,
 }) => {
+  const t = useI18nT();
   return (
     <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border border-border/70 bg-muted/35 px-2 py-1.5">
       <UITypography
@@ -69,7 +71,7 @@ const EnemyPreviewModel: FC<EnemyPreviewModelProps> = ({
         </UITypography>
       </div>
       <UITypography variant="verySmall" className="text-muted-foreground">
-        unit{count > 1 ? "s" : ""}
+        {t("nextWavePreview.units", { count })}
       </UITypography>
     </div>
   );
@@ -82,6 +84,7 @@ type GUINextWavePreviewProps = {
 export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
   pathIndex,
 }) => {
+  const t = useI18nT();
   const nextWaveReady = useWaveStore(nextWaveReadySelector);
   const pathWaypoints = useLevelStore(pathWaypointsSelector);
   const totalWaves = useLevelStore(totalWavesSelector);
@@ -153,11 +156,11 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
               variant="verySmall"
               className="text-primary uppercase tracking-[0.22em]"
             >
-              Path Entrance
+              {t("nextWavePreview.pathEntrance")}
             </UITypography>
             <div className="flex items-center justify-between gap-3">
               <UITypography variant="medium" className="font-semibold">
-                Next Wave
+                {t("nextWavePreview.nextWave")}
               </UITypography>
             </div>
           </UICardHeader>
@@ -171,7 +174,7 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
                   <EnemyPreviewModel
                     key={`${enemyGroup.type}-${index}`}
                     enemyConfig={enemyConfig}
-                    name={enemyGroup.type}
+                    name={t(`enemies.${enemyGroup.type}.name`)}
                     count={enemyGroup.count}
                   />
                 );
@@ -185,14 +188,14 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
                     variant="verySmall"
                     className="text-primary uppercase tracking-[0.16em]"
                   >
-                    Empowered
+                    {t("nextWavePreview.empowered")}
                   </UITypography>
                   {bonusPercentage > 0 && (
                     <UITypography
                       variant="verySmall"
                       className="text-green-400"
                     >
-                      +{bonusPercentage}% gold
+                      {t("upgrade.bonusGold", { percent: bonusPercentage })}
                     </UITypography>
                   )}
                 </div>
@@ -213,7 +216,8 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
                           backgroundColor: upgrade.indicatorColor,
                         }}
                       >
-                        {upgrade.name} {getStackTierRoman(pickTier)}
+                        {t(`enemyUpgrades.${upgradeId}.name`)}{" "}
+                        {getStackTierRoman(pickTier)}
                       </UITypography>
                     );
                   })}

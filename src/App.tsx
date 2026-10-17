@@ -1,6 +1,7 @@
 import { FC, lazy, Suspense } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { WorldProvider } from "koota/react";
+import { useTranslation } from "react-i18next";
 
 import { HUDLoading } from "./components/hud/HUDLoading";
 import { GamePage } from "./components/pages/GamePage";
@@ -15,6 +16,7 @@ const LevelEditorPage = lazy(() =>
 );
 
 const AppRoutes: FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   useGameAudioSystem();
@@ -40,7 +42,7 @@ const AppRoutes: FC = () => {
                 fallback={
                   <HUDLoading
                     className="fixed inset-0"
-                    message="Loading editor..."
+                    message={t("common.loadingEditor")}
                   />
                 }
               >

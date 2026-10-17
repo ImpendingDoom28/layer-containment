@@ -1,4 +1,5 @@
 import { FC, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { cn } from "../ui/lib/twUtils";
 import { Canvas } from "@react-three/fiber";
@@ -43,6 +44,7 @@ type GamePageProps = {
 };
 
 export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
+  const { t } = useTranslation();
   const [activePlayableLevel, setActivePlayableLevel] =
     useState<PlayableLevelId>(PLAYABLE_LEVEL_IDS[0]);
   const [areShadersReady, setAreShadersReady] = useState(false);
@@ -150,12 +152,12 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
 
   const loadingMessage = (() => {
     if (!isGameConfigLoaded) {
-      return "Loading game...";
+      return t("common.loadingGame");
     }
     if (!isMenu && !isLevelConfigLoaded) {
-      return "Loading level...";
+      return t("common.loadingLevel");
     }
-    return "Preparing graphics...";
+    return t("common.preparingGraphics");
   })();
 
   return (

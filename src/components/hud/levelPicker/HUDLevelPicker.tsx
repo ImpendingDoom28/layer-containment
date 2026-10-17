@@ -1,5 +1,6 @@
 import { FC, useEffect, useState } from "react";
 import { ArrowLeft, Radio } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import {
   PLAYABLE_LEVEL_IDS,
@@ -39,6 +40,7 @@ export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
   onBack,
   onSelectLevel,
 }) => {
+  const { t } = useTranslation();
   const tileSize = useGameStore(tileSizeSelector);
   const [entries, setEntries] = useState<LevelPickerEntry[] | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
       } catch (e) {
         if (!cancelled) {
           const errorMessage =
-            e instanceof Error ? e.message : "Failed to load levels";
+            e instanceof Error ? e.message : t("menu.failedToLoadLevels");
           console.error(errorMessage);
           setErrorMessage(errorMessage);
           setEntries(null);
@@ -73,6 +75,7 @@ export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -82,11 +85,9 @@ export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
           <UIButton onClick={onBack} variant="ghost" size="icon">
             <ArrowLeft />
           </UIButton>
-          <UITypography variant="h4">Deploy</UITypography>
+          <UITypography variant="h4">{t("menu.deploy")}</UITypography>
         </UICardTitle>
-        <UICardDescription>
-          Select a theater of operations. Tap a sector to begin.
-        </UICardDescription>
+        <UICardDescription>{t("menu.deployDescription")}</UICardDescription>
       </UICardHeader>
       <UICardContent className="min-h-0 flex-1 flex flex-col gap-4 overflow-y-auto">
         {errorMessage && (
@@ -96,7 +97,7 @@ export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
         )}
         {!entries && !errorMessage && (
           <UITypography variant="body" className="text-muted-foreground">
-            Loading sectors…
+            {t("menu.loadingSectors")}
           </UITypography>
         )}
         {entries?.map(({ id, data }, index) => {
@@ -147,7 +148,7 @@ export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
                       </UITypography>
                     </UICardTitle>
                     <UICardDescription className="p-0">
-                      {waveCount} wave{waveCount === 1 ? "" : "s"}
+                      {t("menu.waves", { count: waveCount })}
                     </UICardDescription>
                   </div>
                 </UICardContent>

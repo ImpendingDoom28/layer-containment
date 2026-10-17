@@ -1,5 +1,6 @@
 import { FC } from "react";
 import { HeartPulse, Play } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { UIButton } from "@/components/ui/buttons/UIButton";
 
@@ -35,6 +36,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
   gameStatus,
   onStartWave,
 }) => {
+  const { t } = useTranslation();
   const totalWaves = useLevelStore(totalWavesSelector);
   const nextWaveReady = useWaveStore(nextWaveReadySelector);
 
@@ -62,7 +64,9 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
             </div>
             <div className="flex items-center justify-between">
               <div className="flex flex-row items-center gap-1">
-                <UITypography variant="body">Wave:</UITypography>
+                <UITypography variant="body">
+                  {t("gameStats.wave")}:
+                </UITypography>
                 <UITypography variant="medium" whiteSpace="nowrap">
                   {`${currentWave} / ${totalWaves}`}
                 </UITypography>
@@ -72,7 +76,9 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
                 currentWave <= totalWaves &&
                 remainingEnemies > 0 && (
                   <div className="flex flex-row items-center gap-1">
-                    <UITypography variant="body">Enemies:</UITypography>
+                    <UITypography variant="body">
+                      {t("gameStats.enemies")}:
+                    </UITypography>
                     <UITypography variant="medium" whiteSpace="nowrap">
                       {remainingEnemies}
                     </UITypography>
@@ -84,7 +90,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
               {currentWave < totalWaves && nextWaveReady && (
                 <div className="flex flex-col justify-center flex-1 gap-1">
                   <UIButton onClick={onStartWave} variant="outline">
-                    <Play /> Start next wave
+                    <Play /> {t("gameStats.startNextWave")}
                   </UIButton>
                 </div>
               )}

@@ -1,5 +1,6 @@
 import { FC, useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import type { GameStatus } from "../../core/types/game";
 import {
@@ -12,7 +13,6 @@ import { UIButton } from "../ui/buttons/UIButton";
 import {
   UICard,
   UICardContent,
-  UICardDescription,
   UICardHeader,
   UICardTitle,
 } from "../ui/UICard";
@@ -41,6 +41,7 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
   onGoToMainMenu,
   className,
 }) => {
+  const { t } = useTranslation();
   const { closing, startClose, startCloseImmediate, finishClose, cancelClose } =
     close;
   const { menuRef, blurDimensions, setBlurDimensions } = useBlurBackdrop();
@@ -87,11 +88,13 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
                   onClick={() => startClose(onResume)}
                   variant="ghost"
                   size="icon"
-                  aria-label="Resume"
+                  aria-label={t("gameMenu.resume")}
                 >
                   <ArrowLeft />
                 </UIButton>
-                <UITypography variant="h4">Game Menu</UITypography>
+                <UITypography variant="h4">
+                  {t("gameMenu.title")}
+                </UITypography>
               </UICardTitle>
             </UICardHeader>
             <UICardContent className="flex flex-col flex-1 min-h-0 gap-1 overflow-y-auto">
@@ -100,7 +103,7 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
                 className="justify-between text-sm text-left group text-foreground"
               >
                 <span className="transition-transform group-hover:translate-x-1">
-                  Continue
+                  {t("gameMenu.continue")}
                 </span>
                 <ArrowRight className="transition-transform size-4 group-hover:translate-x-1" />
               </UIButton>
@@ -110,7 +113,7 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
                 className="justify-between mt-2 text-sm text-left group text-foreground hover:border-primary/30"
               >
                 <span className="transition-transform group-hover:translate-x-1">
-                  Restart
+                  {t("gameMenu.restart")}
                 </span>
                 <ArrowRight className="transition-transform size-4 text-muted-foreground group-hover:translate-x-1 group-hover:text-primary" />
               </UIButton>
@@ -120,7 +123,7 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
                 className="justify-between text-sm text-left group text-foreground hover:border-primary/30"
               >
                 <span className="transition-transform group-hover:translate-x-1">
-                  Settings
+                  {t("gameMenu.settings")}
                 </span>
                 <ArrowRight className="transition-transform size-4 text-muted-foreground group-hover:translate-x-1 group-hover:text-primary" />
               </UIButton>
@@ -130,7 +133,7 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
                 className="justify-between text-sm text-left group text-foreground hover:border-primary/30"
               >
                 <span className="transition-transform group-hover:translate-x-1">
-                  Go to Main Menu
+                  {t("gameMenu.goToMainMenu")}
                 </span>
                 <ArrowRight className="transition-transform size-4 text-muted-foreground group-hover:translate-x-1 group-hover:text-primary" />
               </UIButton>
@@ -140,10 +143,10 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
       </HUDSidePanel>
       <UIConfirmModal
         open={showExitConfirm}
-        title="Exit game"
-        message="Are you sure you want to exit? All unsaved changes will be lost"
-        confirmLabel="Proceed"
-        cancelLabel="Cancel"
+        title={t("gameMenu.exitGame")}
+        message={t("gameMenu.exitGameMessage")}
+        confirmLabel={t("gameMenu.proceed")}
+        cancelLabel={t("common.cancel")}
         onConfirm={() => {
           setShowExitConfirm(false);
           startCloseImmediate(onGoToMainMenu);
@@ -152,10 +155,10 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
       />
       <UIConfirmModal
         open={showRestartConfirm}
-        title="Restart game"
-        message="Are you sure you want to restart?"
-        confirmLabel="Proceed"
-        cancelLabel="Cancel"
+        title={t("gameMenu.restartGame")}
+        message={t("gameMenu.restartGameMessage")}
+        confirmLabel={t("gameMenu.proceed")}
+        cancelLabel={t("common.cancel")}
         onConfirm={() => {
           setShowRestartConfirm(false);
           startCloseImmediate(onRestart);

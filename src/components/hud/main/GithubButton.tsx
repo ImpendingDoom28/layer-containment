@@ -1,4 +1,6 @@
 import { FC } from "react";
+import { useTranslation } from "react-i18next";
+
 import { REPOSITORY_URL } from "../../../constants/game";
 import { GithubIcon } from "../../ui/assets/GithubIcon";
 import { cn } from "../../ui/lib/twUtils";
@@ -9,6 +11,8 @@ type GithubButtonProps = {
 };
 
 export const GithubButton: FC<GithubButtonProps> = ({ hasInteracted }) => {
+  const { t } = useTranslation();
+
   if (REPOSITORY_URL === "") return null;
 
   return (
@@ -24,7 +28,7 @@ export const GithubButton: FC<GithubButtonProps> = ({ hasInteracted }) => {
         href={REPOSITORY_URL}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="View source on GitHub"
+        aria-label={t("menu.viewSource")}
       >
         <GithubIcon />
       </a>

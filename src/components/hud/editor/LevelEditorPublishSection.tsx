@@ -1,4 +1,5 @@
 import { useRef, useState, type ChangeEvent } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   AlertCircle,
@@ -44,20 +45,20 @@ const getPublishState = (
 
 const PUBLISH_CONFIG: Record<
   LevelEditorPublishState,
-  { label: string; className: string; icon: typeof Pencil }
+  { label: "editor.drafting" | "editor.needsFixes" | "editor.readyToExport"; className: string; icon: typeof Pencil }
 > = {
   drafting: {
-    label: "Drafting",
+    label: "editor.drafting",
     className: "text-muted-foreground",
     icon: Pencil,
   },
   needsFixes: {
-    label: "Needs fixes",
+    label: "editor.needsFixes",
     className: "text-amber-400",
     icon: AlertCircle,
   },
   ready: {
-    label: "Ready to export",
+    label: "editor.readyToExport",
     className: "text-emerald-400",
     icon: CheckCircle2,
   },
@@ -66,6 +67,7 @@ const PUBLISH_CONFIG: Record<
 const VISIBLE_ISSUES = 3;
 
 export const LevelEditorPublishSection = () => {
+  const { t } = useTranslation();
   const tileSize = useGameStore(tileSizeSelector);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -93,10 +95,10 @@ export const LevelEditorPublishSection = () => {
     try {
       const sampleLevel = await loadLevelConfigFile("level_1");
       loadDraftLevel(sampleLevel, tileSize);
-      setStatusMessage("Loaded sample level.");
+      setStatusMessage(t("editor.loadedSample"));
     } catch (error) {
       setStatusMessage(
-        error instanceof Error ? error.message : "Failed to load sample level."
+        error instanceof Error ? error.message : t("editor.failedToLoadSample")
       );
     }
   };
@@ -112,16 +114,16 @@ export const LevelEditorPublishSection = () => {
 
       if (!parsedLevel.success) {
         setStatusMessage(
-          parsedLevel.error.issues[0]?.message ?? "Invalid level JSON."
+          parsedLevel.error.issues[0]?.message ?? t("editor.invalidLevelJson")
         );
         return;
       }
 
       loadDraftLevel(parsedLevel.data, tileSize);
-      setStatusMessage(`Imported ${file.name}.`);
+      setStatusMessage(t("editor.imported", { name: file.name }));
     } catch (error) {
       setStatusMessage(
-        error instanceof Error ? error.message : "Failed to import level JSON."
+        error instanceof Error ? error.message : t("editor.failedToImport")
       );
     } finally {
       event.target.value = "";
@@ -131,7 +133,7 @@ export const LevelEditorPublishSection = () => {
   const onDownloadJson = () => {
     const isValid = validateDraftLevel(tileSize);
     if (!isValid) {
-      setStatusMessage("Fix validation issues before exporting.");
+      setStatusMessage(t("editor.fixValidationIssues"));
       return;
     }
 
@@ -139,7 +141,7 @@ export const LevelEditorPublishSection = () => {
     const parsedLevel = parseLevelConfigData(exportableLevel);
     if (!parsedLevel.success) {
       setStatusMessage(
-        parsedLevel.error.issues[0]?.message ?? "Level export failed."
+        parsedLevel.error.issues[0]?.message ?? t("editor.levelExportFailed")
       );
       return;
     }
@@ -153,24 +155,26 @@ export const LevelEditorPublishSection = () => {
     link.download = buildLevelFileName(draftLevel.name);
     link.click();
     URL.revokeObjectURL(objectUrl);
-    setStatusMessage(`Downloaded ${buildLevelFileName(draftLevel.name)}.`);
+    setStatusMessage(
+      t("editor.downloaded", { name: buildLevelFileName(draftLevel.name) })
+    );
   };
 
   const onValidate = () => {
     const isValid = validateDraftLevel(tileSize);
     setStatusMessage(
-      isValid ? "Level is valid." : "Fix validation issues before exporting."
+      isValid ? t("editor.levelIsValid") : t("editor.fixValidationIssues")
     );
   };
 
   return (
     <UIAccordionItem value="publish">
-      <UIAccordionTrigger>Publish</UIAccordionTrigger>
+      <UIAccordionTrigger>{t("editor.publish")}</UIAccordionTrigger>
       <UIAccordionContent className="flex flex-col gap-3">
         <EditorSection className="flex items-center gap-2">
           <StatusIcon className={`size-4 shrink-0 ${config.className}`} />
           <UITypography variant="medium" className={config.className}>
-            {config.label}
+            {t(config.label)}
           </UITypography>
         </EditorSection>
 
@@ -200,7 +204,9 @@ export const LevelEditorPublishSection = () => {
                 size="xs"
                 onClick={() => setShowAllIssues(!showAllIssues)}
               >
-                {showAllIssues ? "Show less" : `Show ${hiddenCount} more`}
+                {showAllIssues
+                  ? t("editor.showLess")
+                  : t("editor.showMore", { count: hiddenCount })}
               </UIButton>
             ) : null}
           </div>
@@ -214,21 +220,21 @@ export const LevelEditorPublishSection = () => {
 
         <div className="flex flex-col gap-1.5">
           <UIButton onClick={onValidate} variant="outline" size="sm">
-            Validate
+            {t("editor.validate")}
           </UIButton>
           <UIButton onClick={onDownloadJson} size="sm">
             <Download />
-            Export JSON
+            {t("editor.exportJson")}
           </UIButton>
         </div>
 
         <div className="flex gap-1.5">
           <UIButton onClick={resetDraftLevel} variant="outline" size="xs">
-            New
+            {t("editor.new")}
           </UIButton>
           <UIButton onClick={onLoadSample} variant="outline" size="xs">
             <Route />
-            Sample
+            {t("editor.sample")}
           </UIButton>
           <UIButton
             onClick={() => fileInputRef.current?.click()}
@@ -236,7 +242,7 @@ export const LevelEditorPublishSection = () => {
             size="xs"
           >
             <FileUp />
-            Import
+            {t("editor.import")}
           </UIButton>
           <input
             ref={fileInputRef}

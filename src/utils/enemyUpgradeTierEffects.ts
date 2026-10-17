@@ -1,3 +1,4 @@
+import { i18n } from "../core/i18n/i18n";
 import type {
   EnemyUpgradeConfig,
   EnemyUpgradeId,
@@ -107,18 +108,28 @@ export const formatTieredUpgradeSummary = (
   const e = getTieredUpgradeEffect(config, tier);
   const parts: string[] = [];
   if (e.healthMultiplier !== undefined && e.healthMultiplier !== 1) {
-    parts.push(`+${Math.round((e.healthMultiplier - 1) * 100)}% HP`);
+    parts.push(
+      i18n.t("upgrade.hp", { percent: Math.round((e.healthMultiplier - 1) * 100) })
+    );
   }
   if (e.speedMultiplier !== undefined && e.speedMultiplier !== 1) {
-    parts.push(`+${Math.round((e.speedMultiplier - 1) * 100)}% speed`);
+    parts.push(
+      i18n.t("upgrade.speed", {
+        percent: Math.round((e.speedMultiplier - 1) * 100),
+      })
+    );
   }
   if (e.regeneration !== undefined && e.regeneration > 0) {
-    parts.push(`${e.regeneration.toFixed(1)} HP/s regen`);
+    parts.push(i18n.t("upgrade.regen", { amount: e.regeneration.toFixed(1) }));
   }
   if (e.slowResistance !== undefined && e.slowResistance >= 1) {
-    parts.push("Slow immune");
+    parts.push(i18n.t("upgrade.slowImmune"));
   } else if (e.slowResistance !== undefined && e.slowResistance > 0) {
-    parts.push(`+${Math.round(e.slowResistance * 100)}% slow resistance`);
+    parts.push(
+      i18n.t("upgrade.slowResistance", {
+        percent: Math.round(e.slowResistance * 100),
+      })
+    );
   }
   return parts.join(" · ");
 };

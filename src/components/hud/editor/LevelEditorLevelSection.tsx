@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEnemyTypeOptions } from "../../../core/hooks/useEnemyTypeOptions";
 import {
   tileSizeSelector,
@@ -24,6 +25,7 @@ import { EditorColorField } from "./EditorColorField";
 import { EditorField } from "./EditorField";
 
 export const LevelEditorLevelSection = () => {
+  const { t } = useTranslation();
   const tileSize = useGameStore(tileSizeSelector);
   const enemyTypeOptions = useEnemyTypeOptions();
   const {
@@ -38,9 +40,12 @@ export const LevelEditorLevelSection = () => {
 
   return (
     <UIAccordionItem value="level">
-      <UIAccordionTrigger>Level</UIAccordionTrigger>
+      <UIAccordionTrigger>{t("editor.level")}</UIAccordionTrigger>
       <UIAccordionContent className="flex flex-col gap-3">
-        <EditorField label="Name" description="Used in the exported filename.">
+        <EditorField
+          label={t("editor.name")}
+          description={t("editor.nameDescription")}
+        >
           <UIInput
             value={draftLevel.name}
             onChange={(event) => setLevelName(event.target.value)}
@@ -48,7 +53,7 @@ export const LevelEditorLevelSection = () => {
           />
         </EditorField>
 
-        <EditorField label="Starting Money">
+        <EditorField label={t("editor.startingMoney")}>
           <UIInput
             type="number"
             value={draftLevel.startingMoney}
@@ -56,7 +61,7 @@ export const LevelEditorLevelSection = () => {
           />
         </EditorField>
 
-        <EditorField label="Grid Size">
+        <EditorField label={t("editor.gridSize")}>
           <UIInput
             type="number"
             min={MIN_GRID_SIZE}
@@ -74,14 +79,14 @@ export const LevelEditorLevelSection = () => {
         </EditorField>
 
         <div className="grid grid-cols-2 gap-2">
-          <EditorField label="Tile Color">
+          <EditorField label={t("editor.tileColor")}>
             <EditorColorField
               value={draftLevel.tileColor}
               defaultToken="editor-default-tile"
               onChange={setTileColor}
             />
           </EditorField>
-          <EditorField label="Ground Color">
+          <EditorField label={t("editor.groundColor")}>
             <EditorColorField
               value={draftLevel.groundColor}
               defaultToken="editor-default-ground"
@@ -92,7 +97,7 @@ export const LevelEditorLevelSection = () => {
 
         <div className="grid grid-cols-3 gap-2">
           {enemyTypeOptions.map((enemyType) => (
-            <EditorField key={enemyType} label={`${enemyType}`}>
+            <EditorField key={enemyType} label={t(`enemies.${enemyType}.name`)}>
               <UIInput
                 type="number"
                 min={0}

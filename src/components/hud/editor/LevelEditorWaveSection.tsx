@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 
@@ -17,6 +18,7 @@ import { EditorSection } from "./EditorSection";
 import { EditorEmptyState } from "./EditorEmptyState";
 
 export const LevelEditorWaveSection = () => {
+  const { t } = useTranslation();
   const enemyTypeOptions = useEnemyTypeOptions();
   const {
     draftLevel,
@@ -43,15 +45,15 @@ export const LevelEditorWaveSection = () => {
 
   return (
     <UIAccordionItem value="waves">
-      <UIAccordionTrigger>Waves</UIAccordionTrigger>
+      <UIAccordionTrigger>{t("editor.waves")}</UIAccordionTrigger>
       <UIAccordionContent className="flex flex-col gap-3">
         <UIButton size="sm" variant="outline" onClick={addWave}>
           <Plus />
-          Add Wave
+          {t("editor.addWave")}
         </UIButton>
 
         {draftLevel.waveConfigs.length === 0 ? (
-          <EditorEmptyState message="No waves configured yet." />
+          <EditorEmptyState message={t("editor.noWaves")} />
         ) : null}
 
         {draftLevel.waveConfigs.map((wave, waveIndex) => {
@@ -70,9 +72,14 @@ export const LevelEditorWaveSection = () => {
                   ) : (
                     <ChevronUp className="size-3 shrink-0 text-muted-foreground" />
                   )}
-                  <UITypography variant="medium">Wave {waveIndex + 1}</UITypography>
+                  <UITypography variant="medium">
+                    {t("editor.wave", { index: waveIndex + 1 })}
+                  </UITypography>
                   <UITypography variant="verySmall" className="text-muted-foreground">
-                    {wave.totalEnemies} enemies, {wave.enemies.length} groups
+                    {t("editor.waveSummary", {
+                      enemies: wave.totalEnemies,
+                      groups: wave.enemies.length,
+                    })}
                   </UITypography>
                 </button>
                 <div className="flex gap-1.5">
@@ -80,7 +87,7 @@ export const LevelEditorWaveSection = () => {
                     size="icon-xs"
                     variant="outline"
                     onClick={() => addWaveEnemyGroup(waveIndex)}
-                    title="Add enemy group"
+                    title={t("editor.addEnemyGroup")}
                   >
                     <Plus />
                   </UIButton>
@@ -88,7 +95,7 @@ export const LevelEditorWaveSection = () => {
                     size="icon-xs"
                     variant="destructive"
                     onClick={() => removeWave(waveIndex)}
-                    title="Remove wave"
+                    title={t("editor.removeWave")}
                   >
                     <Trash2 />
                   </UIButton>
@@ -98,7 +105,7 @@ export const LevelEditorWaveSection = () => {
               {!isCollapsed ? (
                 <div className="mt-3 flex flex-col gap-3">
                   {wave.enemies.length === 0 ? (
-                    <EditorEmptyState message="No enemy groups. Add one above." />
+                    <EditorEmptyState message={t("editor.noEnemyGroups")} />
                   ) : null}
 
                   {wave.enemies.map((enemyGroup, enemyGroupIndex) => (
@@ -108,7 +115,7 @@ export const LevelEditorWaveSection = () => {
                     >
                       <div className="flex items-center justify-between">
                         <UITypography variant="verySmall" className="text-muted-foreground">
-                          Group {enemyGroupIndex + 1}
+                          {t("editor.group", { index: enemyGroupIndex + 1 })}
                         </UITypography>
                         <UIButton
                           size="icon-xs"
@@ -118,7 +125,7 @@ export const LevelEditorWaveSection = () => {
                           <Trash2 />
                         </UIButton>
                       </div>
-                      <EditorField label="Type">
+                      <EditorField label={t("editor.type")}>
                         <UISelect
                           value={enemyGroup.type}
                           onChange={(event) =>
@@ -129,13 +136,13 @@ export const LevelEditorWaveSection = () => {
                         >
                           {enemyTypeOptions.map((enemyType) => (
                             <option key={enemyType} value={enemyType}>
-                              {enemyType}
+                              {t(`enemies.${enemyType}.name`)}
                             </option>
                           ))}
                         </UISelect>
                       </EditorField>
                       <div className="grid grid-cols-2 gap-2">
-                        <EditorField label="Count">
+                        <EditorField label={t("editor.count")}>
                           <UIInput
                             type="number"
                             min={0}
@@ -147,7 +154,7 @@ export const LevelEditorWaveSection = () => {
                             }
                           />
                         </EditorField>
-                        <EditorField label="Interval">
+                        <EditorField label={t("editor.interval")}>
                           <UIInput
                             type="number"
                             step="0.1"

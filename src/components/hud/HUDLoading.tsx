@@ -1,4 +1,5 @@
 import { FC } from "react";
+import { useTranslation } from "react-i18next";
 
 import { HUDWrapper } from "./HUDWrapper";
 import { UITypography } from "../ui/UITypography";
@@ -9,10 +10,9 @@ type HUDLoadingProps = {
   className?: string;
 };
 
-export const HUDLoading: FC<HUDLoadingProps> = ({
-  message = "Loading...",
-  className,
-}) => {
+export const HUDLoading: FC<HUDLoadingProps> = ({ message, className }) => {
+  const { t } = useTranslation();
+
   return (
     <HUDWrapper
       className={cn(
@@ -26,7 +26,7 @@ export const HUDLoading: FC<HUDLoadingProps> = ({
           aria-hidden
         />
         <UITypography variant="body" className="text-muted-foreground">
-          {message}
+          {message ?? t("common.loading")}
         </UITypography>
       </div>
     </HUDWrapper>

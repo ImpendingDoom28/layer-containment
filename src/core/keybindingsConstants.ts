@@ -12,9 +12,11 @@ const KEYBINDING_KEYS = [
 
 export type KeybindingKey = (typeof KEYBINDING_KEYS)[number];
 
+export type KeybindingLabelKey = `controls.${KeybindingKey}`;
+
 export type KeybindingDefinition = {
   key: KeybindingKey;
-  label: string;
+  label: KeybindingLabelKey;
   visible?: boolean;
 };
 
@@ -32,17 +34,29 @@ export type KeybindingEvent = Pick<
   "code" | "ctrlKey" | "shiftKey" | "altKey" | "metaKey"
 >;
 
-export const KEYBINDING_DEFINITIONS: readonly KeybindingDefinition[] = [
-  { key: "cameraForward", label: "Move forward" },
-  { key: "cameraBackward", label: "Move backward" },
-  { key: "cameraLeft", label: "Move left" },
-  { key: "cameraRight", label: "Move right" },
-  { key: "cameraUp", label: "Move up" },
-  { key: "cameraDown", label: "Move down" },
-  { key: "pause", label: "Pause / Resume" },
-  { key: "menu", label: "Open / close menu" },
-  { key: "toggleDebug", label: "Toggle debug overlay", visible: false },
+type KeybindingEntry = {
+  key: KeybindingKey;
+  visible?: boolean;
+};
+
+const KEYBINDING_ENTRIES: readonly KeybindingEntry[] = [
+  { key: "cameraForward" },
+  { key: "cameraBackward" },
+  { key: "cameraLeft" },
+  { key: "cameraRight" },
+  { key: "cameraUp" },
+  { key: "cameraDown" },
+  { key: "pause" },
+  { key: "menu" },
+  { key: "toggleDebug", visible: false },
 ];
+
+export const KEYBINDING_DEFINITIONS: readonly KeybindingDefinition[] =
+  KEYBINDING_ENTRIES.map(({ key, visible }) => ({
+    key,
+    label: `controls.${key}`,
+    visible,
+  }));
 
 // Bindings that can be changed from the Settings panel. The debug toggle is
 // development-only and stays out of the UI.

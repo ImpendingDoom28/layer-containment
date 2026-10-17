@@ -84,6 +84,9 @@ const handleEnemyDeath = (enemy: Enemy): void => {
   gameEvents.emit(GameEvent.ENEMY_KILLED, {
     enemyId: enemy.id,
     enemyType: enemy.type,
+    reward: enemy.reward,
+    size: enemy.size,
+    color: enemy.color,
     worldPosition: {
       x: enemy.x,
       y: enemy.size / 2,

@@ -5,6 +5,7 @@ import { CylinderGeometry, MeshStandardMaterial } from "three";
 
 import type { Tower as TowerInstance } from "../../core/types/game";
 import { GUIDebugInfo } from "../gui/GUIDebugInfo";
+import { RangeRing } from "./effects/RangeRing";
 import { Vector3D } from "../../core/types/utils";
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import {
@@ -233,21 +234,11 @@ export const Tower: FC<TowerProps> = memo(
         </mesh>
         {/* Selection indicator */}
         {isSelected && (effectiveRange ?? tower.range) > 0.01 && (
-          <mesh position={[0, 0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry
-              args={[
-                (effectiveRange ?? tower.range) * 0.9,
-                effectiveRange ?? tower.range,
-                32,
-              ]}
-            />
-            <meshStandardMaterial
-              color={tower.color}
-              transparent
-              opacity={0.3}
-              side={2}
-            />
-          </mesh>
+          <RangeRing
+            range={effectiveRange ?? tower.range}
+            color={tower.color}
+            position={[0, 0.1, 0]}
+          />
         )}
         <GUIDebugInfo entity={tower} offsetY={towerHeight + 0.3} />
       </group>

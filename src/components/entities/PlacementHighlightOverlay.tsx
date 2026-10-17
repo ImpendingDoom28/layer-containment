@@ -8,14 +8,19 @@ import {
   pathYOffsetSelector,
   selectedTowerTypeToPlaceSelector,
   tileSizeSelector,
+  towerTypesSelector,
   useGameStore,
 } from "../../core/stores/useGameStore";
 import {
   gridSizeSelector,
+  towersSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
+import { getEffectiveTowerCombatStats } from "../../core/relayBuffs";
 import type { TileData } from "../../core/types/utils";
+import type { Tower } from "../../core/types/game";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
+import { RangeRing } from "./effects/RangeRing";
 import {
   flatFieldToSphereOverlayPlanePose,
   getPlanetRadius,
@@ -32,7 +37,9 @@ type PlacementHighlightOverlayProps = {
 export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
   memo(({ hoveredTile }) => {
     const selectedTowerType = useGameStore(selectedTowerTypeToPlaceSelector);
+    const towerTypes = useGameStore(towerTypesSelector);
     const gridSize = useLevelStore(gridSizeSelector);
+    const towers = useLevelStore(towersSelector);
     const tileSize = useGameStore(tileSizeSelector);
     const pathYOffset = useGameStore(pathYOffsetSelector);
     const { getTilePlacementState } = useLevelSystem();
@@ -106,6 +113,65 @@ export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
       invalidColor,
     ]);
 
+    // Range disc for the tile under the cursor while placing a tower, so the
+    // player sees the combat reach before committing. Reuses the selected
+    // tower's range ring component and the same effective-range calculation
+    // (so an adjacent relay's range buff is reflected in the preview).
+    const rangeRing = useMemo(() => {
+      if (!selectedTowerType || !hoveredTile || !towerTypes) return null;
+
+      const wx = tileToWorldCoordinate(hoveredTile.gridX, gridSize, tileSize);
+      const wz = tileToWorldCoordinate(hoveredTile.gridZ, gridSize, tileSize);
+
+      const candidate: Tower = {
+        ...towerTypes[selectedTowerType],
+        id: -1,
+        type: selectedTowerType,
+        lastFireTime: 0,
+        gridX: hoveredTile.gridX,
+        gridZ: hoveredTile.gridZ,
+        x: wx,
+        z: wz,
+      };
+      const range = getEffectiveTowerCombatStats(
+        candidate,
+        [...towers, candidate],
+        towerTypes
+      ).range;
+      if (!range || range <= 0.01) return null;
+
+      const placementState = getTilePlacementState(
+        hoveredTile.gridX,
+        hoveredTile.gridZ
+      );
+
+      const { position, quaternion } = flatFieldToSphereOverlayPlanePose(
+        wx,
+        wz,
+        planetRadius,
+        pathYOffset + PLACEMENT_OVERLAY_Y_EPSILON + 0.004
+      );
+
+      return {
+        position,
+        quaternion,
+        range,
+        color: placementState.isBlocked ? invalidColor : validColor,
+      };
+    }, [
+      selectedTowerType,
+      hoveredTile,
+      towerTypes,
+      towers,
+      getTilePlacementState,
+      gridSize,
+      tileSize,
+      planetRadius,
+      pathYOffset,
+      validColor,
+      invalidColor,
+    ]);
+
     if (!selectedTowerType || cells.length === 0) {
       return null;
     }
@@ -121,6 +187,17 @@ export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
             color={color}
           />
         ))}
+        {rangeRing && (
+          <RangeRing
+            range={rangeRing.range}
+            color={rangeRing.color}
+            position={rangeRing.position}
+            quaternion={rangeRing.quaternion}
+            innerRadiusFraction={0.94}
+            radialSegments={48}
+            opacity={0.45}
+          />
+        )}
       </group>
     );
   });

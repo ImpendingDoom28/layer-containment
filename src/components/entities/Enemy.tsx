@@ -145,12 +145,31 @@ export const Enemy: FC<EnemyProps> = memo(
 
     const meshRef = useRef<Group>(null);
     const fillBarRef = useRef<Mesh>(null);
+    const flashMeshRef = useRef<Mesh>(null);
     const healthTierRef = useRef<HealthTier>("high");
     const upgradeFirstRingRef = useRef<Mesh>(null);
     const hasTriggeredSpawnEffect = useRef(false);
     const [isSlowed, setIsSlowed] = useState(false);
     const isSlowedRef = useRef(false);
     const ringTimeRef = useRef(0);
+    const prevHealthRef = useRef(snapshot?.health ?? 0);
+    const hitFlashRef = useRef(0);
+
+    // Per-enemy material for the hit-flash overlay: the body itself shares a
+    // cached material per color, so a flash must live on its own mesh to avoid
+    // lighting every same-colored enemy at once.
+    const flashMaterial = useMemo(
+      () =>
+        new MeshStandardMaterial({
+          color: getCssColorValue("scene-white"),
+          emissive: getCssColorValue("scene-white"),
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+        }),
+      []
+    );
+    useEffect(() => () => flashMaterial.dispose(), [flashMaterial]);
 
     const size = snapshot?.size ?? 0;
 
@@ -211,6 +230,32 @@ export const Enemy: FC<EnemyProps> = memo(
         const footing = applySphereFooting(pos.x, pos.z, pos.y, live.size / 2);
         meshRef.current.position.copy(footing.position);
         meshRef.current.quaternion.copy(footing.quaternion);
+      }
+
+      // Emissive hit-flash: a drop in health bumps a decaying flash rendered by
+      // a slightly larger, transparent white overlay mesh around the body.
+      if (live.health < prevHealthRef.current - 1e-6) {
+        hitFlashRef.current = Math.min(
+          1,
+          hitFlashRef.current + 0.7 + (prevHealthRef.current - live.health) / 25
+        );
+      }
+      prevHealthRef.current = live.health;
+
+      const flashMesh = flashMeshRef.current;
+      if (flashMesh) {
+        const flashMaterial = flashMesh.material as MeshStandardMaterial;
+        if (hitFlashRef.current > 0.004) {
+          flashMaterial.opacity = hitFlashRef.current * 0.85;
+          flashMesh.visible = true;
+          hitFlashRef.current = Math.max(
+            0,
+            hitFlashRef.current - delta * getTimeScale() * 5
+          );
+        } else if (flashMesh.visible) {
+          flashMaterial.opacity = 0;
+          flashMesh.visible = false;
+        }
       }
 
       // Imperative health bar: scale the shared unit box instead of
@@ -284,6 +329,16 @@ export const Enemy: FC<EnemyProps> = memo(
           scale={[size, size, size]}
           geometry={sharedUnitSphere}
           material={getEnemyBodyMaterial(snapshot.color)}
+        />
+
+        {/* Hit-flash overlay: transparent white shell that lights up on damage */}
+        <mesh
+          ref={flashMeshRef}
+          visible={false}
+          position={[0, size / 2, 0]}
+          scale={[size * 1.12, size * 1.12, size * 1.12]}
+          geometry={sharedUnitSphere}
+          material={flashMaterial}
         />
 
         {/* Health bar - always faces camera */}

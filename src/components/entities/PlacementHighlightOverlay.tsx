@@ -13,10 +13,14 @@ import {
 } from "../../core/stores/useGameStore";
 import {
   gridSizeSelector,
+  towersSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
+import { getEffectiveTowerCombatStats } from "../../core/relayBuffs";
 import type { TileData } from "../../core/types/utils";
+import type { Tower } from "../../core/types/game";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
+import { RangeRing } from "./effects/RangeRing";
 import {
   flatFieldToSphereOverlayPlanePose,
   getPlanetRadius,
@@ -35,6 +39,7 @@ export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
     const selectedTowerType = useGameStore(selectedTowerTypeToPlaceSelector);
     const towerTypes = useGameStore(towerTypesSelector);
     const gridSize = useLevelStore(gridSizeSelector);
+    const towers = useLevelStore(towersSelector);
     const tileSize = useGameStore(tileSizeSelector);
     const pathYOffset = useGameStore(pathYOffsetSelector);
     const { getTilePlacementState } = useLevelSystem();
@@ -109,20 +114,36 @@ export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
     ]);
 
     // Range disc for the tile under the cursor while placing a tower, so the
-    // player sees the combat reach before committing (mirrors the selected
-    // tower's range ring).
+    // player sees the combat reach before committing. Reuses the selected
+    // tower's range ring component and the same effective-range calculation
+    // (so an adjacent relay's range buff is reflected in the preview).
     const rangeRing = useMemo(() => {
-      if (!selectedTowerType || !hoveredTile) return null;
+      if (!selectedTowerType || !hoveredTile || !towerTypes) return null;
 
-      const range = towerTypes?.[selectedTowerType]?.range;
+      const wx = tileToWorldCoordinate(hoveredTile.gridX, gridSize, tileSize);
+      const wz = tileToWorldCoordinate(hoveredTile.gridZ, gridSize, tileSize);
+
+      const candidate: Tower = {
+        ...towerTypes[selectedTowerType],
+        id: -1,
+        type: selectedTowerType,
+        lastFireTime: 0,
+        gridX: hoveredTile.gridX,
+        gridZ: hoveredTile.gridZ,
+        x: wx,
+        z: wz,
+      };
+      const range = getEffectiveTowerCombatStats(
+        candidate,
+        [...towers, candidate],
+        towerTypes
+      ).range;
       if (!range || range <= 0.01) return null;
 
       const placementState = getTilePlacementState(
         hoveredTile.gridX,
         hoveredTile.gridZ
       );
-      const wx = tileToWorldCoordinate(hoveredTile.gridX, gridSize, tileSize);
-      const wz = tileToWorldCoordinate(hoveredTile.gridZ, gridSize, tileSize);
 
       const { position, quaternion } = flatFieldToSphereOverlayPlanePose(
         wx,
@@ -141,6 +162,7 @@ export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
       selectedTowerType,
       hoveredTile,
       towerTypes,
+      towers,
       getTilePlacementState,
       gridSize,
       tileSize,
@@ -166,20 +188,15 @@ export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
           />
         ))}
         {rangeRing && (
-          <mesh
+          <RangeRing
+            range={rangeRing.range}
+            color={rangeRing.color}
             position={rangeRing.position}
             quaternion={rangeRing.quaternion}
-            raycast={() => null}
-          >
-            <ringGeometry args={[rangeRing.range * 0.94, rangeRing.range, 48]} />
-            <meshBasicMaterial
-              color={rangeRing.color}
-              transparent
-              opacity={0.45}
-              side={2}
-              depthWrite={false}
-            />
-          </mesh>
+            innerRadiusFraction={0.94}
+            radialSegments={48}
+            opacity={0.45}
+          />
         )}
       </group>
     );

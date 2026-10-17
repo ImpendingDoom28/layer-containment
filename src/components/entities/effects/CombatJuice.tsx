@@ -6,6 +6,7 @@ import { gameEvents } from "../../../utils/eventEmitter";
 import { GameEvent } from "../../../core/types/enums/events";
 import { getPlanetRadius, flatCombatPointToWorldPosition } from "../../../utils/planetSurfaceMapping";
 import { useReducedMotion } from "../../../core/hooks/useReducedMotion";
+import { useNextId } from "../../../core/hooks/utils/useNextId";
 import { getCssColorValue } from "../../ui/lib/cssUtils";
 
 import { Effect } from "./Effect";
@@ -25,9 +26,6 @@ type CombatJuiceProps = {
   shouldStopMovement: boolean;
 };
 
-let burstId = 0;
-const nextBurstId = () => ++burstId;
-
 /**
  * Subscribes to combat game events and renders their juice: gold reward floats
  * (camera-facing sprites) and a small burst when an enemy dies. Event payload
@@ -36,6 +34,7 @@ const nextBurstId = () => ++burstId;
 export const CombatJuice = memo(({ shouldStopMovement }: CombatJuiceProps) => {
   const floatingTextsRef = useRef<FloatingTextsHandle>(null);
   const [bursts, setBursts] = useState<DeathBurst[]>([]);
+  const { getNextId: getNextBurstId } = useNextId();
 
   const gridSize = useLevelStore((state) => state.gridSize);
   const tileSize = useGameStore((state) => state.tileSize);
@@ -62,7 +61,7 @@ export const CombatJuice = memo(({ shouldStopMovement }: CombatJuiceProps) => {
       setBursts((prev) => [
         ...prev.slice(-(MAX_ACTIVE_BURSTS - 1)),
         {
-          id: nextBurstId(),
+          id: getNextBurstId(),
           position: [position.x, position.y, position.z],
           color: data.color,
         },

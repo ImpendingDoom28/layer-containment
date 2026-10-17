@@ -1,4 +1,4 @@
-import type { Locale } from "./en";
+import type { Locale } from "./locale";
 
 // Declared via an intermediate (non-fresh) value so TypeScript skips the
 // excess-property check: Russian needs extra plural variants (`_one/_few/

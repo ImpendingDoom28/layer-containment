@@ -8,7 +8,7 @@ import type { ThreeEvent } from "@react-three/fiber";
 
 import { getEffectiveTowerCombatStats } from "../../core/relayBuffs";
 import type { Tower as TowerInstance } from "../../core/types/game";
-import { useI18nT } from "../../core/i18n/useI18nT";
+import { useTranslationInCanvas } from "../../core/i18n/useTranslationInCanvas";
 import {
   towerSellPriceMultiplierSelector,
   towerTypesSelector,
@@ -35,7 +35,7 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
   tower,
   onSell,
 }) => {
-  const t = useI18nT();
+  const t = useTranslationInCanvas();
   const towerSellPriceMultiplier = useGameStore(
     towerSellPriceMultiplierSelector
   );

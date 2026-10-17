@@ -20,7 +20,7 @@ import {
   useUpgradeStore,
 } from "../../core/stores/useUpgradeStore";
 import { EnemyConfig, EnemyUpgradeStackTier } from "../../core/types/game";
-import { useI18nT } from "../../core/i18n/useI18nT";
+import { useTranslationInCanvas } from "../../core/i18n/useTranslationInCanvas";
 import {
   getPickTierForStackEntryIndex,
   getTotalRewardMultiplierFromStack,
@@ -52,7 +52,7 @@ const EnemyPreviewModel: FC<EnemyPreviewModelProps> = ({
   name,
   count,
 }) => {
-  const t = useI18nT();
+  const t = useTranslationInCanvas();
   return (
     <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border border-border/70 bg-muted/35 px-2 py-1.5">
       <UITypography
@@ -84,7 +84,7 @@ type GUINextWavePreviewProps = {
 export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
   pathIndex,
 }) => {
-  const t = useI18nT();
+  const t = useTranslationInCanvas();
   const nextWaveReady = useWaveStore(nextWaveReadySelector);
   const pathWaypoints = useLevelStore(pathWaypointsSelector);
   const totalWaves = useLevelStore(totalWavesSelector);

@@ -21,7 +21,7 @@ const getSnapshot = (): string => i18n.resolvedLanguage ?? "";
  * in canvas components). Returns a stable `t` that reads from the i18next
  * singleton.
  */
-export const useI18nT = (): TFunction<"translation", undefined> => {
+export const useTranslationInCanvas = (): TFunction<"translation", undefined> => {
   useSyncExternalStore(subscribe, getSnapshot);
   // `i18n.t` is already the fully-typed `TFunction` for the default
   // ("translation") namespace; bind it so it can be passed around safely.

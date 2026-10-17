@@ -8,7 +8,7 @@ import { getPlanetRadius, flatCombatPointToWorldPosition } from "../../../utils/
 import { useReducedMotion } from "../../../core/hooks/useReducedMotion";
 import { useNextId } from "../../../core/hooks/utils/useNextId";
 import { getCssColorValue } from "../../ui/lib/cssUtils";
-import { useI18nT } from "../../../core/i18n/useI18nT";
+import { useTranslationInCanvas } from "../../../core/i18n/useTranslationInCanvas";
 
 import { Effect } from "./Effect";
 import { FloatingTexts, type FloatingTextsHandle } from "./FloatingTexts";
@@ -41,7 +41,7 @@ export const CombatJuice = memo(({ shouldStopMovement }: CombatJuiceProps) => {
   const tileSize = useGameStore((state) => state.tileSize);
   const planetRadius = getPlanetRadius(gridSize, tileSize);
   const reducedMotion = useReducedMotion();
-  const t = useI18nT();
+  const t = useTranslationInCanvas();
 
   useEffect(() => {
     const onEnemyKilled = (data: {

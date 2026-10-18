@@ -223,6 +223,25 @@ describe("enemyActions", () => {
     });
   });
 
+  it("credits exactly one kill when extra hits land on an already-dead enemy", () => {
+    statsActions(testWorld).startRunStats();
+    enemyActions(testWorld).spawnEnemy(baseEnemy(1, 100));
+
+    // First hit kills; the entity stays alive (health 0) until
+    // EnemyDeathSystem settles it, so more hits can land in that window.
+    enemyActions(testWorld).damageEnemy(1, 150, { towerType: "basic" });
+    enemyActions(testWorld).damageEnemy(1, 25, { towerType: "aoe" });
+    enemyActions(testWorld).damageEnemy(1, 10, { towerType: "laser" });
+
+    const killed = testWorld
+      .query(damageDealtRequest)
+      .map((e) => e.get(damageDealtRequest)!)
+      .filter((r) => r.killed);
+
+    expect(killed).toHaveLength(1);
+    expect(killed[0]).toMatchObject({ towerType: "basic", amount: 100 });
+  });
+
   it("damageEnemy without a source raises no stats receipt", () => {
     statsActions(testWorld).startRunStats();
     enemyActions(testWorld).spawnEnemy(baseEnemy(1, 100));

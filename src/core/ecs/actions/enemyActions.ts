@@ -269,7 +269,11 @@ export const enemyActions = createActions((world) => ({
 
     const newHealth = enemy.health - damage;
 
-    if (source && world.queryFirst(IsStats)) {
+    // The entity stays alive (health 0) until EnemyDeathSystem settles the
+    // kill, so further hits can land in that window. Credit the kill only on
+    // the alive-to-dead transition and skip receipts for already-dead enemies
+    // entirely (they deal no effective damage).
+    if (source && enemy.health > 0 && world.queryFirst(IsStats)) {
       const effectiveDamage = Math.max(0, Math.min(damage, enemy.health));
       world.spawn(
         damageDealtRequest({

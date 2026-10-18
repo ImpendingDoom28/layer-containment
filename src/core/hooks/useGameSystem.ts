@@ -98,8 +98,11 @@ export const useGameSystem = () => {
 
   const winGame = useCallback(() => {
     setGameStatus("won");
+    // Flush pending receipts so the end screen freezes a complete snapshot,
+    // regardless of per-frame fold ordering.
+    stats.flushRunStats();
     gameEvents.emit(GameEvent.GAME_WON, { gameWonType: "win" });
-  }, [setGameStatus]);
+  }, [setGameStatus, stats]);
 
   const canPause = getCanPause(gameStatus, nextWaveReady);
 

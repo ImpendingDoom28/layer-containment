@@ -1,6 +1,7 @@
 import { createActions } from "koota";
 
 import type { TowerType } from "../../types/game";
+import { runStatsSystem } from "../systems/statsSystem";
 import {
   DamageByTowerType,
   KillsByTowerType,
@@ -52,5 +53,16 @@ export const statsActions = createActions((world) => ({
   recordTowerPurchase: (towerType: TowerType, amount: number): void => {
     if (!world.queryFirst(IsStats)) return;
     world.spawn(moneySpentRequest({ towerType, amount }));
+  },
+
+  /**
+   * Folds all pending receipts into the stats entity right now (the stats
+   * entity is kept). Called on the end-state transitions so the result
+   * screen freezes a complete snapshot even if the transition lands before
+   * the next per-frame fold.
+   */
+  flushRunStats: (): void => {
+    if (!world.queryFirst(IsStats)) return;
+    runStatsSystem(world);
   },
 }));

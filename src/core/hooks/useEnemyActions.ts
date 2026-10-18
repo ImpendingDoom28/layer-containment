@@ -5,6 +5,7 @@ import {
   enemyActions,
   type EnemyRuntimeUpdates,
 } from "../ecs/actions/enemyActions";
+import type { TowerType } from "../types/game";
 
 export const useEnemyActions = () => {
   const actions = useActions(enemyActions);
@@ -24,8 +25,12 @@ export const useEnemyActions = () => {
   );
 
   const damageEnemy = useCallback(
-    (enemyId: number, damage: number): boolean => {
-      return actions.damageEnemy(enemyId, damage);
+    (
+      enemyId: number,
+      damage: number,
+      source?: { towerType: TowerType }
+    ): boolean => {
+      return actions.damageEnemy(enemyId, damage, source);
     },
     [actions]
   );

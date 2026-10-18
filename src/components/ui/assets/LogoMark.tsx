@@ -4,7 +4,8 @@ type LogoMarkProps = {
   className?: string;
 };
 
-// Containment reticle: tick ring + four layer plates holding an orange core.
+// Containment reticle: tick ring + four hourglass-shaped layer plates that
+// pinch toward the orange core.
 export const LogoMark: FC<LogoMarkProps> = ({ className }) => (
   <svg
     viewBox="0 0 256 256"
@@ -21,10 +22,10 @@ export const LogoMark: FC<LogoMarkProps> = ({ className }) => (
       <line x1="228" y1="128" x2="240" y2="128" />
     </g>
     <g fill="currentColor" fillOpacity="0.75">
-      <rect x="92" y="50" width="72" height="14" rx="7" />
-      <rect x="92" y="76" width="72" height="14" rx="7" />
-      <rect x="92" y="166" width="72" height="14" rx="7" />
-      <rect x="92" y="192" width="72" height="14" rx="7" />
+      <path d="M 92.00 50.00 L 164.00 50.00 Q 168.00 50.00 165.68 53.25 L 160.32 60.75 Q 158.00 64.00 154.00 64.00 L 102.00 64.00 Q 98.00 64.00 95.68 60.75 L 90.32 53.25 Q 88.00 50.00 92.00 50.00 Z" />
+      <path d="M 102.00 76.00 L 154.00 76.00 Q 158.00 76.00 156.02 79.47 L 151.98 86.53 Q 150.00 90.00 146.00 90.00 L 110.00 90.00 Q 106.00 90.00 104.02 86.53 L 99.98 79.47 Q 98.00 76.00 102.00 76.00 Z" />
+      <path d="M 110.00 166.00 L 146.00 166.00 Q 150.00 166.00 151.98 169.47 L 156.02 176.53 Q 158.00 180.00 154.00 180.00 L 102.00 180.00 Q 98.00 180.00 99.98 176.53 L 104.02 169.47 Q 106.00 166.00 110.00 166.00 Z" />
+      <path d="M 102.00 192.00 L 154.00 192.00 Q 158.00 192.00 160.32 195.25 L 165.68 202.75 Q 168.00 206.00 164.00 206.00 L 92.00 206.00 Q 88.00 206.00 90.32 202.75 L 95.68 195.25 Q 98.00 192.00 102.00 192.00 Z" />
     </g>
     <polygon
       points="128,94 157.44,111 157.44,145 128,162 98.56,145 98.56,111"

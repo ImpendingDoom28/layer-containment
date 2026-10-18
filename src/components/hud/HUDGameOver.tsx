@@ -85,6 +85,7 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
 
   return (
     <HUDOverlay
+      className={cn(closing && "pointer-events-none")}
       contentClassName={cn(closing && "pointer-events-none")}
     >
       <UICard

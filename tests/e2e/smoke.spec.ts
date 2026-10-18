@@ -39,6 +39,12 @@ test("loads the main menu and enters gameplay HUD", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: "Level Creator" })
   ).toBeVisible();
+
+  const favicon = page.locator('link[rel="icon"]');
+  await expect(favicon).toHaveAttribute("href", "/logo.svg");
+  await expect(
+    async () => (await page.request.get("/logo.svg")).status()
+  ).resolves.toBe(200);
 });
 
 test("shows the in-game HUD after starting a run", async ({ page }) => {

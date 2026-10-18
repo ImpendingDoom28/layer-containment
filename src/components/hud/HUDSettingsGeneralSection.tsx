@@ -27,24 +27,6 @@ export const HUDSettingsGeneralSection: FC = () => {
   return (
     <section className="flex flex-col gap-4">
       <UITypography variant="body">{t("settings.general")}</UITypography>
-      <div className="flex items-start gap-2">
-        <UICheckbox
-          id="pause-when-tab-hidden"
-          checked={pauseWhenTabHidden}
-          onCheckedChange={(checked) => setPauseWhenTabHidden(checked === true)}
-        />
-        <div className="flex flex-col gap-1">
-          <label
-            htmlFor="pause-when-tab-hidden"
-            className="text-sm font-medium leading-none"
-          >
-            {t("settings.pauseWhenTabHidden")}
-          </label>
-          <UITypography variant="small" className="text-muted-foreground">
-            {t("settings.pauseWhenTabHiddenHint")}
-          </UITypography>
-        </div>
-      </div>
       <div className="flex items-center justify-between gap-2">
         <label
           htmlFor="settings-language"
@@ -67,6 +49,24 @@ export const HUDSettingsGeneralSection: FC = () => {
             </option>
           ))}
         </UISelect>
+      </div>
+      <div className="flex items-start gap-2">
+        <UICheckbox
+          id="pause-when-tab-hidden"
+          checked={pauseWhenTabHidden}
+          onCheckedChange={(checked) => setPauseWhenTabHidden(checked === true)}
+        />
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor="pause-when-tab-hidden"
+            className="text-sm font-medium leading-none"
+          >
+            {t("settings.pauseWhenTabHidden")}
+          </label>
+          <UITypography variant="small" className="text-muted-foreground">
+            {t("settings.pauseWhenTabHiddenHint")}
+          </UITypography>
+        </div>
       </div>
     </section>
   );

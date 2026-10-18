@@ -5,7 +5,6 @@ export const en = {
     pauseWhenTabHidden: "Pause when tab is hidden",
     pauseWhenTabHiddenHint: "Uncheck to keep the game running while you are on another tab.",
     language: "Language",
-    languageHint: "Applies to all in-game text immediately.",
     audio: "Audio",
     mute: "Mute",
     unmute: "Unmute",

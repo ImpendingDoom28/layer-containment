@@ -46,17 +46,12 @@ export const HUDSettingsGeneralSection: FC = () => {
         </div>
       </div>
       <div className="flex items-center justify-between gap-2">
-        <div className="flex flex-col gap-1">
-          <label
-            htmlFor="settings-language"
-            className="text-sm font-medium leading-none"
-          >
-            {t("settings.language")}
-          </label>
-          <UITypography variant="small" className="text-muted-foreground">
-            {t("settings.languageHint")}
-          </UITypography>
-        </div>
+        <label
+          htmlFor="settings-language"
+          className="text-sm font-medium leading-none"
+        >
+          {t("settings.language")}
+        </label>
         <UISelect
           id="settings-language"
           className="ml-auto"

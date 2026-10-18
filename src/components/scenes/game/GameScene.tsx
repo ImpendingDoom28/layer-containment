@@ -13,7 +13,6 @@ import type {
   Enemy as EnemyInstance,
   Projectile as ProjectileInstance,
   GameStatus,
-  ActiveEffect,
   TowerType,
 } from "../../../core/types/game";
 import { WaveLoopSystem } from "../../systems/WaveLoopSystem";
@@ -44,10 +43,6 @@ import { Skybox } from "../shared/Skybox";
 
 type GameSceneProps = {
   placeTower: (gridX: number, gridZ: number, towerType: TowerType) => void;
-  activeEffects: ActiveEffect[];
-  onSpawnEffect: (position: [number, number, number], color: string) => void;
-  onEndEffect: (position: [number, number, number], color: string) => void;
-  onEffectComplete: (effectId: number) => void;
   selectedTower: TowerInstance | null;
   shouldDisableControls: boolean;
   shouldStopMovement: boolean;
@@ -68,10 +63,6 @@ type GameSceneProps = {
 
 export const GameScene: React.FC<GameSceneProps> = ({
   placeTower,
-  activeEffects,
-  onSpawnEffect,
-  onEndEffect,
-  onEffectComplete,
   selectedTower,
   shouldStopMovement,
   shouldStopCamera,
@@ -157,11 +148,7 @@ export const GameScene: React.FC<GameSceneProps> = ({
         onSellTower={onSellTower}
         hoveredTile={hoveredTile}
         selectedTower={selectedTower}
-        onSpawnEffect={onSpawnEffect}
-        onEndEffect={onEndEffect}
         shouldStopMovement={shouldStopMovement}
-        activeEffects={activeEffects}
-        onEffectComplete={onEffectComplete}
       />
 
       <CombatJuice shouldStopMovement={shouldStopMovement} />

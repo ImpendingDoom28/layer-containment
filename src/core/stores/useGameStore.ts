@@ -3,7 +3,6 @@ import { create } from "zustand";
 import type {
   TowerType,
   GameStatus,
-  ActiveEffect,
   TowerConfig,
   EnemyType,
   EnemyConfig,
@@ -17,7 +16,6 @@ import { getIsDocumentVisible } from "../../utils/isDocumentVisible";
 type GameStoreState = {
   enemyHealthLoss: number;
   startingHealth: number;
-  activeEffects: ActiveEffect[];
   /**
    * The type of tower that is currently selected to place from the tower shop
    */
@@ -50,9 +48,6 @@ type GameStoreState = {
 type GameStoreActions = {
   setShowSettings: (show: boolean) => void;
   initializeGameState: (config: GameConfigData) => void;
-  setActiveEffects: (
-    effects: ActiveEffect[] | ((prev: ActiveEffect[]) => ActiveEffect[])
-  ) => void;
   setGameStatus: (status: GameStore["gameStatus"]) => void;
   setPreviousStatus: (status: GameStore["previousStatus"]) => void;
   setSelectedTowerTypeToPlace: (type: TowerType | null) => void;
@@ -70,7 +65,6 @@ const DEFAULT_STATE: GameStoreState = {
   enemyTypes: null,
   towerTypes: null,
   enemyUpgrades: null,
-  activeEffects: [],
   selectedTowerTypeToPlace: null,
   selectedTower: null,
   startingHealth: 0,
@@ -136,13 +130,6 @@ export const useGameStore = create<GameStore>((set) => ({
     set({ showSettings: show });
   },
 
-  setActiveEffects: (effects) => {
-    set((state) => ({
-      activeEffects:
-        typeof effects === "function" ? effects(state.activeEffects) : effects,
-    }));
-  },
-
   setGameStatus: (status) => {
     set({ gameStatus: status });
   },
@@ -181,7 +168,6 @@ export const useGameStore = create<GameStore>((set) => ({
 
   startNewRun: () => {
     set({
-      activeEffects: [],
       selectedTowerTypeToPlace: null,
       selectedTower: null,
       previousStatus: null,
@@ -224,7 +210,6 @@ export const setSelectedTowerSelector = (state: GameStore) =>
 export const gameStatusSelector = (state: GameStore) => state.gameStatus;
 export const previousStatusSelector = (state: GameStore) =>
   state.previousStatus;
-export const activeEffectsSelector = (state: GameStore) => state.activeEffects;
 export const isGameConfigLoadedSelector = (state: GameStore) =>
   state.isGameConfigLoaded;
 export const towerHeightSelector = (state: GameStore) => state.towerHeight;
@@ -232,8 +217,6 @@ export const towerBaseRadiusSelector = (state: GameStore) =>
   state.towerBaseRadius;
 export const towerSellPriceMultiplierSelector = (state: GameStore) =>
   state.towerSellPriceMultiplier;
-export const setActiveEffectsSelector = (state: GameStore) =>
-  state.setActiveEffects;
 export const setGameStatusSelector = (state: GameStore) => state.setGameStatus;
 export const setPreviousStatusSelector = (state: GameStore) =>
   state.setPreviousStatus;

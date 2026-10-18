@@ -7,7 +7,6 @@ export type EntityIdContextValue = {
   getNextEnemyId: (reset?: boolean) => number;
   ensureEnemyIdAtLeast: (minId: number) => void;
   getNextProjectileId: (reset?: boolean) => number;
-  getNextEffectId: (reset?: boolean) => number;
 };
 
 const EntityIdContext = createContext<EntityIdContextValue | null>(null);
@@ -21,7 +20,6 @@ export const EntityIdProvider: FC<EntityIdProviderProps> = ({ children }) => {
   const { getNextId: getNextEnemyId, ensureAtLeast: ensureEnemyIdAtLeast } =
     useNextId();
   const { getNextId: getNextProjectileId } = useNextId();
-  const { getNextId: getNextEffectId } = useNextId();
 
   const value = useMemo(
     (): EntityIdContextValue => ({
@@ -29,15 +27,8 @@ export const EntityIdProvider: FC<EntityIdProviderProps> = ({ children }) => {
       getNextEnemyId,
       ensureEnemyIdAtLeast,
       getNextProjectileId,
-      getNextEffectId,
     }),
-    [
-      getNextTowerId,
-      getNextEnemyId,
-      ensureEnemyIdAtLeast,
-      getNextProjectileId,
-      getNextEffectId,
-    ]
+    [getNextTowerId, getNextEnemyId, ensureEnemyIdAtLeast, getNextProjectileId]
   );
 
   return (

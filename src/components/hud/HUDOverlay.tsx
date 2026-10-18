@@ -6,9 +6,14 @@ import { HUDWrapper } from "./HUDWrapper";
 type HUDOverlayProps = {
   children: ReactNode;
   className?: string;
+  contentClassName?: string;
 };
 
-export const HUDOverlay: FC<HUDOverlayProps> = ({ children, className }) => {
+export const HUDOverlay: FC<HUDOverlayProps> = ({
+  children,
+  className,
+  contentClassName,
+}) => {
   return (
     <HUDWrapper
       className={cn(
@@ -16,7 +21,12 @@ export const HUDOverlay: FC<HUDOverlayProps> = ({ children, className }) => {
         className
       )}
     >
-      <div className="pointer-events-auto w-full max-w-md md:max-w-lg max-h-[90vh] overflow-y-auto">
+      <div
+        className={cn(
+          "pointer-events-auto w-full max-w-md md:max-w-lg max-h-[90vh] overflow-y-auto",
+          contentClassName
+        )}
+      >
         {children}
       </div>
     </HUDWrapper>

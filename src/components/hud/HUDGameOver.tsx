@@ -43,21 +43,32 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
   // true while the card slides out, then everything resets and it unmounts.
   const [hasOpened, setHasOpened] = useState(false);
   const [closing, setClosing] = useState(false);
-  // The game keeps running while the result screen animates out; remember the
-  // final stats so they stay stable during the exit.
-  const [frozen, setFrozen] = useState({ currentWave, money, enemiesKilled });
+  // The game keeps running while the result screen animates out (status flips
+  // to "playing" or "menu"); remember the final stats and outcome so they
+  // stay stable during the exit.
+  const [frozen, setFrozen] = useState({
+    currentWave,
+    money,
+    enemiesKilled,
+    isWin: false,
+  });
 
   const isEnd = gameStatus === "gameOver" || gameStatus === "won";
 
   useEffect(() => {
     if (isEnd) {
-      setFrozen({ currentWave, money, enemiesKilled });
+      setFrozen({
+        currentWave,
+        money,
+        enemiesKilled,
+        isWin: gameStatus === "won",
+      });
       setHasOpened(true);
       setClosing(false);
     } else if (hasOpened) {
       setClosing(true);
     }
-  }, [isEnd, hasOpened, currentWave, money, enemiesKilled]);
+  }, [isEnd, hasOpened, gameStatus, currentWave, money, enemiesKilled]);
 
   const handleCardAnimationEnd = (event: AnimationEvent<HTMLDivElement>) => {
     // Only the card's own exit animation unmounts the overlay (child
@@ -70,10 +81,12 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
 
   if (!hasOpened) return null;
 
-  const isWin = gameStatus === "won";
+  const { isWin } = frozen;
 
   return (
-    <HUDOverlay className={cn(closing && "pointer-events-none")}>
+    <HUDOverlay
+      contentClassName={cn(closing && "pointer-events-none")}
+    >
       <UICard
         className={cn(
           closing

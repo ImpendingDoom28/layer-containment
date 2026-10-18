@@ -270,17 +270,23 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
             onRestart={onRestart}
             onGoToMainMenu={onGoToMainMenu}
           />
-
-          <HUDGameOver
-            gameStatus={gameStatus}
-            currentWave={currentWave}
-            money={money}
-            enemiesKilled={enemiesKilled}
-            onRestart={onRestart}
-            onGoToMainMenu={onGoToMainMenu}
-          />
         </>
       )}
+
+      {/*
+        Rendered outside the !isMenu branch so a run that ends with a
+        "menu" status (e.g. going to the main menu from the game-over
+        screen) doesn't unmount it before the exit animation finishes; it
+        self-gates on gameStatus and returns null otherwise.
+      */}
+      <HUDGameOver
+        gameStatus={gameStatus}
+        currentWave={currentWave}
+        money={money}
+        enemiesKilled={enemiesKilled}
+        onRestart={onRestart}
+        onGoToMainMenu={onGoToMainMenu}
+      />
 
       <HUDControlsIntroModal
         open={controlsIntroOpen}

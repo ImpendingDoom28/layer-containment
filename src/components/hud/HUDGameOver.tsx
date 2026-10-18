@@ -91,8 +91,8 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
       <UICard
         className={cn(
           closing
-            ? "animate-out fade-out slide-out-to-left-10 duration-300 ease-in"
-            : "animate-in fade-in slide-in-from-left-10 duration-400 ease-out"
+            ? "animate-out fade-out slide-out-to-bottom-10 duration-200 ease-in"
+            : "animate-in fade-in slide-in-from-bottom-10 zoom-in-95 duration-300 ease-out"
         )}
         onAnimationEnd={handleCardAnimationEnd}
       >

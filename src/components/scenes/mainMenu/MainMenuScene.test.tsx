@@ -19,8 +19,9 @@ import { useLevelStore } from "../../../core/stores/useLevelStore";
 import { useGameStore } from "../../../core/stores/useGameStore";
 import { MainMenuScene } from "./MainMenuScene";
 
-const { entitiesSystemProps } = vi.hoisted(() => ({
+const { entitiesSystemProps, combatJuiceRendered } = vi.hoisted(() => ({
   entitiesSystemProps: vi.fn(),
+  combatJuiceRendered: vi.fn(),
 }));
 
 // The scene's visual children are not under test; the test renderer cannot
@@ -36,6 +37,12 @@ vi.mock("../shared/Skybox", () => ({ Skybox: () => null }));
 vi.mock("../shared/Light", () => ({ Light: () => null }));
 vi.mock("../shared/Ground", () => ({ Ground: () => null }));
 vi.mock("../../entities/Path", () => ({ Path: () => null }));
+vi.mock("../../entities/effects/CombatJuice", () => ({
+  CombatJuice: () => {
+    combatJuiceRendered();
+    return null;
+  },
+}));
 vi.mock("./MainMenuCamera", () => ({ MainMenuCamera: () => null }));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -131,6 +138,10 @@ describe("MainMenuScene enemy cleanup wiring", () => {
         await advance(renderer);
       }
       expect(useLevelStore.getState().isLevelConfigLoaded).toBe(true);
+
+      // Death juice is mounted so menu kills (settled by EnemyDeathSystem)
+      // animate with the burst + reward float.
+      expect(combatJuiceRendered).toHaveBeenCalled();
 
       // The movement system calls this when an enemy reaches the path end;
       // an undefined handler (the old bug) leaves the enemy there forever.

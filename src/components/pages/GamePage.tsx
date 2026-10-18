@@ -67,10 +67,6 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
     startGame,
     goToMainMenu,
     closeGameMenu,
-    activeEffects,
-    onSpawnEffect,
-    onEndEffect,
-    onEffectComplete,
     shouldStopMovement,
     shouldLockCamera,
     debug,
@@ -184,12 +180,8 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
           {isGameConfigLoaded && !isMenu && (
             <GameScene
               placeTower={placeTower}
-              onSpawnEffect={onSpawnEffect}
-              onEndEffect={onEndEffect}
-              onEffectComplete={onEffectComplete}
               selectedTower={selectedTower}
               money={money}
-              activeEffects={activeEffects}
               gameStatus={gameStatus}
               waveSystem={waveSystem}
               onEnemyReachEnd={onEnemyReachEnd}

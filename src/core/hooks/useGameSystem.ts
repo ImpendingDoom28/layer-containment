@@ -7,7 +7,6 @@ import {
   shouldPauseForTabHidden,
 } from "../getShouldStopMovement";
 import {
-  activeEffectsSelector,
   debugSelector,
   gameStatusSelector,
   initializeGameStateSelector,
@@ -17,7 +16,6 @@ import {
   resetGameStateSelector,
   selectedTowerSelector,
   startNewRunSelector,
-  setActiveEffectsSelector,
   setDebugSelector,
   setGameStatusSelector,
   setIsPageVisibleSelector,
@@ -26,7 +24,6 @@ import {
   setShowSettingsSelector,
   useGameStore,
 } from "../stores/useGameStore";
-import { useEntityIds } from "../contexts/EntityIdContext";
 import { loadGameConfig } from "../configs/gameConfig";
 import { getCanPause } from "../getCanPause";
 import {
@@ -40,14 +37,12 @@ import { GameEvent } from "../types/enums/events";
 export const useGameSystem = () => {
   const { spawnBase } = useActions(worldBaseActions);
 
-  const activeEffects = useGameStore(activeEffectsSelector);
   const gameStatus = useGameStore(gameStatusSelector);
   const previousStatus = useGameStore(previousStatusSelector);
   const selectedTower = useGameStore(selectedTowerSelector);
   const debug = useGameStore(debugSelector);
   const isGameConfigLoaded = useGameStore(isGameConfigLoadedSelector);
   const isPageVisible = useGameStore(isPageVisibleSelector);
-  const setActiveEffects = useGameStore(setActiveEffectsSelector);
   const setGameStatus = useGameStore(setGameStatusSelector);
   const setPreviousStatus = useGameStore(setPreviousStatusSelector);
   const setSelectedTower = useGameStore(setSelectedTowerSelector);
@@ -60,8 +55,6 @@ export const useGameSystem = () => {
 
   const pauseWhenTabHidden = useSettingsStore(pauseWhenTabHiddenSelector);
   const nextWaveReady = useWaveStore(nextWaveReadySelector);
-
-  const { getNextEffectId } = useEntityIds();
 
   useLayoutEffect(() => {
     const onVisibilityChange = () => {
@@ -147,43 +140,10 @@ export const useGameSystem = () => {
     setDebug(!debug);
   }, [debug, setDebug]);
 
-  // TODO: Move to effects system
-  const onSpawnEffect = useCallback(
-    (position: [number, number, number], color: string) => {
-      const effectId = getNextEffectId();
-      setActiveEffects((prev) => [
-        ...prev,
-        { id: effectId, position, color, type: "spawn" },
-      ]);
-    },
-    [setActiveEffects, getNextEffectId]
-  );
-
-  const onEndEffect = useCallback(
-    (position: [number, number, number], color: string) => {
-      const effectId = getNextEffectId();
-      setActiveEffects((prev) => [
-        ...prev,
-        { id: effectId, position, color, type: "end" },
-      ]);
-    },
-    [setActiveEffects, getNextEffectId]
-  );
-
-  const onEffectComplete = useCallback(
-    (effectId: number) => {
-      setActiveEffects((prev) =>
-        prev.filter((effect) => effect.id !== effectId)
-      );
-    },
-    [setActiveEffects]
-  );
-
   return {
     // State
     gameStatus,
     selectedTower,
-    activeEffects,
     shouldDisableControls,
     shouldStopMovement,
     shouldLockCamera,
@@ -199,11 +159,7 @@ export const useGameSystem = () => {
     openGameMenu,
     closeGameMenu,
     setSelectedTower,
-    setActiveEffects,
     toggleDebug,
-    onSpawnEffect,
-    onEndEffect,
-    onEffectComplete,
   };
 };
 

@@ -17,13 +17,12 @@ import {
 import type {
   Tower as TowerInstance,
   Projectile as ProjectileInstance,
-  ActiveEffect,
   Tower,
 } from "../../core/types/game";
 import type { TileData } from "../../core/types/utils";
 import type { TilePlacementState } from "../../utils/tilePlacement";
 import { getTilePlacementState as getSharedTilePlacementState } from "../../utils/tilePlacement";
-import { Effect } from "../entities/effects/Effect";
+import { EffectSystem } from "./EffectSystem";
 import { useInstancedProjectiles } from "../../core/hooks/useInstancedProjectiles";
 import { MedicHealPulseSystem } from "./MedicHealPulseSystem";
 import { ApplySlowSystem } from "./ApplySlowSystem";
@@ -41,8 +40,6 @@ import { IsEnemy } from "../../core/ecs/traits/enemy";
 import { useSimulationClock } from "../../core/hooks/useSimulationClock";
 
 type EntitiesSystemProps = {
-  activeEffects: ActiveEffect[];
-  onEffectComplete: (effectId: number) => void;
   onEnemyReachEnd: ((enemyId: number) => void) | null;
   onProjectileHit: (
     projectile: ProjectileInstance,
@@ -53,8 +50,6 @@ type EntitiesSystemProps = {
   onSellTower: ((towerId: number) => void) | null;
   hoveredTile: TileData | null;
   selectedTower: TowerInstance | null;
-  onSpawnEffect: (position: [number, number, number], color: string) => void;
-  onEndEffect: (position: [number, number, number], color: string) => void;
   shouldStopMovement: boolean;
 };
 
@@ -66,10 +61,6 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
     onSellTower,
     hoveredTile,
     selectedTower,
-    onSpawnEffect,
-    onEndEffect,
-    onEffectComplete,
-    activeEffects,
     shouldStopMovement,
   }) => {
     const enemyEntities = useQuery(IsEnemy);
@@ -158,7 +149,6 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
           getSimulationTime={getSimulationTime}
           getTimeScale={getTimeScale}
           onEnemyReachEnd={onEnemyReachEnd}
-          onEndEffect={onEndEffect}
         />
 
         <MedicHealPulseSystem
@@ -181,7 +171,6 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
               entity={entity}
               getSimulationTime={getSimulationTime}
               getTimeScale={getTimeScale}
-              onSpawnEffect={onSpawnEffect}
             />
           ))}
         </group>
@@ -198,15 +187,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
           hoveredTilePlacementState={hoveredTilePlacementState}
         />
 
-        {activeEffects.map((effect) => (
-          <Effect
-            key={effect.id}
-            position={effect.position}
-            color={effect.color}
-            duration={effect.type === "spawn" ? 0.4 : 0.5}
-            onComplete={() => onEffectComplete(effect.id)}
-          />
-        ))}
+        <EffectSystem />
       </>
     );
   }

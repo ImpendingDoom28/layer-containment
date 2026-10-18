@@ -4,6 +4,7 @@ import { Vector3 } from "three";
 import { EnemyMotion, EnemyState } from "../traits/enemy";
 import { EnemySlow } from "../traits/slow";
 import { Position } from "../traits/position";
+import { effectActions } from "../actions/effectActions";
 import {
   isAtPathEnd,
   getPositionAlongMultiplePaths,
@@ -41,7 +42,6 @@ export type EnemyMovementSystemOptions = {
    * (main menu scene): the enemy then stays at the end of the path.
    */
   onEnemyReachEnd: ((enemyId: number) => void) | null;
-  onEndEffect: ((position: [number, number, number], color: string) => void) | null;
   /**
    * When false, enemies clamped at the path end do not settle the end
    * (effect + removal) yet — they finish it on the first frame where it
@@ -67,8 +67,7 @@ export const runEnemyMovementSystem = (
 ): void => {
   if (delta <= 0) return;
 
-  const { pathWaypoints, radius, onEnemyReachEnd, onEndEffect, canFinish = true } =
-    options;
+  const { pathWaypoints, radius, onEnemyReachEnd, canFinish = true } = options;
   const reachedEndIds: number[] = [];
 
   world
@@ -109,19 +108,21 @@ export const runEnemyMovementSystem = (
 
         motion.hasReachedEnd = true;
 
-        if (onEndEffect) {
-          flatFieldToSphereSurface(
-            endPos.x,
-            endPos.z,
-            radius,
-            scratchSurface,
-            scratchNormal
-          );
-          scratchEndPos
-            .copy(scratchSurface)
-            .addScaledVector(scratchNormal, endPos.y + 0.1);
-          onEndEffect([scratchEndPos.x, scratchEndPos.y, scratchEndPos.z], state.color);
-        }
+        flatFieldToSphereSurface(
+          endPos.x,
+          endPos.z,
+          radius,
+          scratchSurface,
+          scratchNormal
+        );
+        scratchEndPos
+          .copy(scratchSurface)
+          .addScaledVector(scratchNormal, endPos.y + 0.1);
+        effectActions(world).spawnEffect(
+          [scratchEndPos.x, scratchEndPos.y, scratchEndPos.z],
+          state.color,
+          "end"
+        );
 
         if (onEnemyReachEnd) {
           reachedEndIds.push(state.id);
@@ -174,10 +175,7 @@ export const runEnemyMovementFrame = (
   state: { clock: { elapsedTime: number } },
   delta: number,
   getSimulationTime: (rawNow: number) => number,
-  callbacks: Pick<
-    EnemyMovementSystemOptions,
-    "onEnemyReachEnd" | "onEndEffect" | "canFinish"
-  >
+  callbacks: Pick<EnemyMovementSystemOptions, "onEnemyReachEnd" | "canFinish">
 ): void => {
   const { pathWaypoints, gridSize } = useLevelStore.getState();
   const { tileSize } = useGameStore.getState();
@@ -187,7 +185,6 @@ export const runEnemyMovementFrame = (
     pathWaypoints,
     radius,
     onEnemyReachEnd: callbacks.onEnemyReachEnd,
-    onEndEffect: callbacks.onEndEffect,
     canFinish: callbacks.canFinish,
   });
 };

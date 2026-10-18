@@ -7,6 +7,7 @@ import { getEnemySnapshots } from "../selectors/enemySnapshots";
 import { EnemyMotion, EnemyState } from "../traits/enemy";
 import { EnemySlow } from "../traits/slow";
 import { Position } from "../traits/position";
+import { Effect, IsEffect } from "../traits/effect";
 import { testWorld } from "../world";
 import type { Enemy, PathWaypoint } from "../../../core/types/game";
 
@@ -41,14 +42,12 @@ type TestOptions = {
   pathWaypoints: PathWaypoint[][];
   radius: number;
   onEnemyReachEnd: ((enemyId: number) => void) | null;
-  onEndEffect: ((position: [number, number, number], color: string) => void) | null;
 };
 
 const defaultOptions = (): TestOptions => ({
   pathWaypoints: path,
   radius: 50,
   onEnemyReachEnd: vi.fn(),
-  onEndEffect: vi.fn(),
 });
 
 /** Entity helpers: all traits are always present on spawned enemies. */
@@ -56,9 +55,16 @@ const stateOf = (entity: Entity) => entity.get(EnemyState)!;
 const motionOf = (entity: Entity) => entity.get(EnemyMotion)!;
 const positionOf = (entity: Entity) => entity.get(Position)!;
 
+/** Counts end-of-path effect entities currently in the world. */
+const countEndEffects = () =>
+  testWorld
+    .query(IsEffect)
+    .filter((entity) => entity.get(Effect)?.type === "end").length;
+
 describe("enemyMovementSystem", () => {
   beforeEach(() => {
     enemyActions(testWorld).clearAllEnemies();
+    for (const effect of [...testWorld.query(IsEffect)]) effect.destroy();
   });
 
   const run = (delta: number, effectiveTime: number, options = defaultOptions()) =>
@@ -138,13 +144,13 @@ describe("enemyMovementSystem", () => {
     expect(pos.z).toBe(0);
     expect(options.onEnemyReachEnd).toHaveBeenCalledTimes(1);
     expect(options.onEnemyReachEnd).toHaveBeenCalledWith(1);
-    expect(options.onEndEffect).toHaveBeenCalledTimes(1);
+    expect(countEndEffects()).toBe(1);
 
     // Frame 2 (entity still alive, no removal in this test):
     // the one-shot guard prevents re-firing.
     run(0.2, 0.2, options);
     expect(options.onEnemyReachEnd).toHaveBeenCalledTimes(1);
-    expect(options.onEndEffect).toHaveBeenCalledTimes(1);
+    expect(countEndEffects()).toBe(1);
   });
 
   it("settles reached-end removal after the pass so destruction is safe", () => {
@@ -233,19 +239,18 @@ describe("enemyMovementSystem", () => {
 
   it("keeps enemies at the path end when no removal callback is given (menu scene)", () => {
     const options = defaultOptions();
-    const endSpy = options.onEndEffect;
     options.onEnemyReachEnd = null;
     const entity = enemyActions(testWorld).spawnEnemy(
       makeEnemy(1, { pathProgress: 0.98, x: 9.8 })
     );
 
     run(0.2, 0, options);
-    expect(endSpy).toHaveBeenCalledTimes(1);
+    expect(countEndEffects()).toBe(1);
 
     // The enemy stays at the path end and the effect does not re-fire.
     expect(motionOf(entity).pathProgress).toBeGreaterThanOrEqual(1);
     run(0.2, 0.2, options);
-    expect(endSpy).toHaveBeenCalledTimes(1);
+    expect(countEndEffects()).toBe(1);
     expect(getEnemySnapshots(testWorld)).toHaveLength(1);
   });
 });

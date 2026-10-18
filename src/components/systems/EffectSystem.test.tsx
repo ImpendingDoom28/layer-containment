@@ -99,4 +99,25 @@ describe("EffectSystem", () => {
       renderer.unmount();
     }
   });
+
+  it("sweeps active effect entities on unmount so a later scene renders none", async () => {
+    const entity = effectActions(testWorld).spawnEffect([0, 1, 0], "#f00", "spawn");
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <WorldProvider world={testWorld}>
+        <EffectSystem />
+      </WorldProvider>
+    );
+
+    expect(testWorld.queryFirst(IsEffect)).toBeDefined();
+
+    // `Effect` only settles via `useFrame`, so a scene transition can leave the
+    // entity alive; the unmount cleanup must destroy it.
+    await ReactThreeTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+
+    expect(entity.isAlive()).toBe(false);
+    expect(testWorld.queryFirst(IsEffect)).toBeUndefined();
+  });
 });

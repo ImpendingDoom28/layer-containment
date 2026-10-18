@@ -1,4 +1,9 @@
-import { FC } from "react";
+import {
+  FC,
+  useEffect,
+  useState,
+  type AnimationEvent,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import type { GameStatus } from "../../core/types/game";
@@ -12,6 +17,7 @@ import {
 } from "../ui/UICard";
 import { UIMoney } from "../ui/UIMoney";
 import { UITypography } from "../ui/UITypography";
+import { cn } from "../ui/lib/twUtils";
 import { HUDOverlay } from "./HUDOverlay";
 
 type HUDGameOverProps = {
@@ -32,13 +38,64 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
   onGoToMainMenu,
 }) => {
   const { t } = useTranslation();
-  if (gameStatus !== "gameOver" && gameStatus !== "won") return null;
 
-  const isWin = gameStatus === "won";
+  // Keep the overlay mounted through its exit animation: `hasOpened` stays
+  // true while the card slides out, then everything resets and it unmounts.
+  const [hasOpened, setHasOpened] = useState(false);
+  const [closing, setClosing] = useState(false);
+  // The game keeps running while the result screen animates out (status flips
+  // to "playing" or "menu"); remember the final stats and outcome so they
+  // stay stable during the exit.
+  const [frozen, setFrozen] = useState({
+    currentWave,
+    money,
+    enemiesKilled,
+    isWin: false,
+  });
+
+  const isEnd = gameStatus === "gameOver" || gameStatus === "won";
+
+  useEffect(() => {
+    if (isEnd) {
+      setFrozen({
+        currentWave,
+        money,
+        enemiesKilled,
+        isWin: gameStatus === "won",
+      });
+      setHasOpened(true);
+      setClosing(false);
+    } else if (hasOpened) {
+      setClosing(true);
+    }
+  }, [isEnd, hasOpened, gameStatus, currentWave, money, enemiesKilled]);
+
+  const handleCardAnimationEnd = (event: AnimationEvent<HTMLDivElement>) => {
+    // Only the card's own exit animation unmounts the overlay (child
+    // animations bubble up, so check the target).
+    if (event.target === event.currentTarget && event.animationName === "exit") {
+      setHasOpened(false);
+      setClosing(false);
+    }
+  };
+
+  if (!hasOpened) return null;
+
+  const { isWin } = frozen;
 
   return (
-    <HUDOverlay>
-      <UICard>
+    <HUDOverlay
+      className={cn(closing && "pointer-events-none")}
+      contentClassName={cn(closing && "pointer-events-none")}
+    >
+      <UICard
+        className={cn(
+          closing
+            ? "animate-out fade-out slide-out-to-bottom-10 duration-200 ease-in"
+            : "animate-in fade-in slide-in-from-bottom-10 zoom-in-95 duration-300 ease-out"
+        )}
+        onAnimationEnd={handleCardAnimationEnd}
+      >
         <UICardHeader className="space-y-4">
           <UICardTitle className="justify-center">
             <UITypography
@@ -72,7 +129,7 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
                 {t("gameOver.finalMoney")}
               </UITypography>
               <div className="flex items-center justify-center">
-                <UIMoney money={money} variant="h3" iconSize={20} />
+                <UIMoney money={frozen.money} variant="h3" iconSize={20} />
               </div>
             </div>
 
@@ -80,13 +137,13 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
               <UITypography variant="small" className="text-muted-foreground">
                 {t("gameOver.enemiesKilled")}
               </UITypography>
-              <UITypography variant="h3">{enemiesKilled}</UITypography>
+              <UITypography variant="h3">{frozen.enemiesKilled}</UITypography>
             </div>
             <div className="text-center">
               <UITypography variant="small" className="text-muted-foreground">
                 {t("gameOver.wavesSurvived")}
               </UITypography>
-              <UITypography variant="h3">{currentWave} / 7</UITypography>
+              <UITypography variant="h3">{frozen.currentWave} / 7</UITypography>
             </div>
           </div>
         </UICardContent>

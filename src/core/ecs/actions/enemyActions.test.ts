@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeEach, vi, afterEach } from "vitest";
 
 import { enemyActions } from "./enemyActions";
+import { statsActions } from "./statsActions";
 import { worldBaseActions } from "./baseActions";
 import { getEnemySnapshots } from "../selectors/enemySnapshots";
 import { IsEnemy, requestEnemyDeath } from "../traits/enemy";
@@ -8,7 +9,13 @@ import { isBase } from "../traits/base";
 import { damageRequest } from "../traits/damage";
 import { EnemySlow, slowRequest } from "../traits/slow";
 import { HealthInfo } from "../traits/health";
+import {
+  IsStats,
+  damageDealtRequest,
+  moneyEarnedRequest,
+} from "../traits/stats";
 import { testWorld } from "../world";
+import { useGameStore } from "../../stores/useGameStore";
 import type { Enemy } from "../../types/game";
 import { GameEvent } from "../../types/enums/events";
 import { gameEvents } from "../../../utils/eventEmitter";
@@ -45,6 +52,16 @@ describe("enemyActions", () => {
 
   afterEach(() => {
     worldBaseActions(testWorld).removeBase();
+    // Clear any stats receipts / entity and restore the default menu status so
+    // the new stats tests don't leak into other tests.
+    for (const entity of [
+      ...testWorld.query(IsStats),
+      ...testWorld.query(damageDealtRequest),
+      ...testWorld.query(moneyEarnedRequest),
+    ]) {
+      entity.destroy();
+    }
+    useGameStore.setState({ gameStatus: "menu" });
   });
 
   it("spawnEnemy adds entity readable via snapshots", () => {
@@ -178,5 +195,65 @@ describe("enemyActions", () => {
     expect(resisted.get(slowRequest)!.expiresAt).toBe(1);
     // A fully resistant enemy (tier 3 Unstoppable) takes no slow at all.
     expect(immune.has(slowRequest)).toBe(false);
+  });
+
+  it("damageEnemy with a source raises a damageDealtRequest with effective damage", () => {
+    statsActions(testWorld).startRunStats();
+    enemyActions(testWorld).spawnEnemy(baseEnemy(1, 100));
+
+    // Non-lethal: effective damage equals the raw damage.
+    enemyActions(testWorld).damageEnemy(1, 10, { towerType: "basic" });
+    let receipts = testWorld.query(damageDealtRequest);
+    expect(receipts).toHaveLength(1);
+    expect(receipts[0].get(damageDealtRequest)).toMatchObject({
+      towerType: "basic",
+      enemyType: "basic",
+      amount: 10,
+      killed: false,
+    });
+
+    // Lethal: effective damage is clamped to the remaining health.
+    enemyActions(testWorld).damageEnemy(1, 999, { towerType: "laser" });
+    receipts = testWorld.query(damageDealtRequest);
+    expect(receipts).toHaveLength(2);
+    expect(receipts[1].get(damageDealtRequest)).toMatchObject({
+      towerType: "laser",
+      amount: 90,
+      killed: true,
+    });
+  });
+
+  it("damageEnemy without a source raises no stats receipt", () => {
+    statsActions(testWorld).startRunStats();
+    enemyActions(testWorld).spawnEnemy(baseEnemy(1, 100));
+
+    enemyActions(testWorld).damageEnemy(1, 10);
+
+    expect(testWorld.query(damageDealtRequest)).toHaveLength(0);
+  });
+
+  it("handleEnemyDeath raises a moneyEarnedRequest for the reward (non-menu)", () => {
+    statsActions(testWorld).startRunStats();
+    useGameStore.setState({ gameStatus: "playing" });
+    const enemy = baseEnemy(1, 100);
+    enemy.reward = 7;
+    enemyActions(testWorld).spawnEnemy(enemy);
+
+    enemyActions(testWorld).removeEnemy(1, false);
+
+    const receipt = testWorld.queryFirst(moneyEarnedRequest);
+    expect(receipt?.get(moneyEarnedRequest)).toEqual({ amount: 7 });
+  });
+
+  it("handleEnemyDeath raises no money receipt in the menu (no stats entity)", () => {
+    // No run started: gameStatus is the default "menu".
+    const enemy = baseEnemy(2, 100);
+    enemy.reward = 5;
+    enemyActions(testWorld).spawnEnemy(enemy);
+
+    enemyActions(testWorld).removeEnemy(2, false);
+
+    expect(testWorld.queryFirst(moneyEarnedRequest)).toBeUndefined();
+    expect(testWorld.queryFirst(IsStats)).toBeUndefined();
   });
 });

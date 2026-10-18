@@ -60,6 +60,7 @@ import { gameEvents } from "../../utils/eventEmitter";
 import { GameEvent } from "../types/enums/events";
 import { getTowerPlacementDenyReason } from "../utils/towerPlacementDenyReason";
 import { enemyActions } from "../ecs/actions/enemyActions";
+import { statsActions } from "../ecs/actions/statsActions";
 
 export const useLevelSystem = () => {
   const buildings = useLevelStore(buildingsSelector);
@@ -96,6 +97,7 @@ export const useLevelSystem = () => {
   );
 
   const actions = useActions(enemyActions);
+  const stats = useActions(statsActions);
 
   const { getNextTowerId, getNextEnemyId, getNextProjectileId } =
     useEntityIds();
@@ -156,6 +158,7 @@ export const useLevelSystem = () => {
       setTowers((prev) => [...prev, newTower]);
 
       spendMoney(towerConfig.cost);
+      stats.recordTowerPurchase(towerType, towerConfig.cost);
       setSelectedTowerTypeToPlace(null);
       const emitterY =
         towerType === "laser" ? towerHeight * 0.5 : towerHeight * 0.7;
@@ -181,6 +184,7 @@ export const useLevelSystem = () => {
       getNextTowerId,
       setTowers,
       spendMoney,
+      stats,
       setSelectedTowerTypeToPlace,
       towerHeight,
     ]

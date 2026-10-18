@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WorldProvider } from "koota/react";
 
 import { testWorld } from "../ecs/world";
+import { statsActions } from "../ecs/actions/statsActions";
+import { moneySpentRequest } from "../ecs/traits/stats";
 import { EntityIdProvider } from "../contexts/EntityIdContext";
 import { useGameStore } from "../stores/useGameStore";
 import { useLevelStore } from "../stores/useLevelStore";
@@ -150,6 +152,38 @@ describe("useLevelSystem.placeTower denial feedback", () => {
       expect(useLevelStore.getState().towers).toHaveLength(1);
       // Cost was spent (100 - 10 = 90).
       expect(useLevelStore.getState().money).toBe(90);
+    } finally {
+      renderer.unmount();
+    }
+  });
+
+  it("raises a moneySpentRequest when a run is active", async () => {
+    statsActions(testWorld).startRunStats();
+
+    const renderer = await renderSystem();
+    try {
+      const ok = system.placeTower(1, 1, "basic");
+
+      expect(ok).toBe(true);
+      const receipt = testWorld.queryFirst(moneySpentRequest);
+      expect(receipt?.get(moneySpentRequest)).toEqual({
+        towerType: "basic",
+        amount: 10,
+      });
+    } finally {
+      renderer.unmount();
+      // Clean up the run so it doesn't leak into other tests.
+      statsActions(testWorld).endRunStats();
+    }
+  });
+
+  it("raises no moneySpentRequest when no run is active (menu)", async () => {
+    const renderer = await renderSystem();
+    try {
+      const ok = system.placeTower(1, 1, "basic");
+
+      expect(ok).toBe(true);
+      expect(testWorld.queryFirst(moneySpentRequest)).toBeUndefined();
     } finally {
       renderer.unmount();
     }

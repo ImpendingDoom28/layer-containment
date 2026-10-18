@@ -38,6 +38,8 @@ import {
   markControlsIntroSeen,
 } from "../../core/hasSeenControlsIntro";
 import { PageWrapper } from "./PageWrapper";
+import { world } from "../../core/ecs/world";
+import { getRunStats } from "../../core/ecs/selectors/runStats";
 
 type GamePageProps = {
   onOpenLevelEditor: () => void;
@@ -276,6 +278,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
         currentWave={currentWave}
         money={money}
         enemiesKilled={enemiesKilled}
+        stats={getRunStats(world)}
         onRestart={onRestart}
         onGoToMainMenu={onGoToMainMenu}
       />

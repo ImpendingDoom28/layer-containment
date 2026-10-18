@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect } from "react";
 import { useActions } from "koota/react";
 
 import { worldBaseActions } from "../ecs/actions/baseActions";
+import { statsActions } from "../ecs/actions/statsActions";
 import {
   getShouldStopMovement,
   shouldPauseForTabHidden,
@@ -36,6 +37,7 @@ import { GameEvent } from "../types/enums/events";
 
 export const useGameSystem = () => {
   const { spawnBase } = useActions(worldBaseActions);
+  const stats = useActions(statsActions);
 
   const gameStatus = useGameStore(gameStatusSelector);
   const previousStatus = useGameStore(previousStatusSelector);
@@ -117,14 +119,16 @@ export const useGameSystem = () => {
 
   const startGame = useCallback(async () => {
     startNewRun();
+    stats.startRunStats();
     const maxHealth = useGameStore.getState().startingHealth;
     spawnBase(maxHealth);
-  }, [startNewRun, spawnBase]);
+  }, [startNewRun, spawnBase, stats]);
 
   const goToMainMenu = useCallback(() => {
+    stats.endRunStats();
     resetGameState();
     setGameStatus("menu");
-  }, [resetGameState, setGameStatus]);
+  }, [resetGameState, setGameStatus, stats]);
 
   const openGameMenu = useCallback(() => {
     setShowSettings(false);

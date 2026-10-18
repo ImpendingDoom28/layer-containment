@@ -118,7 +118,7 @@ export const runEnemyMovementSystem = (
         scratchEndPos
           .copy(scratchSurface)
           .addScaledVector(scratchNormal, endPos.y + 0.1);
-        effectActions(world).spawnEffect(
+        effectActions(world).requestSpawnEffect(
           [scratchEndPos.x, scratchEndPos.y, scratchEndPos.z],
           state.color,
           "end"

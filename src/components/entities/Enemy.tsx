@@ -20,7 +20,7 @@ import {
   type Mesh,
 } from "three";
 import type { Entity } from "koota";
-import { useWorld } from "koota/react";
+import { useActions } from "koota/react";
 
 import { effectActions } from "../../core/ecs/actions/effectActions";
 import { getPositionAlongMultiplePaths } from "../../utils/pathUtils";
@@ -108,7 +108,7 @@ export const Enemy: FC<EnemyProps> = memo(
     // `useTrait` re-render on every hit.
     const [snapshot] = useState(() => entity.get(EnemyState));
 
-    const world = useWorld();
+    const actions = useActions(effectActions);
 
     const pathWaypoints = useLevelStore(pathWaypointsSelector);
     const gridSize = useLevelStore(gridSizeSelector);
@@ -198,7 +198,7 @@ export const Enemy: FC<EnemyProps> = memo(
         scratchGroupPos.current
           .copy(scratchSurface.current)
           .addScaledVector(scratchNormal.current, spawnPosition.y + 0.1);
-        effectActions(world).spawnEffect(
+        actions.requestSpawnEffect(
           [
             scratchGroupPos.current.x,
             scratchGroupPos.current.y,
@@ -209,7 +209,7 @@ export const Enemy: FC<EnemyProps> = memo(
         );
         hasTriggeredSpawnEffect.current = true;
       }
-    }, [snapshot, entity, world, pathWaypoints, radius]);
+    }, [snapshot, entity, actions, pathWaypoints, radius]);
 
     useLayoutEffect(() => {
       const live = entity.get(EnemyState);

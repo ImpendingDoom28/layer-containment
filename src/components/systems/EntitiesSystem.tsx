@@ -26,6 +26,7 @@ import { EffectSystem } from "./EffectSystem";
 import { useInstancedProjectiles } from "../../core/hooks/useInstancedProjectiles";
 import { MedicHealPulseSystem } from "./MedicHealPulseSystem";
 import { ApplySlowSystem } from "./ApplySlowSystem";
+import { ApplyEffectSystem } from "./ApplyEffectSystem";
 import { EnemyMovementSystem } from "./EnemyMovementSystem";
 import { EnemyDeathSystem } from "./EnemyDeathSystem";
 import {
@@ -142,6 +143,8 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
          * any scene rendering enemies — game and main menu alike — clears
          * requestEnemyDeath and destroys the entity.
          */}
+        <ApplyEffectSystem />
+
         <EnemyDeathSystem />
 
         <EnemyMovementSystem

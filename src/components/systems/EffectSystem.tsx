@@ -1,8 +1,9 @@
-import { FC, useEffect } from "react";
+import { FC, useEffect, useRef } from "react";
 import type { Entity } from "koota";
-import { useQuery, useWorld } from "koota/react";
+import { useQuery } from "koota/react";
 
 import { Effect as EffectTrait, IsEffect } from "../../core/ecs/traits/effect";
+import { Position } from "../../core/ecs/traits/position";
 import { Effect } from "../entities/effects/Effect";
 
 /**
@@ -19,19 +20,24 @@ import { Effect } from "../entities/effects/Effect";
  * `Effect` only fires `onComplete` from `useFrame`, so an in-flight effect can
  * outlive the component across a scene transition (the world is a singleton).
  * On unmount we sweep the remaining effect entities so a scene that mounts
- * later does not render a leftover burst.
+ * later does not render a leftover burst. The sweep reuses the `useQuery`
+ * result (kept in a ref) rather than re-querying the world.
  */
 export const EffectSystem: FC = () => {
-  const world = useWorld();
   const entities = useQuery(IsEffect);
+  const entitiesRef = useRef<readonly Entity[]>([]);
+
+  useEffect(() => {
+    entitiesRef.current = entities;
+  }, [entities]);
 
   useEffect(() => {
     return () => {
-      for (const entity of [...world.query(IsEffect)]) {
+      for (const entity of entitiesRef.current) {
         if (entity.isAlive()) entity.destroy();
       }
     };
-  }, [world]);
+  }, []);
 
   const onComplete = (entity: Entity) => {
     if (entity.isAlive()) entity.destroy();
@@ -41,11 +47,12 @@ export const EffectSystem: FC = () => {
     <>
       {entities.map((entity) => {
         const data = entity.get(EffectTrait);
-        if (!data) return null;
+        const position = entity.get(Position);
+        if (!data || !position) return null;
         return (
           <Effect
             key={entity}
-            position={data.position}
+            position={[position.x, position.y, position.z]}
             color={data.color}
             duration={data.duration}
             onComplete={() => onComplete(entity)}

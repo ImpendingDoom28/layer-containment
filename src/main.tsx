@@ -1,18 +1,19 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
-
 import { i18n } from "./core/i18n/i18n";
 import "./styles/index.css";
 import { App } from "./App";
+import { AppRouter } from "./core/router";
 import { useSettingsStore } from "./core/stores/useSettingsStore";
 
+// AppRouter picks BrowserRouter (http) or HashRouter (file:// for the
+// packaged Electron app) based on the protocol — see src/core/router.tsx.
 const Game = () => {
   return (
     <React.StrictMode>
-      <BrowserRouter>
+      <AppRouter>
         <App />
-      </BrowserRouter>
+      </AppRouter>
     </React.StrictMode>
   );
 };

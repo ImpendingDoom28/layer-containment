@@ -1,0 +1,57 @@
+name: Desktop build
+
+# Packages the Electron desktop build on every pull request and push to
+# master, so the desktop app is verified before merge. The macOS job runs on
+# a macOS runner (required to produce the .dmg/.app). Code signing and
+# notarization are not configured yet; adding them requires CI-stored
+# certificates (see README "Desktop").
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            target: linux
+          - runner: windows-latest
+            target: win
+          - runner: macos-latest
+            target: mac
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app + main process
+        run: npm run build && npx tsc -p electron/tsconfig.json
+
+      - name: Package
+        run: npm run dist -- --${{ matrix.target }}
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.target }}
+          path: release/*
+          if-no-files-found: error

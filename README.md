@@ -40,6 +40,7 @@ A 3D tower defense game built with React, Tailwind CSS, and React Three Fiber.
 - **JSON-based configuration** - Game settings, tower stats, and level data stored in JSON files
 - **Explicit loading flow** - Full-screen loading HUD while game and level configs load; `isGameConfigLoaded` and `isLevelConfigLoaded` exposed from core hooks for UI coordination
 - **Simulation vs React frame order** - Wave spawning, tower combat, and instanced projectiles read `useGameStore.getState()` inside R3F `useFrame` so gameplay matches Zustand immediately after tab visibility changes (before the next React commit refreshes hook closures)
+- **Desktop app (Electron)** - The game can be packaged as a native desktop application (Windows `.exe`/NSIS installer, macOS `.dmg`/`.app`, Linux AppImage/deb) and distributed outside a browser (e.g. through Steam). In the browser the app keeps `BrowserRouter`; when loaded from a local file (packaged desktop) it switches to `HashRouter` so deep links work without a web server. Config and audio files are fetched as static assets, which works identically over `file://` (the packaged app relaxes `webSecurity` for that local, trusted content only; the renderer stays fully sandboxed with contextIsolation and no Node integration)
 - **Playwright smoke coverage** - Canvas-aware E2E tests cover menu-to-game flow, first-tower placement, first-wave start, and editor route loading
 - **Localization (i18next)** - All in-game UI text is rendered through locale keys (no hardcoded strings). A language selector in Settings → General switches the whole app live; English is the default and Russian is the first alternate language. The choice persists to localStorage (settings store) and is applied before the first render on load. Locales live in `src/core/i18n/locales/` — `en` is the reference shape (`as const`) that drives TypeScript-checked `t()` keys, and new languages are validated against it by the locale parity tests (missing or misspelled keys fail those tests). Plurals follow i18next suffix rules (`_other`, and `_one/_few/_many` for Russian). React components use `useTranslation`; R3F canvas components use the context-free `useTranslationInCanvas` hook, and non-React code (e.g. upgrade summaries) uses the shared `i18n` singleton from `src/core/i18n/i18n.ts`
 
@@ -58,6 +59,33 @@ npm run dev
 ```
 
 The game will be available at `http://localhost:5173`
+
+### Desktop (Electron)
+
+The game also runs as a desktop application via Electron.
+
+```bash
+# Dev: Vite dev server + Electron window (hot reload)
+npm run dev:desktop
+
+# Package for the current platform (produces an unpacked app in release/)
+npm run build:desktop
+
+# Build installers for the current platform / a specific platform
+npm run dist        # current platform
+npm run dist:win    # Windows NSIS installer + portable
+npm run dist:mac    # macOS dmg + app (must run on macOS)
+npm run dist:linux  # Linux AppImage + deb
+```
+
+Notes:
+
+- The packaged app is loaded from `dist/index.html` over `file://`, so routing automatically switches to `HashRouter` in that environment (see `src/core/router.tsx`) and asset loading stays local.
+- `npm run dev:desktop` waits for the Vite dev server (`http://localhost:5173`) before launching Electron, so the game hot-reloads while you develop.
+- F12 toggles the DevTools in the desktop app.
+- The desktop icon lives in `build/` (`icon.svg`, rendered to `icon.png` via `npm run make:icon`); it is bundled as the app icon.
+- CI (`.github/workflows/desktop.yml`) builds installers for Windows, macOS, and Linux on every PR and push to `master`, so packaging is verified before merge.
+- Distributing through Steam: publish the per-platform installer/artifact builds (NSIS exe, dmg, AppImage) as a Steam app via the Steamworks SDK. No signing/notarization is configured yet — add your code-signing certificates to CI before publishing to the Mac App Store or Steam's notarized macOS builds.
 
 ### Playwright E2E
 

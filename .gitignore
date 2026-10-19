@@ -19,6 +19,12 @@ blob-report
 test-results
 playwright/.cache
 
+# Electron packaging output (electron-builder)
+release/
+
+# Local npm cache used to install deps without a shared ~/.npm
+.npm-cache/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

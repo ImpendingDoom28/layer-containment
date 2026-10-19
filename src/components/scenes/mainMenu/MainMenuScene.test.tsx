@@ -1,13 +1,6 @@
 import { readFileSync } from "node:fs";
 import ReactThreeTestRenderer from "@react-three/test-renderer";
-import {
-  afterAll,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { WorldProvider } from "koota/react";
 
@@ -80,6 +73,7 @@ describe("MainMenuScene enemy cleanup wiring", () => {
         removeEventListener: vi.fn(),
         visibilityState: "visible",
         documentElement: {},
+        baseURI: "http://localhost:5173/",
       },
       configurable: true,
     });
@@ -94,7 +88,12 @@ describe("MainMenuScene enemy cleanup wiring", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
-        const relative = String(url).replace(/^\/+/, "");
+        // loadFile resolves the config path against document.baseURI, so the
+        // mock receives a full URL; read the file by its path component.
+        const relative = new URL(
+          String(url),
+          "http://localhost/"
+        ).pathname.replace(/^\/+/, "");
         const raw = readFileSync(`public/${relative}`);
         return {
           ok: true,
@@ -141,9 +140,7 @@ describe("MainMenuScene enemy cleanup wiring", () => {
       expect(getEnemySnapshots(testWorld).some((e) => e.id === 1)).toBe(true);
 
       (onEnemyReachEnd as (id: number) => void)(1);
-      expect(
-        getEnemySnapshots(testWorld).some((e) => e.id === 1)
-      ).toBe(false);
+      expect(getEnemySnapshots(testWorld).some((e) => e.id === 1)).toBe(false);
     } finally {
       renderer.unmount();
       actions.clearAllEnemies();

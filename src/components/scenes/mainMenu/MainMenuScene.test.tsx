@@ -73,7 +73,6 @@ describe("MainMenuScene enemy cleanup wiring", () => {
         removeEventListener: vi.fn(),
         visibilityState: "visible",
         documentElement: {},
-        baseURI: "http://localhost:5173/",
       },
       configurable: true,
     });
@@ -88,12 +87,9 @@ describe("MainMenuScene enemy cleanup wiring", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
-        // loadFile resolves the config path against document.baseURI, so the
-        // mock receives a full URL; read the file by its path component.
-        const relative = new URL(
-          String(url),
-          "http://localhost/"
-        ).pathname.replace(/^\/+/, "");
+        // loadFile fetches configs as root-absolute paths over http; read
+        // the file by its path component.
+        const relative = String(url).replace(/^\/+/, "");
         const raw = readFileSync(`public/${relative}`);
         return {
           ok: true,

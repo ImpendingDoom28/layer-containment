@@ -3,6 +3,11 @@ import { expect, test } from "@playwright/test";
 import { MONEY_AFTER_FIRST_BASIC_TOWER, onPlaceBasicTower } from "./fixtures/towerPlacement";
 import { onOpenGame } from "./fixtures/navigation";
 
+// Heavy WebGL flow (open game, place a tower on canvas, start a wave); under
+// parallel workers the scene render can be slow, so give it headroom like the
+// other long-running canvas tests (passes in ~10s in isolation).
+test.setTimeout(90_000);
+
 test("places a basic tower and starts the first wave", async ({ page }) => {
   await onOpenGame(page, { waitForTowerShop: true });
   await onPlaceBasicTower(page, MONEY_AFTER_FIRST_BASIC_TOWER);

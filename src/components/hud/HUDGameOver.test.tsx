@@ -1,10 +1,24 @@
 // @vitest-environment jsdom
 import { createRoot, type ReactNode } from "react-dom/client";
 import { act } from "react";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "vitest";
 
 import { i18n } from "../../core/i18n/i18n";
+import type {
+  EnemyConfig,
+  EnemyType,
+  TowerConfig,
+  TowerType,
+} from "../../core/types/game";
 import type { RunStatsSnapshot } from "../../core/ecs/selectors/runStats";
+import { useGameStore } from "../../core/stores/useGameStore";
 import { HUDGameOver } from "./HUDGameOver";
 
 (globalThis as unknown as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT =
@@ -12,6 +26,33 @@ import { HUDGameOver } from "./HUDGameOver";
 
 // Load the locale so `t()` resolves real strings instead of raw keys.
 void i18n;
+
+const makeTowerConfig = (id: TowerType, name: string): TowerConfig =>
+  ({
+    id,
+    name,
+    cost: 10,
+    damage: 5,
+    range: 4,
+    fireRate: 1,
+    targeting: "nearest",
+    projectileType: "single",
+    projectileSpeed: 10,
+    color: "#fff",
+    description: "",
+  }) as TowerConfig;
+
+const makeEnemyConfig = (id: EnemyType, name: string): EnemyConfig =>
+  ({
+    id,
+    name,
+    health: 10,
+    speed: 1,
+    reward: 5,
+    color: "#fff",
+    size: 1,
+    healthLoss: 1,
+  }) as EnemyConfig;
 
 const emptyStats = (): RunStatsSnapshot => ({
   totalEarned: 0,
@@ -39,10 +80,31 @@ describe("HUDGameOver", () => {
     document.body.appendChild(container);
   });
 
+  beforeEach(() => {
+    // The stats table derives its rows from the config in the store.
+    useGameStore.setState({
+      towerTypes: {
+        basic: makeTowerConfig("basic", "Basic Tower"),
+        slow: makeTowerConfig("slow", "Slow Tower"),
+        aoe: makeTowerConfig("aoe", "AOE Tower"),
+        laser: makeTowerConfig("laser", "Laser Tower"),
+        relay: makeTowerConfig("relay", "Relay Tower"),
+        chain: makeTowerConfig("chain", "Chain Tower"),
+      } as Record<TowerType, TowerConfig>,
+      enemyTypes: {
+        basic: makeEnemyConfig("basic", "Basic Enemy"),
+        fast: makeEnemyConfig("fast", "Fast Enemy"),
+        tank: makeEnemyConfig("tank", "Tank Enemy"),
+        medic: makeEnemyConfig("medic", "Medic Enemy"),
+      } as Record<EnemyType, EnemyConfig>,
+    });
+  });
+
   afterEach(() => {
     act(() => {
       root.unmount();
     });
+    useGameStore.setState({ towerTypes: null, enemyTypes: null });
   });
 
   const mountOverlay = (stats: RunStatsSnapshot, status: "won" | "gameOver") => {

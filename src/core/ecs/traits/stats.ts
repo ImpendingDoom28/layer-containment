@@ -9,6 +9,14 @@ export type KillsByTowerType = Partial<Record<TowerType, EnemyKillsByType>>;
 /** Tags the per-run stats entity (spawned on run start, destroyed on end). */
 export const IsStats = trait();
 
+/**
+ * Tagged onto the stats entity the moment a run ends. The stats system
+ * reacts to its appearance (via `world.onAdd`) to fold any receipts that were
+ * raised on the same frame as the end-state transition, so the result screen
+ * freezes a complete snapshot regardless of per-frame fold ordering.
+ */
+export const RunEnded = trait();
+
 const createTowerTypeTotals = (): TowerTypeTotals => ({});
 const createKillsByTowerType = (): KillsByTowerType => ({});
 

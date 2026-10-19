@@ -16,6 +16,7 @@ import {
   useSettingsStore,
 } from "../../core/stores/useSettingsStore";
 import { UIButton } from "../ui/buttons/UIButton";
+import { UITable, UITableCell, UITableRow } from "../ui/UITable";
 import { UITypography } from "../ui/UITypography";
 import clsx from "clsx";
 
@@ -73,50 +74,46 @@ export const HUDSettingsControlsSection: FC = () => {
           {t("settings.reset")}
         </UIButton>
       </div>
-      <table className="w-full border-collapse">
-        <tbody>
-          {VISIBLE_KEYBINDING_DEFINITIONS.map((definition) => {
-            const isRebinding = rebindingKey === definition.key;
-            const binding = keybindings[definition.key];
+      <UITable>
+        {VISIBLE_KEYBINDING_DEFINITIONS.map((definition) => {
+          const isRebinding = rebindingKey === definition.key;
+          const binding = keybindings[definition.key];
 
-            return (
-              <tr key={definition.key}>
-                <td className="py-1.5 pr-4">
-                  <UITypography variant="medium" as="span">
-                    {t(definition.label)}
-                  </UITypography>
-                </td>
-                <td className="py-1.5 text-right">
-                  <button
-                    type="button"
-                    data-testid={`keybinding-row-${definition.key}`}
-                    aria-label={t("controls.rebind", {
-                      label: t(definition.label),
-                    })}
-                    onClick={() => setRebindingKey(definition.key)}
-                    className={clsx(
-                      "inline-flex min-w-[88px] items-center justify-center gap-1 rounded-none border px-2.5 py-1 text-xs",
-                      isRebinding
-                        ? "border-primary bg-primary/15  text-primary-foreground"
-                        : " border-border bg-input/30  hover:bg-input/50"
-                    )}
-                  >
-                    {isRebinding ? (
-                      <UITypography variant="buttons1">
-                        {t("settings.pressAKey")}
-                      </UITypography>
-                    ) : (
-                      <UITypography as={"kbd"} variant="buttons1">
-                        {formatKeyCode(binding)}
-                      </UITypography>
-                    )}
-                  </button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+          return (
+            <UITableRow key={definition.key}>
+              <UITableCell className="py-1.5 pr-4">
+                {t(definition.label)}
+              </UITableCell>
+              <UITableCell align="right" plain className="py-1.5">
+                <button
+                  type="button"
+                  data-testid={`keybinding-row-${definition.key}`}
+                  aria-label={t("controls.rebind", {
+                    label: t(definition.label),
+                  })}
+                  onClick={() => setRebindingKey(definition.key)}
+                  className={clsx(
+                    "inline-flex min-w-[88px] items-center justify-center gap-1 rounded-none border px-2.5 py-1 text-xs",
+                    isRebinding
+                      ? "border-primary bg-primary/15  text-primary-foreground"
+                      : " border-border bg-input/30  hover:bg-input/50"
+                  )}
+                >
+                  {isRebinding ? (
+                    <UITypography variant="buttons1">
+                      {t("settings.pressAKey")}
+                    </UITypography>
+                  ) : (
+                    <UITypography as={"kbd"} variant="buttons1">
+                      {formatKeyCode(binding)}
+                    </UITypography>
+                  )}
+                </button>
+              </UITableCell>
+            </UITableRow>
+          );
+        })}
+      </UITable>
     </section>
   );
 };

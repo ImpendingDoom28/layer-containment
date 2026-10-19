@@ -98,9 +98,9 @@ export const useGameSystem = () => {
 
   const winGame = useCallback(() => {
     setGameStatus("won");
-    // Flush pending receipts so the end screen freezes a complete snapshot,
-    // regardless of per-frame fold ordering.
-    stats.flushRunStats();
+    // Signal the run ended; the stats system flushes the receipts raised in
+    // this same frame so the end screen freezes a complete snapshot.
+    stats.markRunEnded();
     gameEvents.emit(GameEvent.GAME_WON, { gameWonType: "win" });
   }, [setGameStatus, stats]);
 

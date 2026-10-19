@@ -13,9 +13,9 @@ export const runBaseDefeatSystem = (world: World) => {
   const gameStore = useGameStore.getState();
   if (gameStore.gameStatus === "playing") {
     gameStore.setGameStatus("gameOver");
-    // Flush pending receipts so the end screen freezes a complete snapshot,
-    // regardless of per-frame fold ordering.
-    statsActions(world).flushRunStats();
+    // Signal the run ended; the stats system flushes the receipts raised in
+    // this same frame so the end screen freezes a complete snapshot.
+    statsActions(world).markRunEnded();
   }
   // The scene keeps running after defeat, so skip re-emitting (SFX) per frame.
   if (gameStore.gameStatus !== "gameOver") {

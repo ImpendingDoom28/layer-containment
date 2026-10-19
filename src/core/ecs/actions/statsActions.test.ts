@@ -4,6 +4,7 @@ import { statsActions } from "./statsActions";
 import {
   IsStats,
   MoneyEarned,
+  RunEnded,
   damageDealtRequest,
   moneyEarnedRequest,
   moneySpentRequest,
@@ -80,24 +81,19 @@ describe("statsActions", () => {
     expect(testWorld.queryFirst(moneySpentRequest)).toBeUndefined();
   });
 
-  it("flushRunStats folds pending receipts immediately and keeps the stats entity", () => {
+  it("markRunEnded tags the stats entity with RunEnded", () => {
     statsActions(testWorld).startRunStats();
-    testWorld.spawn(moneyEarnedRequest({ amount: 6 }));
-    testWorld.spawn(moneySpentRequest({ towerType: "basic", amount: 12 }));
 
-    statsActions(testWorld).flushRunStats();
+    statsActions(testWorld).markRunEnded();
 
     const stats = testWorld.queryFirst(IsStats);
     expect(stats).toBeDefined();
-    expect(stats?.get(MoneyEarned)).toEqual({ total: 6 });
-    // Receipts are consumed; the stats entity survives the flush.
-    expect(testWorld.query(moneyEarnedRequest)).toHaveLength(0);
-    expect(testWorld.query(moneySpentRequest)).toHaveLength(0);
-    expect(testWorld.queryFirst(IsStats)).toBe(stats);
+    expect(testWorld.queryFirst(IsStats, RunEnded)).toBe(stats);
   });
 
-  it("flushRunStats is a no-op with no active run", () => {
-    expect(() => statsActions(testWorld).flushRunStats()).not.toThrow();
-    expect(testWorld.queryFirst(IsStats)).toBeUndefined();
+  it("markRunEnded is a no-op with no active run", () => {
+    statsActions(testWorld).markRunEnded();
+
+    expect(testWorld.queryFirst(RunEnded)).toBeUndefined();
   });
 });

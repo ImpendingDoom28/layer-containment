@@ -11,8 +11,10 @@ import { WorldProvider } from "koota/react";
 
 import { statsActions } from "../../core/ecs/actions/statsActions";
 import {
+  DamageByTowerType,
   IsStats,
   MoneyEarned,
+  RunEnded,
   damageDealtRequest,
   moneyEarnedRequest,
 } from "../../core/ecs/traits/stats";
@@ -91,5 +93,40 @@ describe("ApplyStatsSystem", () => {
     }
 
     expect(testWorld.queryFirst(moneyEarnedRequest)).toBeUndefined();
+  });
+
+  it("flushes same-frame receipts when the run ends and clears the RunEnded tag", async () => {
+    statsActions(testWorld).startRunStats();
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <WorldProvider world={testWorld}>
+        <ApplyStatsSystem />
+      </WorldProvider>
+    );
+
+    try {
+      // The end-state transition and a killing blow land in the same frame,
+      // before the next per-frame fold.
+      testWorld.spawn(
+        damageDealtRequest({
+          towerType: "basic",
+          enemyType: "basic",
+          amount: 10,
+          killed: true,
+        })
+      );
+      statsActions(testWorld).markRunEnded();
+
+      // The onAdd reaction folded the receipt synchronously...
+      const stats = testWorld.queryFirst(IsStats);
+      expect(stats?.get(DamageByTowerType)).toEqual({ basic: 10 });
+      expect(testWorld.queryFirst(damageDealtRequest)).toBeUndefined();
+      // ...and removed the tag, so the next end is a discrete event.
+      expect(testWorld.queryFirst(IsStats, RunEnded)).toBeUndefined();
+    } finally {
+      await ReactThreeTestRenderer.act(async () => {
+        renderer.unmount();
+      });
+    }
   });
 });

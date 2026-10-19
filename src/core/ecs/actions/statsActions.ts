@@ -1,12 +1,12 @@
 import { createActions } from "koota";
 
 import type { TowerType } from "../../types/game";
-import { runStatsSystem } from "../systems/statsSystem";
 import {
   DamageByTowerType,
   KillsByTowerType,
   IsStats,
   MoneyEarned,
+  RunEnded,
   SpendByTowerType,
   damageDealtRequest,
   moneyEarnedRequest,
@@ -56,13 +56,13 @@ export const statsActions = createActions((world) => ({
   },
 
   /**
-   * Folds all pending receipts into the stats entity right now (the stats
-   * entity is kept). Called on the end-state transitions so the result
-   * screen freezes a complete snapshot even if the transition lands before
-   * the next per-frame fold.
+   * Tags the stats entity so the stats system can flush receipts raised in
+   * the same frame as the end-state transition (e.g. the killing blow on the
+   * final wave). The system removes the tag after folding.
    */
-  flushRunStats: (): void => {
-    if (!world.queryFirst(IsStats)) return;
-    runStatsSystem(world);
+  markRunEnded: (): void => {
+    const statsEntity = world.queryFirst(IsStats);
+    if (!statsEntity) return;
+    statsEntity.add(RunEnded);
   },
 }));

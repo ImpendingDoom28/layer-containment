@@ -2,6 +2,12 @@
   "name": "containment-layer",
   "private": true,
   "version": "0.0.0",
+  "description": "Layer Containment — a 3D tower defense game",
+  "author": {
+    "name": "Layer Containment",
+    "email": "impendingdoom28@users.noreply.github.com"
+  },
+  "desktopName": "layer-containment",
   "type": "module",
   "main": "electron/dist/main.js",
   "scripts": {
@@ -112,7 +118,9 @@
       "target": [
         "AppImage",
         "deb"
-      ]
+      ],
+      "maintainer": "Layer Containment <impendingdoom28@users.noreply.github.com>",
+      "syncDesktopName": true
     },
     "mac": {
       "category": "public.app-category.games"

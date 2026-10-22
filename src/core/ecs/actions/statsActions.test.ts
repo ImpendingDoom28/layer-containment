@@ -1,12 +1,11 @@
 import { describe, expect, it, beforeEach } from "vitest";
 
-import { statsActions } from "./statsActions";
+import { statsActions, sweepStatsReceipts } from "./statsActions";
 import {
   IsStats,
   MoneyEarned,
   RunEnded,
   damageDealtRequest,
-  moneyEarnedRequest,
   moneySpentRequest,
 } from "../traits/stats";
 import { testWorld } from "../world";
@@ -15,15 +14,7 @@ const clearRun = () => {
   for (const entity of [...testWorld.query(IsStats)]) {
     entity.destroy();
   }
-  for (const entity of [...testWorld.query(damageDealtRequest)]) {
-    entity.destroy();
-  }
-  for (const entity of [...testWorld.query(moneyEarnedRequest)]) {
-    entity.destroy();
-  }
-  for (const entity of [...testWorld.query(moneySpentRequest)]) {
-    entity.destroy();
-  }
+  sweepStatsReceipts(testWorld);
 };
 
 describe("statsActions", () => {

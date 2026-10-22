@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach } from "vitest";
 
 import { runStatsSystem } from "./statsSystem";
-import { statsActions } from "../actions/statsActions";
+import { statsActions, sweepStatsReceipts } from "../actions/statsActions";
 import {
   DamageByTowerType,
   IsStats,
@@ -18,15 +18,7 @@ const clearRun = () => {
   for (const entity of [...testWorld.query(IsStats)]) {
     entity.destroy();
   }
-  for (const entity of [...testWorld.query(damageDealtRequest)]) {
-    entity.destroy();
-  }
-  for (const entity of [...testWorld.query(moneyEarnedRequest)]) {
-    entity.destroy();
-  }
-  for (const entity of [...testWorld.query(moneySpentRequest)]) {
-    entity.destroy();
-  }
+  sweepStatsReceipts(testWorld);
 };
 
 describe("statsSystem", () => {

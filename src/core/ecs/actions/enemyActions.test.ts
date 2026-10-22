@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, vi, afterEach } from "vitest";
 
 import { enemyActions } from "./enemyActions";
-import { statsActions } from "./statsActions";
+import { statsActions, sweepStatsReceipts } from "./statsActions";
 import { worldBaseActions } from "./baseActions";
 import { getEnemySnapshots } from "../selectors/enemySnapshots";
 import { IsEnemy, requestEnemyDeath } from "../traits/enemy";
@@ -52,15 +52,12 @@ describe("enemyActions", () => {
 
   afterEach(() => {
     worldBaseActions(testWorld).removeBase();
-    // Clear any stats receipts / entity and restore the default menu status so
+    // Clear any stats entity / receipts and restore the default menu status so
     // the new stats tests don't leak into other tests.
-    for (const entity of [
-      ...testWorld.query(IsStats),
-      ...testWorld.query(damageDealtRequest),
-      ...testWorld.query(moneyEarnedRequest),
-    ]) {
+    for (const entity of [...testWorld.query(IsStats)]) {
       entity.destroy();
     }
+    sweepStatsReceipts(testWorld);
     useGameStore.setState({ gameStatus: "menu" });
   });
 

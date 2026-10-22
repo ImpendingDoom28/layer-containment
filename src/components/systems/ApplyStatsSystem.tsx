@@ -2,13 +2,9 @@ import { FC, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useWorld } from "koota/react";
 
+import { sweepStatsReceipts } from "../../core/ecs/actions/statsActions";
 import { runStatsSystem } from "../../core/ecs/systems/statsSystem";
-import {
-  RunEnded,
-  damageDealtRequest,
-  moneyEarnedRequest,
-  moneySpentRequest,
-} from "../../core/ecs/traits/stats";
+import { RunEnded } from "../../core/ecs/traits/stats";
 
 /**
  * Folds pending stats receipts into the run's stats entity once per frame.
@@ -45,15 +41,7 @@ export const ApplyStatsSystem: FC = () => {
   // scene does not collect leftover receipts.
   useEffect(() => {
     return () => {
-      for (const entity of world.query(damageDealtRequest)) {
-        if (entity.isAlive()) entity.destroy();
-      }
-      for (const entity of world.query(moneyEarnedRequest)) {
-        if (entity.isAlive()) entity.destroy();
-      }
-      for (const entity of world.query(moneySpentRequest)) {
-        if (entity.isAlive()) entity.destroy();
-      }
+      sweepStatsReceipts(world);
     };
   }, [world]);
 

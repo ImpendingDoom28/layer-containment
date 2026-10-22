@@ -1,4 +1,4 @@
-import { createActions } from "koota";
+import { createActions, type World } from "koota";
 
 import type { TowerType } from "../../types/game";
 import {
@@ -12,6 +12,23 @@ import {
   moneyEarnedRequest,
   moneySpentRequest,
 } from "../traits/stats";
+
+/**
+ * Destroys any still-pending stats receipt entities. The receipt list has a
+ * single owner here so a new receipt type can't be missed in one of the sweeps
+ * (run end, scene unmount, test teardown).
+ */
+export const sweepStatsReceipts = (world: World): void => {
+  for (const entity of world.query(damageDealtRequest)) {
+    if (entity.isAlive()) entity.destroy();
+  }
+  for (const entity of world.query(moneyEarnedRequest)) {
+    if (entity.isAlive()) entity.destroy();
+  }
+  for (const entity of world.query(moneySpentRequest)) {
+    if (entity.isAlive()) entity.destroy();
+  }
+};
 
 /**
  * Owns the per-run stats entity: spawns a fresh one on run start and
@@ -38,15 +55,7 @@ export const statsActions = createActions((world) => ({
     for (const entity of world.query(IsStats)) {
       entity.destroy();
     }
-    for (const entity of world.query(damageDealtRequest)) {
-      entity.destroy();
-    }
-    for (const entity of world.query(moneyEarnedRequest)) {
-      entity.destroy();
-    }
-    for (const entity of world.query(moneySpentRequest)) {
-      entity.destroy();
-    }
+    sweepStatsReceipts(world);
   },
 
   /** Raises a purchase receipt; a no-op when no run is being tracked. */

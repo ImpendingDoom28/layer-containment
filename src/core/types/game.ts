@@ -166,13 +166,6 @@ export type WaveConfig = {
   enemies: WaveEnemyGroup[];
 };
 
-export type ActiveEffect = {
-  id: number;
-  position: [number, number, number];
-  color: string;
-  type: "spawn" | "end";
-};
-
 export type Building = {
   id: number;
   gridX: number;

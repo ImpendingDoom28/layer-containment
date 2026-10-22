@@ -15,8 +15,6 @@ type EnemyMovementSystemProps = {
   getSimulationTime: GetSimulationTime;
   getTimeScale: GetTimeScale;
   onEnemyReachEnd: ((enemyId: number) => void) | null;
-  onEndEffect:
-    ((position: [number, number, number], color: string) => void) | null;
 };
 
 /**
@@ -32,7 +30,6 @@ export const EnemyMovementSystem: FC<EnemyMovementSystemProps> = ({
   getSimulationTime,
   getTimeScale,
   onEnemyReachEnd,
-  onEndEffect,
 }) => {
   const world = useWorld();
 
@@ -43,7 +40,6 @@ export const EnemyMovementSystem: FC<EnemyMovementSystemProps> = ({
     );
     runEnemyMovementFrame(world, state, clampedDelta * getTimeScale(), getSimulationTime, {
       onEnemyReachEnd,
-      onEndEffect,
       canFinish: !shouldStopMovement,
     });
   });

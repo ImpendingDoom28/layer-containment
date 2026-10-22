@@ -9,11 +9,11 @@ import { useLevelSystem } from "../../../core/hooks/useLevelSystem";
 import { EntitiesSystem } from "../../systems/EntitiesSystem";
 import { useProjectileSystem } from "../../../core/hooks/useProjectileSystem";
 import { useEnemyActions } from "../../../core/hooks/useEnemyActions";
+import { useGameSystem } from "../../../core/hooks/useGameSystem";
 import {
   enemyTypesSelector,
   useGameStore,
 } from "../../../core/stores/useGameStore";
-import { useGameSystem } from "../../../core/hooks/useGameSystem";
 import { enemyActions } from "../../../core/ecs/actions/enemyActions";
 import { Path } from "../../entities/Path";
 import { CombatJuice } from "../../entities/effects/CombatJuice";
@@ -49,15 +49,17 @@ const selectWeightedEnemyType = (
 };
 
 export const MainMenuScene: FC = () => {
-  const gameSystem = useGameSystem();
+  // Loads the game config and wires the game store; the scene no longer
+  // consumes its effect callbacks (those are now ECS entities), but the
+  // config-loading side effect is still required for `addEnemy` and the
+  // level to initialize.
+  useGameSystem();
   const levelSystem = useLevelSystem();
   const enemySystem = useEnemyActions();
   const { onProjectileHit, onProjectileRemove } =
     useProjectileSystem(enemySystem);
 
   const enemyTypes = useGameStore(enemyTypesSelector);
-  const { onSpawnEffect, onEndEffect, activeEffects, onEffectComplete } =
-    gameSystem;
 
   const { pathWaypoints, enemyWeights } = useLevelStore();
   const { addEnemy } = levelSystem;
@@ -119,10 +121,6 @@ export const MainMenuScene: FC = () => {
         onProjectileHit={onProjectileHit}
         onProjectileRemove={onProjectileRemove}
         onEnemyReachEnd={enemySystem.onEnemyReachEnd}
-        onSpawnEffect={onSpawnEffect}
-        onEndEffect={onEndEffect}
-        activeEffects={activeEffects}
-        onEffectComplete={onEffectComplete}
       />
 
       {/* Death burst on `ENEMY_KILLED`; menu kills are settled by the shared

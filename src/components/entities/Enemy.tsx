@@ -20,7 +20,9 @@ import {
   type Mesh,
 } from "three";
 import type { Entity } from "koota";
+import { useActions } from "koota/react";
 
+import { effectActions } from "../../core/ecs/actions/effectActions";
 import { getPositionAlongMultiplePaths } from "../../utils/pathUtils";
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import { GUIDebugInfo } from "../gui/GUIDebugInfo";
@@ -50,8 +52,6 @@ type EnemyProps = {
   entity: Entity;
   getSimulationTime: GetSimulationTime;
   getTimeScale: GetTimeScale;
-  onSpawnEffect:
-    ((position: [number, number, number], color: string) => void) | null;
   debug?: boolean;
 };
 
@@ -99,7 +99,6 @@ export const Enemy: FC<EnemyProps> = memo(
     entity,
     getSimulationTime,
     getTimeScale,
-    onSpawnEffect,
     debug = false,
   }) => {
     // Read the cold state once at mount: every field the JSX uses
@@ -108,6 +107,8 @@ export const Enemy: FC<EnemyProps> = memo(
     // that is handled imperatively in useFrame below instead of through a
     // `useTrait` re-render on every hit.
     const [snapshot] = useState(() => entity.get(EnemyState));
+
+    const actions = useActions(effectActions);
 
     const pathWaypoints = useLevelStore(pathWaypointsSelector);
     const gridSize = useLevelStore(gridSizeSelector);
@@ -179,7 +180,6 @@ export const Enemy: FC<EnemyProps> = memo(
       const motionData = entity.get(EnemyMotion);
       if (
         !hasTriggeredSpawnEffect.current &&
-        onSpawnEffect &&
         motionData &&
         motionData.pathProgress < 0.01
       ) {
@@ -198,17 +198,18 @@ export const Enemy: FC<EnemyProps> = memo(
         scratchGroupPos.current
           .copy(scratchSurface.current)
           .addScaledVector(scratchNormal.current, spawnPosition.y + 0.1);
-        onSpawnEffect(
+        actions.requestSpawnEffect(
           [
             scratchGroupPos.current.x,
             scratchGroupPos.current.y,
             scratchGroupPos.current.z,
           ],
-          snapshot.color
+          snapshot.color,
+          "spawn"
         );
         hasTriggeredSpawnEffect.current = true;
       }
-    }, [snapshot, entity, onSpawnEffect, pathWaypoints, radius]);
+    }, [snapshot, entity, actions, pathWaypoints, radius]);
 
     useLayoutEffect(() => {
       const live = entity.get(EnemyState);

@@ -67,11 +67,7 @@ const entitiesSystemProps = {
   onSellTower: null,
   hoveredTile: null,
   selectedTower: null,
-  onSpawnEffect: vi.fn(),
-  onEndEffect: vi.fn(),
   shouldStopMovement: false,
-  activeEffects: [],
-  onEffectComplete: vi.fn(),
 };
 
 describe("EntitiesSystem enemy death settlement", () => {

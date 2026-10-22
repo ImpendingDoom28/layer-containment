@@ -15,10 +15,11 @@ export const useProjectileSystem = (enemyActions: EnemyActions) => {
 
   const onProjectileHit = useCallback(
     (projectile: Projectile, targetEnemy: Enemy, currentTime: number = 0) => {
+      const source = { towerType: projectile.towerType };
       if (projectile.projectileType === "beam") {
-        damageEnemy(targetEnemy.id, projectile.damage);
+        damageEnemy(targetEnemy.id, projectile.damage, source);
       } else if (projectile.projectileType === "chain") {
-        damageEnemy(targetEnemy.id, projectile.damage);
+        damageEnemy(targetEnemy.id, projectile.damage, source);
       } else if (projectile.projectileType === "aoe" && projectile.aoeRadius) {
         // Only AOE needs the full snapshot array; allocate it lazily so the
         // far more common single/beam/chain hits don't allocate per hit.
@@ -31,10 +32,10 @@ export const useProjectileSystem = (enemyActions: EnemyActions) => {
         );
 
         enemiesInRange.forEach((enemy) => {
-          damageEnemy(enemy.id, projectile.damage);
+          damageEnemy(enemy.id, projectile.damage, source);
         });
       } else {
-        damageEnemy(targetEnemy.id, projectile.damage);
+        damageEnemy(targetEnemy.id, projectile.damage, source);
 
         if (
           projectile.projectileType === "single" &&

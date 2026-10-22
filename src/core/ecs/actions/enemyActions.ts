@@ -1,11 +1,16 @@
-import { createActions, type Entity } from "koota";
+import { createActions, type Entity, type World } from "koota";
 
 import { useAlmanacStore } from "../../stores/useAlmanacStore";
 import { useLevelStore } from "../../stores/useLevelStore";
 import { useGameStore } from "../../stores/useGameStore";
-import type { Enemy } from "../../types/game";
+import type { Enemy, TowerType } from "../../types/game";
 import { GameEvent } from "../../types/enums/events";
 import { gameEvents } from "../../../utils/eventEmitter";
+import {
+  IsStats,
+  damageDealtRequest,
+  moneyEarnedRequest,
+} from "../traits/stats";
 import {
   EnemyMotion,
   EnemyState,
@@ -75,11 +80,15 @@ const enemyToPosition = (enemyData: Enemy): PositionData => ({
 });
 
 /** Settle a kill: reward, kill count, ENEMY_KILLED. Private to the enemy domain. */
-const handleEnemyDeath = (enemy: Enemy): void => {
+const handleEnemyDeath = (world: World, enemy: Enemy): void => {
   const gameStatus = useGameStore.getState().gameStatus;
   useLevelStore.getState().addMoney(enemy.reward);
   if (gameStatus !== "menu") {
     useLevelStore.getState().incrementEnemiesKilled();
+    // Guarded so the main menu (no stats entity) collects nothing.
+    if (world.queryFirst(IsStats)) {
+      world.spawn(moneyEarnedRequest({ amount: enemy.reward }));
+    }
   }
   gameEvents.emit(GameEvent.ENEMY_KILLED, {
     enemyId: enemy.id,
@@ -234,7 +243,7 @@ export const enemyActions = createActions((world) => ({
         },
       });
     } else {
-      handleEnemyDeath(enemy);
+      handleEnemyDeath(world, enemy);
     }
 
     enemyEntitiesById.delete(enemyId);
@@ -242,7 +251,16 @@ export const enemyActions = createActions((world) => ({
     return true;
   },
 
-  damageEnemy: (enemyId: number, damage: number): boolean => {
+  /**
+   * Settles one damage hit. With a `source`, also raises a per-hit stats
+   * receipt (effective damage clamped at 0; `killed` on the final hit).
+   * The optional source keeps the existing two-argument calls intact.
+   */
+  damageEnemy: (
+    enemyId: number,
+    damage: number,
+    source?: { towerType: TowerType }
+  ): boolean => {
     const entity = enemyEntitiesById.get(enemyId);
     if (!entity) return false;
 
@@ -250,6 +268,22 @@ export const enemyActions = createActions((world) => ({
     if (!enemy) return false;
 
     const newHealth = enemy.health - damage;
+
+    // The entity stays alive (health 0) until EnemyDeathSystem settles the
+    // kill, so further hits can land in that window. Credit the kill only on
+    // the alive-to-dead transition and skip receipts for already-dead enemies
+    // entirely (they deal no effective damage).
+    if (source && enemy.health > 0 && world.queryFirst(IsStats)) {
+      const effectiveDamage = Math.max(0, Math.min(damage, enemy.health));
+      world.spawn(
+        damageDealtRequest({
+          towerType: source.towerType,
+          enemyType: enemy.type,
+          amount: effectiveDamage,
+          killed: newHealth <= 0,
+        })
+      );
+    }
 
     if (newHealth <= 0) {
       // Death is not settled here: clamp health and raise the request,

@@ -1,5 +1,6 @@
 import { World } from "koota";
 
+import { statsActions } from "../actions/statsActions";
 import { requestBaseDefeat } from "../traits/base";
 import { useGameStore } from "../../stores/useGameStore";
 import { gameEvents } from "../../../utils/eventEmitter";
@@ -12,6 +13,9 @@ export const runBaseDefeatSystem = (world: World) => {
   const gameStore = useGameStore.getState();
   if (gameStore.gameStatus === "playing") {
     gameStore.setGameStatus("gameOver");
+    // Signal the run ended; the stats system flushes the receipts raised in
+    // this same frame so the end screen freezes a complete snapshot.
+    statsActions(world).markRunEnded();
   }
   // The scene keeps running after defeat, so skip re-emitting (SFX) per frame.
   if (gameStore.gameStatus !== "gameOver") {

@@ -36,6 +36,9 @@ export const sweepStatsReceipts = (world: World): void => {
  */
 export const statsActions = createActions((world) => ({
   startRunStats: (): void => {
+    // Sweep receipts left over from the previous run (e.g. damage that landed
+    // while the end screen was up) so they cannot be folded into the new run.
+    sweepStatsReceipts(world);
     const existing = world.queryFirst(IsStats);
     if (existing) {
       existing.destroy();

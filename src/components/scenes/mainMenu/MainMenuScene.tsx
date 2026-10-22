@@ -16,6 +16,7 @@ import {
 } from "../../../core/stores/useGameStore";
 import { enemyActions } from "../../../core/ecs/actions/enemyActions";
 import { Path } from "../../entities/Path";
+import { CombatJuice } from "../../entities/effects/CombatJuice";
 import { MainMenuCamera } from "./MainMenuCamera";
 import { MAIN_MENU_ENEMY_SPAWN_CONFIG } from "./constants";
 import { Ground } from "../shared/Ground";
@@ -121,6 +122,11 @@ export const MainMenuScene: FC = () => {
         onProjectileRemove={onProjectileRemove}
         onEnemyReachEnd={enemySystem.onEnemyReachEnd}
       />
+
+      {/* Death burst on `ENEMY_KILLED`; menu kills are settled by the shared
+          EnemyDeathSystem so the event fires here too. No reward float: the
+          menu has no gold display. */}
+      <CombatJuice shouldStopMovement={false} showRewardText={false} />
     </>
   );
 };

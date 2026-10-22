@@ -22,7 +22,7 @@
     "generate:stress-level": "python3 scripts/generate-stress-level.py",
     "make:icon": "node scripts/make-icon.mjs",
     "dev:desktop": "concurrently -k -n vite,electron -c blue,magenta \"vite\" \"npm:dev:electron:wait\"",
-    "dev:electron": "tsc -p electron/tsconfig.json && VITE_DEV_SERVER_URL=http://localhost:5173 electron .",
+    "dev:electron": "tsc -p electron/tsconfig.json && node scripts/dev-electron.mjs",
     "dev:electron:wait": "node scripts/wait-for-url.mjs http://localhost:5173 && npm run dev:electron",
     "build:desktop": "npm run build && tsc -p electron/tsconfig.json && electron-builder --dir",
     "dist": "npm run build && tsc -p electron/tsconfig.json && electron-builder",
@@ -102,6 +102,18 @@
     ],
     "icon": "build/icon.png",
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ]
+    },
     "mac": {
       "category": "public.app-category.games"
     },

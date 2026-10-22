@@ -1,7 +1,9 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { app, BrowserWindow, Menu } from "electron";
+import { app, BrowserWindow, Menu, shell } from "electron";
 
+// The Vite dev server URL; the dev:electron launch script sets this (see
+// scripts/dev-electron.mjs).
 const DEV_SERVER_URL =
   process.env.VITE_DEV_SERVER_URL ?? "http://localhost:5173";
 
@@ -48,6 +50,28 @@ const createMainWindow = () => {
 
   Menu.setApplicationMenu(null);
   window.setMenuBarVisibility(false);
+
+  // The packaged renderer runs with webSecurity relaxed (for local file://
+  // content only), so links must never open a remote page in a child window
+  // or navigate the app away from its local content — hand them to the OS
+  // browser instead.
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:/i.test(url)) {
+      void shell.openExternal(url);
+    }
+    return { action: "deny" };
+  });
+  window.webContents.on("will-navigate", (event, url) => {
+    const allowedRoot = useDevServer
+      ? DEV_SERVER_URL
+      : `file://${path.dirname(resolveIndexHtml())}/`;
+    if (!url.startsWith(allowedRoot)) {
+      event.preventDefault();
+      if (/^https?:/i.test(url)) {
+        void shell.openExternal(url);
+      }
+    }
+  });
 
   window.webContents.on("before-input-event", (event, input) => {
     // Keep the app keyboard-first (camera movement, pause, tower hotkeys).
@@ -100,15 +124,18 @@ const runSmoke = (window: BrowserWindow) => {
     app.exit(1);
   }, 30_000);
 
+  // Any button in #root means the main menu rendered (the loading overlay
+  // has no buttons), which is language-independent — the app restores the
+  // saved language before rendering, so the button label is not fixed.
   window.webContents
     .executeJavaScript(
       `new Promise((resolve) => {
         const wait = (ms) => new Promise((r) => setTimeout(r, ms));
         const check = async () => {
           for (let i = 0; i < 20; i++) {
-            const play = [...document.querySelectorAll("button")]
-              .find((b) => b.textContent.trim() === "Play");
-            if (play) return { ok: true, url: location.href, rootLen: document.getElementById("root")?.innerHTML.length ?? -1 };
+            if (document.querySelector("#root button")) {
+              return { ok: true, url: location.href, rootLen: document.getElementById("root")?.innerHTML.length ?? -1 };
+            }
             await wait(500);
           }
           return { ok: false, url: location.href, rootLen: document.getElementById("root")?.innerHTML.length ?? -1 };

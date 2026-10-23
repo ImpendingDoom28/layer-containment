@@ -30,6 +30,9 @@ const useDevServer = !app.isPackaged && !isSmokeAny;
 
 let mainWindow: BrowserWindow | null = null;
 let appServerUrl = "";
+// Set before an intentional quit so the crash handlers (which also fire when
+// the renderer is torn down during shutdown) don't show a spurious dialog.
+let isQuitting = false;
 
 const resolveIndexHtml = () =>
   path.join(app.getAppPath(), "dist", "index.html");
@@ -230,18 +233,20 @@ const createMainWindow = () => {
   window.webContents.on("did-fail-load", (_event, code, desc, url) => {
     appendLog(`DID-FAIL-LOAD: ${code} ${desc} ${url}`);
   });
-  window.webContents.on("unresponsive", () =>
+  window.webContents.on("unresponsive", () => {
+    if (isQuitting) return;
     showCrashDialog(
       "Layer Containment is not responding",
       "The renderer process stopped responding (usually a GPU crash on this machine)."
-    )
-  );
-  window.webContents.on("render-process-gone", (_event, details) =>
+    );
+  });
+  window.webContents.on("render-process-gone", (_event, details) => {
+    if (isQuitting) return;
     showCrashDialog(
       "Layer Containment crashed",
       `The renderer process ${details.reason} (exit code ${details.exitCode}).`
-    )
-  );
+    );
+  });
 
 
   if (useDevServer) {
@@ -460,6 +465,7 @@ const runSmoke = (window: BrowserWindow, bootOnly: boolean) => {
   const timeout = setTimeout(() => {
     void dumpState("SMOKE TIMEOUT STATE");
     console.log("SMOKE FAILED (timeout)");
+    isQuitting = true;
     app.exit(1);
   }, bootOnly ? 60_000 : 180_000);
 
@@ -471,11 +477,13 @@ const runSmoke = (window: BrowserWindow, bootOnly: boolean) => {
         bootOnly ? "SMOKE BOOT RESULT:" : "SMOKE RESULT:",
         JSON.stringify(result, null, 2)
       );
+      isQuitting = true;
       app.exit(result && result.ok ? 0 : 1);
     })
     .catch((error) => {
       clearTimeout(timeout);
       console.log("SMOKE FAILED (eval):", String(error));
+      isQuitting = true;
       app.exit(1);
     });
 };
@@ -520,8 +528,11 @@ ipcMain.on("renderer-uncaught-error", (event, payload) => {
 
 app.whenReady().then(onAppReady);
 
+// Quit on every platform when the last window closes (not just on Windows/
+// Linux as the macOS convention would): a dev launcher that started the Vite
+// server (or a CI smoke run) must not linger with its helper processes alive
+// after the window goes away.
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
+  isQuitting = true;
+  app.quit();
 });

@@ -78,14 +78,15 @@ npm run dist:mac    # macOS dmg + app (must run on macOS)
 npm run dist:linux  # Linux AppImage + deb
 
 # Test the packaged build without installing it
-npm run run:desktop             # build (if missing) + launch the app in a window
+npm run run:desktop             # build (if missing) + launch the packaged
+                                # binary in a window
 npm run run:desktop -- --rebuild
-npm run smoke:desktop           # boots the app and plays through
-                                # menu -> tower -> first wave, exits 0/1
+npm run smoke:desktop           # boots the app (repo build, `electron .`)
+                                # and plays through menu -> tower -> first
+                                # wave, exits 0/1
 npm run smoke:desktop -- --unpacked --no-sandbox
                                 # smoke the *packaged* executable from
-                                # release/ (build it first with
-                                # `npx electron-builder --dir`). On headless
+                                # release/ (built if missing). On headless
                                 # machines add chromium flags, e.g.
                                 # `--disable-gpu --use-angle=swiftshader`
                                 # (software WebGL) — CI does exactly that.

@@ -1,25 +1,22 @@
-// Boots the desktop app the same way the installed binary does (main
-// process serves the built app from a loopback http origin) and either runs
-// the full smoke flow headless (exit 0/1) or launches the packaged build in a
-// window for manual testing.
+// Launches the desktop app the same way the installed binary does (main
+// process serves the built app from a loopback http origin).
 //
-//   npm run build && npm run smoke:desktop [-- --no-sandbox]
-//   npm run smoke:desktop -- --unpacked   # smoke the packaged executable
-//   npm run smoke:desktop -- --run        # build if missing, launch in a window
-//   npm run smoke:desktop -- --run --rebuild
+// Modes (general -> specific):
+//   npm run run:desktop              # launch the packaged binary in a window
+//   npm run run:desktop -- --rebuild # build it first (npm run build:desktop)
+//   npm run smoke:desktop            # smoke the repo app (`electron .`)
+//   npm run smoke:desktop -- --unpacked
+//                                   # smoke the packaged binary
 //
-// Without --unpacked/--run it launches `electron .` (the unpackaged app in
-// the repo, same main-process code path). --unpacked and --run locate and
-// launch the executable electron-builder produced (release/
-// linux-unpacked|win-unpacked|mac-<arch>), i.e. the actual installed binary;
-// --run builds it first (npm run build:desktop) if it is missing.
-//
+// --smoke runs the in-app smoke flow (menu -> level -> tower -> first wave)
+// and exits with its status; --boot-only runs only the boot check. A plain
+// run targets the packaged executable (building it if missing) so the
+// installed build is what gets tested; a plain smoke targets the repo app.
 // --no-sandbox disables the Chromium renderer sandbox (no setuid helper on
-// headless runners). Safe to pass anywhere.
-//
-// Additional chromium flags (e.g. --disable-gpu, --use-angle=swiftshader for
-// headless software WebGL) are forwarded to the app verbatim; see the CI
-// matrix in .github/workflows/desktop.yml for the per-platform choices.
+// headless runners). Additional chromium flags
+// (e.g. --disable-gpu, --use-angle=swiftshader for headless software WebGL)
+// are forwarded to the app verbatim; see .github/workflows/desktop.yml for
+// the per-platform CI choices.
 import { spawn, spawnSync } from "node:child_process";
 import { accessSync, constants, existsSync, readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -115,25 +112,27 @@ const scriptFlags = new Set([
   "--no-sandbox",
   "--smoke",
   "--boot-only",
-  "--run",
   "--rebuild",
 ]);
-const runMode = process.argv.includes("--run");
-const noSandbox = process.argv.includes("--no-sandbox");
-const bootOnly = process.argv.includes("--boot-only");
+const argv = process.argv.slice(2);
+const smoke = argv.includes("--smoke");
+const bootOnly = argv.includes("--boot-only");
+const noSandbox = argv.includes("--no-sandbox");
 const env = { ...process.env };
 if (noSandbox) env.ELECTRON_DISABLE_SANDBOX = "1";
 
-const forwardArgs = process.argv
-  .slice(2)
-  .filter((arg) => arg.startsWith("--") && !scriptFlags.has(arg));
+const forwardArgs = argv.filter((arg) => arg.startsWith("--") && !scriptFlags.has(arg));
+
+// Target executable: a plain run launches the packaged binary (building it
+// if missing — that is how the installed build is tested); a plain smoke
+// launches `electron .` (the repo app, same main-process code path) unless
+// --unpacked asks for the packaged executable.
+const usePackaged = argv.includes("--unpacked") || !smoke && !bootOnly;
 
 let executable = electronBinary;
 let appPathArgs = ["."];
-if (runMode) {
-  // Launch the packaged binary (building it first if needed) in a plain
-  // window for manual testing; no --smoke args in this mode.
-  const rebuild = process.argv.includes("--rebuild");
+if (usePackaged) {
+  const rebuild = argv.includes("--rebuild");
   let packaged = findPackagedExecutable();
   if (rebuild || !packaged) {
     if (!packaged) console.log("No packaged app found; building (npm run build:desktop)");
@@ -151,20 +150,10 @@ if (runMode) {
   }
   executable = packaged;
   appPathArgs = [];
-} else if (process.argv.includes("--unpacked")) {
-  const packaged = findPackagedExecutable();
-  if (!packaged) {
-    console.error(
-      "No packaged app found under release/. Run `npx electron-builder --dir --<target>` first."
-    );
-    process.exit(1);
-  }
-  executable = packaged;
-  appPathArgs = [];
 }
 
-const exeArgs = runMode ? [] : [bootOnly ? "--smoke-boot" : "--smoke"];
-if (!runMode && noSandbox) exeArgs.push("--no-sandbox");
+const exeArgs = smoke || bootOnly ? [bootOnly ? "--smoke-boot" : "--smoke"] : [];
+if (noSandbox) exeArgs.push("--no-sandbox");
 exeArgs.push(...forwardArgs);
 
 const child = spawn(executable, [...appPathArgs, ...exeArgs], {
@@ -179,5 +168,5 @@ child.on("error", (error) => {
 });
 
 child.on("exit", (code) => {
-  process.exit(code ?? (runMode ? 0 : 1));
+  process.exit(code ?? (smoke || bootOnly ? 1 : 0));
 });

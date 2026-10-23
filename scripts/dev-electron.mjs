@@ -4,21 +4,26 @@
 // set here. `electron .` resolves the app via the "main" field in
 // package.json (electron/dist/main.js).
 import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+const require = createRequire(import.meta.url);
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const electronBinary = path.join(
-  root,
-  "node_modules",
-  ".bin",
-  process.platform === "win32" ? "electron.cmd" : "electron"
-);
+
+// require("electron") resolves to the platform executable directly (not the
+// .cmd shim that the .bin entry points to), so spawn works on every OS.
+const electronBinary = require("electron");
 
 const child = spawn(electronBinary, ["."], {
   cwd: root,
   stdio: "inherit",
   env: { ...process.env, VITE_DEV_SERVER_URL: "http://localhost:5173" },
+});
+
+child.on("error", (error) => {
+  console.error(`Failed to launch Electron: ${error.message}`);
+  process.exit(1);
 });
 
 child.on("exit", (code) => {

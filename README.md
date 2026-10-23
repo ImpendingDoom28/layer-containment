@@ -83,7 +83,7 @@ Notes:
 - The packaged app is loaded from `dist/index.html` over `file://`, so routing automatically switches to `HashRouter` in that environment (see `src/core/router.tsx`) and asset loading stays local.
 - `npm run dev:desktop` waits for the Vite dev server (`http://localhost:5173`) before launching Electron, so the game hot-reloads while you develop.
 - F12 toggles the DevTools in the desktop app.
-- The desktop icon lives in `build/` (`icon.svg`, rendered to `icon.png` via `npm run make:icon`); it is bundled as the app icon.
+- The desktop icon lives in `build/` (`icon.svg`, rendered to `icon.png` via `npm run make:icon`); it is bundled as the app icon. It redraws the brand mark so this PR does not depend on the (still open) `feature/logo-mark` branch — once that lands, `build/icon.svg` should reuse the canonical `public/` logo as the single source of truth.
 - CI (`.github/workflows/desktop.yml`) builds installers for Windows, macOS, and Linux on every PR and push to `master`, so packaging is verified before merge.
 - Distributing through Steam: publish the per-platform installer/artifact builds (NSIS exe, dmg, AppImage) as a Steam app via the Steamworks SDK. No signing/notarization is configured yet — add your code-signing certificates to CI before publishing to the Mac App Store or Steam's notarized macOS builds.
 

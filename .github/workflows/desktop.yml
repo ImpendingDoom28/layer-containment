@@ -53,11 +53,19 @@ jobs:
       - name: Package
         run: npm run dist -- --${{ matrix.target }}
 
-      # Boots the packaged app the same way the installed binary does and
-      # plays through menu → tower placement → first wave, so a broken build
-      # (e.g. a WebGL or config-loading failure) fails CI instead of shipping.
+      # `dist` only produces installers; the smoke needs a runnable unpacked
+      # app, so build one (release/*-unpacked or *.app, per platform).
+      - name: Build unpacked app
+        run: npx electron-builder --dir --${{ matrix.target }}
+
+      # Boots the packaged executable the same way the installed binary does
+      # and plays through menu → tower placement → first wave, so a broken
+      # build (e.g. a WebGL or config-loading failure) fails CI instead of
+      # shipping. --no-sandbox disables the Chromium sandbox (no setuid
+      # helper on runners); --disable-gpu forces software rendering (no GPU
+      # on runners).
       - name: Smoke test the packaged app
-        run: npm run smoke:desktop -- --unpacked --no-sandbox
+        run: npm run smoke:desktop -- --unpacked --no-sandbox --disable-gpu
 
       - name: Upload installer
         uses: actions/upload-artifact@v4

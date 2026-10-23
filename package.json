@@ -31,6 +31,8 @@
     "dev:electron": "tsc -p electron/tsconfig.json && node scripts/dev-electron.mjs",
     "dev:electron:wait": "node scripts/wait-for-url.mjs http://localhost:5173 && npm run dev:electron",
     "build:desktop": "npm run build && tsc -p electron/tsconfig.json && electron-builder --dir",
+    "smoke:desktop": "tsc -p electron/tsconfig.json && node scripts/smoke-desktop.mjs",
+    "run:desktop": "node scripts/run-desktop.mjs",
     "dist": "npm run build && tsc -p electron/tsconfig.json && electron-builder",
     "dist:win": "npm run build && tsc -p electron/tsconfig.json && electron-builder --win",
     "dist:mac": "npm run build && tsc -p electron/tsconfig.json && electron-builder --mac",

@@ -146,6 +146,9 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
                 return (
                   <UIButton
                     key={labelKey}
+                    data-testid={
+                      labelKey === "menu.play" ? "main-menu-play" : undefined
+                    }
                     onClick={onClick}
                     variant={variant ?? "ghost"}
                     className={cn(

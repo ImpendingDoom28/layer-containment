@@ -67,7 +67,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
                 <UITypography variant="body">
                   {t("gameStats.wave")}:
                 </UITypography>
-                <UITypography variant="medium" whiteSpace="nowrap">
+                <UITypography variant="medium" whiteSpace="nowrap" data-testid="wave-count">
                   {`${currentWave} / ${totalWaves}`}
                 </UITypography>
               </div>
@@ -89,7 +89,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
             <div>
               {currentWave < totalWaves && nextWaveReady && (
                 <div className="flex flex-col justify-center flex-1 gap-1">
-                  <UIButton onClick={onStartWave} variant="outline">
+                  <UIButton data-testid="wave-start" onClick={onStartWave} variant="outline">
                     <Play /> {t("gameStats.startNextWave")}
                   </UIButton>
                 </div>

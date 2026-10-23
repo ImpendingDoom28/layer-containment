@@ -43,11 +43,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install display server (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
       - name: Build web app + main process
         run: npm run build && npx tsc -p electron/tsconfig.json
 
       - name: Package
         run: npm run dist -- --${{ matrix.target }}
+
+      # Boots the packaged app the same way the installed binary does and
+      # plays through menu → tower placement → first wave, so a broken build
+      # (e.g. a WebGL or config-loading failure) fails CI instead of shipping.
+      - name: Smoke test the packaged app
+        run: npm run smoke:desktop -- --unpacked --no-sandbox
 
       - name: Upload installer
         uses: actions/upload-artifact@v4

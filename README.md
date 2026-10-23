@@ -40,7 +40,7 @@ A 3D tower defense game built with React, Tailwind CSS, and React Three Fiber.
 - **JSON-based configuration** - Game settings, tower stats, and level data stored in JSON files
 - **Explicit loading flow** - Full-screen loading HUD while game and level configs load; `isGameConfigLoaded` and `isLevelConfigLoaded` exposed from core hooks for UI coordination
 - **Simulation vs React frame order** - Wave spawning, tower combat, and instanced projectiles read `useGameStore.getState()` inside R3F `useFrame` so gameplay matches Zustand immediately after tab visibility changes (before the next React commit refreshes hook closures)
-- **Desktop app (Electron)** - The game can be packaged as a native desktop application (Windows `.exe`/NSIS installer, macOS `.dmg`/`.app`, Linux AppImage/deb) and distributed outside a browser (e.g. through Steam). In the browser the app keeps `BrowserRouter`; when loaded from a local file (packaged desktop) it switches to `HashRouter` so deep links work without a web server. Under `file://`, config and audio files are fetched relative to the app's `index.html` (instead of root-absolute, which would point at the filesystem root); the packaged renderer relaxes `webSecurity` for that local, trusted content only, since Chromium blocks `file://` → `file://` requests otherwise — the renderer stays fully sandboxed with contextIsolation and no Node integration
+- **Desktop app (Electron)** - The game can be packaged as a native desktop application (Windows `.exe`/NSIS installer, macOS `.dmg`/`.app`, Linux AppImage/deb) and distributed outside a browser (e.g. through Steam). The packaged app serves the built `dist/` from a local loopback HTTP server (`http://127.0.0.1`, random port) instead of `file://`, so Web Workers, config fetches, and WebGL behave exactly like the web build. The renderer stays fully sandboxed (contextIsolation on, no Node integration, no `webSecurity` relaxation); links open in the OS browser
 - **Playwright smoke coverage** - Canvas-aware E2E tests cover menu-to-game flow, first-tower placement, first-wave start, and editor route loading
 - **Localization (i18next)** - All in-game UI text is rendered through locale keys (no hardcoded strings). A language selector in Settings → General switches the whole app live; English is the default and Russian is the first alternate language. The choice persists to localStorage (settings store) and is applied before the first render on load. Locales live in `src/core/i18n/locales/` — `en` is the reference shape (`as const`) that drives TypeScript-checked `t()` keys, and new languages are validated against it by the locale parity tests (missing or misspelled keys fail those tests). Plurals follow i18next suffix rules (`_other`, and `_one/_few/_many` for Russian). React components use `useTranslation`; R3F canvas components use the context-free `useTranslationInCanvas` hook, and non-React code (e.g. upgrade summaries) uses the shared `i18n` singleton from `src/core/i18n/i18n.ts`
 
@@ -76,15 +76,22 @@ npm run dist        # current platform
 npm run dist:win    # Windows NSIS installer + portable
 npm run dist:mac    # macOS dmg + app (must run on macOS)
 npm run dist:linux  # Linux AppImage + deb
+
+# Test the packaged build without installing it
+npm run run:desktop             # build (if missing) + launch the app in a window
+npm run run:desktop -- --rebuild
+npm run smoke:desktop           # headless: boots the app and plays through
+                                # menu -> tower -> first wave, exits 0/1
 ```
 
 Notes:
 
-- The packaged app is loaded from `dist/index.html` over `file://`, so routing automatically switches to `HashRouter` in that environment (see `src/core/router.tsx`) and asset loading stays local.
+- The packaged app serves the built `dist/` from a local loopback HTTP server (`http://127.0.0.1`, random port) rather than `file://`. This gives the renderer a real origin, which is required for Web Workers (the background game loop mounts on the main menu) — under `file://` they cannot start and the game is stuck on the "Preparing graphics" loading screen. The server is loopback-only, nothing outside the machine can reach it, and no `webSecurity` relaxation is needed.
 - `npm run dev:desktop` waits for the Vite dev server (`http://localhost:5173`) before launching Electron, so the game hot-reloads while you develop.
 - F12 toggles the DevTools in the desktop app.
+- **Crash diagnostics**: every renderer console message, failed load, and uncaught error is appended to `game.log` in the app's user-data folder (on macOS: `~/Library/Application Support/containment-layer/game.log`; on Windows: `%APPDATA%/containment-layer/game.log`; on Linux: `~/.config/containment-layer/game.log`). Uncaught renderer errors and renderer-process crashes (usually a GPU failure) also pop up a dialog with the error and a link to the log. If the app ever fails to start, that log is where the cause lives.
 - The desktop icon lives in `build/` (`icon.svg`, rendered to `icon.png` via `npm run make:icon`); it is bundled as the app icon. It redraws the brand mark so this PR does not depend on the (still open) `feature/logo-mark` branch — once that lands, `build/icon.svg` should reuse the canonical `public/` logo as the single source of truth.
-- CI (`.github/workflows/desktop.yml`) builds installers for Windows, macOS, and Linux on every PR and push to `master`, so packaging is verified before merge.
+- CI (`.github/workflows/desktop.yml`) builds installers for Windows, macOS, and Linux on every PR and push to `master`, and runs `smoke:desktop` against the packaged app, so a broken desktop build fails CI before merge.
 - Distributing through Steam: publish the per-platform installer/artifact builds (NSIS exe, dmg, AppImage) as a Steam app via the Steamworks SDK. No signing/notarization is configured yet — add your code-signing certificates to CI before publishing to the Mac App Store or Steam's notarized macOS builds.
 
 ### Playwright E2E

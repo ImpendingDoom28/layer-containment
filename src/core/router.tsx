@@ -1,13 +1,8 @@
-import { BrowserRouter, HashRouter } from "react-router-dom";
+import { BrowserRouter } from "react-router-dom";
 import type { ComponentType } from "react";
 
-import { isFileProtocol } from "../utils/isFileProtocol";
-
-// The app is served by a dev server or a static host (BrowserRouter, path
-// routes) in the browser, but the packaged Electron app loads the built
-// files from file:// where there is no server to resolve path routes.
-// Picking the router by protocol keeps clean URLs in the browser and working
-// routes in the desktop shell without touching the rest of the app.
-export const AppRouter: ComponentType = isFileProtocol
-  ? HashRouter
-  : BrowserRouter;
+// Path routes work everywhere: the browser uses the dev server / static host,
+// and the packaged desktop app serves the built files from a local loopback
+// http origin (see electron/main.ts), so there is no file:// case that would
+// require hash routes.
+export const AppRouter: ComponentType = BrowserRouter;

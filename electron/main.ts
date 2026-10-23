@@ -78,9 +78,18 @@ const startAppServer = async (): Promise<string> => {
   const distDir = path.join(app.getAppPath(), "dist");
 
   const server = http.createServer((req, res) => {
-    const urlPath = decodeURIComponent(
-      new URL(req.url ?? "/", "http://localhost").pathname
-    );
+    // decodeURIComponent throws on malformed percent-encoding (e.g. "/%"),
+    // so keep it inside a try: a bad request must not crash the handler.
+    let urlPath: string;
+    try {
+      urlPath = decodeURIComponent(
+        new URL(req.url ?? "/", "http://localhost").pathname
+      );
+    } catch {
+      res.writeHead(400);
+      res.end("Bad Request");
+      return;
+    }
     let filePath = path.join(distDir, urlPath);
     if (!filePath.startsWith(distDir)) {
       res.writeHead(403);

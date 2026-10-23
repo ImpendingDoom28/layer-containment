@@ -48,6 +48,7 @@ import {
   pauseWhenTabHiddenSelector,
   useSettingsStore,
 } from "../../core/stores/useSettingsStore";
+import type { GetSimulationTime } from "../../core/hooks/useSimulationClock";
 
 type TowerSystemProps = {
   fireProjectile: (
@@ -59,6 +60,7 @@ type TowerSystemProps = {
   hoveredTile: TileData | null;
   hoveredTilePlacementState: TilePlacementState | null;
   selectedTowerType: TowerType | null;
+  getSimulationTime: GetSimulationTime;
 };
 
 export const TowerSystem: FC<TowerSystemProps> = memo(
@@ -70,6 +72,7 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     hoveredTile,
     selectedTowerType,
     hoveredTilePlacementState,
+    getSimulationTime,
   }) => {
     // Fire timing is a pure simulation concern, so it lives in a ref instead
     // of the zustand `towers` array: updating `lastFireTime` no longer
@@ -174,7 +177,11 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
         return;
       if (gameStatus !== "playing" && gameStatus !== "menu") return;
 
-      const currentTime = state.clock.elapsedTime;
+      // Fire timing runs on the pause-adjusted simulation clock, so a
+      // tower's cooldown does not keep counting down while the game is
+      // paused (the raw clock keeps advancing, which let towers fire the
+      // instant the pause was lifted).
+      const currentTime = getSimulationTime(state.clock.elapsedTime);
       const enemies = getLivingEnemyList(world);
       const fireTimes = fireTimesRef.current;
       // Prune entries for towers that no longer exist (sold / level restart)

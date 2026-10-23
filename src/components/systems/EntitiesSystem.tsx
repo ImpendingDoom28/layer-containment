@@ -188,6 +188,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
           selectedTower={selectedTower}
           selectedTowerType={selectedTowerTypeToPlace}
           hoveredTilePlacementState={hoveredTilePlacementState}
+          getSimulationTime={getSimulationTime}
         />
 
         <EffectSystem />

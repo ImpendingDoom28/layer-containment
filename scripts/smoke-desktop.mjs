@@ -107,8 +107,9 @@ const findPackagedExecutable = () => {
 
 // Flags this script itself understands (everything else starting with -- is
 // forwarded to the app, e.g. --disable-gpu / --use-angle=swiftshader from CI).
-const scriptFlags = new Set(["--unpacked", "--no-sandbox", "--smoke"]);
+const scriptFlags = new Set(["--unpacked", "--no-sandbox", "--smoke", "--boot-only"]);
 const noSandbox = process.argv.includes("--no-sandbox");
+const bootOnly = process.argv.includes("--boot-only");
 const env = { ...process.env };
 if (noSandbox) env.ELECTRON_DISABLE_SANDBOX = "1";
 
@@ -116,7 +117,7 @@ const forwardArgs = process.argv
   .slice(2)
   .filter((arg) => arg.startsWith("--") && !scriptFlags.has(arg));
 
-const exeArgs = ["--smoke"];
+const exeArgs = [bootOnly ? "--smoke-boot" : "--smoke"];
 if (noSandbox) exeArgs.push("--no-sandbox");
 exeArgs.push(...forwardArgs);
 

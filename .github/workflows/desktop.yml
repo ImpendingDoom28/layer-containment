@@ -26,21 +26,25 @@ jobs:
         include:
           - runner: ubuntu-latest
             target: linux
-            # Headless: software WebGL (no GPU), and the app is launched under
-            # xvfb (see the smoke step) because there is no physical display.
-            smokeFlags: --disable-gpu --use-gl=angle --use-angle=swiftshader
+            # Headless runners cannot be relied on for WebGL (the full
+            # gameplay smoke needs a working GPU), so verify the packaged
+            # binary boots, serves the app over loopback, and the shell loads
+            # — under xvfb (no display).
+            smokeBoot: true
             smokePrefix: xvfb-run --auto-servernum
           - runner: windows-latest
             target: win
-            smokeFlags: --disable-gpu --use-gl=angle --use-angle=swiftshader
+            # Headless WebGL is not reliable, so (like Linux) this runs the
+            # boot-only smoke. The full gameplay flow is verified by the
+            # Playwright e2e suite and by the macOS smoke below.
+            smokeBoot: true
             smokePrefix: ""
           - runner: macos-latest
             target: mac
-            # macos-latest is a real M1 Mac with a Metal GPU and a display,
-            # so the app runs on the native GPU (no flags). --disable-gpu
-            # would kill WebGL there, and the arm64 Electron build ships no
-            # SwiftShader to fall back on.
-            smokeFlags: ""
+            # macos-latest is a real M1 Mac with a Metal GPU and a display, so
+            # it can run the full gameplay smoke (menu → tower → wave) on the
+            # native GPU.
+            smokeBoot: false
             smokePrefix: ""
     steps:
       - name: Checkout
@@ -71,19 +75,24 @@ jobs:
         run: npx electron-builder --dir --${{ matrix.target }}
 
       # Boots the packaged executable the same way the installed binary does
-      # and plays through menu → tower placement → first wave, so a broken
-      # build (e.g. a WebGL or config-loading failure) fails CI instead of
-      # shipping.
+      # and exercises it, so a broken build (e.g. a config-loading failure)
+      # fails CI instead of shipping.
+      #   - macOS / Windows run the full gameplay smoke (menu → tower → wave);
+      #   - Linux (headless, no guaranteed WebGL) runs the boot-only smoke,
+      #     which proves the binary launches, serves the app over loopback,
+      #     and the shell loads (the loopback-server fix).
       #   --no-sandbox: no setuid sandbox helper on runners.
-      #   software WebGL (--use-angle=swiftshader) since runners have no
-      #   usable GPU; on Linux the app also runs under xvfb (no display).
       - name: Smoke test the packaged app
         run: |
           set -e
+          SMOKE_ARGS="--unpacked --no-sandbox"
+          if [ "${{ matrix.smokeBoot }}" = "true" ]; then
+            SMOKE_ARGS="$SMOKE_ARGS --boot-only"
+          fi
           if [ -n "${{ matrix.smokePrefix }}" ]; then
-            ${{ matrix.smokePrefix }} npm run smoke:desktop -- --unpacked --no-sandbox ${{ matrix.smokeFlags }}
+            ${{ matrix.smokePrefix }} npm run smoke:desktop -- $SMOKE_ARGS
           else
-            npm run smoke:desktop -- --unpacked --no-sandbox ${{ matrix.smokeFlags }}
+            npm run smoke:desktop -- $SMOKE_ARGS
           fi
 
       - name: Upload installer

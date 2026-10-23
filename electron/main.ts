@@ -16,12 +16,17 @@ const DEV_SERVER_URL =
 // `--smoke` boots the packaged code path (local static server, no dev server)
 // even when unpackaged, runs a full menu→gameplay flow, prints diagnostics,
 // and exits with 0/1. Run: `npm run build && tsc -p electron/tsconfig.json
-// && npm run smoke:desktop -- --no-sandbox`
+// && npm run smoke:desktop -- --no-sandbox`.
+// `--smoke-boot` is the same without WebGL: it only verifies the packaged
+// binary launches, serves the app over loopback, and the app shell loads
+// (used on headless CI where software WebGL cannot be guaranteed).
 const isSmoke = process.argv.includes("--smoke");
+const isSmokeBoot = process.argv.includes("--smoke-boot");
+const isSmokeAny = isSmoke || isSmokeBoot;
 
 // Dev loads the Vite dev server; everything else (packaged or smoke) serves
 // the built app over a loopback http server — see startAppServer.
-const useDevServer = !app.isPackaged && !isSmoke;
+const useDevServer = !app.isPackaged && !isSmokeAny;
 
 let mainWindow: BrowserWindow | null = null;
 let appServerUrl = "";
@@ -244,7 +249,7 @@ const createMainWindow = () => {
   return window;
 };
 
-const runSmoke = (window: BrowserWindow) => {
+const runSmoke = (window: BrowserWindow, bootOnly: boolean) => {
   const dumpState = (label: string) =>
     window.webContents
       .executeJavaScript(
@@ -264,6 +269,35 @@ const runSmoke = (window: BrowserWindow) => {
   // started. Each step reports where it got stuck, so a failure is
   // diagnosable from the log alone. The canvas points are calibrated for the
   // fixed 1280x720 window (same as the e2e fixture).
+  // Boot-only flow (no WebGL): proves the packaged binary launches, the
+  // loopback server works, and the app shell loads. Used on headless CI where
+  // software WebGL cannot be guaranteed. The full gameplay smoke (--smoke)
+  // additionally needs a working GPU.
+  const bootFlow = `new Promise((resolve) => {
+    const out = { steps: [], errors: [], ok: false };
+    const log = (step, data) => out.steps.push({ step, ...data });
+    window.addEventListener("error", (e) => out.errors.push("error: " + e.message));
+    window.addEventListener("unhandledrejection", (e) => out.errors.push("rejection: " + String(e.reason)));
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const ready = () => !!document.querySelector('[data-testid="smoke-ready"]');
+    const deadline = Date.now() + 30000;
+    const tick = async () => {
+      if (ready() || Date.now() >= deadline) {
+        log("boot", {
+          pass: ready(),
+          url: location.href,
+          rootText: (document.getElementById("root")?.innerText ?? "").replace(/\\s+/g, " ").slice(0, 80),
+        });
+        out.ok = ready();
+        resolve(out);
+        return;
+      }
+      await wait(250);
+      void tick();
+    };
+    void tick();
+  })`;
+
   const smokeFlow = `new Promise((resolve) => {
     const out = { steps: [], errors: [], ok: false };
     const log = (step, data) => out.steps.push({ step, ...data });
@@ -418,13 +452,16 @@ const runSmoke = (window: BrowserWindow) => {
     void dumpState("SMOKE TIMEOUT STATE");
     console.log("SMOKE FAILED (timeout)");
     app.exit(1);
-  }, 180_000);
+  }, bootOnly ? 60_000 : 180_000);
 
   window.webContents
-    .executeJavaScript(smokeFlow)
+    .executeJavaScript(bootOnly ? bootFlow : smokeFlow)
     .then((result) => {
       clearTimeout(timeout);
-      console.log("SMOKE RESULT:", JSON.stringify(result, null, 2));
+      console.log(
+        bootOnly ? "SMOKE BOOT RESULT:" : "SMOKE RESULT:",
+        JSON.stringify(result, null, 2)
+      );
       app.exit(result && result.ok ? 0 : 1);
     })
     .catch((error) => {
@@ -454,8 +491,8 @@ const onAppReady = async () => {
 
   mainWindow = createMainWindow();
 
-  if (isSmoke && mainWindow) {
-    runSmoke(mainWindow);
+  if (isSmokeAny && mainWindow) {
+    runSmoke(mainWindow, isSmokeBoot);
     return;
   }
 

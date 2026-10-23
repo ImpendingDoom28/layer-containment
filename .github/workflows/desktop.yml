@@ -26,10 +26,22 @@ jobs:
         include:
           - runner: ubuntu-latest
             target: linux
+            # Headless: software WebGL (no GPU), and the app is launched under
+            # xvfb (see the smoke step) because there is no physical display.
+            smokeFlags: --disable-gpu --use-gl=angle --use-angle=swiftshader
+            smokePrefix: xvfb-run --auto-servernum
           - runner: windows-latest
             target: win
+            smokeFlags: --disable-gpu --use-gl=angle --use-angle=swiftshader
+            smokePrefix: ""
           - runner: macos-latest
             target: mac
+            # macos-latest is a real M1 Mac with a Metal GPU and a display,
+            # so the app runs on the native GPU (no flags). --disable-gpu
+            # would kill WebGL there, and the arm64 Electron build ships no
+            # SwiftShader to fall back on.
+            smokeFlags: ""
+            smokePrefix: ""
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -61,11 +73,18 @@ jobs:
       # Boots the packaged executable the same way the installed binary does
       # and plays through menu → tower placement → first wave, so a broken
       # build (e.g. a WebGL or config-loading failure) fails CI instead of
-      # shipping. --no-sandbox disables the Chromium sandbox (no setuid
-      # helper on runners); --disable-gpu forces software rendering (no GPU
-      # on runners).
+      # shipping.
+      #   --no-sandbox: no setuid sandbox helper on runners.
+      #   software WebGL (--use-angle=swiftshader) since runners have no
+      #   usable GPU; on Linux the app also runs under xvfb (no display).
       - name: Smoke test the packaged app
-        run: npm run smoke:desktop -- --unpacked --no-sandbox --disable-gpu
+        run: |
+          set -e
+          if [ -n "${{ matrix.smokePrefix }}" ]; then
+            ${{ matrix.smokePrefix }} npm run smoke:desktop -- --unpacked --no-sandbox ${{ matrix.smokeFlags }}
+          else
+            npm run smoke:desktop -- --unpacked --no-sandbox ${{ matrix.smokeFlags }}
+          fi
 
       - name: Upload installer
         uses: actions/upload-artifact@v4

@@ -5,11 +5,9 @@
 // package.json (electron/dist/main.js).
 //
 // The dev server must be running before Electron launches, or the window just
-// shows ERR_CONNECTION_REFUSED (a blank, unusable app). Previously this
-// assumed Vite was already up (only true when running via `dev:desktop`,
-// which starts it with concurrently). Now the dev server is started here if
-// it is not already listening, and shut down again when the window closes —
-// so `npm run dev:electron` works on its own.
+// shows ERR_CONNECTION_REFUSED (a blank, unusable app). The dev server is
+// therefore started here if it is not already listening, and shut down again
+// when the window closes — so `npm run dev:desktop` works on its own.
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -42,8 +40,8 @@ const waitForServer = async (timeoutMs = 90_000) => {
 };
 
 // Returns the Vite child process if we had to start it, or null when a dev
-// server was already running (e.g. under `dev:desktop`'s concurrently). Only
-// a process we started ourselves is torn down on exit.
+// server was already running. Only a process we started ourselves is torn
+// down on exit — a pre-existing server is left to its owner.
 const ensureDevServer = async () => {
   if (await isServerUp()) return null;
 
@@ -83,7 +81,7 @@ try {
 
   child.on("exit", (code) => {
     // Shut down the Vite process we started (a server that was already
-    // running — e.g. started by `dev:desktop` — is left to its owner).
+    // running is left to its owner).
     vite?.kill("SIGTERM");
     process.exit(code ?? 1);
   });

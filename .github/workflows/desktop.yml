@@ -20,6 +20,11 @@ jobs:
     name: Build (${{ matrix.target }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
+    # The smoke step uses POSIX bash; Windows' default shell is pwsh, so pin
+    # bash for the whole job (it is preinstalled on all three runners).
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
@@ -77,10 +82,12 @@ jobs:
       # Boots the packaged executable the same way the installed binary does
       # and exercises it, so a broken build (e.g. a config-loading failure)
       # fails CI instead of shipping.
-      #   - macOS / Windows run the full gameplay smoke (menu → tower → wave);
-      #   - Linux (headless, no guaranteed WebGL) runs the boot-only smoke,
-      #     which proves the binary launches, serves the app over loopback,
-      #     and the shell loads (the loopback-server fix).
+      #   - macOS (real GPU + display) runs the full gameplay smoke
+      #     (menu → tower → wave) — the real "get past the main screen" check.
+      #   - Linux & Windows (headless, no guaranteed WebGL) run the
+      #     boot-only smoke: the binary launches, serves the app over loopback,
+      #     and the shell loads (the loopback-server fix). Linux also runs
+      #     under xvfb (no display).
       #   --no-sandbox: no setuid sandbox helper on runners.
       - name: Smoke test the packaged app
         run: |

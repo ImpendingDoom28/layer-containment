@@ -1,0 +1,57 @@
+name: CI
+
+# Verifies the app on every pull request and push to master: builds the web
+# app, runs the RTTR unit tests, and runs the default Playwright e2e suite
+# (menu → game flows; the stress scene is excluded and has its own local
+# tooling, see stress/README.md). The repo is public, so these runs are free.
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# The job only reads the repository and runs tests; no write access needed.
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Build, unit, e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      # The Playwright config starts the dev server itself (webServer) and
+      # uses CI-appropriate settings (single worker, retries) when the CI
+      # env var is set, which GitHub Actions provides automatically.
+      - name: E2E tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          if-no-files-found: ignore

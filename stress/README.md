@@ -27,10 +27,8 @@ npm run generate:stress-level  # regenerate public/configs/levels/stress.json
 ```
 
 The stress e2e suite is **not** part of the local `npm run verify` pre-push
-gate; instead it runs in GitHub Actions (`.github/workflows/stress-test.yml`)
-on every pull request — so it runs before anything is merged — and on pushes
-to `master`. The repo is public, so those runs are free. The 30-second average
-numbers are printed to the CI test output (`[stress-averages] ...`).
+gate and is **not** run in CI; it is a local profiling tool. The 30-second
+average numbers are printed to the test output (`[stress-averages] ...`).
 
 The generated level is written to `public/configs/levels/stress.json` by
 `scripts/generate-stress-level.py`; rerun the generator (or commit the result)

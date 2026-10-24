@@ -99,14 +99,14 @@ export const StatsArcade: FC<StatsArcadeProps> = ({ stats }) => {
 
       <div className="ml-2 flex items-center gap-3">
         {stats.isPaused && (
-          <UIButton
-            variant="default"
-            size={"icon-sm"}
-            className="hud-pixel-panel w-fit px-2 text-yellow-300 hud-blink"
+          <span
+            role="status"
+            aria-live="polite"
             data-testid="paused-indicator"
+            className="hud-pixel-panel flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-yellow-300 hud-blink"
           >
-            <PauseIcon />
-          </UIButton>
+            <PauseIcon size={12} className="size-3" /> {t("gameStats.paused")}
+          </span>
         )}
         {stats.showStartWave && (
           <UIButton

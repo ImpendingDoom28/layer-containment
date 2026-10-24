@@ -126,14 +126,14 @@ export const StatsTactical: FC<StatsTacticalProps> = ({ stats }) => {
 
       <div className="ml-auto flex shrink-0 items-center gap-3">
         {stats.isPaused && (
-          <UIButton
-            variant="default"
-            size={"icon-sm"}
-            className="w-fit rounded-none border border-lime-400/60 bg-lime-400/15 px-1 text-lime-300"
+          <span
+            role="status"
+            aria-live="polite"
             data-testid="paused-indicator"
+            className="flex items-center gap-1.5 rounded-none border border-lime-400/60 bg-lime-400/15 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-lime-300"
           >
-            <PauseIcon />
-          </UIButton>
+            <PauseIcon size={12} className="size-3" /> {t("gameStats.paused")}
+          </span>
         )}
         {stats.showStartWave && (
           <UIButton

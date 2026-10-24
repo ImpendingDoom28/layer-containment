@@ -50,7 +50,7 @@ const STATS_WRAPPER: Record<HudThemeId, string> = {
   // Top-center scoreboard; wrapper spans the top edge and centers it.
   arcade: "top-3 bottom-auto left-0 right-0 flex justify-center",
   // Floating glass sheet, bottom-left.
-  glass: "top-auto right-auto bottom-5 left-5 w-96",
+  glass: "top-auto right-auto bottom-5 left-5 w-96 max-w-[calc(100vw-2.5rem)]",
 };
 
 const STATS_CHROME: Record<HudThemeId, string> = {

@@ -119,14 +119,14 @@ export const StatsHologram: FC<StatsHologramProps> = ({ stats }) => {
 
       <div className="ml-auto flex items-center gap-3">
         {stats.isPaused && (
-          <UIButton
-            variant="default"
-            size={"icon-sm"}
-            className="w-fit rounded-none border border-cyan-300/50 bg-cyan-300/15 px-1 text-cyan-200"
+          <span
+            role="status"
+            aria-live="polite"
             data-testid="paused-indicator"
+            className="flex items-center gap-1.5 rounded-none border border-cyan-300/50 bg-cyan-300/15 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-cyan-200"
           >
-            <PauseIcon />
-          </UIButton>
+            <PauseIcon size={12} className="size-3" /> {t("gameStats.paused")}
+          </span>
         )}
         {stats.showStartWave && (
           <UIButton

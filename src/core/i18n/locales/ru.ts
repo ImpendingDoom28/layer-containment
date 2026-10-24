@@ -90,6 +90,7 @@ const ruValues = {
     credits: "Кредиты",
     integrity: "Целостность",
     hull: "Корпус",
+    paused: "Пауза",
   },
   hudTheme: {
     command: "Командная",

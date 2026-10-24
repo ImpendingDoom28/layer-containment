@@ -80,6 +80,7 @@ export const en = {
     credits: "Credits",
     integrity: "Integrity",
     hull: "Hull",
+    paused: "Paused",
   },
   hudTheme: {
     command: "Command",

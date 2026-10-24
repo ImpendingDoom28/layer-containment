@@ -57,7 +57,7 @@ const SHOP_CHROME: Record<HudThemeId, string> = {
   hologram:
     "hud-holo-rail hud-scanlines overflow-hidden flex h-full w-full flex-col",
   tactical: "hud-tactical-board flex h-full w-full flex-col",
-  arcade: "hud-arcade-dock flex w-fit flex-col",
+  arcade: "hud-arcade-dock flex w-fit min-w-0 max-w-full flex-col",
   glass: "flex w-full flex-col",
 };
 

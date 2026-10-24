@@ -96,14 +96,14 @@ export const StatsGlass: FC<StatsGlassProps> = ({ stats }) => {
         )}
         <div className="flex items-center gap-3">
           {stats.isPaused && (
-            <UIButton
-              variant="default"
-              size={"icon-sm"}
-              className="w-fit rounded-full bg-white/10 px-2 text-white/80"
+            <span
+              role="status"
+              aria-live="polite"
               data-testid="paused-indicator"
+              className="flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80"
             >
-              <PauseIcon />
-            </UIButton>
+              <PauseIcon size={12} className="size-3" /> {t("gameStats.paused")}
+            </span>
           )}
           {stats.showStartWave && (
             <UIButton

@@ -36,7 +36,7 @@ export const TowerShopArcade: FC<TowerShopArcadeProps> = ({ shop }) => {
         )}
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex gap-3 overflow-x-auto">
         {shop.entries.map(({ tower, cost, canAfford, isSelected }) => {
           const deniedData = canAfford
             ? undefined

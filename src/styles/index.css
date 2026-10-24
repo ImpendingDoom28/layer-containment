@@ -290,6 +290,548 @@
   }
 }
 
+/* ---------------------------------------------------------------------------
+ * HUD theme variants (hologram / tactical / arcade / glass). The "command"
+ * theme is the original markup and needs no CSS of its own. All decorative
+ * effects are gated on theme classes set by the HUD theme switcher, so the
+ * default look is untouched.
+ * ------------------------------------------------------------------------- */
+
+/* -- Hologram: cyan phosphor, scanlines, corner cuts ---------------------- */
+
+@utility hud-holo-cut {
+  clip-path: polygon(
+    0 10px,
+    10px 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    10px 100%,
+    0 calc(100% - 10px)
+  );
+}
+
+@utility hud-holo-panel {
+  background: linear-gradient(
+    160deg,
+    oklch(0.85 0.09 195 / 0.09),
+    oklch(0.2 0.05 220 / 0.5) 45%,
+    oklch(0.1 0.03 230 / 0.65)
+  );
+  border: 1px solid oklch(0.85 0.11 195 / 0.45);
+}
+
+@utility hud-holo-scan {
+  overflow: hidden;
+}
+
+.hud-holo-scan::after {
+  content: "";
+  position: absolute;
+  inset: -40% 0 auto 0;
+  height: 45%;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    oklch(0.9 0.08 195 / 0.1) 55%,
+    oklch(0.95 0.06 195 / 0.22) 56%,
+    transparent
+  );
+  animation: hud-holo-sweep 4.5s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes hud-holo-sweep {
+  0% {
+    transform: translateY(-120%);
+  }
+  100% {
+    transform: translateY(340%);
+  }
+}
+
+@utility hud-scanlines {
+  background-image: repeating-linear-gradient(
+    0deg,
+    oklch(0.95 0.05 195 / 0.045) 0px,
+    oklch(0.95 0.05 195 / 0.045) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+@utility hud-scanlines-soft {
+  background-image: repeating-linear-gradient(
+    0deg,
+    oklch(0.8 0.1 120 / 0.03) 0px,
+    oklch(0.8 0.1 120 / 0.03) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+}
+
+@utility hud-holo-glow {
+  box-shadow:
+    0 0 24px oklch(0.8 0.12 195 / 0.22),
+    inset 0 0 18px oklch(0.8 0.12 195 / 0.08);
+}
+
+@utility hud-holo-text {
+  color: oklch(0.92 0.09 195);
+  text-shadow: 0 0 8px oklch(0.85 0.12 195 / 0.65);
+}
+
+@utility hud-holo-text-dim {
+  color: oklch(0.85 0.07 195 / 0.55);
+  text-shadow: 0 0 6px oklch(0.85 0.1 195 / 0.3);
+}
+
+@utility hud-holo-selected {
+  box-shadow:
+    0 0 16px oklch(0.85 0.12 195 / 0.4),
+    inset 0 0 12px oklch(0.85 0.12 195 / 0.15);
+}
+
+@utility hud-holo-blink {
+  animation: hud-blink 1s steps(2, start) infinite;
+}
+
+@utility hud-holo-dot {
+  box-shadow: 0 0 8px oklch(0.85 0.12 195 / 0.8);
+  animation: hud-led-pulse 2s ease-in-out infinite;
+}
+
+/* -- Tactical: olive ops board, hazard tape, LEDs ------------------------- */
+
+@utility hud-tactical-panel {
+  border: 1px solid oklch(0.8 0.15 120 / 0.35);
+  outline: 1px solid oklch(0 0 0 / 0.6);
+  outline-offset: -4px;
+  background: linear-gradient(
+    oklch(0.18 0.02 130 / 0.92),
+    oklch(0.12 0.02 130 / 0.94)
+  );
+  box-shadow: 0 14px 34px oklch(0 0 0 / 0.45);
+}
+
+@utility hud-hazard-top {
+  border-top: 6px solid;
+  border-image: repeating-linear-gradient(
+      -45deg,
+      oklch(0.85 0.16 95) 0 10px,
+      oklch(0.12 0 0) 10px 20px
+    )
+    1;
+}
+
+@utility hud-hazard-bottom {
+  border-bottom: 6px solid;
+  border-image: repeating-linear-gradient(
+      -45deg,
+      oklch(0.85 0.16 95) 0 10px,
+      oklch(0.12 0 0) 10px 20px
+    )
+    1;
+}
+
+@utility hud-stencil {
+  font-family: "JetBrains Mono Variable", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+
+@utility hud-tactical-selected {
+  box-shadow:
+    0 0 0 1px oklch(0.85 0.18 120 / 0.9),
+    0 0 18px oklch(0.85 0.18 120 / 0.35);
+  background: oklch(0.24 0.05 130 / 0.95);
+}
+
+@utility hud-led-pulse {
+  animation: hud-led-pulse 2s ease-in-out infinite;
+}
+
+@keyframes hud-led-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@utility hud-blink {
+  animation: hud-blink 0.9s steps(2, start) infinite;
+}
+
+@keyframes hud-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* -- Arcade: chunky pixel, hard shadows, CRT checker ---------------------- */
+
+@utility hud-arcade-panel {
+  background: oklch(0.12 0.02 270 / 0.92);
+  border: 3px solid oklch(0.9 0.18 270);
+  box-shadow: 6px 6px 0 oklch(0 0 0 / 0.85);
+}
+
+@utility hud-arcade-checker {
+  background-color: oklch(0.13 0.02 270);
+  background-image:
+    linear-gradient(45deg, oklch(0.2 0.03 270 / 0.5) 25%, transparent 25%),
+    linear-gradient(-45deg, oklch(0.2 0.03 270 / 0.5) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, oklch(0.2 0.03 270 / 0.5) 75%),
+    linear-gradient(-45deg, transparent 75%, oklch(0.2 0.03 270 / 0.5) 75%);
+  background-size: 14px 14px;
+  background-position:
+    0 0,
+    0 7px,
+    7px -7px,
+    -7px 0;
+}
+
+@utility hud-pixel-panel {
+  background: oklch(0.16 0.02 270);
+  border: 2px solid oklch(0.85 0.15 270 / 0.9);
+  box-shadow: 3px 3px 0 oklch(0 0 0 / 0.9);
+}
+
+@utility hud-arcade-title {
+  color: oklch(0.92 0.19 95);
+  text-shadow:
+    2px 2px 0 oklch(0.7 0.2 270),
+    4px 4px 0 oklch(0 0 0 / 0.6);
+}
+
+@utility hud-arcade-body {
+  color: oklch(0.95 0 0);
+  font-weight: 600;
+}
+
+@utility hud-arcade-selected {
+  border-color: oklch(0.92 0.19 95);
+  box-shadow:
+    0 0 0 2px oklch(0.92 0.19 95),
+    0 0 22px oklch(0.92 0.19 95 / 0.5);
+}
+
+/* -- Glass: frosted blur, aurora mesh, gradient health ------------------- */
+
+@utility hud-glass-blur {
+  background: linear-gradient(
+    150deg,
+    oklch(0.55 0.02 260 / 0.14),
+    oklch(0.25 0.03 260 / 0.35)
+  );
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid oklch(0.95 0 0 / 0.14);
+  box-shadow: 0 18px 48px oklch(0 0 0 / 0.4);
+}
+
+@utility hud-glass-panel {
+  border-radius: 24px;
+}
+
+@utility hud-aurora {
+  position: relative;
+  overflow: hidden;
+}
+
+.hud-aurora::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(
+      38% 55% at 20% 15%,
+      oklch(0.75 0.15 200 / 0.3),
+      transparent 70%
+    ),
+    radial-gradient(
+      42% 55% at 85% 80%,
+      oklch(0.7 0.18 40 / 0.28),
+      transparent 70%
+    ),
+    radial-gradient(
+      30% 45% at 60% 30%,
+      oklch(0.65 0.15 300 / 0.18),
+      transparent 70%
+    );
+  animation: hud-aurora-drift 14s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes hud-aurora-drift {
+  from {
+    transform: translate3d(-2%, -1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(3%, 2%, 0) scale(1.06);
+  }
+}
+
+/* -- Hologram: edge rail + bottom console -------------------------------- */
+
+@utility hud-holo-rail {
+  background: linear-gradient(
+    180deg,
+    oklch(0.2 0.05 220 / 0.6),
+    oklch(0.08 0.04 230 / 0.75)
+  );
+  border: 1px solid oklch(0.85 0.11 195 / 0.4);
+  box-shadow:
+    0 0 28px oklch(0.8 0.12 195 / 0.18),
+    inset 0 0 22px oklch(0.8 0.12 195 / 0.06);
+}
+
+@utility hud-holo-tile {
+  background: linear-gradient(
+    160deg,
+    oklch(0.85 0.09 195 / 0.08),
+    oklch(0.12 0.04 225 / 0.55)
+  );
+  border: 1px solid oklch(0.85 0.1 195 / 0.35);
+  clip-path: polygon(
+    0 6px,
+    6px 0,
+    100% 0,
+    100% calc(100% - 6px),
+    calc(100% - 6px) 100%,
+    0 100%
+  );
+}
+
+@utility hud-holo-tile-active {
+  background: linear-gradient(
+    160deg,
+    oklch(0.85 0.1 195 / 0.18),
+    oklch(0.14 0.05 225 / 0.6)
+  );
+  border-color: oklch(0.9 0.12 195 / 0.9);
+  box-shadow: 0 0 22px oklch(0.85 0.12 195 / 0.45);
+}
+
+/* Lock-on brackets sit on the two uncut corners of hud-holo-tile. */
+.hud-holo-corner {
+  position: relative;
+}
+
+.hud-holo-corner::before,
+.hud-holo-corner::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: oklch(0.92 0.11 195);
+  border-style: solid;
+  pointer-events: none;
+}
+
+.hud-holo-corner::before {
+  top: -1px;
+  right: -1px;
+  border-width: 2px 2px 0 0;
+}
+
+.hud-holo-corner::after {
+  bottom: -1px;
+  left: -1px;
+  border-width: 0 0 2px 2px;
+}
+
+@utility hud-holo-console {
+  background: linear-gradient(
+    90deg,
+    oklch(0.12 0.04 225 / 0.78),
+    oklch(0.2 0.05 220 / 0.55)
+  );
+  border: 1px solid oklch(0.85 0.11 195 / 0.45);
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  box-shadow: 0 -10px 40px oklch(0.8 0.12 195 / 0.15);
+}
+
+@utility hud-holo-hairline {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(0.85 0.11 195 / 0.5),
+    transparent
+  );
+}
+
+@utility hud-holo-vline {
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    oklch(0.85 0.11 195 / 0.45),
+    transparent
+  );
+}
+
+/* -- Tactical: ops board, command bar, tick overlay ---------------------- */
+
+@utility hud-tactical-board {
+  background:
+    radial-gradient(oklch(0.85 0.15 110 / 0.05) 1px, transparent 1px),
+    linear-gradient(oklch(0.16 0.02 130 / 0.96), oklch(0.11 0.02 130 / 0.97));
+  background-size:
+    18px 18px,
+    auto;
+  border: 1px solid oklch(0.8 0.15 120 / 0.4);
+  outline: 1px solid oklch(0 0 0 / 0.6);
+  outline-offset: -5px;
+  box-shadow: 0 16px 40px oklch(0 0 0 / 0.5);
+}
+
+@utility hud-tactical-card {
+  background: linear-gradient(
+    oklch(0.2 0.03 130 / 0.9),
+    oklch(0.14 0.02 130 / 0.95)
+  );
+  border: 1px solid oklch(0.8 0.13 120 / 0.3);
+}
+
+@utility hud-tactical-topbar {
+  background: linear-gradient(
+    90deg,
+    oklch(0.14 0.02 130 / 0.97),
+    oklch(0.18 0.02 130 / 0.92)
+  );
+  border: 1px solid oklch(0.8 0.15 120 / 0.45);
+  box-shadow: 0 14px 40px oklch(0 0 0 / 0.5);
+}
+
+@utility hud-tactical-vline {
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    oklch(0.8 0.12 120 / 0.35),
+    transparent
+  );
+}
+
+@utility hud-tactical-ticks {
+  background-image: repeating-linear-gradient(
+    90deg,
+    oklch(0.1 0 0 / 0.55) 0 1px,
+    transparent 1px 10px
+  );
+}
+
+/* -- Arcade: dock + scoreboard ------------------------------------------- */
+
+@utility hud-arcade-dock {
+  background: oklch(0.1 0.02 270 / 0.95);
+  border: 4px solid oklch(0.9 0.18 270);
+  box-shadow: 8px 8px 0 oklch(0 0 0 / 0.85);
+}
+
+@utility hud-arcade-slot {
+  background: oklch(0.16 0.02 270);
+  border: 3px solid oklch(0.8 0.12 270 / 0.8);
+  box-shadow: 4px 4px 0 oklch(0 0 0 / 0.8);
+}
+
+@utility hud-arcade-slot-active {
+  border-color: oklch(0.92 0.19 95);
+  box-shadow:
+    0 0 0 2px oklch(0.92 0.19 95),
+    0 0 26px oklch(0.92 0.19 95 / 0.55);
+  background: oklch(0.2 0.03 270);
+}
+
+@utility hud-arcade-scoreboard {
+  background: oklch(0.1 0.02 270 / 0.95);
+  border: 4px solid oklch(0.9 0.18 270);
+  box-shadow: 8px 8px 0 oklch(0 0 0 / 0.85);
+}
+
+/* -- Glass: floating frosted sheets --------------------------------------- */
+
+@utility hud-glass-sheet {
+  background: linear-gradient(
+    150deg,
+    oklch(0.6 0.02 260 / 0.16),
+    oklch(0.25 0.03 260 / 0.3)
+  );
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid oklch(0.95 0 0 / 0.16);
+  border-radius: 28px;
+  box-shadow: 0 24px 60px oklch(0 0 0 / 0.45);
+}
+
+@utility hud-glass-tile {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    150deg,
+    oklch(0.75 0.02 240 / 0.14),
+    oklch(0.3 0.03 260 / 0.22)
+  );
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid oklch(0.95 0 0 / 0.14);
+  border-radius: 20px;
+  box-shadow: 0 10px 26px oklch(0 0 0 / 0.3);
+}
+
+.hud-glass-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 45%;
+  background: linear-gradient(180deg, oklch(0.97 0 0 / 0.14), transparent);
+  pointer-events: none;
+}
+
+@utility hud-glass-tile-active {
+  border-color: oklch(0.9 0.12 200 / 0.6);
+  box-shadow:
+    0 0 0 1px oklch(0.9 0.12 200 / 0.5),
+    0 0 30px oklch(0.8 0.12 200 / 0.35),
+    0 14px 30px oklch(0 0 0 / 0.35);
+}
+
+@utility hud-glass-health {
+  background: linear-gradient(90deg, oklch(0.8 0.16 150), oklch(0.8 0.14 120));
+  box-shadow: 0 0 14px oklch(0.8 0.15 140 / 0.5);
+}
+
+@utility hud-glass-health-warn {
+  background: linear-gradient(90deg, oklch(0.8 0.15 85), oklch(0.78 0.16 70));
+  box-shadow: 0 0 14px oklch(0.8 0.15 80 / 0.5);
+}
+
+@utility hud-glass-health-low {
+  background: linear-gradient(90deg, oklch(0.7 0.18 25), oklch(0.65 0.2 5));
+  box-shadow: 0 0 16px oklch(0.7 0.18 20 / 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-holo-scan::after,
+  .hud-aurora::before,
+  .hud-led-pulse,
+  .hud-blink,
+  .hud-holo-blink,
+  .hud-holo-dot {
+    animation: none;
+  }
+}
+
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

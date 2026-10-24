@@ -1,130 +1,96 @@
-import { FC, useMemo } from "react";
+import { FC } from "react";
 import { useTranslation } from "react-i18next";
 
-import { UIButton } from "@/components/ui/buttons/UIButton";
-import { UITypography } from "../ui/UITypography";
-import {
-  denyPulseSelector,
-  selectedTowerTypeToPlaceSelector,
-  setSelectedTowerTypeToPlaceSelector,
-  towerTypesSelector,
-  useGameStore,
-} from "../../core/stores/useGameStore";
+import { cn } from "../ui/lib/twUtils";
 import { HUDWrapper } from "./HUDWrapper";
-import { UICard, UICardContent, UICardHeader, UICardTitle } from "../ui/UICard";
-import { UIMoney } from "../ui/UIMoney";
-import { cn } from "@/components/ui/lib/twUtils";
-import { TOWER_SHOP_MONEY_ICON_SIZE_PX } from "../../constants/uiActionDeniedFeedback";
+import { useHudShopState } from "./useHudPanels";
+import {
+  hudThemeSelector,
+  useHudThemeStore,
+  type HudThemeId,
+} from "../../core/stores/useHudThemeStore";
+import { TowerShopCommand } from "./themes/TowerShopCommand";
+import { TowerShopHologram } from "./themes/TowerShopHologram";
+import { TowerShopTactical } from "./themes/TowerShopTactical";
+import { TowerShopArcade } from "./themes/TowerShopArcade";
+import { TowerShopGlass } from "./themes/TowerShopGlass";
 
 type HUDTowerShopProps = {
   money: number;
 };
 
+const TOWER_SHOP_THEMES: Record<
+  HudThemeId,
+  FC<{ shop: ReturnType<typeof useHudShopState> }>
+> = {
+  command: TowerShopCommand,
+  hologram: TowerShopHologram,
+  tactical: TowerShopTactical,
+  arcade: TowerShopArcade,
+  glass: TowerShopGlass,
+};
+
+/**
+ * Where the shop lives on screen, per theme. Each theme uses a different
+ * panel placement + layout on purpose (left rail, right ops column,
+ * bottom dock, floating grid) instead of one shared top-left card.
+ * The wrapper box is exactly the panel so the game-camera block only
+ * covers the panel, not the whole screen.
+ */
+const SHOP_WRAPPER: Record<HudThemeId, string> = {
+  // Command matches the original master box exactly (e2e depends on it).
+  command: "bottom-auto right-auto w-80 top-4 left-4",
+  // Full-height left armory rail.
+  hologram: "top-0 bottom-0 left-0 right-auto w-72",
+  // Full-height right ops column.
+  tactical: "top-0 bottom-0 left-auto right-0 w-80",
+  // Bottom-center dock; the wrapper spans the bottom edge and centers it.
+  arcade: "top-auto bottom-3 left-0 right-0 flex justify-center",
+  // Floating tile grid, top-left.
+  glass: "bottom-auto right-auto top-5 left-5 w-[24rem]",
+};
+
+/** The panel chrome (frame/background) that wraps each theme's content. */
+const SHOP_CHROME: Record<HudThemeId, string> = {
+  command:
+    "ui-menu-tilt ui-menu-tilt-left ui-menu-tilt-shadow-left flex h-full w-full flex-col",
+  hologram:
+    "hud-holo-rail hud-scanlines overflow-hidden flex h-full w-full flex-col",
+  tactical: "hud-tactical-board flex h-full w-full flex-col",
+  arcade: "hud-arcade-dock flex w-fit min-w-0 max-w-full flex-col",
+  glass: "flex w-full flex-col",
+};
+
+/**
+ * The region box is a stretchy (flex-1) list in the full-height rail/column
+ * themes but a natural-height block in the dock/grid themes so the content
+ * never gets squashed by a zero flex basis.
+ */
+const SHOP_REGION: Record<HudThemeId, string> = {
+  command: "flex h-full w-full flex-col",
+  hologram: "flex w-full min-h-0 flex-1 flex-col",
+  tactical: "flex w-full min-h-0 flex-1 flex-col",
+  arcade: "flex flex-col",
+  glass: "flex w-full flex-col",
+};
+
 export const HUDTowerShop: FC<HUDTowerShopProps> = ({ money }) => {
   const { t } = useTranslation();
-  const setSelectedTowerType = useGameStore(
-    setSelectedTowerTypeToPlaceSelector
-  );
-  const selectedTowerType = useGameStore(selectedTowerTypeToPlaceSelector);
-  const denyPulse = useGameStore(denyPulseSelector);
-  const towerTypes = useGameStore(towerTypesSelector);
-  const towerTypesValues = useMemo(() => {
-    return Object.values(towerTypes ?? {}).sort((a, b) => a.cost - b.cost);
-  }, [towerTypes]);
-
-  const onCancelSelection = () => {
-    setSelectedTowerType(null);
-  };
+  const theme = useHudThemeStore(hudThemeSelector);
+  const shop = useHudShopState(money);
+  const ShopTheme = TOWER_SHOP_THEMES[theme];
 
   return (
-    <HUDWrapper className="bottom-auto w-80 top-4 left-4">
-      <div
-        data-testid="tower-shop"
-        className="ui-menu-tilt ui-menu-tilt-left ui-menu-tilt-shadow-left flex h-full flex-col"
-      >
-        <UICard className="flex-1">
-          <UICardHeader>
-            <UICardTitle>
-              <UITypography variant="h4">
-                {t("towerShop.title")}
-              </UITypography>
-            </UICardTitle>
-          </UICardHeader>
-          <UICardContent className="gap-2">
-            {towerTypesValues.map((tower) => {
-              const canAfford = money >= tower.cost;
-              const isSelected = selectedTowerType === tower.id;
-              const isDisabled = !canAfford;
-              const deniedData = canAfford
-                ? undefined
-                : ({
-                    reason: "insufficient_funds",
-                    towerType: tower.id,
-                  } as const);
-
-              let towerButtonVariant: "default" | "outline" | "ghost" = "ghost";
-              if (isSelected) {
-                towerButtonVariant = "default";
-              } else if (canAfford) {
-                towerButtonVariant = "outline";
-              }
-
-              const onTowerClick = () => {
-                if (isSelected) {
-                  onCancelSelection();
-                } else if (canAfford) {
-                  setSelectedTowerType(tower.id);
-                }
-              };
-
-              return (
-                <div
-                  className={cn(
-                    "relative flex flex-1",
-                    (denyPulse[tower.id] ?? 0) > 0 && "animate-hud-denied-shake"
-                  )}
-                  key={`${tower.id}-${denyPulse[tower.id] ?? 0}`}
-                >
-                  <div
-                    className={`${canAfford ? "text-green-400" : "text-red-400"} absolute top-2 right-2`}
-                  >
-                    <UIMoney
-                      money={tower.cost}
-                      variant={"medium"}
-                      iconSize={TOWER_SHOP_MONEY_ICON_SIZE_PX}
-                    />
-                  </div>
-                  <UIButton
-                    data-testid={`tower-${tower.id}`}
-                    onClick={onTowerClick}
-                    disabled={isDisabled}
-                    className={cn(
-                      "h-24 w-full flex flex-col text-start items-start"
-                    )}
-                    deniedData={deniedData}
-                    variant={towerButtonVariant}
-                  >
-                    <UITypography variant="medium">
-                      {t(`towers.${tower.id}.name`)}
-                    </UITypography>
-                    <UITypography className="text-gray-300" variant={"small"}>
-                      {t(`towers.${tower.id}.description`)}
-                    </UITypography>
-                  </UIButton>
-                </div>
-              );
-            })}
-            {selectedTowerType && (
-              <UIButton
-                data-testid="tower-cancel-selection"
-                onClick={onCancelSelection}
-                variant="destructive"
-              >
-                {t("towerShop.cancelSelection")}
-              </UIButton>
-            )}
-          </UICardContent>
-        </UICard>
+    <HUDWrapper className={SHOP_WRAPPER[theme]}>
+      <div className={cn(SHOP_CHROME[theme])}>
+        <div
+          data-testid="tower-shop"
+          role="region"
+          aria-label={t("towerShop.title")}
+          className={SHOP_REGION[theme]}
+        >
+          <ShopTheme shop={shop} />
+        </div>
       </div>
     </HUDWrapper>
   );

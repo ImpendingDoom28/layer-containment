@@ -1,23 +1,18 @@
 import { FC } from "react";
-import { HeartPulse, Play } from "lucide-react";
-import { useTranslation } from "react-i18next";
-
-import { UIButton } from "@/components/ui/buttons/UIButton";
 
 import type { GameStatus } from "../../core/types/game";
-import { UITypography } from "../ui/UITypography";
-import { UICard, UICardContent } from "../ui/UICard";
-import {
-  totalWavesSelector,
-  useLevelStore,
-} from "../../core/stores/useLevelStore";
-import {
-  nextWaveReadySelector,
-  useWaveStore,
-} from "../../core/stores/useWaveStore";
 import { HUDWrapper } from "./HUDWrapper";
-import { UIMoney } from "../ui/UIMoney";
-import { PauseIcon } from "../ui/assets/PauseIcon";
+import { useHudStatsState } from "./useHudPanels";
+import {
+  hudThemeSelector,
+  useHudThemeStore,
+  type HudThemeId,
+} from "../../core/stores/useHudThemeStore";
+import { StatsCommand } from "./themes/StatsCommand";
+import { StatsHologram } from "./themes/StatsHologram";
+import { StatsTactical } from "./themes/StatsTactical";
+import { StatsArcade } from "./themes/StatsArcade";
+import { StatsGlass } from "./themes/StatsGlass";
 
 type HUDGameStatsProps = {
   money: number;
@@ -28,85 +23,62 @@ type HUDGameStatsProps = {
   onStartWave: () => void;
 };
 
-export const HUDGameStats: FC<HUDGameStatsProps> = ({
-  money,
-  health,
-  currentWave,
-  remainingEnemies,
-  gameStatus,
-  onStartWave,
-}) => {
-  const { t } = useTranslation();
-  const totalWaves = useLevelStore(totalWavesSelector);
-  const nextWaveReady = useWaveStore(nextWaveReadySelector);
+const STATS_THEMES: Record<
+  HudThemeId,
+  FC<{ stats: ReturnType<typeof useHudStatsState> }>
+> = {
+  command: StatsCommand,
+  hologram: StatsHologram,
+  tactical: StatsTactical,
+  arcade: StatsArcade,
+  glass: StatsGlass,
+};
 
-  const getHealthColor = (): string => {
-    if (health > 15) return "text-green-400";
-    if (health > 8) return "text-yellow-400";
-    return "text-red-400";
-  };
+/**
+ * Where the stats live on screen, per theme. Command is the original
+ * top-right card; the other themes move the readout into a bottom console
+ * (hologram), a top command bar (tactical), a top-center scoreboard
+ * (arcade) or a floating glass sheet (glass).
+ */
+const STATS_WRAPPER: Record<HudThemeId, string> = {
+  // Command matches the original master box exactly (e2e depends on it).
+  command: "bottom-auto left-auto w-80 top-4 right-4",
+  // Full-width bottom console strip.
+  hologram: "top-auto bottom-0 left-0 right-0 flex justify-center",
+  // Top command strip, leaving the right ops column clear.
+  tactical: "top-0 bottom-auto left-0 right-80 max-w-3xl flex justify-center",
+  // Top-center scoreboard; wrapper spans the top edge and centers it.
+  arcade: "top-3 bottom-auto left-0 right-0 flex justify-center",
+  // Floating glass sheet, bottom-left.
+  glass: "top-auto right-auto bottom-5 left-5 w-96 max-w-[calc(100vw-2.5rem)]",
+};
+
+const STATS_CHROME: Record<HudThemeId, string> = {
+  command: "ui-menu-tilt ui-menu-tilt-right flex h-full w-full flex-col",
+  hologram:
+    "hud-holo-console hud-scanlines flex w-full flex-col overflow-hidden",
+  tactical:
+    "hud-tactical-topbar hud-hazard-top hud-hazard-bottom flex w-full flex-col",
+  arcade: "hud-arcade-scoreboard flex w-fit flex-col",
+  glass: "hud-glass-sheet hud-aurora flex h-full w-full flex-col",
+};
+
+export const HUDGameStats: FC<HUDGameStatsProps> = (props) => {
+  const theme = useHudThemeStore(hudThemeSelector);
+  const stats = useHudStatsState({
+    money: props.money,
+    health: props.health,
+    currentWave: props.currentWave,
+    remainingEnemies: props.remainingEnemies,
+    isPaused: props.gameStatus === "paused",
+    onStartWave: props.onStartWave,
+  });
+  const StatsTheme = STATS_THEMES[theme];
 
   return (
-    <HUDWrapper className="bottom-auto left-auto w-80 top-4 right-4">
-      <div className="flex flex-col w-full h-full ui-menu-tilt ui-menu-tilt-right">
-        <UICard className="flex-1">
-          <UICardContent className="gap-4">
-            <div className="flex flex-row items-center justify-between gap-4">
-              <div className="flex items-center">
-                <UIMoney money={money} variant="h4" iconSize={20} />
-              </div>
-              <div className="flex items-center gap-2">
-                <HeartPulse size={20} className={getHealthColor()} />
-                <UITypography variant="h4" className={getHealthColor()}>
-                  {health}
-                </UITypography>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex flex-row items-center gap-1">
-                <UITypography variant="body">
-                  {t("gameStats.wave")}:
-                </UITypography>
-                <UITypography variant="medium" whiteSpace="nowrap" data-testid="wave-count">
-                  {`${currentWave} / ${totalWaves}`}
-                </UITypography>
-              </div>
-
-              {currentWave > 0 &&
-                currentWave <= totalWaves &&
-                remainingEnemies > 0 && (
-                  <div className="flex flex-row items-center gap-1">
-                    <UITypography variant="body">
-                      {t("gameStats.enemies")}:
-                    </UITypography>
-                    <UITypography variant="medium" whiteSpace="nowrap">
-                      {remainingEnemies}
-                    </UITypography>
-                  </div>
-                )}
-            </div>
-
-            <div>
-              {currentWave < totalWaves && nextWaveReady && (
-                <div className="flex flex-col justify-center flex-1 gap-1">
-                  <UIButton data-testid="wave-start" onClick={onStartWave} variant="outline">
-                    <Play /> {t("gameStats.startNextWave")}
-                  </UIButton>
-                </div>
-              )}
-              {gameStatus === "paused" && (
-                <UIButton
-                  variant="default"
-                  size={"icon-sm"}
-                  className="px-1 w-fit"
-                  data-testid="paused-indicator"
-                >
-                  <PauseIcon />
-                </UIButton>
-              )}
-            </div>
-          </UICardContent>
-        </UICard>
+    <HUDWrapper className={STATS_WRAPPER[theme]}>
+      <div className={STATS_CHROME[theme]}>
+        <StatsTheme stats={stats} />
       </div>
     </HUDWrapper>
   );

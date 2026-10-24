@@ -14,6 +14,7 @@ import { HUDMainMenu } from "../hud/main/HUDMainMenu";
 import { HUDGameMenu } from "../hud/HUDGameMenu";
 import { HUDControlsIntroModal } from "../hud/HUDControlsIntroModal";
 import { HUDUpgradePanel } from "../hud/HUDUpgradePanel";
+import { HUDThemeSwitcher } from "../hud/HUDThemeSwitcher";
 import { HUDPauseOverlay } from "../hud/HUDPauseOverlay";
 import { HUDLoading } from "../hud/HUDLoading";
 import { KeyboardHandlingSystem } from "../systems/KeyboardHandlingSystem";
@@ -247,6 +248,8 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
                   onStartWave={startWave}
                 />
               </div>
+
+              <HUDThemeSwitcher />
 
               {/*
                 Rendered unconditionally so the panel can play its exit

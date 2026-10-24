@@ -5,6 +5,9 @@ import { defineConfig } from "vitest/config";
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Relative base so the built app works from file:// (Electron) and from
+  // any sub-path; the dev server ignores it for its own URLs.
+  base: "./",
   plugins: [react(), tailwindcss()],
   server: {
     port: 5173,

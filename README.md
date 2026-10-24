@@ -42,6 +42,7 @@ A 3D tower defense game built with React, Tailwind CSS, and React Three Fiber.
 - **JSON-based configuration** - Game settings, tower stats, and level data stored in JSON files
 - **Explicit loading flow** - Full-screen loading HUD while game and level configs load; `isGameConfigLoaded` and `isLevelConfigLoaded` exposed from core hooks for UI coordination
 - **Simulation vs React frame order** - Wave spawning, tower combat, and instanced projectiles read `useGameStore.getState()` inside R3F `useFrame` so gameplay matches Zustand immediately after tab visibility changes (before the next React commit refreshes hook closures)
+- **Desktop app (Electron)** - The game can be packaged as a native desktop application (Windows `.exe`/NSIS installer, macOS `.dmg`/`.app`, Linux AppImage/deb) and distributed outside a browser (e.g. through Steam). The packaged app serves the built `dist/` from a local loopback HTTP server (`http://127.0.0.1`, random port) instead of `file://`, so Web Workers, config fetches, and WebGL behave exactly like the web build. The renderer stays fully sandboxed (contextIsolation on, no Node integration, no `webSecurity` relaxation); links open in the OS browser
 - **Playwright smoke coverage** - Canvas-aware E2E tests cover menu-to-game flow, first-tower placement, first-wave start, and editor route loading
 - **Localization (i18next)** - All in-game UI text is rendered through locale keys (no hardcoded strings). A language selector in Settings → General switches the whole app live; English is the default and Russian is the first alternate language. The choice persists to localStorage (settings store) and is applied before the first render on load. Locales live in `src/core/i18n/locales/` — `en` is the reference shape (`as const`) that drives TypeScript-checked `t()` keys, and new languages are validated against it by the locale parity tests (missing or misspelled keys fail those tests). Plurals follow i18next suffix rules (`_other`, and `_one/_few/_many` for Russian). React components use `useTranslation`; R3F canvas components use the context-free `useTranslationInCanvas` hook, and non-React code (e.g. upgrade summaries) uses the shared `i18n` singleton from `src/core/i18n/i18n.ts`
 
@@ -60,6 +61,48 @@ npm run dev
 ```
 
 The game will be available at `http://localhost:5173`
+
+### Desktop (Electron)
+
+The game also runs as a desktop application via Electron.
+
+```bash
+# Dev: Vite dev server + Electron window (hot reload)
+npm run dev:desktop
+
+# Package for the current platform (produces an unpacked app in release/)
+npm run build:desktop
+
+# Build installers for the current platform / a specific platform
+npm run dist        # current platform
+npm run dist:win    # Windows NSIS installer + portable
+npm run dist:mac    # macOS dmg + app (must run on macOS)
+npm run dist:linux  # Linux AppImage + deb
+
+# Test the packaged build without installing it
+npm run run:desktop             # build (if missing) + launch the packaged
+                                # binary in a window
+npm run run:desktop -- --rebuild
+npm run smoke:desktop           # boots the app (repo build, `electron .`)
+                                # and plays through menu -> tower -> first
+                                # wave, exits 0/1
+npm run smoke:desktop -- --unpacked --no-sandbox
+                                # smoke the *packaged* executable from
+                                # release/ (built if missing). On headless
+                                # machines add chromium flags, e.g.
+                                # `--disable-gpu --use-angle=swiftshader`
+                                # (software WebGL) — CI does exactly that.
+```
+
+Notes:
+
+- The packaged app serves the built `dist/` from a local loopback HTTP server (`http://127.0.0.1`, random port) rather than `file://`. This gives the renderer a real origin, which is required for Web Workers (the background game loop mounts on the main menu) — under `file://` they cannot start and the game is stuck on the "Preparing graphics" loading screen. The server is loopback-only, nothing outside the machine can reach it, and no `webSecurity` relaxation is needed.
+- `npm run dev:desktop` starts the Vite dev server itself if one is not already running at `http://localhost:5173` (reusing an existing one, e.g. from another terminal), so the game hot-reloads while you develop.
+- F12 toggles the DevTools in the desktop app.
+- **Crash diagnostics**: every renderer console message, failed load, and uncaught error is appended to `game.log` in the app's user-data folder — macOS: `~/Library/Application Support/Layer Containment/game.log`, Windows: `%APPDATA%/Layer Containment/game.log`, Linux: `~/.config/Layer Containment/game.log` (the folder is named after the product; with `dev:desktop` it is `containment-layer`). Uncaught renderer errors and renderer-process crashes (usually a GPU failure) also pop up a dialog with the error and the log path. If the app ever fails to start, that log is where the cause lives.
+- The desktop icon lives in `build/` (`icon.svg`, rendered to `icon.png` via `npm run make:icon`); it is bundled as the app icon. It redraws the brand mark so this PR does not depend on the (still open) `feature/logo-mark` branch — once that lands, `build/icon.svg` should reuse the canonical `public/` logo as the single source of truth.
+- CI (`.github/workflows/desktop.yml`) builds installers for Windows, macOS, and Linux on every PR and push to `master`, and runs `smoke:desktop` against the packaged app, so a broken desktop build fails CI before merge.
+- Distributing through Steam: publish the per-platform installer/artifact builds (NSIS exe, dmg, AppImage) as a Steam app via the Steamworks SDK. No signing/notarization is configured yet — add your code-signing certificates to CI before publishing to the Mac App Store or Steam's notarized macOS builds.
 
 ### Playwright E2E
 

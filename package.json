@@ -2,7 +2,14 @@
   "name": "containment-layer",
   "private": true,
   "version": "0.0.0",
+  "description": "Layer Containment — a 3D tower defense game",
+  "author": {
+    "name": "Layer Containment",
+    "email": "impendingdoom28@users.noreply.github.com"
+  },
+  "desktopName": "layer-containment",
   "type": "module",
+  "main": "electron/dist/main.js",
   "scripts": {
     "prepare": "husky",
     "dev": "vite",
@@ -19,6 +26,15 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:stress": "playwright test --config stress/playwright.config.ts",
     "generate:stress-level": "python3 scripts/generate-stress-level.py",
+    "make:icon": "node scripts/make-icon.mjs",
+    "dev:desktop": "tsc -p electron/tsconfig.json && node scripts/dev-electron.mjs",
+    "build:desktop": "npm run build && tsc -p electron/tsconfig.json && electron-builder --dir",
+    "smoke:desktop": "tsc -p electron/tsconfig.json && node scripts/run-desktop.mjs --smoke",
+    "run:desktop": "node scripts/run-desktop.mjs",
+    "dist": "npm run build && tsc -p electron/tsconfig.json && electron-builder",
+    "dist:win": "npm run build && tsc -p electron/tsconfig.json && electron-builder --win",
+    "dist:mac": "npm run build && tsc -p electron/tsconfig.json && electron-builder --mac",
+    "dist:linux": "npm run build && tsc -p electron/tsconfig.json && electron-builder --linux",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
     "lint": "eslint src --ext ts,tsx",
@@ -63,6 +79,8 @@
     "@typescript-eslint/parser": "^7.0.0",
     "@vitejs/plugin-react": "^6.1.2",
     "autoprefixer": "^10.4.16",
+    "electron": "^44.9.0",
+    "electron-builder": "^26.15.3",
     "eslint": "^8.57.0",
     "eslint-plugin-react": "^7.34.0",
     "eslint-plugin-react-hooks": "^5.1.0",
@@ -71,8 +89,45 @@
     "jsdom": "^29.0.1",
     "postcss": "^8.4.32",
     "prettier": "^3.2.5",
+    "sharp": "^0.35.5",
     "typescript": "^5.3.3",
     "vite": "^8.3.4",
     "vitest": "^4.1.11"
+  },
+  "build": {
+    "appId": "com.layercontainment.game",
+    "productName": "Layer Containment",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/dist/**/*",
+      "electron/package.json"
+    ],
+    "icon": "build/icon.png",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "maintainer": "Layer Containment <impendingdoom28@users.noreply.github.com>",
+      "syncDesktopName": true
+    },
+    "mac": {
+      "category": "public.app-category.games"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
   }
 }

@@ -1,0 +1,110 @@
+name: Desktop build
+
+# Packages the Electron desktop build on every pull request and push to
+# master, so the desktop app is verified before merge. The macOS job runs on
+# a macOS runner (required to produce the .dmg/.app). Code signing and
+# notarization are not configured yet; adding them requires CI-stored
+# certificates (see README "Desktop").
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    # The smoke step uses POSIX bash; Windows' default shell is pwsh, so pin
+    # bash for the whole job (it is preinstalled on all three runners).
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            target: linux
+            # Headless runners cannot be relied on for WebGL (the full
+            # gameplay smoke needs a working GPU), so verify the packaged
+            # binary boots, serves the app over loopback, and the shell loads
+            # — under xvfb (no display).
+            smokeBoot: true
+            smokePrefix: xvfb-run --auto-servernum
+          - runner: windows-latest
+            target: win
+            # Headless WebGL is not reliable, so (like Linux) this runs the
+            # boot-only smoke. The full gameplay flow is verified by the
+            # Playwright e2e suite and by the macOS smoke below.
+            smokeBoot: true
+            smokePrefix: ""
+          - runner: macos-latest
+            target: mac
+            # macos-latest is a real M1 Mac with a Metal GPU and a display, so
+            # it can run the full gameplay smoke (menu → tower → wave) on the
+            # native GPU.
+            smokeBoot: false
+            smokePrefix: ""
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install display server (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      - name: Build web app + main process
+        run: npm run build && npx tsc -p electron/tsconfig.json
+
+      - name: Package
+        run: npm run dist -- --${{ matrix.target }}
+
+      # `dist` only produces installers; the smoke needs a runnable unpacked
+      # app, so build one (release/*-unpacked or *.app, per platform).
+      - name: Build unpacked app
+        run: npx electron-builder --dir --${{ matrix.target }}
+
+      # Boots the packaged executable the same way the installed binary does
+      # and exercises it, so a broken build (e.g. a config-loading failure)
+      # fails CI instead of shipping.
+      #   - macOS (real GPU + display) runs the full gameplay smoke
+      #     (menu → tower → wave) — the real "get past the main screen" check.
+      #   - Linux & Windows (headless, no guaranteed WebGL) run the
+      #     boot-only smoke: the binary launches, serves the app over loopback,
+      #     and the shell loads (the loopback-server fix). Linux also runs
+      #     under xvfb (no display).
+      #   --no-sandbox: no setuid sandbox helper on runners.
+      - name: Smoke test the packaged app
+        run: |
+          set -e
+          SMOKE_ARGS="--unpacked --no-sandbox"
+          if [ "${{ matrix.smokeBoot }}" = "true" ]; then
+            SMOKE_ARGS="$SMOKE_ARGS --boot-only"
+          fi
+          if [ -n "${{ matrix.smokePrefix }}" ]; then
+            ${{ matrix.smokePrefix }} npm run smoke:desktop -- $SMOKE_ARGS
+          else
+            npm run smoke:desktop -- $SMOKE_ARGS
+          fi
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.target }}
+          path: release/*
+          if-no-files-found: error

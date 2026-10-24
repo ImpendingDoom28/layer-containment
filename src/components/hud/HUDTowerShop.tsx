@@ -38,7 +38,10 @@ export const HUDTowerShop: FC<HUDTowerShopProps> = ({ money }) => {
 
   return (
     <HUDWrapper className="bottom-auto w-80 top-4 left-4">
-      <div className="ui-menu-tilt ui-menu-tilt-left ui-menu-tilt-shadow-left flex h-full flex-col">
+      <div
+        data-testid="tower-shop"
+        className="ui-menu-tilt ui-menu-tilt-left ui-menu-tilt-shadow-left flex h-full flex-col"
+      >
         <UICard className="flex-1">
           <UICardHeader>
             <UICardTitle>
@@ -92,6 +95,7 @@ export const HUDTowerShop: FC<HUDTowerShopProps> = ({ money }) => {
                     />
                   </div>
                   <UIButton
+                    data-testid={`tower-${tower.id}`}
                     onClick={onTowerClick}
                     disabled={isDisabled}
                     className={cn(
@@ -111,7 +115,11 @@ export const HUDTowerShop: FC<HUDTowerShopProps> = ({ money }) => {
               );
             })}
             {selectedTowerType && (
-              <UIButton onClick={onCancelSelection} variant="destructive">
+              <UIButton
+                data-testid="tower-cancel-selection"
+                onClick={onCancelSelection}
+                variant="destructive"
+              >
                 {t("towerShop.cancelSelection")}
               </UIButton>
             )}

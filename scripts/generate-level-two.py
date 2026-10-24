@@ -35,14 +35,17 @@ PATH_WIDTH = 0.85  # matches public/configs/game.json
 
 
 def tile_to_world(grid: int) -> float:
+    """Map a grid coordinate to its world-space position on the surface."""
     return -HALF + grid + TILE_SIZE / 2
 
 
 def wp(gx: int, gz: int) -> dict:
+    """Build a path waypoint dict for grid cell (gx, gz) at surface height y=0."""
     return {"x": tile_to_world(gx), "y": 0, "z": tile_to_world(gz)}
 
 
 def point_to_segment_dist(px, pz, x1, z1, x2, z2) -> float:
+    """Distance from point (px, pz) to the segment (x1, z1) -> (x2, z2)."""
     dx = x2 - x1
     dz = z2 - z1
     length_sq = dx * dx + dz * dz
@@ -158,11 +161,13 @@ WAVES = [
 
 
 def build_wave(wave) -> dict:
+    """Total the enemy counts of a wave's groups and wrap them in a WaveConfig."""
     total = sum(e["count"] for e in wave)
     return {"totalEnemies": total, "enemies": wave}
 
 
 def main() -> None:
+    """Validate the two fronts and write public/configs/levels/level_2.json."""
     # --- Validate the two fronts ---
     for (gx, gz) in LEFT + RIGHT:
         assert 0 <= gx < GRID_SIZE and 0 <= gz < GRID_SIZE, f"waypoint out of grid: {gx},{gz}"

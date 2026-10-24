@@ -18,6 +18,7 @@ const PATH_WIDTH = 0.85;
 const REPO_ROOT = path.resolve(fileURLToPath(import.meta.url), "../../../..");
 const LEVELS_DIR = path.join(REPO_ROOT, "public", "configs", "levels");
 
+/** Reads a level file and returns it after validating it against the schema. */
 const loadLevel = (id: string): LevelConfigData => {
   const raw = readFileSync(path.join(LEVELS_DIR, `${id}.json`), "utf-8");
   const parsed = JSON.parse(raw) as unknown;

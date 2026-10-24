@@ -1,6 +1,5 @@
 import { FC } from "react";
 import { useTranslation } from "react-i18next";
-import { Coins } from "lucide-react";
 
 import { UIButton } from "@/components/ui/buttons/UIButton";
 import { UITypography } from "../../ui/UITypography";
@@ -11,27 +10,17 @@ type TowerShopGlassProps = {
   shop: TowerShopState;
 };
 
+/**
+ * Glass shop: six frosted tiles floating over the field in a 3×2 grid —
+ * each tower is its own glass sheet with a glowing orb swatch, big cost
+ * and aurora sheen. Arming a tile gives it a bright rim glow.
+ */
 export const TowerShopGlass: FC<TowerShopGlassProps> = ({ shop }) => {
   const { t } = useTranslation();
 
   return (
-    <div className="relative flex flex-1 flex-col gap-3 p-4">
-      <div className="flex items-baseline justify-between">
-        <UITypography
-          variant="h4"
-          className="font-light tracking-wide text-white"
-        >
-          {t("towerShop.title")}
-        </UITypography>
-        <UITypography
-          variant="verySmall"
-          className="text-white/50 tracking-widest"
-        >
-          {shop.entries.length.toString().padStart(2, "0")}/06
-        </UITypography>
-      </div>
-
-      <div className="flex flex-1 flex-col gap-2">
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {shop.entries.map(({ tower, cost, canAfford, isSelected }) => {
           const deniedData = canAfford
             ? undefined
@@ -41,58 +30,48 @@ export const TowerShopGlass: FC<TowerShopGlassProps> = ({ shop }) => {
               } as const);
 
           return (
-            <div
+            <UIButton
+              data-testid={`tower-${tower.id}`}
+              onClick={() => shop.onSelect(tower.id)}
+              disabled={!canAfford}
+              variant="ghost"
+              deniedData={deniedData}
+              key={tower.id}
               className={cn(
-                "relative flex flex-1",
+                "hud-glass-tile flex h-auto min-h-[104px] flex-col p-3 text-left",
                 (shop.denyPulse[tower.id] ?? 0) > 0 &&
-                  "animate-hud-denied-shake"
+                  "animate-hud-denied-shake",
+                isSelected && "hud-glass-tile-active",
+                !canAfford && "opacity-40"
               )}
-              key={`${tower.id}-${shop.denyPulse[tower.id] ?? 0}`}
             >
-              <UIButton
-                data-testid={`tower-${tower.id}`}
-                onClick={() => shop.onSelect(tower.id)}
-                disabled={!canAfford}
-                variant={canAfford ? "outline" : "ghost"}
-                deniedData={deniedData}
-                className={cn(
-                  "h-full min-h-[68px] w-full flex flex-col items-start gap-1 rounded-2xl border border-white/10 bg-white/5 p-3 text-left backdrop-blur-md transition-all",
-                  isSelected &&
-                    "border-white/40 bg-white/15 shadow-[0_0_24px_-6px_var(--color-primary-hex)]",
-                  !canAfford && "opacity-40"
-                )}
-              >
-                <div className="flex w-full items-center justify-between gap-2">
-                  <span className="flex items-center gap-2">
-                    <span
-                      className="size-3 rounded-full ring-2 ring-white/20"
-                      style={{
-                        backgroundColor: tower.color,
-                        boxShadow: `0 0 10px ${tower.color}`,
-                      }}
-                    />
-                    <span className="text-[12px] font-medium text-white">
-                      {t(`towers.${tower.id}.name`)}
-                    </span>
-                  </span>
-                  <span
-                    className={cn(
-                      "flex items-center gap-1 text-[11px] font-semibold",
-                      canAfford ? "text-emerald-300" : "text-red-300"
-                    )}
-                  >
-                    <Coins size={11} />
-                    {cost}
-                  </span>
-                </div>
-                <UITypography
-                  variant="verySmall"
-                  className="leading-snug text-white/50"
+              <div className="mb-2 flex items-center justify-between">
+                <span
+                  className="size-5 rounded-full"
+                  style={{
+                    backgroundColor: tower.color,
+                    boxShadow: `0 0 14px ${tower.color}88`,
+                  }}
+                />
+                <span
+                  className={cn(
+                    "text-lg font-semibold leading-none",
+                    canAfford ? "text-white" : "text-red-300"
+                  )}
                 >
-                  {t(`towers.${tower.id}.description`)}
-                </UITypography>
-              </UIButton>
-            </div>
+                  ${cost}
+                </span>
+              </div>
+              <span className="text-xs font-semibold leading-tight text-white/90">
+                {t(`towers.${tower.id}.name`)}
+              </span>
+              <UITypography
+                variant="verySmall"
+                className="mt-1 line-clamp-2 leading-snug text-white/50"
+              >
+                {t(`towers.${tower.id}.description`)}
+              </UITypography>
+            </UIButton>
           );
         })}
       </div>
@@ -102,9 +81,9 @@ export const TowerShopGlass: FC<TowerShopGlassProps> = ({ shop }) => {
           data-testid="tower-cancel-selection"
           onClick={shop.onCancelSelection}
           variant="destructive"
-          className="rounded-2xl border border-white/10 bg-white/5 py-2 text-[11px] font-medium tracking-wider text-white/80 backdrop-blur-md hover:bg-white/10"
+          className="hud-glass-tile w-full rounded-full py-2 text-xs font-semibold text-red-200"
         >
-          {t("towerShop.cancelSelection")}
+          ✕ {t("towerShop.cancelSelection")}
         </UIButton>
       )}
     </div>

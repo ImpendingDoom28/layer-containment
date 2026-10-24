@@ -580,6 +580,247 @@
   }
 }
 
+/* -- Hologram: edge rail + bottom console -------------------------------- */
+
+@utility hud-holo-rail {
+  background: linear-gradient(
+    180deg,
+    oklch(0.2 0.05 220 / 0.6),
+    oklch(0.08 0.04 230 / 0.75)
+  );
+  border: 1px solid oklch(0.85 0.11 195 / 0.4);
+  box-shadow:
+    0 0 28px oklch(0.8 0.12 195 / 0.18),
+    inset 0 0 22px oklch(0.8 0.12 195 / 0.06);
+}
+
+@utility hud-holo-tile {
+  background: linear-gradient(
+    160deg,
+    oklch(0.85 0.09 195 / 0.08),
+    oklch(0.12 0.04 225 / 0.55)
+  );
+  border: 1px solid oklch(0.85 0.1 195 / 0.35);
+  clip-path: polygon(
+    0 6px,
+    6px 0,
+    100% 0,
+    100% calc(100% - 6px),
+    calc(100% - 6px) 100%,
+    0 100%
+  );
+}
+
+@utility hud-holo-tile-active {
+  background: linear-gradient(
+    160deg,
+    oklch(0.85 0.1 195 / 0.18),
+    oklch(0.14 0.05 225 / 0.6)
+  );
+  border-color: oklch(0.9 0.12 195 / 0.9);
+  box-shadow: 0 0 22px oklch(0.85 0.12 195 / 0.45);
+}
+
+/* Lock-on brackets sit on the two uncut corners of hud-holo-tile. */
+.hud-holo-corner {
+  position: relative;
+}
+
+.hud-holo-corner::before,
+.hud-holo-corner::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: oklch(0.92 0.11 195);
+  border-style: solid;
+  pointer-events: none;
+}
+
+.hud-holo-corner::before {
+  top: -1px;
+  right: -1px;
+  border-width: 2px 2px 0 0;
+}
+
+.hud-holo-corner::after {
+  bottom: -1px;
+  left: -1px;
+  border-width: 0 0 2px 2px;
+}
+
+@utility hud-holo-console {
+  background: linear-gradient(
+    90deg,
+    oklch(0.12 0.04 225 / 0.78),
+    oklch(0.2 0.05 220 / 0.55)
+  );
+  border: 1px solid oklch(0.85 0.11 195 / 0.45);
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  box-shadow: 0 -10px 40px oklch(0.8 0.12 195 / 0.15);
+}
+
+@utility hud-holo-hairline {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(0.85 0.11 195 / 0.5),
+    transparent
+  );
+}
+
+@utility hud-holo-vline {
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    oklch(0.85 0.11 195 / 0.45),
+    transparent
+  );
+}
+
+/* -- Tactical: ops board, command bar, tick overlay ---------------------- */
+
+@utility hud-tactical-board {
+  background:
+    radial-gradient(oklch(0.85 0.15 110 / 0.05) 1px, transparent 1px),
+    linear-gradient(oklch(0.16 0.02 130 / 0.96), oklch(0.11 0.02 130 / 0.97));
+  background-size:
+    18px 18px,
+    auto;
+  border: 1px solid oklch(0.8 0.15 120 / 0.4);
+  outline: 1px solid oklch(0 0 0 / 0.6);
+  outline-offset: -5px;
+  box-shadow: 0 16px 40px oklch(0 0 0 / 0.5);
+}
+
+@utility hud-tactical-card {
+  background: linear-gradient(
+    oklch(0.2 0.03 130 / 0.9),
+    oklch(0.14 0.02 130 / 0.95)
+  );
+  border: 1px solid oklch(0.8 0.13 120 / 0.3);
+}
+
+@utility hud-tactical-topbar {
+  background: linear-gradient(
+    90deg,
+    oklch(0.14 0.02 130 / 0.97),
+    oklch(0.18 0.02 130 / 0.92)
+  );
+  border: 1px solid oklch(0.8 0.15 120 / 0.45);
+  box-shadow: 0 14px 40px oklch(0 0 0 / 0.5);
+}
+
+@utility hud-tactical-vline {
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    oklch(0.8 0.12 120 / 0.35),
+    transparent
+  );
+}
+
+@utility hud-tactical-ticks {
+  background-image: repeating-linear-gradient(
+    90deg,
+    oklch(0.1 0 0 / 0.55) 0 1px,
+    transparent 1px 10px
+  );
+}
+
+/* -- Arcade: dock + scoreboard ------------------------------------------- */
+
+@utility hud-arcade-dock {
+  background: oklch(0.1 0.02 270 / 0.95);
+  border: 4px solid oklch(0.9 0.18 270);
+  box-shadow: 8px 8px 0 oklch(0 0 0 / 0.85);
+}
+
+@utility hud-arcade-slot {
+  background: oklch(0.16 0.02 270);
+  border: 3px solid oklch(0.8 0.12 270 / 0.8);
+  box-shadow: 4px 4px 0 oklch(0 0 0 / 0.8);
+}
+
+@utility hud-arcade-slot-active {
+  border-color: oklch(0.92 0.19 95);
+  box-shadow:
+    0 0 0 2px oklch(0.92 0.19 95),
+    0 0 26px oklch(0.92 0.19 95 / 0.55);
+  background: oklch(0.2 0.03 270);
+}
+
+@utility hud-arcade-scoreboard {
+  background: oklch(0.1 0.02 270 / 0.95);
+  border: 4px solid oklch(0.9 0.18 270);
+  box-shadow: 8px 8px 0 oklch(0 0 0 / 0.85);
+}
+
+/* -- Glass: floating frosted sheets --------------------------------------- */
+
+@utility hud-glass-sheet {
+  background: linear-gradient(
+    150deg,
+    oklch(0.6 0.02 260 / 0.16),
+    oklch(0.25 0.03 260 / 0.3)
+  );
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid oklch(0.95 0 0 / 0.16);
+  border-radius: 28px;
+  box-shadow: 0 24px 60px oklch(0 0 0 / 0.45);
+}
+
+@utility hud-glass-tile {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    150deg,
+    oklch(0.75 0.02 240 / 0.14),
+    oklch(0.3 0.03 260 / 0.22)
+  );
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid oklch(0.95 0 0 / 0.14);
+  border-radius: 20px;
+  box-shadow: 0 10px 26px oklch(0 0 0 / 0.3);
+}
+
+.hud-glass-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 45%;
+  background: linear-gradient(180deg, oklch(0.97 0 0 / 0.14), transparent);
+  pointer-events: none;
+}
+
+@utility hud-glass-tile-active {
+  border-color: oklch(0.9 0.12 200 / 0.6);
+  box-shadow:
+    0 0 0 1px oklch(0.9 0.12 200 / 0.5),
+    0 0 30px oklch(0.8 0.12 200 / 0.35),
+    0 14px 30px oklch(0 0 0 / 0.35);
+}
+
+@utility hud-glass-health {
+  background: linear-gradient(90deg, oklch(0.8 0.16 150), oklch(0.8 0.14 120));
+  box-shadow: 0 0 14px oklch(0.8 0.15 140 / 0.5);
+}
+
+@utility hud-glass-health-warn {
+  background: linear-gradient(90deg, oklch(0.8 0.15 85), oklch(0.78 0.16 70));
+  box-shadow: 0 0 14px oklch(0.8 0.15 80 / 0.5);
+}
+
+@utility hud-glass-health-low {
+  background: linear-gradient(90deg, oklch(0.7 0.18 25), oklch(0.65 0.2 5));
+  box-shadow: 0 0 16px oklch(0.7 0.18 20 / 0.55);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hud-holo-scan::after,
   .hud-aurora::before,

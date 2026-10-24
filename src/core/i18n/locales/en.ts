@@ -90,6 +90,7 @@ export const en = {
     switchTheme: "HUD theme",
     switchToNext: "Switch HUD theme",
     deployed: "Deployed",
+    online: "Online",
   },
   gameOver: {
     victory: "Victory!",

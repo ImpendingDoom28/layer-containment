@@ -1,6 +1,6 @@
 import { FC } from "react";
-import { useTranslation } from "react-i18next";
 import { Circle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { UIButton } from "@/components/ui/buttons/UIButton";
 import { UITypography } from "../../ui/UITypography";
@@ -11,30 +11,35 @@ type TowerShopTacticalProps = {
   shop: TowerShopState;
 };
 
+/**
+ * Tactical shop: a right-edge ops column of tower cards in a 2×3 grid.
+ * Each card carries a status LED (tower color), stencil type, a $ cost
+ * and a diamond swatch; arming one lights its LED and stamps it DEPLOYED.
+ */
 export const TowerShopTactical: FC<TowerShopTacticalProps> = ({ shop }) => {
   const { t } = useTranslation();
 
   return (
-    <div className="relative flex flex-1 flex-col gap-3 bg-[#141a14] p-4">
-      <div className="flex items-center justify-between border-b border-lime-500/30 pb-2">
+    <div className="flex min-h-0 flex-1 flex-col p-4">
+      <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Circle
             size={8}
-            className="fill-lime-400 text-lime-400 hud-led-pulse"
+            className="hud-led-pulse fill-lime-400 text-lime-400"
           />
-          <UITypography variant="h4" className="hud-stencil text-lime-300">
+          <UITypography variant="small" className="hud-stencil text-lime-200">
             {t("towerShop.title")}
           </UITypography>
         </div>
         <UITypography
           variant="verySmall"
-          className="hud-stencil text-lime-600/70"
+          className="hud-stencil text-lime-500/70"
         >
           OP·{shop.entries.length.toString().padStart(2, "0")}
         </UITypography>
       </div>
 
-      <div className="flex flex-1 flex-col gap-2">
+      <div className="grid min-h-0 flex-1 grid-cols-2 gap-2 overflow-y-auto">
         {shop.entries.map(({ tower, cost, canAfford, isSelected }) => {
           const deniedData = canAfford
             ? undefined
@@ -44,58 +49,60 @@ export const TowerShopTactical: FC<TowerShopTacticalProps> = ({ shop }) => {
               } as const);
 
           return (
-            <div
+            <UIButton
+              data-testid={`tower-${tower.id}`}
+              onClick={() => shop.onSelect(tower.id)}
+              disabled={!canAfford}
+              variant="ghost"
+              deniedData={deniedData}
+              key={tower.id}
               className={cn(
-                "relative flex flex-1",
+                "hud-tactical-card h-auto flex flex-col gap-1.5 p-2.5 text-left",
                 (shop.denyPulse[tower.id] ?? 0) > 0 &&
-                  "animate-hud-denied-shake"
+                  "animate-hud-denied-shake",
+                isSelected && "hud-tactical-selected",
+                !canAfford && "opacity-45"
               )}
-              key={`${tower.id}-${shop.denyPulse[tower.id] ?? 0}`}
             >
-              <UIButton
-                data-testid={`tower-${tower.id}`}
-                onClick={() => shop.onSelect(tower.id)}
-                disabled={!canAfford}
-                variant={canAfford ? "outline" : "ghost"}
-                deniedData={deniedData}
-                className={cn(
-                  "h-full min-h-[72px] w-full flex flex-col items-start gap-1.5 rounded-none border-2 border-lime-500/25 bg-[#0d120d] p-3 text-left",
-                  isSelected && "hud-tactical-selected border-lime-400",
-                  !canAfford && "opacity-50"
-                )}
+              <div className="flex items-center justify-between">
+                <Circle
+                  size={8}
+                  className={cn(isSelected && "hud-led-pulse")}
+                  style={{
+                    color: tower.color,
+                    fill: isSelected ? tower.color : "transparent",
+                  }}
+                />
+                <span
+                  className="size-2 rotate-45"
+                  style={{ backgroundColor: tower.color }}
+                />
+              </div>
+              <span className="hud-stencil text-[11px] leading-tight text-lime-100">
+                {t(`towers.${tower.id}.name`)}
+              </span>
+              <UITypography
+                variant="verySmall"
+                className="text-lime-300/70 leading-snug"
               >
-                <div className="flex w-full items-center justify-between gap-2">
-                  <span className="flex items-center gap-2">
-                    <span
-                      className="size-2.5 rotate-45"
-                      style={{ backgroundColor: tower.color }}
-                    />
-                    <span className="hud-stencil text-[12px] font-bold text-lime-200">
-                      {t(`towers.${tower.id}.name`)}
-                    </span>
-                  </span>
-                  <span
-                    className={cn(
-                      "hud-stencil text-[12px] font-bold",
-                      canAfford ? "text-amber-300" : "text-red-400"
-                    )}
-                  >
-                    ${cost}
-                  </span>
-                </div>
-                <UITypography
-                  variant="verySmall"
-                  className="leading-snug text-lime-100/50"
+                {t(`towers.${tower.id}.description`)}
+              </UITypography>
+              <div className="mt-auto flex items-center justify-between">
+                <span
+                  className={cn(
+                    "hud-stencil text-xs",
+                    canAfford ? "text-amber-300" : "text-red-400"
+                  )}
                 >
-                  {t(`towers.${tower.id}.description`)}
-                </UITypography>
+                  ${cost}
+                </span>
                 {isSelected && (
-                  <span className="hud-stencil text-[9px] tracking-[0.3em] text-lime-400">
+                  <span className="hud-stencil text-[10px] text-lime-300">
                     ▸ {t("hudTheme.deployed")}
                   </span>
                 )}
-              </UIButton>
-            </div>
+              </div>
+            </UIButton>
           );
         })}
       </div>
@@ -105,9 +112,9 @@ export const TowerShopTactical: FC<TowerShopTacticalProps> = ({ shop }) => {
           data-testid="tower-cancel-selection"
           onClick={shop.onCancelSelection}
           variant="destructive"
-          className="rounded-none border-2 border-red-500/50 bg-red-500/10 py-2 text-[11px] font-bold tracking-[0.3em] text-red-300 hover:bg-red-500/20"
+          className="mt-3 w-full py-2"
         >
-          ✕ {t("towerShop.cancelSelection")}
+          {t("towerShop.cancelSelection")}
         </UIButton>
       )}
     </div>

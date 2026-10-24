@@ -14,99 +14,108 @@ type StatsArcadeProps = {
   stats: HudStatsState;
 };
 
+/**
+ * Arcade stats: a top-center "scoreboard" marquee — CREDITS / HULL / WAVE
+ * readouts in chunky pixel cells with a blinking 1-UP-style wave readout
+ * and a big arcade start button.
+ */
 export const StatsArcade: FC<StatsArcadeProps> = ({ stats }) => {
   const { t } = useTranslation();
 
-  const filledPixels = Math.max(
+  const filled = Math.max(
     0,
     Math.min(
       HEALTH_PIXELS,
       Math.round((stats.health / stats.maxHealth) * HEALTH_PIXELS)
     )
   );
-  const healthColor =
+  const healthTone =
     stats.health > 15
-      ? "bg-green-400"
+      ? "bg-lime-400"
       : stats.health > 8
         ? "bg-yellow-400"
         : "bg-red-500";
 
   return (
-    <div className="hud-arcade-checker relative flex flex-col gap-3 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="hud-pixel-panel flex items-center gap-1.5 px-3 py-1.5">
-          <span className="hud-arcade-body animate-pulse text-yellow-300">
-            ◆
-          </span>
-          <UITypography
-            variant="medium"
-            className="hud-arcade-body text-yellow-300"
-          >
-            {stats.money}
-          </UITypography>
-        </div>
-        <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-5 px-5 py-3">
+      <div className="hud-pixel-panel flex flex-col items-center px-4 py-1.5">
+        <UITypography
+          variant="verySmall"
+          className="hud-arcade-body tracking-[0.2em] opacity-70"
+        >
+          {t("gameStats.credits")}
+        </UITypography>
+        <span className="hud-arcade-title text-xl font-bold leading-none">
+          ${stats.money}
+        </span>
+      </div>
+
+      <div className="hud-pixel-panel flex flex-col items-center gap-1 px-4 py-1.5">
+        <UITypography
+          variant="verySmall"
+          className="hud-arcade-body tracking-[0.2em] opacity-70"
+        >
+          {t("gameStats.hull")}
+        </UITypography>
+        <div className="flex gap-1">
           {Array.from({ length: HEALTH_PIXELS }).map((_, i) => (
             <span
               key={i}
               className={cn(
-                "size-3",
-                i < filledPixels
-                  ? cn(healthColor, stats.health <= 8 && "hud-blink")
-                  : "bg-black/60 outline outline-1 outline-white/20"
+                "h-3 w-3",
+                i < filled ? healthTone : "bg-white/15",
+                stats.health <= 8 && i < filled && "hud-blink"
               )}
             />
           ))}
         </div>
+        <UITypography
+          variant="verySmall"
+          className={cn("hud-arcade-body", stats.health <= 8 && "hud-blink")}
+        >
+          {stats.health}
+        </UITypography>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="hud-pixel-panel px-3 py-1.5">
-          <UITypography
-            variant="medium"
-            data-testid="wave-count"
-            className="hud-arcade-body text-white"
-          >
-            {t("gameStats.wave")}
-            <span className="ml-1.5 text-yellow-300">
-              {`${stats.currentWave} / ${stats.totalWaves}`}
-            </span>
-          </UITypography>
-        </div>
+      <div className="hud-pixel-panel flex flex-col items-center px-4 py-1.5">
+        <UITypography
+          variant="verySmall"
+          className="hud-arcade-body tracking-[0.2em] opacity-70"
+        >
+          {t("gameStats.wave")}
+        </UITypography>
+        <span
+          data-testid="wave-count"
+          className="hud-arcade-title text-xl font-bold leading-none"
+        >
+          {`${stats.currentWave} / ${stats.totalWaves}`}
+        </span>
         {stats.showEnemies && (
-          <div className="hud-pixel-panel px-3 py-1.5">
-            <UITypography
-              variant="medium"
-              className="hud-arcade-body text-white"
-            >
-              {t("gameStats.enemies")}
-              <span className="ml-1.5 text-red-400">
-                {stats.remainingEnemies}
-              </span>
-            </UITypography>
-          </div>
+          <UITypography variant="verySmall" className="hud-arcade-body">
+            {t("gameStats.enemies")} {stats.remainingEnemies}
+          </UITypography>
         )}
       </div>
 
-      <div>
+      <div className="ml-2 flex items-center gap-3">
+        {stats.isPaused && (
+          <UIButton
+            variant="default"
+            size={"icon-sm"}
+            className="hud-pixel-panel w-fit px-2 text-yellow-300 hud-blink"
+            data-testid="paused-indicator"
+          >
+            <PauseIcon />
+          </UIButton>
+        )}
         {stats.showStartWave && (
           <UIButton
             data-testid="wave-start"
             onClick={stats.onStartWave}
             variant="outline"
-            className="hud-pixel-panel hud-blink py-3 text-[12px] font-bold tracking-[0.3em] text-yellow-300"
+            className="hud-pixel-panel px-5 py-2.5 text-xs font-bold uppercase tracking-[0.25em] text-yellow-300 hover:bg-yellow-400/15"
           >
             <Play /> {t("gameStats.startNextWave")}
-          </UIButton>
-        )}
-        {stats.isPaused && (
-          <UIButton
-            variant="default"
-            size={"icon-sm"}
-            className="px-1 w-fit hud-pixel-panel text-white"
-            data-testid="paused-indicator"
-          >
-            <PauseIcon />
           </UIButton>
         )}
       </div>

@@ -23,7 +23,14 @@ export const HUDThemeSwitcher: FC = () => {
   const themeNumber = HUD_THEME_IDS.indexOf(theme) + 1;
 
   return (
-    <div className="absolute inset-x-0 bottom-4 z-(--z-overlay) flex justify-center">
+    <div
+      className={cn(
+        "absolute left-1/2 z-(--z-overlay) flex -translate-x-1/2 justify-center",
+        // In arcade the bottom dock occupies the bottom edge, so the pill
+        // floats above it.
+        theme === "arcade" ? "bottom-32" : "bottom-4"
+      )}
+    >
       <UIButton
         data-testid="hud-theme-switcher"
         onClick={cycleTheme}

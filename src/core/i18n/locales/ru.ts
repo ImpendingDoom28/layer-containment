@@ -100,6 +100,7 @@ const ruValues = {
     switchTheme: "Тема HUD",
     switchToNext: "Сменить тему HUD",
     deployed: "Развёрнуто",
+    online: "В сети",
   },
   gameOver: {
     victory: "Победа!",

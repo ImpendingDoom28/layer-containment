@@ -14,6 +14,11 @@ type StatsHologramProps = {
   stats: HudStatsState;
 };
 
+/**
+ * Hologram stats: a full-width bottom "console" — credits, a segmented
+ * integrity readout, wave/enemies telemetry and the launch control laid
+ * out left to right in one scanline bar.
+ */
 export const StatsHologram: FC<StatsHologramProps> = ({ stats }) => {
   const { t } = useTranslation();
 
@@ -32,53 +37,56 @@ export const StatsHologram: FC<StatsHologramProps> = ({ stats }) => {
         : "bg-red-500";
 
   return (
-    <div className="hud-holo-scan relative flex flex-col gap-4 p-4">
-      <div className="flex items-end justify-between gap-4">
-        <div>
+    <div className="hud-holo-scan relative flex items-center gap-6 px-6 py-3">
+      <div className="flex min-w-0 flex-col">
+        <UITypography
+          variant="verySmall"
+          className="hud-holo-text-dim tracking-[0.3em]"
+        >
+          {t("gameStats.credits")}
+        </UITypography>
+        <UITypography variant="h4" className="hud-holo-text leading-none">
+          {stats.money}
+        </UITypography>
+      </div>
+
+      <span className="hud-holo-vline h-9 shrink-0" />
+
+      <div className="flex flex-1 flex-col gap-1">
+        <div className="flex items-center justify-between">
           <UITypography
             variant="verySmall"
-            className="hud-holo-text-dim mb-1 tracking-[0.3em]"
-          >
-            {t("gameStats.credits")}
-          </UITypography>
-          <UITypography variant="h4" className="hud-holo-text">
-            {stats.money}
-          </UITypography>
-        </div>
-        <div>
-          <UITypography
-            variant="verySmall"
-            className="hud-holo-text-dim mb-1 tracking-[0.3em]"
+            className="hud-holo-text-dim tracking-[0.3em]"
           >
             {t("gameStats.integrity")}
           </UITypography>
-          <div className="flex items-center gap-2">
-            <div className="flex gap-[3px]">
-              {Array.from({ length: HEALTH_SEGMENTS }).map((_, i) => (
-                <span
-                  key={i}
-                  className={cn(
-                    "h-3 w-[5px] skew-x-[-12deg]",
-                    i < filledSegments ? healthTone : "bg-white/10"
-                  )}
-                />
-              ))}
-            </div>
-            <UITypography
-              variant="medium"
+          <UITypography
+            variant="medium"
+            className={cn(
+              "hud-holo-text",
+              stats.health <= 8 && "hud-holo-blink"
+            )}
+          >
+            {stats.health}
+          </UITypography>
+        </div>
+        <div className="flex gap-[3px]">
+          {Array.from({ length: HEALTH_SEGMENTS }).map((_, i) => (
+            <span
+              key={i}
               className={cn(
-                "hud-holo-text",
-                stats.health <= 8 && "hud-holo-blink"
+                "h-2.5 w-[7px] skew-x-[-12deg]",
+                i < filledSegments ? healthTone : "bg-white/10"
               )}
-            >
-              {stats.health}
-            </UITypography>
-          </div>
+            />
+          ))}
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <span className="hud-holo-vline h-9 shrink-0" />
+
+      <div className="flex items-center gap-6">
+        <div className="flex flex-col">
           <UITypography
             variant="verySmall"
             className="hud-holo-text-dim tracking-[0.3em]"
@@ -109,25 +117,25 @@ export const StatsHologram: FC<StatsHologramProps> = ({ stats }) => {
         )}
       </div>
 
-      <div>
+      <div className="ml-auto flex items-center gap-3">
+        {stats.isPaused && (
+          <UIButton
+            variant="default"
+            size={"icon-sm"}
+            className="w-fit rounded-none border border-cyan-300/50 bg-cyan-300/15 px-1 text-cyan-200"
+            data-testid="paused-indicator"
+          >
+            <PauseIcon />
+          </UIButton>
+        )}
         {stats.showStartWave && (
           <UIButton
             data-testid="wave-start"
             onClick={stats.onStartWave}
             variant="outline"
-            className="hud-holo-scanline-btn rounded-none border border-cyan-300/60 bg-cyan-300/10 py-2.5 text-[11px] font-bold uppercase tracking-[0.35em] text-cyan-200 hover:bg-cyan-300/20"
+            className="rounded-none border border-cyan-300/60 bg-cyan-300/10 px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.35em] text-cyan-200 hover:bg-cyan-300/20"
           >
             <Play /> {t("gameStats.startNextWave")}
-          </UIButton>
-        )}
-        {stats.isPaused && (
-          <UIButton
-            variant="default"
-            size={"icon-sm"}
-            className="px-1 w-fit rounded-none border border-cyan-300/50 bg-cyan-300/15 text-cyan-200"
-            data-testid="paused-indicator"
-          >
-            <PauseIcon />
           </UIButton>
         )}
       </div>

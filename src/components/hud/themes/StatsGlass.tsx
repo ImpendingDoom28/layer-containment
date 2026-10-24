@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { UIButton } from "@/components/ui/buttons/UIButton";
 import { UITypography } from "../../ui/UITypography";
+import { cn } from "@/components/ui/lib/twUtils";
 import { PauseIcon } from "../../ui/assets/PauseIcon";
 import type { HudStatsState } from "../useHudPanels";
 
@@ -11,6 +12,11 @@ type StatsGlassProps = {
   stats: HudStatsState;
 };
 
+/**
+ * Glass stats: a frosted sheet floating over the field — large credits
+ * figure, a soft glowing gradient integrity bar, wave/enemies and the
+ * wave control in big, airy type.
+ */
 export const StatsGlass: FC<StatsGlassProps> = ({ stats }) => {
   const { t } = useTranslation();
 
@@ -18,91 +24,98 @@ export const StatsGlass: FC<StatsGlassProps> = ({ stats }) => {
     0,
     Math.min(100, (stats.health / stats.maxHealth) * 100)
   );
-  const healthGradient =
+  const healthTone =
     stats.health > 15
-      ? "linear-gradient(90deg, #34d399, #a7f3d0)"
+      ? "hud-glass-health"
       : stats.health > 8
-        ? "linear-gradient(90deg, #f59e0b, #fcd34d)"
-        : "linear-gradient(90deg, #ef4444, #fca5a5)";
+        ? "hud-glass-health-warn"
+        : "hud-glass-health-low";
 
   return (
-    <div className="relative flex flex-col gap-4 p-4">
-      <div className="flex items-end justify-between gap-4">
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md">
+    <div className="flex flex-col gap-4 p-6">
+      <div className="flex items-end justify-between">
+        <div className="flex flex-col">
           <UITypography
             variant="verySmall"
-            className="mb-0.5 text-white/50 tracking-[0.25em]"
+            className="tracking-[0.35em] uppercase text-white/50"
           >
             {t("gameStats.credits")}
           </UITypography>
-          <UITypography variant="h4" className="font-light text-emerald-200">
+          <span className="text-4xl font-light leading-none text-white">
             {stats.money}
-          </UITypography>
+          </span>
         </div>
-        <div className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md">
+        <UITypography
+          variant="verySmall"
+          data-testid="wave-count"
+          className="tracking-[0.3em] uppercase text-white/60"
+        >
+          {t("gameStats.wave")} {stats.currentWave} / {stats.totalWaves}
+        </UITypography>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between">
           <UITypography
             variant="verySmall"
-            className="mb-1.5 text-white/50 tracking-[0.25em]"
+            className="tracking-[0.35em] uppercase text-white/50"
           >
-            {t("gameStats.integrity")} · {stats.health}
+            {t("gameStats.integrity")}
           </UITypography>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
-            <div
-              className="h-full rounded-full transition-all duration-300"
-              style={{
-                width: `${healthPercent}%`,
-                background: healthGradient,
-                boxShadow: `0 0 12px ${
-                  stats.health > 8 ? "#34d39966" : "#ef444466"
-                }`,
-              }}
-            />
-          </div>
+          <UITypography
+            variant="small"
+            className={cn(
+              "font-semibold",
+              stats.health <= 8 ? "text-red-300 hud-blink" : "text-white/90"
+            )}
+          >
+            {stats.health}
+          </UITypography>
+        </div>
+        <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/10">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all duration-500",
+              healthTone
+            )}
+            style={{ width: `${healthPercent}%` }}
+          />
         </div>
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md">
-          <UITypography variant="medium" data-testid="wave-count">
-            <span className="text-white/50">{t("gameStats.wave")}</span>
-            <span className="ml-1.5 font-light text-white">
-              {`${stats.currentWave} / ${stats.totalWaves}`}
-            </span>
+        {stats.showEnemies ? (
+          <UITypography
+            variant="verySmall"
+            className="tracking-[0.3em] uppercase text-white/50"
+          >
+            {t("gameStats.enemies")} {stats.remainingEnemies}
           </UITypography>
+        ) : (
+          <span />
+        )}
+        <div className="flex items-center gap-3">
+          {stats.isPaused && (
+            <UIButton
+              variant="default"
+              size={"icon-sm"}
+              className="w-fit rounded-full bg-white/10 px-2 text-white/80"
+              data-testid="paused-indicator"
+            >
+              <PauseIcon />
+            </UIButton>
+          )}
+          {stats.showStartWave && (
+            <UIButton
+              data-testid="wave-start"
+              onClick={stats.onStartWave}
+              variant="outline"
+              className="rounded-full border border-white/30 bg-white/10 px-6 py-2.5 text-xs font-semibold tracking-[0.25em] uppercase text-white hover:bg-white/20"
+            >
+              <Play /> {t("gameStats.startNextWave")}
+            </UIButton>
+          )}
         </div>
-        {stats.showEnemies && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md">
-            <UITypography variant="medium">
-              <span className="text-white/50">{t("gameStats.enemies")}</span>
-              <span className="ml-1.5 font-light text-white">
-                {stats.remainingEnemies}
-              </span>
-            </UITypography>
-          </div>
-        )}
-      </div>
-
-      <div>
-        {stats.showStartWave && (
-          <UIButton
-            data-testid="wave-start"
-            onClick={stats.onStartWave}
-            variant="outline"
-            className="rounded-2xl border border-white/20 bg-white/10 py-3 text-[12px] font-medium tracking-[0.25em] text-white backdrop-blur-md hover:bg-white/20 shadow-[0_8px_30px_-8px_var(--color-primary-hex)]"
-          >
-            <Play /> {t("gameStats.startNextWave")}
-          </UIButton>
-        )}
-        {stats.isPaused && (
-          <UIButton
-            variant="default"
-            size={"icon-sm"}
-            className="px-1 w-fit rounded-2xl border border-white/20 bg-white/10 text-white backdrop-blur-md"
-            data-testid="paused-indicator"
-          >
-            <PauseIcon />
-          </UIButton>
-        )}
       </div>
     </div>
   );

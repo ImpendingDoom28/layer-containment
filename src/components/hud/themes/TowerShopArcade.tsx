@@ -10,21 +10,33 @@ type TowerShopArcadeProps = {
   shop: TowerShopState;
 };
 
+/**
+ * Arcade shop: a bottom-center "dock" of slot-machine tower slots in a
+ * single row — chunky pixel frame, hard shadows, a per-tower color strip
+ * on top and the price punched in the corner.
+ */
 export const TowerShopArcade: FC<TowerShopArcadeProps> = ({ shop }) => {
   const { t } = useTranslation();
 
   return (
-    <div className="hud-arcade-checker relative flex flex-1 flex-col gap-3 p-4">
-      <div className="hud-pixel-panel px-3 py-2">
-        <UITypography
-          variant="h4"
-          className="hud-arcade-title animate-pulse text-center"
-        >
+    <div className="flex flex-col gap-1.5 p-3">
+      <div className="flex items-center justify-between px-1">
+        <UITypography variant="small" className="hud-arcade-title uppercase">
           {t("towerShop.title")}
         </UITypography>
+        {shop.hasSelection && (
+          <UIButton
+            data-testid="tower-cancel-selection"
+            onClick={shop.onCancelSelection}
+            variant="destructive"
+            className="hud-pixel-panel px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-red-300 hover:bg-red-500/20"
+          >
+            ✕ {t("towerShop.cancelSelection")}
+          </UIButton>
+        )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-2.5">
+      <div className="flex gap-3">
         {shop.entries.map(({ tower, cost, canAfford, isSelected }) => {
           const deniedData = canAfford
             ? undefined
@@ -34,73 +46,46 @@ export const TowerShopArcade: FC<TowerShopArcadeProps> = ({ shop }) => {
               } as const);
 
           return (
-            <div
+            <UIButton
+              data-testid={`tower-${tower.id}`}
+              onClick={() => shop.onSelect(tower.id)}
+              disabled={!canAfford}
+              variant="ghost"
+              deniedData={deniedData}
+              key={tower.id}
               className={cn(
-                "relative flex flex-1",
+                "hud-arcade-slot relative flex h-auto w-28 flex-col items-center gap-1 overflow-hidden px-2 pb-2 pt-4",
                 (shop.denyPulse[tower.id] ?? 0) > 0 &&
-                  "animate-hud-denied-shake"
+                  "animate-hud-denied-shake",
+                isSelected && "hud-arcade-slot-active",
+                !canAfford && "opacity-40"
               )}
-              key={`${tower.id}-${shop.denyPulse[tower.id] ?? 0}`}
             >
-              <UIButton
-                data-testid={`tower-${tower.id}`}
-                onClick={() => shop.onSelect(tower.id)}
-                disabled={!canAfford}
-                variant={canAfford ? "outline" : "ghost"}
-                deniedData={deniedData}
+              <span
+                className="absolute inset-x-0 top-0 h-2"
+                style={{ backgroundColor: tower.color }}
+              />
+              <span className="hud-arcade-body text-[11px] leading-tight text-center">
+                {t(`towers.${tower.id}.name`)}
+              </span>
+              <UITypography
+                variant="verySmall"
+                className="hud-arcade-body line-clamp-2 text-center leading-tight opacity-80"
+              >
+                {t(`towers.${tower.id}.description`)}
+              </UITypography>
+              <span
                 className={cn(
-                  "hud-pixel-panel h-full min-h-[68px] w-full flex flex-col items-start gap-1 p-3 text-left",
-                  isSelected && "hud-arcade-selected",
-                  !canAfford && "opacity-45"
+                  "mt-auto font-mono text-xs font-bold",
+                  canAfford ? "text-yellow-300" : "text-red-400"
                 )}
               >
-                <div className="flex w-full items-center justify-between gap-2">
-                  <span
-                    className="hud-arcade-body text-[12px] font-bold"
-                    style={{ color: tower.color }}
-                  >
-                    {t(`towers.${tower.id}.name`)}
-                  </span>
-                  <span
-                    className={cn(
-                      "hud-arcade-body text-[12px] font-bold",
-                      canAfford ? "text-yellow-300" : "text-red-400"
-                    )}
-                  >
-                    ${cost}
-                  </span>
-                </div>
-                <UITypography
-                  variant="verySmall"
-                  className="hud-arcade-body leading-snug opacity-70"
-                >
-                  {t(`towers.${tower.id}.description`)}
-                </UITypography>
-                <span className="h-1.5 w-full bg-black/50">
-                  <span
-                    className={cn(
-                      "block h-full transition-all",
-                      isSelected ? "w-full" : "w-0"
-                    )}
-                    style={{ backgroundColor: tower.color }}
-                  />
-                </span>
-              </UIButton>
-            </div>
+                ${cost}
+              </span>
+            </UIButton>
           );
         })}
       </div>
-
-      {shop.hasSelection && (
-        <UIButton
-          data-testid="tower-cancel-selection"
-          onClick={shop.onCancelSelection}
-          variant="destructive"
-          className="hud-pixel-panel py-2 text-[11px] font-bold tracking-widest text-red-400 hover:text-red-300"
-        >
-          ✕ {t("towerShop.cancelSelection")}
-        </UIButton>
-      )}
     </div>
   );
 };

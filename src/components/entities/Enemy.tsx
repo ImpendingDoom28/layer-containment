@@ -37,6 +37,7 @@ import {
   getPlanetRadius,
   getSurfaceQuaternion,
 } from "../../utils/planetSurfaceMapping";
+import { useFrustumCulling } from "../../core/hooks/useFrustumCulling";
 import { EnemyMotion, EnemyState } from "../../core/ecs/traits/enemy";
 import { EnemySlow } from "../../core/ecs/traits/slow";
 import { Position } from "../../core/ecs/traits/position";
@@ -145,6 +146,7 @@ export const Enemy: FC<EnemyProps> = memo(
     );
 
     const meshRef = useRef<Group>(null);
+    useFrustumCulling(meshRef);
     const fillBarRef = useRef<Mesh>(null);
     const flashMeshRef = useRef<Mesh>(null);
     const healthTierRef = useRef<HealthTier>("high");

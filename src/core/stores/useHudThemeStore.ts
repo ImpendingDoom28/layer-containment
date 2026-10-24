@@ -49,12 +49,15 @@ export const useHudThemeStore = create<HudThemeStore>()(
     {
       name: `${GAME_NAME_ID}-hud-theme-v1`,
       merge: (persisted, current) => {
-        const persistedState = persisted as Partial<HudThemeStoreState>;
+        // No entry in storage yet: persist calls merge with undefined.
+        const persistedState = (persisted ?? {}) as Partial<HudThemeStoreState>;
+        const savedTheme = persistedState.theme;
         return {
           ...current,
-          theme: HUD_THEME_IDS.includes(persistedState.theme)
-            ? (persistedState.theme as HudThemeId)
-            : DEFAULT_HUD_THEME_ID,
+          theme:
+            savedTheme && HUD_THEME_IDS.includes(savedTheme)
+              ? savedTheme
+              : DEFAULT_HUD_THEME_ID,
         };
       },
     }

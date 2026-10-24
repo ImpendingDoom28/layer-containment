@@ -826,7 +826,8 @@
   .hud-aurora::before,
   .hud-led-pulse,
   .hud-blink,
-  .hud-holo-blink {
+  .hud-holo-blink,
+  .hud-holo-dot {
     animation: none;
   }
 }

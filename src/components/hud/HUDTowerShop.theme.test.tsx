@@ -38,6 +38,15 @@ const TOWER_NAMES: Record<TowerType, string> = {
   chain: "Chain Lightning",
 };
 
+// The full switcher order, typed so it is safe to pass to mountShop.
+const THEMES = [
+  "command",
+  "hologram",
+  "tactical",
+  "arcade",
+  "glass",
+] as const satisfies readonly HudThemeId[];
+
 const makeTowerConfig = (
   id: TowerType,
   name: string,
@@ -101,7 +110,7 @@ describe("HUDTowerShop themes", () => {
     act(() => {});
   };
 
-  it.each(["command", "hologram", "tactical", "arcade", "glass"])(
+  it.each(THEMES)(
     "renders the shop region and all tower buttons on the %s theme",
     (theme) => {
       mountShop(theme, 1000);
@@ -126,13 +135,7 @@ describe("HUDTowerShop themes", () => {
   );
 
   it("keeps the cancel-selection flow working in every theme", () => {
-    for (const theme of [
-      "command",
-      "hologram",
-      "tactical",
-      "arcade",
-      "glass",
-    ] as const) {
+    for (const theme of THEMES) {
       mountShop(theme, 1000);
 
       const basic = container.querySelector(
@@ -165,13 +168,7 @@ describe("HUDTowerShop themes", () => {
 
   it("marks unaffordable towers as disabled in every theme", () => {
     // money = 10 covers only the $10 basic tower.
-    for (const theme of [
-      "command",
-      "hologram",
-      "tactical",
-      "arcade",
-      "glass",
-    ] as const) {
+    for (const theme of THEMES) {
       mountShop(theme, 10);
 
       const basic = container.querySelector(

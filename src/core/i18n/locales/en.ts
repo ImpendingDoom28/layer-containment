@@ -3,7 +3,8 @@ export const en = {
     title: "Settings",
     general: "General",
     pauseWhenTabHidden: "Pause when tab is hidden",
-    pauseWhenTabHiddenHint: "Uncheck to keep the game running while you are on another tab.",
+    pauseWhenTabHiddenHint:
+      "Uncheck to keep the game running while you are on another tab.",
     language: "Language",
     audio: "Audio",
     mute: "Mute",
@@ -13,6 +14,7 @@ export const en = {
     music: "Music",
     ambient: "Ambient",
     controls: "Controls",
+    hudTheme: "HUD Theme",
     reset: "Reset",
     pressAKey: "Press a key…",
   },
@@ -51,7 +53,8 @@ export const en = {
     settings: "Settings",
     goToMainMenu: "Go to Main Menu",
     exitGame: "Exit game",
-    exitGameMessage: "Are you sure you want to exit? All unsaved changes will be lost",
+    exitGameMessage:
+      "Are you sure you want to exit? All unsaved changes will be lost",
     restartGame: "Restart game",
     restartGameMessage: "Are you sure you want to restart?",
     proceed: "Proceed",
@@ -74,6 +77,19 @@ export const en = {
     wave: "Wave",
     enemies: "Enemies",
     startNextWave: "Start next wave",
+    credits: "Credits",
+    integrity: "Integrity",
+    hull: "Hull",
+  },
+  hudTheme: {
+    command: "Command",
+    hologram: "Hologram",
+    tactical: "Tactical",
+    arcade: "Arcade",
+    glass: "Glass",
+    switchTheme: "HUD theme",
+    switchToNext: "Switch HUD theme",
+    deployed: "Deployed",
   },
   gameOver: {
     victory: "Victory!",
@@ -103,7 +119,8 @@ export const en = {
     damage: "Damage",
     undiscovered: "Encounter this enemy in battle to reveal its secrets...",
     discoveredCount: "{{found}} / {{total}} discovered",
-    noData: "No enemy data available. Start a game to load enemy configurations.",
+    noData:
+      "No enemy data available. Start a game to load enemy configurations.",
   },
   controlsIntro: {
     title: "How to play",
@@ -116,7 +133,8 @@ export const en = {
     moveCamera: "Move the camera",
     pauseResume: "Pause / Resume",
     openCloseMenu: "Open / close menu",
-    laterInSettings: 'You can watch controls later in "{{settings}}" / "{{controls}}".',
+    laterInSettings:
+      'You can watch controls later in "{{settings}}" / "{{controls}}".',
   },
   upgrade: {
     title: "Empower Next Wave",
@@ -256,7 +274,8 @@ export const en = {
     },
     chain: {
       name: "Chain Lightning",
-      description: "Chain lightning jumps to nearby enemies (-15% damage per hop, up to 3 hops).",
+      description:
+        "Chain lightning jumps to nearby enemies (-15% damage per hop, up to 3 hops).",
     },
   },
   enemies: {
@@ -270,7 +289,8 @@ export const en = {
     },
     medic: {
       name: "Medic",
-      description: "Support unit. Every few seconds restores HP to nearby allies (not itself).",
+      description:
+        "Support unit. Every few seconds restores HP to nearby allies (not itself).",
     },
     tank: {
       name: "Tankee",

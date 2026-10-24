@@ -16,6 +16,13 @@ import {
   setPauseWhenTabHiddenSelector,
   useSettingsStore,
 } from "../../core/stores/useSettingsStore";
+import {
+  HUD_THEME_IDS,
+  hudThemeSelector,
+  setHudThemeSelector,
+  useHudThemeStore,
+  type HudThemeId,
+} from "../../core/stores/useHudThemeStore";
 
 export const HUDSettingsGeneralSection: FC = () => {
   const { t } = useTranslation();
@@ -23,6 +30,8 @@ export const HUDSettingsGeneralSection: FC = () => {
   const setPauseWhenTabHidden = useSettingsStore(setPauseWhenTabHiddenSelector);
   const language = useSettingsStore(languageSelector);
   const setLanguage = useSettingsStore(setLanguageSelector);
+  const hudTheme = useHudThemeStore(hudThemeSelector);
+  const setHudTheme = useHudThemeStore(setHudThemeSelector);
 
   return (
     <section className="flex flex-col gap-4">
@@ -39,13 +48,32 @@ export const HUDSettingsGeneralSection: FC = () => {
           className="ml-auto"
           value={language}
           aria-label={t("settings.language")}
-          onChange={(event) =>
-            setLanguage(event.target.value as LanguageId)
-          }
+          onChange={(event) => setLanguage(event.target.value as LanguageId)}
         >
           {LANGUAGE_IDS.map((languageId) => (
             <option key={languageId} value={languageId}>
               {LANGUAGE_NAMES[languageId]}
+            </option>
+          ))}
+        </UISelect>
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <label
+          htmlFor="settings-hud-theme"
+          className="text-sm font-medium leading-none"
+        >
+          {t("settings.hudTheme")}
+        </label>
+        <UISelect
+          id="settings-hud-theme"
+          className="ml-auto"
+          value={hudTheme}
+          aria-label={t("settings.hudTheme")}
+          onChange={(event) => setHudTheme(event.target.value as HudThemeId)}
+        >
+          {HUD_THEME_IDS.map((themeId) => (
+            <option key={themeId} value={themeId}>
+              {t(`hudTheme.${themeId}`)}
             </option>
           ))}
         </UISelect>

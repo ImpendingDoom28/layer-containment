@@ -1,131 +1,55 @@
-import { FC, useMemo } from "react";
+import { FC } from "react";
 import { useTranslation } from "react-i18next";
 
-import { UIButton } from "@/components/ui/buttons/UIButton";
-import { UITypography } from "../ui/UITypography";
-import {
-  denyPulseSelector,
-  selectedTowerTypeToPlaceSelector,
-  setSelectedTowerTypeToPlaceSelector,
-  towerTypesSelector,
-  useGameStore,
-} from "../../core/stores/useGameStore";
 import { HUDWrapper } from "./HUDWrapper";
-import { UICard, UICardContent, UICardHeader, UICardTitle } from "../ui/UICard";
-import { UIMoney } from "../ui/UIMoney";
-import { cn } from "@/components/ui/lib/twUtils";
-import { TOWER_SHOP_MONEY_ICON_SIZE_PX } from "../../constants/uiActionDeniedFeedback";
+import { HudThemePanel, HudThemeShell } from "./hudThemePanel";
+import { useHudShopState } from "./useHudPanels";
+import {
+  hudThemeSelector,
+  useHudThemeStore,
+  type HudThemeId,
+} from "../../core/stores/useHudThemeStore";
+import { TowerShopCommand } from "./themes/TowerShopCommand";
+import { TowerShopHologram } from "./themes/TowerShopHologram";
+import { TowerShopTactical } from "./themes/TowerShopTactical";
+import { TowerShopArcade } from "./themes/TowerShopArcade";
+import { TowerShopGlass } from "./themes/TowerShopGlass";
 
 type HUDTowerShopProps = {
   money: number;
 };
 
+const TOWER_SHOP_THEMES: Record<
+  HudThemeId,
+  FC<{ shop: ReturnType<typeof useHudShopState> }>
+> = {
+  command: TowerShopCommand,
+  hologram: TowerShopHologram,
+  tactical: TowerShopTactical,
+  arcade: TowerShopArcade,
+  glass: TowerShopGlass,
+};
+
 export const HUDTowerShop: FC<HUDTowerShopProps> = ({ money }) => {
   const { t } = useTranslation();
-  const setSelectedTowerType = useGameStore(
-    setSelectedTowerTypeToPlaceSelector
-  );
-  const selectedTowerType = useGameStore(selectedTowerTypeToPlaceSelector);
-  const denyPulse = useGameStore(denyPulseSelector);
-  const towerTypes = useGameStore(towerTypesSelector);
-  const towerTypesValues = useMemo(() => {
-    return Object.values(towerTypes ?? {}).sort((a, b) => a.cost - b.cost);
-  }, [towerTypes]);
-
-  const onCancelSelection = () => {
-    setSelectedTowerType(null);
-  };
+  const theme = useHudThemeStore(hudThemeSelector);
+  const shop = useHudShopState(money);
+  const ShopTheme = TOWER_SHOP_THEMES[theme];
 
   return (
     <HUDWrapper className="bottom-auto w-80 top-4 left-4">
-      <div
-        data-testid="tower-shop"
-        className="ui-menu-tilt ui-menu-tilt-left ui-menu-tilt-shadow-left flex h-full flex-col"
-      >
-        <UICard className="flex-1">
-          <UICardHeader>
-            <UICardTitle>
-              <UITypography variant="h4">
-                {t("towerShop.title")}
-              </UITypography>
-            </UICardTitle>
-          </UICardHeader>
-          <UICardContent className="gap-2">
-            {towerTypesValues.map((tower) => {
-              const canAfford = money >= tower.cost;
-              const isSelected = selectedTowerType === tower.id;
-              const isDisabled = !canAfford;
-              const deniedData = canAfford
-                ? undefined
-                : ({
-                    reason: "insufficient_funds",
-                    towerType: tower.id,
-                  } as const);
-
-              let towerButtonVariant: "default" | "outline" | "ghost" = "ghost";
-              if (isSelected) {
-                towerButtonVariant = "default";
-              } else if (canAfford) {
-                towerButtonVariant = "outline";
-              }
-
-              const onTowerClick = () => {
-                if (isSelected) {
-                  onCancelSelection();
-                } else if (canAfford) {
-                  setSelectedTowerType(tower.id);
-                }
-              };
-
-              return (
-                <div
-                  className={cn(
-                    "relative flex flex-1",
-                    (denyPulse[tower.id] ?? 0) > 0 && "animate-hud-denied-shake"
-                  )}
-                  key={`${tower.id}-${denyPulse[tower.id] ?? 0}`}
-                >
-                  <div
-                    className={`${canAfford ? "text-green-400" : "text-red-400"} absolute top-2 right-2`}
-                  >
-                    <UIMoney
-                      money={tower.cost}
-                      variant={"medium"}
-                      iconSize={TOWER_SHOP_MONEY_ICON_SIZE_PX}
-                    />
-                  </div>
-                  <UIButton
-                    data-testid={`tower-${tower.id}`}
-                    onClick={onTowerClick}
-                    disabled={isDisabled}
-                    className={cn(
-                      "h-24 w-full flex flex-col text-start items-start"
-                    )}
-                    deniedData={deniedData}
-                    variant={towerButtonVariant}
-                  >
-                    <UITypography variant="medium">
-                      {t(`towers.${tower.id}.name`)}
-                    </UITypography>
-                    <UITypography className="text-gray-300" variant={"small"}>
-                      {t(`towers.${tower.id}.description`)}
-                    </UITypography>
-                  </UIButton>
-                </div>
-              );
-            })}
-            {selectedTowerType && (
-              <UIButton
-                data-testid="tower-cancel-selection"
-                onClick={onCancelSelection}
-                variant="destructive"
-              >
-                {t("towerShop.cancelSelection")}
-              </UIButton>
-            )}
-          </UICardContent>
-        </UICard>
-      </div>
+      <HudThemeShell theme={theme} side="left" className="h-full">
+        <HudThemePanel theme={theme} className="flex-1 shadow-panel">
+          <div
+            data-testid="tower-shop"
+            role="region"
+            aria-label={t("towerShop.title")}
+            className="flex flex-1 flex-col"
+          >
+            <ShopTheme shop={shop} />
+          </div>
+        </HudThemePanel>
+      </HudThemeShell>
     </HUDWrapper>
   );
 };

@@ -20,6 +20,7 @@ const ruValues = {
     music: "Музыка",
     ambient: "Фоновые звуки",
     controls: "Управление",
+    hudTheme: "Тема HUD",
     reset: "Сбросить",
     pressAKey: "Нажмите клавишу…",
   },
@@ -44,7 +45,8 @@ const ruValues = {
     tagline: "вы не выигрываете войну — вы держите границу.",
     viewSource: "Посмотреть исходный код на GitHub",
     deploy: "Деплой",
-    deployDescription: "Выберите театр операций. Нажмите на сектор, чтобы начать.",
+    deployDescription:
+      "Выберите театр операций. Нажмите на сектор, чтобы начать.",
     loadingSectors: "Загрузка секторов…",
     failedToLoadLevels: "Не удалось загрузить уровни",
     waves: "Волна",
@@ -61,7 +63,8 @@ const ruValues = {
     settings: "Настройки",
     goToMainMenu: "В главное меню",
     exitGame: "Выйти из игры",
-    exitGameMessage: "Вы уверены, что хотите выйти? Все несохранённые изменения будут потеряны",
+    exitGameMessage:
+      "Вы уверены, что хотите выйти? Все несохранённые изменения будут потеряны",
     restartGame: "Начать заново",
     restartGameMessage: "Вы уверены, что хотите начать заново?",
     proceed: "Продолжить",
@@ -84,6 +87,19 @@ const ruValues = {
     wave: "Волна",
     enemies: "Враги",
     startNextWave: "Начать волну",
+    credits: "Кредиты",
+    integrity: "Целостность",
+    hull: "Корпус",
+  },
+  hudTheme: {
+    command: "Командная",
+    hologram: "Голограмма",
+    tactical: "Тактическая",
+    arcade: "Аркада",
+    glass: "Стекло",
+    switchTheme: "Тема HUD",
+    switchToNext: "Сменить тему HUD",
+    deployed: "Развёрнуто",
   },
   gameOver: {
     victory: "Победа!",
@@ -126,7 +142,8 @@ const ruValues = {
     moveCamera: "Двигать камеру",
     pauseResume: "Пауза / Продолжить",
     openCloseMenu: "Открыть / закрыть меню",
-    laterInSettings: 'Вы можете посмотреть управление позже в «{{settings}}» / «{{controls}}».',
+    laterInSettings:
+      "Вы можете посмотреть управление позже в «{{settings}}» / «{{controls}}».",
   },
   upgrade: {
     title: "Усиление следующей волны",
@@ -183,8 +200,10 @@ const ruValues = {
     pathSubToolBase: "База",
     addPath: "Добавить путь",
     remove: "Удалить",
-    clickTilesToWaypoint: "Кликайте по плиткам на канвасе, чтобы добавлять точки пути.",
-    switchPathTool: "Переключитесь на инструмент пути выше, чтобы редактировать.",
+    clickTilesToWaypoint:
+      "Кликайте по плиткам на канвасе, чтобы добавлять точки пути.",
+    switchPathTool:
+      "Переключитесь на инструмент пути выше, чтобы редактировать.",
     waypoints: "Точек пути: {{count}}",
     waypoint: "Точка пути",
     removeWaypoint: "Удалить точку",
@@ -272,7 +291,8 @@ const ruValues = {
     },
     chain: {
       name: "Цепная молния",
-      description: "Молния перескакивает на соседей (−15% урона за скачок, до 3 скачков).",
+      description:
+        "Молния перескакивает на соседей (−15% урона за скачок, до 3 скачков).",
     },
   },
   enemies: {
@@ -286,7 +306,8 @@ const ruValues = {
     },
     medic: {
       name: "Медик",
-      description: "Поддержка. Периодически восстанавливает HP соседям (не себе).",
+      description:
+        "Поддержка. Периодически восстанавливает HP соседям (не себе).",
     },
     tank: {
       name: "Танк",

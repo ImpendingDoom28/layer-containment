@@ -43,6 +43,10 @@ export type FrustumCullingState = {
   center: Vector3;
   /** Reused "hide" frustum (show frustum expanded by the margin). */
   hideFrustum: Frustum;
+  /** Version of the shared frustum this `hideFrustum` was built from. */
+  hideVersion: number;
+  /** Margin `hideFrustum` was expanded by (NaN until the first build). */
+  hideMargin: number;
 };
 
 const _testSphere = new Sphere(new Vector3(), 0);
@@ -54,6 +58,8 @@ export const createFrustumCullingState = (): FrustumCullingState => ({
   childCount: -1,
   center: new Vector3(),
   hideFrustum: new Frustum(),
+  hideVersion: -1,
+  hideMargin: Number.NaN,
 });
 
 /**

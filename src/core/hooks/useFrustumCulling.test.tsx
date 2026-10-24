@@ -43,6 +43,23 @@ const render = async (position: [number, number, number]) => {
   return { renderer, group: group.instance as Group };
 };
 
+const renderTwo = async (
+  first: [number, number, number],
+  second: [number, number, number]
+) => {
+  const renderer = await ReactThreeTestRenderer.create(
+    <>
+      <CameraProbe />
+      <CulledGroup position={first} />
+      <CulledGroup position={second} />
+    </>
+  );
+  const groups = renderer.scene
+    .findAllByType("Group")
+    .map((g) => g.instance as Group);
+  return { renderer, first: groups[0], second: groups[1] };
+};
+
 const frame = async (renderer: Awaited<ReturnType<typeof render>>["renderer"], n = 1) => {
   await ReactThreeTestRenderer.act(async () => {
     await renderer.advanceFrames(n);
@@ -73,6 +90,29 @@ describe("useFrustumCulling", () => {
       expect(group.visible).toBe(false);
       // Only `visible` is toggled; the child mesh stays mounted.
       expect(group.children).toHaveLength(1);
+    } finally {
+      await renderer.unmount();
+    }
+  });
+
+  it("culls every group, not just the first hook to run each frame", async () => {
+    // Regression: only the first hook rebuilt its margin-expanded hide
+    // frustum on a camera change; the rest kept the default `new Frustum()`
+    // and their grace band never matched the real view, so they were never
+    // hidden. Both groups must be culled independently.
+    const { renderer, first, second } = await renderTwo(
+      [0, 0, -10],
+      [0, 0, 20]
+    );
+
+    try {
+      expect(first.visible).toBe(true);
+      expect(second.visible).toBe(true);
+
+      await frame(renderer);
+
+      expect(first.visible).toBe(true);
+      expect(second.visible).toBe(false);
     } finally {
       await renderer.unmount();
     }

@@ -36,6 +36,9 @@ type SharedFrustum = {
   /** True until the first build, so a camera coincidentally at the default
    * transform still builds a frustum on the first frame. */
   dirty: boolean;
+  /** Incremented on every rebuild of `show`, so per-hook hide frustums can
+   * detect a fresh view without re-testing the camera each frame. */
+  version: number;
 };
 
 const createSharedFrustum = (): SharedFrustum => ({
@@ -44,6 +47,7 @@ const createSharedFrustum = (): SharedFrustum => ({
   lastQuaternion: new Quaternion(),
   lastProjection: new Matrix4(),
   dirty: true,
+  version: 0,
 });
 
 /**
@@ -90,24 +94,35 @@ export const useFrustumCulling = (
   const camera = useThree((state) => state.camera);
   const state = useMemo(() => createFrustumCullingState(), []);
   const viewProjection = useRef(new Matrix4());
-  const hideFrustum = useRef(new Frustum());
 
   useFrame(() => {
     const object = ref.current;
     if (!object) return;
 
     const shared = getSharedFrustum(camera);
-    // Rebuild the shared exact frustum (and this hook's expanded hide
-    // frustum) only when the camera actually moved, rotated, or changed its
-    // projection — idle frames skip the matrix math entirely.
+    // The first hook in a frame rebuilds the shared exact frustum when the
+    // camera actually moved, rotated, or changed its projection — idle frames
+    // skip the matrix math entirely.
     if (cameraChanged(camera, shared)) {
       buildFrustumFromCamera(camera, viewProjection.current, shared.show);
       shared.lastPosition.copy(camera.position);
       shared.lastQuaternion.copy(camera.quaternion);
       shared.lastProjection.copy(camera.projectionMatrix);
       shared.dirty = false;
-      hideFrustum.current.copy(shared.show);
-      expandFrustum(hideFrustum.current, margin);
+      shared.version += 1;
+    }
+
+    // Every hook must rebuild its own margin-expanded hide frustum when the
+    // shared view was rebuilt or its margin changed — only the first hook
+    // rebuilds the shared frustum, the rest see `cameraChanged() === false`.
+    if (
+      state.hideVersion !== shared.version ||
+      state.hideMargin !== margin
+    ) {
+      state.hideFrustum.copy(shared.show);
+      expandFrustum(state.hideFrustum, margin);
+      state.hideVersion = shared.version;
+      state.hideMargin = margin;
     }
 
     // Re-measure the bounding radius only when the child set changes (an
@@ -123,7 +138,7 @@ export const useFrustumCulling = (
       state.center,
       state.radius,
       shared.show,
-      hideFrustum.current,
+      state.hideFrustum,
       state.wasVisible
     );
     if (object.visible !== state.wasVisible) {

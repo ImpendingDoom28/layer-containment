@@ -1,0 +1,437 @@
+{
+  "name": "2",
+  "startingMoney": 200,
+  "gridSize": 20,
+  "waters": [
+    {
+      "id": 1,
+      "gridX": 1,
+      "gridZ": 17,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 2,
+      "gridX": 2,
+      "gridZ": 17,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 3,
+      "gridX": 1,
+      "gridZ": 18,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 4,
+      "gridX": 2,
+      "gridZ": 18,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 5,
+      "gridX": 17,
+      "gridZ": 17,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 6,
+      "gridX": 18,
+      "gridZ": 17,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 7,
+      "gridX": 17,
+      "gridZ": 18,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 8,
+      "gridX": 18,
+      "gridZ": 18,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 9,
+      "gridX": 8,
+      "gridZ": 15,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 10,
+      "gridX": 10,
+      "gridZ": 15,
+      "shape": "box",
+      "color": "#0e7490"
+    }
+  ],
+  "pathWaypoints": [
+    [
+      {
+        "x": -6.5,
+        "y": 0,
+        "z": -9.5
+      },
+      {
+        "x": -6.5,
+        "y": 0,
+        "z": -5.5
+      },
+      {
+        "x": -2.5,
+        "y": 0,
+        "z": -5.5
+      },
+      {
+        "x": -2.5,
+        "y": 0,
+        "z": -1.5
+      },
+      {
+        "x": -6.5,
+        "y": 0,
+        "z": -1.5
+      },
+      {
+        "x": -6.5,
+        "y": 0,
+        "z": 2.5
+      },
+      {
+        "x": -0.5,
+        "y": 0,
+        "z": 2.5
+      },
+      {
+        "x": -0.5,
+        "y": 0,
+        "z": 6.5
+      },
+      {
+        "x": -0.5,
+        "y": 0,
+        "z": 9.5
+      }
+    ],
+    [
+      {
+        "x": 6.5,
+        "y": 0,
+        "z": -9.5
+      },
+      {
+        "x": 6.5,
+        "y": 0,
+        "z": -5.5
+      },
+      {
+        "x": 2.5,
+        "y": 0,
+        "z": -5.5
+      },
+      {
+        "x": 2.5,
+        "y": 0,
+        "z": -1.5
+      },
+      {
+        "x": 6.5,
+        "y": 0,
+        "z": -1.5
+      },
+      {
+        "x": 6.5,
+        "y": 0,
+        "z": 2.5
+      },
+      {
+        "x": -0.5,
+        "y": 0,
+        "z": 2.5
+      },
+      {
+        "x": -0.5,
+        "y": 0,
+        "z": 6.5
+      },
+      {
+        "x": -0.5,
+        "y": 0,
+        "z": 9.5
+      }
+    ]
+  ],
+  "waveConfigs": [
+    {
+      "totalEnemies": 10,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 10,
+          "spawnInterval": 1.0
+        }
+      ]
+    },
+    {
+      "totalEnemies": 17,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 12,
+          "spawnInterval": 0.8
+        },
+        {
+          "type": "fast",
+          "count": 4,
+          "spawnInterval": 1.1
+        },
+        {
+          "type": "medic",
+          "count": 1,
+          "spawnInterval": 1.0
+        }
+      ]
+    },
+    {
+      "totalEnemies": 20,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 14,
+          "spawnInterval": 0.7
+        },
+        {
+          "type": "fast",
+          "count": 6,
+          "spawnInterval": 1.0
+        }
+      ]
+    },
+    {
+      "totalEnemies": 27,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 16,
+          "spawnInterval": 0.6
+        },
+        {
+          "type": "fast",
+          "count": 8,
+          "spawnInterval": 0.9
+        },
+        {
+          "type": "tank",
+          "count": 2,
+          "spawnInterval": 2.0
+        },
+        {
+          "type": "medic",
+          "count": 1,
+          "spawnInterval": 1.0
+        }
+      ]
+    },
+    {
+      "totalEnemies": 31,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 18,
+          "spawnInterval": 0.5
+        },
+        {
+          "type": "fast",
+          "count": 10,
+          "spawnInterval": 0.8
+        },
+        {
+          "type": "tank",
+          "count": 3,
+          "spawnInterval": 1.5
+        }
+      ]
+    },
+    {
+      "totalEnemies": 38,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 20,
+          "spawnInterval": 0.45
+        },
+        {
+          "type": "fast",
+          "count": 12,
+          "spawnInterval": 0.7
+        },
+        {
+          "type": "tank",
+          "count": 4,
+          "spawnInterval": 1.3
+        },
+        {
+          "type": "medic",
+          "count": 2,
+          "spawnInterval": 1.0
+        }
+      ]
+    },
+    {
+      "totalEnemies": 41,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 22,
+          "spawnInterval": 0.4
+        },
+        {
+          "type": "fast",
+          "count": 14,
+          "spawnInterval": 0.6
+        },
+        {
+          "type": "tank",
+          "count": 5,
+          "spawnInterval": 1.2
+        }
+      ]
+    },
+    {
+      "totalEnemies": 53,
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 26,
+          "spawnInterval": 0.35
+        },
+        {
+          "type": "fast",
+          "count": 16,
+          "spawnInterval": 0.5
+        },
+        {
+          "type": "tank",
+          "count": 8,
+          "spawnInterval": 1.0
+        },
+        {
+          "type": "medic",
+          "count": 3,
+          "spawnInterval": 1.0
+        }
+      ]
+    }
+  ],
+  "buildings": [
+    {
+      "id": 1,
+      "gridX": 5,
+      "gridZ": 2,
+      "x": -4.5,
+      "z": -7.5,
+      "shape": "box",
+      "width": 0.9,
+      "depth": 0.9,
+      "height": 2.2,
+      "color": "#8b7355"
+    },
+    {
+      "id": 2,
+      "gridX": 14,
+      "gridZ": 2,
+      "x": 4.5,
+      "z": -7.5,
+      "shape": "cylinder",
+      "width": 0.8,
+      "depth": 0.8,
+      "height": 1.9,
+      "color": "#6b7280"
+    },
+    {
+      "id": 3,
+      "gridX": 5,
+      "gridZ": 6,
+      "x": -4.5,
+      "z": -3.5,
+      "shape": "box",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#78716c"
+    },
+    {
+      "id": 4,
+      "gridX": 14,
+      "gridZ": 6,
+      "x": 4.5,
+      "z": -3.5,
+      "shape": "cylinder",
+      "width": 0.7,
+      "depth": 0.7,
+      "height": 1.8,
+      "color": "#57534e"
+    },
+    {
+      "id": 5,
+      "gridX": 9,
+      "gridZ": 6,
+      "x": -0.5,
+      "z": -3.5,
+      "shape": "box",
+      "width": 0.9,
+      "depth": 0.9,
+      "height": 2.3,
+      "color": "#8b7355"
+    },
+    {
+      "id": 6,
+      "gridX": 9,
+      "gridZ": 10,
+      "x": -0.5,
+      "z": 0.5,
+      "shape": "cylinder",
+      "width": 0.75,
+      "depth": 0.75,
+      "height": 2.0,
+      "color": "#6b7280"
+    },
+    {
+      "id": 7,
+      "gridX": 2,
+      "gridZ": 16,
+      "x": -7.5,
+      "z": 6.5,
+      "shape": "box",
+      "width": 0.8,
+      "depth": 0.8,
+      "height": 1.9,
+      "color": "#78716c"
+    },
+    {
+      "id": 8,
+      "gridX": 17,
+      "gridZ": 16,
+      "x": 7.5,
+      "z": 6.5,
+      "shape": "cylinder",
+      "width": 0.7,
+      "depth": 0.7,
+      "height": 1.8,
+      "color": "#57534e"
+    }
+  ],
+  "towers": [],
+  "enemies": [],
+  "projectiles": [],
+  "enemyWeights": null
+}

@@ -8,8 +8,8 @@ import http from "node:http";
 import path from "node:path";
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 
-// The Vite dev server URL; the dev:electron launch script sets this (see
-// scripts/dev-electron.mjs).
+// The Vite dev server URL; the dev:desktop launch script sets this (see
+// scripts/dev-desktop.mjs).
 const DEV_SERVER_URL =
   process.env.VITE_DEV_SERVER_URL ?? "http://localhost:5173";
 

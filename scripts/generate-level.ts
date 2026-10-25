@@ -21,7 +21,6 @@ import path from "node:path";
 import {
   buildLevel,
   type LevelBuildingSpec,
-  type LevelCell,
   type LevelDefinition,
   type LevelWaterSpec,
 } from "../src/utils/levelBuilder";
@@ -295,6 +294,24 @@ const writeLevel = (
   console.log(`  waves: ${level.waveConfigs.length} (total enemies: ${totalEnemies})`);
 };
 
+const isPositiveFiniteNumber = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value) && value > 0;
+
+/** Read and validate tileSize/pathWidth from game.json (the path-geometry constants). */
+const loadGameConstants = (): { tileSize: number; pathWidth: number } => {
+  const gameConfigPath = path.join(PROJECT_ROOT, "public", "configs", "game.json");
+  const gameConfig = JSON.parse(
+    readFileSync(gameConfigPath, "utf8")
+  ) as Record<string, unknown>;
+  const { tileSize, pathWidth } = gameConfig;
+  if (!isPositiveFiniteNumber(tileSize) || !isPositiveFiniteNumber(pathWidth)) {
+    fail(
+      `invalid public/configs/game.json: tileSize (${tileSize}) and pathWidth (${pathWidth}) must be finite numbers greater than zero`
+    );
+  }
+  return { tileSize, pathWidth };
+};
+
 /** Parse the level name, load tileSize/pathWidth from game.json, and generate the level. */
 const main = (): void => {
   const levelName = process.argv[2];
@@ -310,12 +327,8 @@ const main = (): void => {
 
   // tileSize / pathWidth are the level's rendering constants; read them from the
   // game config file so the generated geometry matches the game's path width.
-  const gameConfigPath = path.join(PROJECT_ROOT, "public", "configs", "game.json");
-  const gameConfig = JSON.parse(
-    readFileSync(gameConfigPath, "utf8")
-  ) as { tileSize: number; pathWidth: number };
-
-  writeLevel(levelName, definition, gameConfig.tileSize, gameConfig.pathWidth);
+  const { tileSize, pathWidth } = loadGameConstants();
+  writeLevel(levelName, definition, tileSize, pathWidth);
 };
 
 void main();

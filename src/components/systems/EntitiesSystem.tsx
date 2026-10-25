@@ -29,6 +29,7 @@ import { ApplySlowSystem } from "./ApplySlowSystem";
 import { ApplyEffectSystem } from "./ApplyEffectSystem";
 import { EnemyMovementSystem } from "./EnemyMovementSystem";
 import { EnemyDeathSystem } from "./EnemyDeathSystem";
+import { EnemySplitSystem } from "./EnemySplitSystem";
 import {
   pathWidthSelector,
   selectedTowerTypeToPlaceSelector,
@@ -146,6 +147,12 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
         <ApplyEffectSystem />
 
         <EnemyDeathSystem />
+
+        {/*
+         * Runs right after death so a splitter's children appear the same
+         * frame the parent is killed, then continue along the path.
+         */}
+        <EnemySplitSystem />
 
         <EnemyMovementSystem
           shouldStopMovement={shouldStopMovement}

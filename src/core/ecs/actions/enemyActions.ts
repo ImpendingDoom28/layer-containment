@@ -64,6 +64,7 @@ const enemyToState = (enemyData: Enemy): EnemyStateData => ({
   slowResistance: enemyData.slowResistance,
   nextHealPulseAt: enemyData.nextHealPulseAt,
   healPulse: enemyData.healPulse,
+  split: enemyData.split,
 });
 
 const enemyToMotion = (enemyData: Enemy): EnemyMotionData => ({

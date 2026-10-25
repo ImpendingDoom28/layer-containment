@@ -61,7 +61,9 @@ export const CombatJuice = memo(
           0.15,
           planetRadius
         );
-        if (showRewardText) {
+        // Zero-reward kills (splitter shrapnel) get the burst but no float,
+        // so a "+$0" never clutters the path.
+        if (showRewardText && data.reward > 0) {
           floatingTextsRef.current?.spawn(
             t("rewardText", { amount: data.reward }),
             [position.x, position.y + REWARD_TEXT_HEIGHT, position.z],

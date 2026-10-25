@@ -19,6 +19,7 @@ import {
 } from "../../utils/levelEditor";
 import { getUpgradeIndicatorColors } from "../../utils/enemyUpgradeVisuals";
 import { enemyActions } from "../ecs/actions/enemyActions";
+import { splitRequest } from "../ecs/traits/split";
 import { world } from "../ecs/world";
 import { useGameStore } from "./useGameStore";
 
@@ -233,6 +234,11 @@ export const useLevelStore = create<LevelStore>((set) => ({
 
   resetLevelState: () => {
     enemyActions(world).clearAllEnemies();
+    // A splitter killed moments before the reset leaves a pending splitRequest
+    // behind; clear it so the new level does not spawn its children.
+    for (const entity of world.query(splitRequest)) {
+      if (entity.isAlive()) entity.destroy();
+    }
     set({
       ...DEFAULT_STATE,
     });

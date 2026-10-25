@@ -281,9 +281,14 @@
           "count": 3,
           "spawnInterval": 1.5,
           "type": "tank"
+        },
+        {
+          "type": "splitter",
+          "count": 2,
+          "spawnInterval": 2.0
         }
       ],
-      "totalEnemies": 28
+      "totalEnemies": 30
     },
     {
       "enemies": [
@@ -321,9 +326,14 @@
           "count": 8,
           "spawnInterval": 1,
           "type": "tank"
+        },
+        {
+          "type": "splitter",
+          "count": 4,
+          "spawnInterval": 1.5
         }
       ],
-      "totalEnemies": 38
+      "totalEnemies": 42
     }
   ]
 }

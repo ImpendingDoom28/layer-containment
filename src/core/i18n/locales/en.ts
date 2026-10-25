@@ -276,6 +276,10 @@ export const en = {
       name: "Tankee",
       description: "Slow, but can take a punch. A modern approach for a tank.",
     },
+    splitter: {
+      name: "Splitter",
+      description: "Unstable colony. On death it bursts into 2-4 weaker shrapnel that continue along the path and pay no gold.",
+    },
   },
   enemyUpgrades: {
     armored: {

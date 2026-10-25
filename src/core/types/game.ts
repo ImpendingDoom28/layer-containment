@@ -9,12 +9,22 @@ export type TowerType = "basic" | "slow" | "aoe" | "laser" | "relay" | "chain";
 export type TowerTargeting = "nearest" | "furthest";
 
 // Enemy types
-export type EnemyType = "basic" | "fast" | "tank" | "medic";
+export type EnemyType = "basic" | "fast" | "tank" | "medic" | "splitter";
 
 export type HealPulseConfig = {
   radius: number;
   intervalSeconds: number;
   healAmount: number;
+};
+
+/**
+ * Splitter death behavior: on death the enemy spawns a random number of
+ * weaker children (between `minChildren` and `maxChildren` inclusive) with
+ * zero gold reward.
+ */
+export type SplitConfig = {
+  minChildren: number;
+  maxChildren: number;
 };
 
 // Enemy upgrade types
@@ -109,6 +119,8 @@ export type EnemyConfig = {
   healthLoss: number;
   description?: string;
   healPulse?: HealPulseConfig;
+  /** Present on the Splitter: on death, spawns 2-4 weaker zero-reward children. */
+  split?: SplitConfig;
 };
 
 // Enemy instance

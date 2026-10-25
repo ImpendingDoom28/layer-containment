@@ -257,9 +257,14 @@
           "type": "tank",
           "count": 3,
           "spawnInterval": 1.5
+        },
+        {
+          "type": "splitter",
+          "count": 2,
+          "spawnInterval": 2
         }
       ],
-      "totalEnemies": 31
+      "totalEnemies": 33
     },
     {
       "enemies": [
@@ -282,9 +287,14 @@
           "type": "medic",
           "count": 2,
           "spawnInterval": 1
+        },
+        {
+          "type": "splitter",
+          "count": 3,
+          "spawnInterval": 1.8
         }
       ],
-      "totalEnemies": 38
+      "totalEnemies": 41
     },
     {
       "enemies": [
@@ -327,9 +337,14 @@
           "type": "medic",
           "count": 3,
           "spawnInterval": 1
+        },
+        {
+          "type": "splitter",
+          "count": 4,
+          "spawnInterval": 1.5
         }
       ],
-      "totalEnemies": 53
+      "totalEnemies": 57
     }
   ],
   "buildings": [

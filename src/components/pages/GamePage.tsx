@@ -9,6 +9,7 @@ import { GameScene } from "../scenes/game/GameScene";
 import { MainMenuScene } from "../scenes/mainMenu/MainMenuScene";
 import { HUDTowerShop } from "../hud/HUDTowerShop";
 import { HUDGameStats } from "../hud/HUDGameStats";
+import { HUDMobileMenuButton } from "../hud/HUDMobileMenuButton";
 import { HUDGameOver } from "../hud/HUDGameOver";
 import { HUDMainMenu } from "../hud/main/HUDMainMenu";
 import { HUDGameMenu } from "../hud/HUDGameMenu";
@@ -68,6 +69,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
     selectedTower,
     startGame,
     goToMainMenu,
+    openGameMenu,
     closeGameMenu,
     shouldStopMovement,
     shouldLockCamera,
@@ -228,6 +230,8 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
       {isGameReady && !isMenu && (
         <>
           <HUDPauseOverlay gameStatus={gameStatus} />
+
+          <HUDMobileMenuButton gameStatus={gameStatus} onOpenGameMenu={openGameMenu} />
 
           {(shouldDisableControls ? gameMenuClose.closing : true) && (
             <>

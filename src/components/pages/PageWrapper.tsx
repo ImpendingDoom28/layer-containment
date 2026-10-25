@@ -6,6 +6,8 @@ type PageWrapperProps = {
 
 export const PageWrapper: FC<PageWrapperProps> = ({ children }) => {
   return (
-    <div className="relative w-screen h-screen bg-gray-900">{children}</div>
+    // dvh so the page tracks the mobile browser chrome (url bar) instead of
+    // being taller than the visible viewport.
+    <div className="relative w-screen h-[100dvh] bg-gray-900">{children}</div>
   );
 };

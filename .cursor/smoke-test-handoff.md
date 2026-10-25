@@ -11,6 +11,7 @@
   - **`tests/e2e/controlsIntro.spec.ts`**: first-run **How to play** modal (mouse + keyboard controls, rebind-aware keys, "watch controls later in Settings/Controls" note) appears when a run starts with a clean localStorage flag, closes via `Got it` and sets `containment-layer-controls-intro-seen`; a returning player (flag preset via `onOpenGame`, which skips the intro by default) never sees it
   - **`tests/e2e/gameplay.spec.ts`**: Basic Tower placement via fixed canvas coordinates, first wave start (`1 / 7`)
   - **`tests/e2e/editor.spec.ts`**: `/editor` route (`editor-canvas`, `Level`, `Waves`, `Publish`)
+  - **`tests/e2e/mobile.spec.ts`**: mobile layout at a 375x667 viewport — main menu fits the viewport, in-game HUD uses a bottom shop bar + top stats strip + mobile menu button, a tower can be placed from the bottom bar, and the game menu opens from the mobile menu button
 - Shared placement helpers: `tests/e2e/fixtures/towerPlacement.ts` (`onPlaceBasicTower`, `onPlaceMultipleBasicTowers`); coordinates in `tests/e2e/fixtures/canvasPoints.ts` (`1280x720` viewport)
 - The Empower smoke test uses `test.setTimeout(180_000)` and a 120s wait for the modal after wave 1 ends
 

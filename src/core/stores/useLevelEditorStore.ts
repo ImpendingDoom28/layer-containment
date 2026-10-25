@@ -972,6 +972,7 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
     });
   },
 
+  /** Validate the draft level with the shared rules and store the issues. */
   validateDraftLevel: (tileSize: number) => {
     const validationIssues = validateLevel(get().draftLevel, tileSize);
     set({ validationIssues });

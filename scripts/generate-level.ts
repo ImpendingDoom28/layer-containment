@@ -37,12 +37,14 @@ const PROJECT_ROOT = path.resolve(
 
 type WaveGroup = WaveEnemyGroup;
 
+/** Build an enemy group entry for a wave. */
 const g = (
   type: WaveGroup["type"],
   count: number,
   spawnInterval: number
 ): WaveGroup => ({ type, count, spawnInterval });
 
+/** Build an unbuildable ruin/obstacle (a building) at a grid cell. */
 const building = (
   gridX: number,
   gridZ: number,
@@ -53,6 +55,7 @@ const building = (
   color: string
 ): LevelBuildingSpec => ({ gridX, gridZ, shape, width, depth, height, color });
 
+/** Build a water (contamination) tile at a grid cell. */
 const water = (gridX: number, gridZ: number): LevelWaterSpec => ({
   gridX,
   gridZ,
@@ -156,6 +159,7 @@ const LEVELS: Record<string, LevelDefinition> = {
   },
 };
 
+/** Print the failure reason and exit non-zero. */
 const fail = (message: string): never => {
   console.error(`Level generation failed: ${message}`);
   process.exit(1);
@@ -252,7 +256,7 @@ const checkGeometry = (
     }
   }
 };
-
+/** Build, validate, and write one level to public/configs/levels/<name>.json. */
 const writeLevel = (
   levelName: string,
   definition: LevelDefinition,
@@ -291,6 +295,7 @@ const writeLevel = (
   console.log(`  waves: ${level.waveConfigs.length} (total enemies: ${totalEnemies})`);
 };
 
+/** Parse the level name, load tileSize/pathWidth from game.json, and generate the level. */
 const main = (): void => {
   const levelName = process.argv[2];
   if (!levelName) {

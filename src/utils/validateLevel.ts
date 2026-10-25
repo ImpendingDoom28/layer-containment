@@ -6,9 +6,12 @@ import type { LevelEditorValidationIssue } from "../core/types/editor";
 import { MAX_GRID_SIZE, MIN_GRID_SIZE } from "./gridSizeLimits";
 import { waypointToTile } from "./levelEditor";
 
-// Shared level validation. Used by the level editor (validateDraftLevel) and
-// by the level generation script (scripts/generate-level.ts), so both check a
-// level with the exact same rules.
+/**
+ * Validate a level with the exact rules the level editor runs
+ * (`validateDraftLevel` delegates to this). Shared by the editor and the
+ * level generation script (scripts/generate-level.ts), so both check a level
+ * the same way. Returns the list of issues (empty when the level is valid).
+ */
 export const validateLevel = (
   level: LevelConfigData,
   tileSize: number

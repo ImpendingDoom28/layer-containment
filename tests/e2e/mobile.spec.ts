@@ -91,8 +91,18 @@ test("in-game HUD uses a bottom shop bar and a top stats strip", async ({
   await expect(page.getByTestId("wave-count")).toBeVisible();
   await expect(page.getByText("Wave:")).toBeVisible();
 
-  // The mobile menu button replaces the desktop ESC entry point.
-  await expect(page.getByTestId("mobile-menu-button")).toBeVisible();
+  // The mobile menu button replaces the desktop ESC entry point and lives
+  // inside the header strip rather than floating above it.
+  const menuButton = page.getByTestId("mobile-menu-button");
+  await expect(menuButton).toBeVisible();
+  const header = page.getByTestId("game-stats-header");
+  const headerBox = await expectSettledBox(page, header, "stats header");
+  const menuBox = await menuButton.boundingBox();
+  expect(menuBox).not.toBeNull();
+  expect(menuBox!.y).toBeGreaterThanOrEqual(headerBox.y);
+  expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(
+    headerBox.y + headerBox.height
+  );
 });
 
 test("a tower can be selected and deselected from the bottom shop bar", async ({

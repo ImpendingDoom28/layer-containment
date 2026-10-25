@@ -1,5 +1,5 @@
 import { FC } from "react";
-import { HeartPulse, Play } from "lucide-react";
+import { HeartPulse, Menu, Play } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { UIButton } from "@/components/ui/buttons/UIButton";
@@ -27,6 +27,7 @@ type HUDGameStatsProps = {
   remainingEnemies: number;
   gameStatus: GameStatus;
   onStartWave: () => void;
+  onOpenGameMenu: () => void;
 };
 
 export const HUDGameStats: FC<HUDGameStatsProps> = ({
@@ -36,6 +37,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
   remainingEnemies,
   gameStatus,
   onStartWave,
+  onOpenGameMenu,
 }) => {
   const { t } = useTranslation();
   const totalWaves = useLevelStore(totalWavesSelector);
@@ -57,10 +59,10 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
 
   if (isMobile) {
     return (
-      // The strip spans the full width (background and bottom border live on
-      // the wrapper); pr-14 keeps the right-edge controls clear of the mobile
-      // menu button (top-2 right-2, 32px wide), which sits above this strip.
-      <HUDWrapper className="inset-x-0 top-0 bottom-auto flex border-b border-white/10 bg-gray-900/80 pr-14 backdrop-blur-sm">
+      <HUDWrapper
+        data-testid="game-stats-header"
+        className="inset-x-0 top-0 bottom-auto flex border-b border-white/10 bg-card backdrop-blur-sm"
+      >
         <div
           data-testid="game-stats"
           className="ui-menu-tilt ui-menu-tilt-left flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2 px-3 py-1.5"
@@ -107,6 +109,16 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
             <PauseIcon />
           </UIButton>
         )}
+        <UIButton
+          data-testid="mobile-menu-button"
+          onClick={onOpenGameMenu}
+          variant="secondary"
+          size="icon"
+          aria-label={t("gameMenu.title")}
+          className="shrink-0"
+        >
+          <Menu />
+        </UIButton>
       </HUDWrapper>
     );
   }

@@ -1,17 +1,21 @@
-import type { FC, ReactNode } from "react";
+import { FC, type HTMLAttributes, type ReactNode } from "react";
 
 import { cn } from "../ui/lib/twUtils";
 
-type HUDWrapperProps = {
+type HUDWrapperProps = HTMLAttributes<HTMLDivElement> & {
   children: ReactNode;
-  className?: string;
 };
 
-export const HUDWrapper: FC<HUDWrapperProps> = ({ children, className }) => {
+export const HUDWrapper: FC<HUDWrapperProps> = ({
+  children,
+  className,
+  ...props
+}) => {
   return (
     <div
       className={cn("absolute inset-0 z-(--z-overlay) flex", className)}
       data-game-camera-block
+      {...props}
     >
       {children}
     </div>

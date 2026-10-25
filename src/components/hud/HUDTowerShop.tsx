@@ -140,9 +140,9 @@ export const HUDTowerShop: FC<HUDTowerShopProps> = ({ money }) => {
       <HUDWrapper className="inset-x-0 bottom-0 top-auto p-2">
         <div
           data-testid="tower-shop"
-          className="ui-menu-tilt ui-menu-tilt-right flex items-end justify-between gap-2"
+          className="ui-menu-tilt ui-menu-tilt-right flex min-w-0 flex-1 items-end justify-between gap-2"
         >
-          <div className="flex min-w-0 flex-1 items-end gap-2 overflow-x-auto pb-1">
+          <div className="scroll-hide flex min-w-0 flex-1 items-end gap-2 overflow-x-auto pb-1">
             {towerTypesValues.map((tower) => renderTowerButton(tower))}
           </div>
           {selectedCancel}

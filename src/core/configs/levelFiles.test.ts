@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { PLAYABLE_LEVEL_IDS } from "../../constants/playableLevels";
 import {
   computeWaveTotalEnemies,
+  waypointToTile,
   waypointToTileUnclamped,
 } from "../../utils/levelEditor";
 import { isGridTileOnPath } from "../../utils/pathUtils";
@@ -82,6 +83,56 @@ describe("playable level files", () => {
           isOnPath(water.gridX, water.gridZ),
           `water ${water.id} at ${water.gridX},${water.gridZ} is on the path`
         ).toBe(false);
+      }
+    });
+
+    it(`${id}: path segments are axis-aligned`, () => {
+      const level = loadLevel(id);
+      level.pathWaypoints.forEach((path, pathIndex) => {
+        for (let i = 1; i < path.length; i++) {
+          const prev = path[i - 1];
+          const curr = path[i];
+          // The editor's path tool is orthogonal; a diagonal segment would
+          // render but the level could not be opened or edited.
+          expect(
+            prev.x === curr.x || prev.z === curr.z,
+            `path ${pathIndex} segment (${prev.x}, ${prev.z})->(${curr.x}, ${curr.z}) is not axis-aligned`
+          ).toBe(true);
+        }
+      });
+    });
+
+    it(`${id}: no duplicate or overlapping building/water tiles`, () => {
+      const level = loadLevel(id);
+      const tileKey = (gridX: number, gridZ: number) => `${gridX},${gridZ}`;
+      const buildingKeys = level.buildings.map(
+        (b) => tileKey(b.gridX, b.gridZ)
+      );
+      expect(new Set(buildingKeys).size).toBe(buildingKeys.length);
+      const waterKeys = level.waters.map((w) => tileKey(w.gridX, w.gridZ));
+      expect(new Set(waterKeys).size).toBe(waterKeys.length);
+      for (const key of waterKeys) {
+        expect(buildingKeys).not.toContain(key);
+      }
+    });
+
+    it(`${id}: path waypoints never sit on water`, () => {
+      const level = loadLevel(id);
+      const waterKeys = new Set(
+        level.waters.map((w) => `${w.gridX},${w.gridZ}`)
+      );
+      for (const path of level.pathWaypoints) {
+        for (const waypoint of path) {
+          const { gridX, gridZ } = waypointToTile(
+            waypoint,
+            level.gridSize,
+            TILE_SIZE
+          );
+          expect(
+            waterKeys.has(`${gridX},${gridZ}`),
+            `path waypoint at grid ${gridX},${gridZ} sits on water`
+          ).toBe(false);
+        }
       }
     });
 

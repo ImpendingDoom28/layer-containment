@@ -7,3 +7,4 @@ alwaysApply: true
   - run a smoke test in a browser using playwright. Find more information inside [smoke-test-handoff.mdc](./smoke-test-handoff.mdc)
   - run unit tests with React Three Fiber Test Renderer (RTTR) via `npm run test:unit`
 - After creating a new feature for the project, don't forget to document only important information about it in `README.md` file. Include only features, not bugfixes or "best practices" info. Make it concise and short.
+- Git: follow Conventional Commits — `type(scope): subject` (imperative mood, no trailing period), e.g. `feat(towers): add slow tower`. The `commit-msg` hook (commitlint) and CI enforce it; never bypass hooks with `--no-verify`.

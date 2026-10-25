@@ -38,6 +38,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
     "lint": "eslint src --ext ts,tsx",
     "lint:fix": "eslint src --ext ts,tsx --fix",
+    "lint:commit": "commitlint --edit",
     "verify": "npm run build && npm run test:unit && npm run test:e2e"
   },
   "dependencies": {
@@ -67,6 +68,8 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
     "@csstools/postcss-oklab-function": "^4.0.12",
     "@playwright/test": "^1.58.2",
     "@react-three/test-renderer": "^9.1.1",

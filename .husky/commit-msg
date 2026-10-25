@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+# commitlint auto-ignores git-generated messages (merge/revert/squash) via
+# its default ignore rules and `commitlint.config.mjs`, so this just lints
+# the message being committed.
+npm run lint:commit "$1"

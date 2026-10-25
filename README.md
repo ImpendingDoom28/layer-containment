@@ -140,7 +140,7 @@ Enforcement is two-tiered:
 1. **Local** — a [`husky`](https://typicode.github.io/husky/) `commit-msg` hook runs [commitlint](https://commitlint.js.org/) (`npm run lint:commit`) on every commit, so a non-conforming message is rejected before it lands. The rules live in [`commitlint.config.mjs`](commitlint.config.mjs).
 2. **CI** — a [GitHub Actions](.github/workflows/ci.yml) job re-checks every PR's commit messages with commitlint as a backstop, since local hooks can be bypassed.
 
-To lint a single commit by hand: `npm run lint:commit` (reads the last commit message), or pipe a message: `echo "feat: x" | npx commitlint`.
+To lint a single commit by hand: `npx commitlint --last` (checks the most recent commit), or pipe a message: `echo "feat: x" | npx commitlint`.
 
 ### Pre-push Verification (husky)
 

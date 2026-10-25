@@ -82,12 +82,12 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      # `commitlint` (no flags) reads messages from stdin; the range is the
-      # PR head minus the base branch, i.e. exactly the PR's own commits.
-      # Merge commits (e.g. `Merge branch 'master' into ...`) are skipped,
-      # since they are not hand-written subjects.
+      # `--from`/`--to` lints every commit in the PR (base..head) as its own
+      # message, so one bad subject cannot hide behind another. Git-generated
+      # messages (merge commits, reverts, squash messages) are ignored
+      # automatically by commitlint's default ignore rules.
       - name: Lint commit messages
         run: |
-          git log --no-merges --format=%s \
-            origin/${{ github.event.pull_request.base.ref }}..HEAD |
-            npx commitlint
+          npx commitlint \
+            --from ${{ github.event.pull_request.base.sha }} \
+            --to ${{ github.event.pull_request.head.sha }}

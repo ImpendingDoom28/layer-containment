@@ -1,2 +1,62 @@
 #!/usr/bin/env sh
-npm run verify
+# Pre-push: run the full verify (build + unit + e2e) only when the push could
+# affect the app. If every changed file is documentation or otherwise
+# non-code (all *.md, docs/, lock/log files, etc.), skip verify so
+# docs-only pushes stay fast. When unsure, verify.
+#
+# Husky invokes this as:  pre-push <local-ref> <local-sha> <remote> <remote-ref>
+# and lists the refs being pushed on stdin, one per line:
+#   <local ref> SP <local sha> SP <remote ref> SP <remote sha>
+# A sha of all zeros marks a new remote ref (local sha zero: a deletion).
+
+zero=0000000000000000000000000000000000000000
+
+# Changed files that do not affect the app build or its tests. Anything else
+# is treated as code (the safe default is to run verify).
+non_code='^docs/|\.(md|mdx)$|^package-lock\.json$|\.(log|lock)$|^\.DS_Store$|^Thumbs\.db$'
+
+changed_files=''
+refs_seen=0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ -z "$local_ref" ]; then continue; fi
+  refs_seen=$((refs_seen + 1))
+
+  if [ "$local_sha" = "$zero" ]; then
+    # Remote ref is being deleted: it removes no app code, so nothing to verify.
+    continue
+  fi
+
+  if [ "$remote_sha" = "$zero" ]; then
+    # New remote ref: diff against the default branch's merge base.
+    base=$(git merge-base origin/master "$local_sha" 2>/dev/null || true)
+    if [ -n "$base" ]; then
+      files=$(git diff --name-only "$base" "$local_sha" || true)
+    else
+      # No common base (orphan/detached): consider every file in the ref.
+      files=$(git ls-tree -r --name-only "$local_sha" || true)
+    fi
+  else
+    # Updating an existing remote ref.
+    files=$(git diff --name-only "$remote_sha" "$local_sha" || true)
+  fi
+
+  changed_files="$changed_files$files
+"
+done
+
+# No ref info on stdin means the hook was invoked unexpectedly; verify.
+if [ "$refs_seen" -eq 0 ]; then
+  npm run verify
+  exit $?
+fi
+
+# Count changed files that look like code (i.e. not in the non-code set).
+code_count=$(printf '%s\n' "$changed_files" | grep -Ev '^$' | grep -Evc "$non_code" || true)
+if [ -z "$code_count" ]; then code_count=0; fi
+
+if [ "$code_count" -gt 0 ]; then
+  npm run verify
+else
+  echo "husky - pre-push: only non-code files changed (e.g. docs, *.md); skipping verify"
+fi

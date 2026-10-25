@@ -127,6 +127,21 @@ Vitest runs React Three Fiber unit tests with `@react-three/test-renderer` witho
 npm run build
 ```
 
+### Commit Conventions
+
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/) — `type(scope): subject`, e.g. `feat(towers): add slow tower` or `fix(levels): stop wave counter drifting`.
+
+- **Type**: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
+- **Scope** (optional): the affected area, kebab-case — `levels`, `towers`, `hud`, `ecs`, `stats`, `main-menu`, …
+- **Subject**: imperative mood, no trailing period, ~72 chars (the hook enforces a 100-char header limit).
+
+Enforcement is two-tiered:
+
+1. **Local** — a [`husky`](https://typicode.github.io/husky/) `commit-msg` hook runs [commitlint](https://commitlint.js.org/) (`npm run lint:commit`) on every commit, so a non-conforming message is rejected before it lands. The rules live in [`commitlint.config.mjs`](commitlint.config.mjs).
+2. **CI** — a [GitHub Actions](.github/workflows/ci.yml) job re-checks every PR's commit messages with commitlint as a backstop, since local hooks can be bypassed.
+
+To lint a single commit by hand: `npm run lint:commit` (reads the last commit message), or pipe a message: `echo "feat: x" | npx commitlint`.
+
 ### Performance Stress Test
 
 A dedicated, unattended stress-test entry for renderer/simulation

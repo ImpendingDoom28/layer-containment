@@ -1,9 +1,10 @@
 name: CI
 
 # Verifies the app on every pull request and push to master: builds the web
-# app, runs the RTTR unit tests, and runs the default Playwright e2e suite
+# app, runs the RTTR unit tests, runs the default Playwright e2e suite
 # (menu → game flows; the stress scene is excluded and has its own local
-# tooling, see stress/README.md). The repo is public, so these runs are free.
+# tooling, see stress/README.md), and lints PR commit messages with
+# commitlint (Conventional Commits). The repo is public, so these runs are free.
 
 on:
   pull_request:
@@ -55,3 +56,38 @@ jobs:
           name: playwright-report
           path: playwright-report/
           if-no-files-found: ignore
+
+  # Backstop for the local `commit-msg` hook (commitlint): checks the commit
+  # messages of every PR against Conventional Commits.
+  commitlint:
+    name: Commit messages
+    # `github.event.pull_request.base.ref` only exists on PR events.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # fetch-depth 0: the full history is needed to diff the PR's commits
+      # against the base branch.
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      # `commitlint` (no flags) reads messages from stdin; the range is the
+      # PR head minus the base branch, i.e. exactly the PR's own commits.
+      # Merge commits (e.g. `Merge branch 'master' into ...`) are skipped,
+      # since they are not hand-written subjects.
+      - name: Lint commit messages
+        run: |
+          git log --no-merges --format=%s \
+            origin/${{ github.event.pull_request.base.ref }}..HEAD |
+            npx commitlint

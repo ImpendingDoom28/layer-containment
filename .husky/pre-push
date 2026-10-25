@@ -8,6 +8,12 @@
 # and lists the refs being pushed on stdin, one per line:
 #   <local ref> SP <local sha> SP <remote ref> SP <remote sha>
 # A sha of all zeros marks a new remote ref (local sha zero: a deletion).
+#
+# Diffs use --no-renames so a renamed file is reported as a delete + add;
+# a code file renamed to a .md name (or moved into docs/) therefore still
+# exposes its code path and triggers verify. If any ref cannot be inspected
+# (e.g. its remote sha is not available locally), verify runs rather than
+# skipping.
 
 zero=0000000000000000000000000000000000000000
 
@@ -17,6 +23,13 @@ non_code='^docs/|\.(md|mdx)$|^package-lock\.json$|\.(log|lock)$|^\.DS_Store$|^Th
 
 changed_files=''
 refs_seen=0
+inspection_failed=0
+
+# Print the changed file names between $1 and $2; rename detection off so
+# moved/renamed files keep their source path in the list.
+diff_names() {
+  git diff --no-renames --name-only "$1" "$2"
+}
 
 while read -r local_ref local_sha remote_ref remote_sha; do
   if [ -z "$local_ref" ]; then continue; fi
@@ -31,22 +44,31 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     # New remote ref: diff against the default branch's merge base.
     base=$(git merge-base origin/master "$local_sha" 2>/dev/null || true)
     if [ -n "$base" ]; then
-      files=$(git diff --name-only "$base" "$local_sha" || true)
+      if ! files=$(diff_names "$base" "$local_sha" 2>/dev/null); then
+        inspection_failed=1
+        files=''
+      fi
     else
       # No common base (orphan/detached): consider every file in the ref.
-      files=$(git ls-tree -r --name-only "$local_sha" || true)
+      if ! files=$(git ls-tree -r --name-only "$local_sha" 2>/dev/null); then
+        inspection_failed=1
+        files=''
+      fi
     fi
   else
     # Updating an existing remote ref.
-    files=$(git diff --name-only "$remote_sha" "$local_sha" || true)
+    if ! files=$(diff_names "$remote_sha" "$local_sha" 2>/dev/null); then
+      inspection_failed=1
+      files=''
+    fi
   fi
 
   changed_files="$changed_files$files
 "
 done
 
-# No ref info on stdin means the hook was invoked unexpectedly; verify.
-if [ "$refs_seen" -eq 0 ]; then
+# No ref info, or a ref we could not inspect: verify (the safe default).
+if [ "$refs_seen" -eq 0 ] || [ "$inspection_failed" -ne 0 ]; then
   npm run verify
   exit $?
 fi

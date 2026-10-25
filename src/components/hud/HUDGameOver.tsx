@@ -158,7 +158,7 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
         </UICardHeader>
 
         <UICardContent className="gap-4">
-          <div className="flex flex-row items-center justify-center gap-4">
+          <div className="flex flex-row flex-wrap items-center justify-center gap-4">
             <div className="text-center">
               <UITypography variant="small" className="text-muted-foreground">
                 {t("gameOver.finalMoney")}
@@ -251,7 +251,7 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
           )}
         </UICardContent>
 
-        <UICardFooter className="flex flex-row justify-end gap-3">
+        <UICardFooter className="flex flex-row flex-wrap justify-end gap-3">
           <UIButton onClick={onGoToMainMenu} variant={"ghost"}>
             {t("gameOver.goToMainMenu")}
           </UIButton>

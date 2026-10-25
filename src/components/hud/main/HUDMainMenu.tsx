@@ -109,7 +109,7 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
           )}
         >
           <div
-            className="ui-menu-tilt ui-menu-tilt-left relative flex h-full w-[45%] max-w-xl flex-col justify-between p-8 md:p-12"
+            className="ui-menu-tilt ui-menu-tilt-left relative flex h-full w-full max-w-xl flex-col justify-between p-4 sm:p-8 md:w-[45%] md:p-12"
             ref={menuRef}
           >
             <UIBadge text={t("menu.systemsOnline")} />
@@ -118,13 +118,13 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
               <div className="min-w-0">
                 <UITypography
                   variant="h1"
-                  className="tracking-widest font-extralight"
+                  className="text-3xl tracking-widest font-extralight md:text-4xl"
                 >
                   {title[0]}
                 </UITypography>
                 <UITypography
                   variant="h1"
-                  className="tracking-widest font-extralight text-primary"
+                  className="text-3xl tracking-widest font-extralight text-primary md:text-4xl"
                 >
                   {title[1] ?? ""}
                 </UITypography>

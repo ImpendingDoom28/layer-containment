@@ -189,6 +189,7 @@ test("shows the level picker with Deploy before starting a level", async ({
 
   await expect(page.getByRole("heading", { name: "Deploy" })).toBeVisible();
   await expect(page.getByTestId("level-picker-level_1")).toBeVisible();
+  await expect(page.getByTestId("level-picker-level_2")).toBeVisible();
 });
 
 test("shows Empower Next Wave after wave 1 completes and clears after pick", async ({

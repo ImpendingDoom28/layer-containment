@@ -156,6 +156,132 @@ const LEVELS: Record<string, LevelDefinition> = {
       ],
     ],
   },
+
+  // Sector 3 "The Deep Vein": the breach's source is finally located — a
+  // hollow vein running under the core rock. Three gates (top-left,
+  // top-center, top-right) each zigzag down through a mined-out sector, then
+  // all three merge into one shared vein corridor: a full-width cross-row at
+  // gridZ 13 that feeds a single final approach down the x=9 column to the
+  // core at (9,19). The left and right fronts travel in opposite directions
+  // along the shared row, so the map reads as collapsing inward toward the
+  // core. Ruins are mine supports and old excavation rigs; the pools flanking
+  // the core approach are molten ventings from the vein.
+  level_3: {
+    name: "3",
+    startingMoney: 250,
+    gridSize: 20,
+    paths: [
+      [
+        [2, 0],
+        [2, 4],
+        [6, 4],
+        [6, 9],
+        [3, 9],
+        [3, 13],
+        [9, 13],
+        [9, 19],
+      ],
+      [
+        [10, 0],
+        [10, 5],
+        [7, 5],
+        [7, 10],
+        [13, 10],
+        [13, 13],
+        [9, 13],
+        [9, 19],
+      ],
+      [
+        [17, 0],
+        [17, 4],
+        [14, 4],
+        [14, 9],
+        [16, 9],
+        [16, 13],
+        [9, 13],
+        [9, 19],
+      ],
+    ],
+    buildings: [
+      building(0, 2, "box", 0.8, 0.8, 1.9, "#78716c"),
+      building(4, 2, "cylinder", 0.7, 0.7, 1.8, "#57534e"),
+      building(11, 3, "box", 0.9, 0.9, 2.2, "#8b7355"),
+      building(15, 3, "box", 0.8, 0.8, 1.9, "#78716c"),
+      building(12, 5, "box", 0.86, 0.86, 2.1, "#8b7355"),
+      building(5, 6, "box", 0.8, 0.8, 1.9, "#78716c"),
+      building(1, 7, "cylinder", 0.75, 0.75, 2.0, "#6b7280"),
+      building(12, 8, "box", 0.86, 0.86, 2.1, "#78716c"),
+      building(18, 7, "box", 0.8, 0.8, 1.9, "#78716c"),
+      building(10, 8, "cylinder", 0.75, 0.75, 2.0, "#6b7280"),
+      building(1, 10, "box", 0.8, 0.8, 1.9, "#78716c"),
+      building(5, 11, "cylinder", 0.75, 0.75, 2.0, "#6b7280"),
+      building(8, 12, "box", 0.86, 0.86, 2.1, "#8b7355"),
+      building(15, 12, "cylinder", 0.7, 0.7, 1.8, "#57534e"),
+      building(6, 15, "box", 0.8, 0.8, 1.9, "#78716c"),
+      building(13, 15, "cylinder", 0.75, 0.75, 2.0, "#6b7280"),
+    ],
+    waters: [
+      water(1, 16),
+      water(2, 16),
+      water(1, 17),
+      water(2, 17),
+      water(17, 16),
+      water(18, 16),
+      water(17, 17),
+      water(18, 17),
+      water(7, 16),
+      water(7, 17),
+      water(12, 16),
+      water(12, 17),
+    ],
+    waves: [
+      [g("basic", 12, 0.9)],
+      [
+        g("basic", 14, 0.8),
+        g("fast", 5, 1.0),
+        g("medic", 1, 1.0),
+      ],
+      [
+        g("basic", 16, 0.7),
+        g("fast", 7, 0.9),
+      ],
+      [
+        g("basic", 18, 0.6),
+        g("fast", 9, 0.85),
+        g("tank", 2, 2.0),
+        g("medic", 1, 1.0),
+      ],
+      [
+        g("basic", 20, 0.55),
+        g("fast", 11, 0.75),
+        g("tank", 3, 1.6),
+        g("medic", 2, 1.0),
+      ],
+      [
+        g("basic", 22, 0.5),
+        g("fast", 13, 0.65),
+        g("tank", 4, 1.4),
+        g("medic", 2, 0.9),
+      ],
+      [
+        g("basic", 26, 0.45),
+        g("fast", 15, 0.6),
+        g("tank", 5, 1.2),
+      ],
+      [
+        g("basic", 28, 0.4),
+        g("fast", 18, 0.5),
+        g("tank", 6, 1.1),
+        g("medic", 3, 0.9),
+      ],
+      [
+        g("basic", 32, 0.35),
+        g("fast", 20, 0.45),
+        g("tank", 8, 1.0),
+        g("medic", 4, 0.9),
+      ],
+    ],
+  },
 };
 
 /** Print the failure reason and exit non-zero. */

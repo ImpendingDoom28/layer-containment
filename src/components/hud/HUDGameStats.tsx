@@ -63,7 +63,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
       <HUDWrapper className="inset-x-0 top-0 bottom-auto flex border-b border-white/10 bg-gray-900/80 pr-14 backdrop-blur-sm">
         <div
           data-testid="game-stats"
-          className="ui-menu-tilt ui-menu-tilt-left flex min-w-0 flex-1 items-center justify-between gap-2 px-3 py-1.5"
+          className="ui-menu-tilt ui-menu-tilt-left flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2 px-3 py-1.5"
         >
           <UIMoney money={money} variant="medium" iconSize={14} />
           <div className="flex items-center gap-1.5">

@@ -8,9 +8,8 @@ import { waypointToTile } from "./levelEditor";
 
 /**
  * Validate a level with the exact rules the level editor runs
- * (`validateDraftLevel` delegates to this). Shared by the editor and the
- * level generation script (scripts/generate-level.ts), so both check a level
- * the same way. Returns the list of issues (empty when the level is valid).
+ * (`validateDraftLevel` delegates to this). Returns the list of issues
+ * (empty when the level is valid).
  */
 export const validateLevel = (
   level: LevelConfigData,

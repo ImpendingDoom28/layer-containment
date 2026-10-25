@@ -153,6 +153,7 @@ export type LevelConfigFiles =
   | "level_main"
   | "level_1"
   | "level_2"
+  | "level_3"
   | "stress";
 
 export const levelConfigSchema = z.object({

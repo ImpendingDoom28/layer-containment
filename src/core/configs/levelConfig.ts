@@ -20,12 +20,16 @@ const towerTypeSchema = z.enum([
   "relay",
   "chain",
 ]);
-const enemyTypeSchema = z.enum(["basic", "fast", "tank", "medic"]);
+const enemyTypeSchema = z.enum(["basic", "fast", "tank", "medic", "splitter"]);
 
 const healPulseConfigSchema = z.object({
   radius: z.number(),
   intervalSeconds: z.number(),
   healAmount: z.number(),
+});
+const splitConfigSchema = z.object({
+  minChildren: z.number().int().min(1),
+  maxChildren: z.number().int().min(1),
 });
 const projectileTypeSchema = z.enum(["aoe", "single", "beam", "chain"]);
 const buildingShapeSchema = z.enum(["box", "cylinder"]);
@@ -124,6 +128,7 @@ const enemySchema: z.ZodType<Enemy> = z.object({
   slowResistance: z.number().optional(),
   healPulse: healPulseConfigSchema.optional(),
   nextHealPulseAt: z.number().optional(),
+  split: splitConfigSchema.optional(),
 });
 
 const projectileSchema: z.ZodType<Projectile> = z.object({

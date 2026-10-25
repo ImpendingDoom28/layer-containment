@@ -10,6 +10,7 @@ import {
 
 import { WorldProvider } from "koota/react";
 
+import { EntityIdProvider } from "../../core/contexts/EntityIdContext";
 import { enemyActions } from "../../core/ecs/actions/enemyActions";
 import { getEnemySnapshots } from "../../core/ecs/selectors/enemySnapshots";
 import { IsEnemy, requestEnemyDeath } from "../../core/ecs/traits/enemy";
@@ -85,7 +86,9 @@ describe("EntitiesSystem enemy death settlement", () => {
 
     const renderer = await ReactThreeTestRenderer.create(
       <WorldProvider world={testWorld}>
-        <EntitiesSystem {...entitiesSystemProps} />
+        <EntityIdProvider>
+          <EntitiesSystem {...entitiesSystemProps} />
+        </EntityIdProvider>
       </WorldProvider>
     );
 
@@ -118,7 +121,9 @@ describe("EntitiesSystem enemy death settlement", () => {
 
     const renderer = await ReactThreeTestRenderer.create(
       <WorldProvider world={testWorld}>
-        <EntitiesSystem {...entitiesSystemProps} />
+        <EntityIdProvider>
+          <EntitiesSystem {...entitiesSystemProps} />
+        </EntityIdProvider>
       </WorldProvider>
     );
 
@@ -142,7 +147,9 @@ describe("EntitiesSystem enemy death settlement", () => {
 
     const renderer = await ReactThreeTestRenderer.create(
       <WorldProvider world={testWorld}>
-        <EntitiesSystem {...entitiesSystemProps} />
+        <EntityIdProvider>
+          <EntitiesSystem {...entitiesSystemProps} />
+        </EntityIdProvider>
       </WorldProvider>
     );
 

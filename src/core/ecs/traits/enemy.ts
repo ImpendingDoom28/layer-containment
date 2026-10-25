@@ -5,6 +5,7 @@ import type {
   EnemyType,
   EnemyUpgradeId,
   HealPulseConfig,
+  SplitConfig,
 } from "../../types/game";
 import type { PositionData } from "./position";
 
@@ -38,6 +39,8 @@ export type EnemyStateData = {
   slowResistance?: number;
   nextHealPulseAt?: number;
   healPulse?: HealPulseConfig;
+  /** Present on the Splitter: death spawns 2-4 weaker zero-reward children. */
+  split?: SplitConfig;
 };
 
 export const createDefaultEnemyState = (): EnemyStateData => ({
@@ -116,4 +119,5 @@ export const toEnemySnapshot = (
   slowResistance: state.slowResistance,
   nextHealPulseAt: state.nextHealPulseAt,
   healPulse: state.healPulse,
+  split: state.split,
 });

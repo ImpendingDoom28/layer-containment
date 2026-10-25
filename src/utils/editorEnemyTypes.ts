@@ -5,6 +5,7 @@ export const FALLBACK_ENEMY_TYPES: EnemyType[] = [
   "fast",
   "tank",
   "medic",
+  "splitter",
 ];
 
 export const getEnemyTypeOptions = (

@@ -4,6 +4,7 @@ import type {
   TowerConfig,
   EnemyConfig,
   EnemyUpgradeConfig,
+  SplitConfig,
 } from "../types/game";
 import { loadFile } from "../../utils/fileLoader";
 
@@ -17,12 +18,16 @@ const towerTypeSchema = z.enum([
   "relay",
   "chain",
 ]);
-const enemyTypeSchema = z.enum(["basic", "fast", "tank", "medic"]);
+const enemyTypeSchema = z.enum(["basic", "fast", "tank", "medic", "splitter"]);
 
 const healPulseConfigSchema = z.object({
   radius: z.number(),
   intervalSeconds: z.number(),
   healAmount: z.number(),
+});
+const splitConfigSchema: z.ZodType<SplitConfig> = z.object({
+  minChildren: z.number().int().min(1),
+  maxChildren: z.number().int().min(1),
 });
 const enemyUpgradeIdSchema = z.enum([
   "armored",
@@ -68,6 +73,7 @@ const enemyConfigSchema: z.ZodType<EnemyConfig> = z.object({
   healthLoss: z.number(),
   description: z.string().optional(),
   healPulse: healPulseConfigSchema.optional(),
+  split: splitConfigSchema.optional(),
 });
 
 const enemyUpgradeConfigSchema: z.ZodType<EnemyUpgradeConfig> = z.object({

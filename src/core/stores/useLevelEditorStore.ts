@@ -25,6 +25,15 @@ import {
   withRecalculatedBuildingCoordinates,
 } from "../../utils/levelEditor";
 
+/** Every enemy type the weight panel can hold a value for. */
+const ALL_ENEMY_TYPES: EnemyType[] = [
+  "basic",
+  "fast",
+  "tank",
+  "medic",
+  "splitter",
+];
+
 type LevelEditorStoreState = {
   draftLevel: LevelConfigData;
   activeTool: LevelEditorTool;
@@ -288,12 +297,17 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
 
   setEnemyWeight: (enemyType, value) => {
     set((state) => {
-      const nextWeights = {
-        basic: state.draftLevel.enemyWeights?.basic ?? 1,
-        fast: state.draftLevel.enemyWeights?.fast ?? 1,
-        tank: state.draftLevel.enemyWeights?.tank ?? 1,
-        medic: state.draftLevel.enemyWeights?.medic ?? 1,
-      };
+      const existingWeights = state.draftLevel.enemyWeights;
+      // A level that already has weights keeps absent types at 0 (the author
+      // deliberately left them out); only a fresh level (enemyWeights: null)
+      // seeds the default weight of 1.
+      const nextWeights = ALL_ENEMY_TYPES.reduce(
+        (acc, type) => {
+          acc[type] = existingWeights ? existingWeights[type] ?? 0 : 1;
+          return acc;
+        },
+        {} as Record<EnemyType, number>
+      );
 
       if (value === null) {
         nextWeights[enemyType] = 0;

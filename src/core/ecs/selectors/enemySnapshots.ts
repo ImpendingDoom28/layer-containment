@@ -43,6 +43,7 @@ const copyEnemyFromRow = (
   enemy.slowResistance = state.slowResistance;
   enemy.nextHealPulseAt = state.nextHealPulseAt;
   enemy.healPulse = state.healPulse;
+  enemy.split = state.split;
 };
 
 const enemyRegistry = createWorldRegistry<number, Enemy, EnemyRow>({

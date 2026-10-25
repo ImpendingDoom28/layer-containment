@@ -15,11 +15,12 @@ A 3D tower defense game built with React, Tailwind CSS, and React Three Fiber.
   - Laser Tower: Piercing beam that hits multiple enemies in a line (targets furthest enemy)
   - Relay Tower: Support tower that buffs **edge-adjacent** combat towers (+damage and +range; multiple relays stack with diminishing returns). Does not attack; placement preview highlights neighbor tiles that already hold a combat tower
   - Chain Lightning: First hit on the primary target, then the bolt travels and strikes up to three more enemies in order (each hop deals 15% less damage than the previous hit, multiplicative)
-- **Four enemy types**:
+- **Five enemy types**:
   - Troop: Standard enemy with balanced stats
   - Fastero: Fast-moving enemy with lower health
   - Tankee: Slow but heavily armored enemy that causes more health loss
   - Medic: Periodically heals nearby allies (not itself); pulse timing respects game pause; a short ring burst plays when the area heal fires
+  - Splitter: On death it bursts into a random 2–4 weaker shrapnel that continue along the path and pay no gold (no `+$0` float). Each child spawns at a small random offset along the path (a bounded progress stagger) so the shrapnel scatter around the death point instead of stacking — a single AOE shot can't clear the whole cluster and the burst reads as a spread, not a clump. ECS-backed like the effects: the death system raises a short-lived `splitRequest` trait (carrying the death location and the parent's `split` config), and the `EnemySplitSystem` consumes it to spawn the children. Children never carry the `split` config, so the swarm is bounded to one generation. Splitters only appear in the in-game levels (Sector 1 & 2 waves), not the main-menu scene
 - **Enemy wave system** - 7 waves of increasing difficulty with configurable enemy compositions
 - **Level creator** - Dedicated `/editor` route with a mode rail, contextual inspector, and unified publish flow for placing buildings, drawing paths, painting non-buildable water bodies (same schema shape as buildings; stored in `waters` in level JSON), configuring waves, and exporting schema-compatible level JSON files
 - **Terrain** - Buildable land tiles use a procedural regolith-style surface (shader speckle / micro-patches on the top face only) plus sparse instanced rock props; path cells and water stay visually distinct; level editor matches the same treatment on land tiles

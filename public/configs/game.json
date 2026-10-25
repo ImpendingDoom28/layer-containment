@@ -39,6 +39,21 @@
       "size": 0.35,
       "speed": 1.2
     },
+    "splitter": {
+      "color": "#06b6d4",
+      "description": "Unstable colony. On death it bursts into 2-4 weaker shrapnel that continue along the path and pay no gold.",
+      "health": 90,
+      "healthLoss": 2,
+      "id": "splitter",
+      "name": "Splitter",
+      "reward": 18,
+      "size": 0.45,
+      "speed": 1.5,
+      "split": {
+        "maxChildren": 4,
+        "minChildren": 2
+      }
+    },
     "tank": {
       "color": "#6366f1",
       "description": "Slow, but can take a punch. A modern approach for a tank.",

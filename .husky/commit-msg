@@ -1,2 +1,9 @@
 #!/usr/bin/env sh
+# Git-generated messages (merge commits, reverts, squash notes) are not
+# hand-written subjects, so they are exempt from Conventional Commits.
+case "$(head -n 1 "$1")" in
+  "Merge "* | "Revert "* | "Squashed commit"*)
+    exit 0
+    ;;
+esac
 npm run lint:commit "$1"

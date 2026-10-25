@@ -142,6 +142,22 @@ Enforcement is two-tiered:
 
 To lint a single commit by hand: `npm run lint:commit` (reads the last commit message), or pipe a message: `echo "feat: x" | npx commitlint`.
 
+### Pre-push Verification (husky)
+
+The `pre-push` hook runs `npm run verify` (build + unit + e2e) before a push,
+but only when the push could affect the app. It diffs the refs you push
+against their previous remote state (for a new branch, against the merge base
+with `master`) and skips verify when every changed file is non-code: all
+`*.md` files, `docs/`, `package-lock.json` (alone), and other generated/log
+files. Any change to source or app config (`.ts`, `.tsx`, `.js`, `.css`,
+`.html`, …) runs the full verify. Ref deletions change no app code, so they
+skip too. When the hook cannot determine the changed files, it verifies.
+
+```bash
+# docs-only push: verify is skipped
+git commit -am "docs: update README" && git push   # → skip message
+```
+
 ### Performance Stress Test
 
 A dedicated, unattended stress-test entry for renderer/simulation

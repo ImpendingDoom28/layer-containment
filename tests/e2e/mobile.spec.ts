@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { onOpenGame, onOpenMainMenu } from "./fixtures/navigation";
 
@@ -13,6 +13,30 @@ const MOBILE_VIEWPORT = { width: 375, height: 667 };
 
 test.use({ viewport: MOBILE_VIEWPORT });
 
+type Box = { x: number; y: number; width: number; height: number };
+
+// The main menu panel animates in over 1s, so a box read right after the
+// element becomes visible can catch it mid-flight; wait for the position to
+// stop moving first.
+const expectSettledBox = async (
+  page: Page,
+  locator: Locator,
+  name: string
+): Promise<Box> => {
+  let previous: Box | null = null;
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    const box = await locator.boundingBox();
+    if (box) {
+      if (previous && box.x === previous.x && box.y === previous.y) {
+        return box;
+      }
+      previous = box;
+    }
+    await page.waitForTimeout(100);
+  }
+  throw new Error(`${name} did not settle within the timeout`);
+};
+
 const openGameOnMobile = async (page: Page) => {
   await onOpenGame(page);
   await expect(page.getByTestId("tower-shop")).toBeVisible({ timeout: 20_000 });
@@ -23,23 +47,19 @@ test("main menu fits the mobile viewport", async ({ page }) => {
 
   const play = page.getByRole("button", { name: "Play" });
   await expect(play).toBeVisible();
-
-  const box = await play.boundingBox();
-  expect(box).not.toBeNull();
-  expect(box.x).toBeGreaterThanOrEqual(0);
-  expect(box.x + box.width).toBeLessThanOrEqual(MOBILE_VIEWPORT.width);
+  const playBox = await expectSettledBox(page, play, "Play button");
+  expect(playBox.x).toBeGreaterThanOrEqual(0);
+  expect(playBox.x + playBox.width).toBeLessThanOrEqual(MOBILE_VIEWPORT.width);
 
   // The title and the level creator link are inside the viewport as well.
   const title = page.getByRole("heading", { level: 1 }).first();
   await expect(title).toBeVisible();
-  const titleBox = await title.boundingBox();
-  expect(titleBox).not.toBeNull();
+  const titleBox = await expectSettledBox(page, title, "title");
   expect(titleBox.x + titleBox.width).toBeLessThanOrEqual(MOBILE_VIEWPORT.width);
 
   const creator = page.getByRole("button", { name: "Level Creator" });
   await expect(creator).toBeVisible();
-  const creatorBox = await creator.boundingBox();
-  expect(creatorBox).not.toBeNull();
+  const creatorBox = await expectSettledBox(page, creator, "Level Creator button");
   expect(creatorBox.x + creatorBox.width).toBeLessThanOrEqual(
     MOBILE_VIEWPORT.width
   );
@@ -51,8 +71,7 @@ test("in-game HUD uses a bottom shop bar and a top stats strip", async ({
   await openGameOnMobile(page);
 
   const shop = page.getByTestId("tower-shop");
-  const shopBox = await shop.boundingBox();
-  expect(shopBox).not.toBeNull();
+  const shopBox = await expectSettledBox(page, shop, "tower shop bar");
   // The shop is a wide bar anchored to the bottom edge, not a 320px left
   // column: it spans nearly the full width and sits in the lower fifth.
   expect(shopBox.width).toBeGreaterThanOrEqual(320);
@@ -62,8 +81,7 @@ test("in-game HUD uses a bottom shop bar and a top stats strip", async ({
   );
 
   const stats = page.getByTestId("game-stats");
-  const statsBox = await stats.boundingBox();
-  expect(statsBox).not.toBeNull();
+  const statsBox = await expectSettledBox(page, stats, "stats strip");
   expect(statsBox.y).toBeLessThanOrEqual(48);
   expect(statsBox.x + statsBox.width).toBeLessThanOrEqual(
     MOBILE_VIEWPORT.width

@@ -57,10 +57,13 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
 
   if (isMobile) {
     return (
-      <HUDWrapper className="inset-x-0 top-0 bottom-auto flex">
+      // The strip spans the full width (background and bottom border live on
+      // the wrapper); pr-14 keeps the right-edge controls clear of the mobile
+      // menu button (top-2 right-2, 32px wide), which sits above this strip.
+      <HUDWrapper className="inset-x-0 top-0 bottom-auto flex border-b border-white/10 bg-gray-900/80 pr-14 backdrop-blur-sm">
         <div
           data-testid="game-stats"
-          className="ui-menu-tilt ui-menu-tilt-left flex min-w-0 flex-1 items-center justify-between gap-2 border-b border-white/10 bg-gray-900/80 px-3 py-1.5 backdrop-blur-sm"
+          className="ui-menu-tilt ui-menu-tilt-left flex min-w-0 flex-1 items-center justify-between gap-2 px-3 py-1.5"
         >
           <UIMoney money={money} variant="medium" iconSize={14} />
           <div className="flex items-center gap-1.5">

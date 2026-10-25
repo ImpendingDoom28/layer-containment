@@ -1,8 +1,9 @@
 import { FC } from "react";
-import { HeartPulse, Play } from "lucide-react";
+import { HeartPulse, Menu, Play } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { UIButton } from "@/components/ui/buttons/UIButton";
+import { useIsMobile } from "../../core/hooks/useIsMobile";
 
 import type { GameStatus } from "../../core/types/game";
 import { UITypography } from "../ui/UITypography";
@@ -26,6 +27,7 @@ type HUDGameStatsProps = {
   remainingEnemies: number;
   gameStatus: GameStatus;
   onStartWave: () => void;
+  onOpenGameMenu: () => void;
 };
 
 export const HUDGameStats: FC<HUDGameStatsProps> = ({
@@ -35,16 +37,91 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
   remainingEnemies,
   gameStatus,
   onStartWave,
+  onOpenGameMenu,
 }) => {
   const { t } = useTranslation();
   const totalWaves = useLevelStore(totalWavesSelector);
   const nextWaveReady = useWaveStore(nextWaveReadySelector);
+
+  const isMobile = useIsMobile();
 
   const getHealthColor = (): string => {
     if (health > 15) return "text-green-400";
     if (health > 8) return "text-yellow-400";
     return "text-red-400";
   };
+
+  const waveLabel = `${currentWave} / ${totalWaves}`;
+  const showEnemies =
+    currentWave > 0 && currentWave <= totalWaves && remainingEnemies > 0;
+  const showStartWave = currentWave < totalWaves && nextWaveReady;
+  const paused = gameStatus === "paused";
+
+  if (isMobile) {
+    return (
+      <HUDWrapper
+        data-testid="game-stats-header"
+        className="inset-x-0 top-0 bottom-auto flex border-b border-white/10 bg-card backdrop-blur-sm"
+      >
+        <div
+          data-testid="game-stats"
+          className="ui-menu-tilt ui-menu-tilt-left flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2 px-3 py-1.5"
+        >
+          <UIMoney money={money} variant="medium" iconSize={14} />
+          <div className="flex items-center gap-1.5">
+            <HeartPulse size={14} className={getHealthColor()} />
+            <UITypography variant="medium" className={getHealthColor()}>
+              {health}
+            </UITypography>
+          </div>
+          <div className="flex items-center gap-1">
+            <UITypography variant="small" className="text-gray-300">
+              {t("gameStats.wave")}:
+            </UITypography>
+            <UITypography variant="medium" whiteSpace="nowrap" data-testid="wave-count">
+              {waveLabel}
+            </UITypography>
+          </div>
+          {showEnemies && (
+            <UITypography variant="medium" whiteSpace="nowrap">
+              {remainingEnemies}
+            </UITypography>
+          )}
+        </div>
+        {showStartWave && (
+          <UIButton
+            data-testid="wave-start"
+            onClick={onStartWave}
+            variant="default"
+            size="sm"
+            className="shrink-0"
+          >
+            <Play size={14} /> {t("gameStats.startNextWave")}
+          </UIButton>
+        )}
+        {paused && (
+          <UIButton
+            variant="default"
+            size="icon-sm"
+            className="px-1 shrink-0"
+            data-testid="paused-indicator"
+          >
+            <PauseIcon />
+          </UIButton>
+        )}
+        <UIButton
+          data-testid="mobile-menu-button"
+          onClick={onOpenGameMenu}
+          variant="secondary"
+          size="icon"
+          aria-label={t("gameMenu.title")}
+          className="shrink-0"
+        >
+          <Menu />
+        </UIButton>
+      </HUDWrapper>
+    );
+  }
 
   return (
     <HUDWrapper className="bottom-auto left-auto w-80 top-4 right-4">

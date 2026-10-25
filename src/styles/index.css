@@ -215,6 +215,15 @@
   transform-origin: right center;
 }
 
+/* Hides the scrollbar while keeping the element scrollable. */
+@utility scroll-hide {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 .ui-menu-parallax-on .ui-menu-tilt-left {
   --ui-menu-proximity-lift: calc(var(--ui-menu-proximity, 0) * -2deg);
   transform: perspective(1200px)
@@ -299,4 +308,10 @@ body {
 #root {
   width: 100vw;
   height: 100vh;
+}
+
+@supports (height: 100dvh) {
+  #root {
+    height: 100dvh;
+  }
 }

@@ -68,6 +68,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
     selectedTower,
     startGame,
     goToMainMenu,
+    openGameMenu,
     closeGameMenu,
     shouldStopMovement,
     shouldLockCamera,
@@ -245,6 +246,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
                   remainingEnemies={remainingEnemies}
                   gameStatus={gameStatus}
                   onStartWave={startWave}
+                  onOpenGameMenu={openGameMenu}
                 />
               </div>
 

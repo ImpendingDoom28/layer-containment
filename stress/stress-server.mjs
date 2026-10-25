@@ -167,5 +167,7 @@ export const safeClose = async (browser, timeoutMs = 15_000) => {
     new Promise((r) => setTimeout(r, timeoutMs)),
   ]);
   stopServer();
-  process.exit(0);
+  // Preserve a failure exit code set by the script (e.g. culling-probe marking
+  // an invalid measurement) instead of always reporting success.
+  process.exit(process.exitCode ?? 0);
 };

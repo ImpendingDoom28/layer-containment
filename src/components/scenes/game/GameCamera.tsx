@@ -44,6 +44,10 @@ const rightVector = new Vector3();
 const moveVector = new Vector3();
 const upVector = new Vector3(0, 1, 0);
 
+// Mirrors R3F's click-distance threshold: below it a pointerdown+up counts as
+// a genuine click, beyond it as a drag.
+const CLICK_DRAG_THRESHOLD = 2;
+
 type GameCameraProps = {
   movementSpeed?: number;
   rotationSensitivity?: number;
@@ -73,6 +77,8 @@ export const GameCamera = ({
   });
   const isDragging = useRef(false);
   const lastMousePosition = useRef({ x: 0, y: 0 });
+  const dragTravelRef = useRef(0);
+  const suppressClickRef = useRef(false);
   const rotation = useRef({ pitch: 0, yaw: 0 });
   const initialized = useRef(false);
   const shakeOffsetRef = useRef(new Vector3());
@@ -106,6 +112,8 @@ export const GameCamera = ({
         down: false,
       };
       isDragging.current = false;
+      dragTravelRef.current = 0;
+      suppressClickRef.current = false;
       return;
     }
 
@@ -129,6 +137,8 @@ export const GameCamera = ({
         return;
       }
       isDragging.current = true;
+      dragTravelRef.current = 0;
+      suppressClickRef.current = false;
       lastMousePosition.current = { x: e.clientX, y: e.clientY };
     };
 
@@ -151,11 +161,73 @@ export const GameCamera = ({
         Math.min(Math.PI / 2, rotation.current.pitch)
       );
 
+      dragTravelRef.current += Math.hypot(deltaX, deltaY);
       lastMousePosition.current = { x: e.clientX, y: e.clientY };
     };
 
-    const handleMouseUp = () => {
+    // While the camera is being dragged R3F raycasts the whole scene on every
+    // pointermove (its listener sits on the container, bubble phase). That cost
+    // is unrelated to frustum culling — three tests `layers`, not `visible` —
+    // so it runs even for culled objects. Stop the pointermove in the capture
+    // phase (window is an ancestor, so this runs first) so the drag stays cheap.
+    //
+    // The suppressed moves leave two stale side effects, handled here:
+    // 1. R3F only dispatches `onClick` to objects hit at pointerdown, so a
+    //    short camera nudge (past R3F's 2px click threshold but small enough
+    //    that the cursor still sits over the same tile) would still place a
+    //    tower on release. The `click` fires after `mouseup`, so the "this was
+    //    a far drag" flag is set on mouseup and consumed by the capture-phase
+    //    click handler, which swallows the click before R3F sees it.
+    // 2. With no pointermove R3F never runs `cancelPointer`, so the hover
+    //    highlight of the tile the drag started on stays stuck. On release we
+    //    re-dispatch a pointermove on the canvas at the final position so R3F
+    //    recomputes the hover and clears it.
+    const handlePointerMoveCapture = (e: PointerEvent) => {
+      if (isDragging.current) {
+        e.stopPropagation();
+      }
+    };
+
+    const handleClickCapture = (e: MouseEvent) => {
+      if (isDragging.current) {
+        // Released outside the window: no mouseup ran, treat as a drag.
+        isDragging.current = false;
+        dragTravelRef.current = 0;
+        suppressClickRef.current = false;
+        e.stopPropagation();
+        return;
+      }
+      if (suppressClickRef.current) {
+        suppressClickRef.current = false;
+        e.stopPropagation();
+      }
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (!isDragging.current) {
+        return;
+      }
       isDragging.current = false;
+      suppressClickRef.current = dragTravelRef.current > CLICK_DRAG_THRESHOLD;
+      dragTravelRef.current = 0;
+      if (!isPointerOverGameCameraBlock(e.clientX, e.clientY)) {
+        const canvas = (e.target as HTMLElement).closest("canvas");
+        if (canvas) {
+          // The browser derives offsetX/offsetY from clientX/clientY and the
+          // target for untrusted events, so R3F's raycast gets the right
+          // coordinates without them being set explicitly.
+          canvas.dispatchEvent(
+            new PointerEvent("pointermove", {
+              clientX: e.clientX,
+              clientY: e.clientY,
+              pointerId: 1,
+              isPrimary: true,
+              pointerType: "mouse",
+              bubbles: true,
+            })
+          );
+        }
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -163,6 +235,8 @@ export const GameCamera = ({
     window.addEventListener("mousedown", handleMouseDown);
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("pointermove", handlePointerMoveCapture, true);
+    window.addEventListener("click", handleClickCapture, true);
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
@@ -170,6 +244,8 @@ export const GameCamera = ({
       window.removeEventListener("mousedown", handleMouseDown);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("pointermove", handlePointerMoveCapture, true);
+      window.removeEventListener("click", handleClickCapture, true);
     };
   }, [rotationSensitivity, shouldStopCamera, keybindings]);
 

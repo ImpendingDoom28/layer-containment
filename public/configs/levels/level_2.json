@@ -172,17 +172,16 @@
   ],
   "waveConfigs": [
     {
-      "totalEnemies": 10,
       "enemies": [
         {
           "type": "basic",
           "count": 10,
-          "spawnInterval": 1.0
+          "spawnInterval": 1
         }
-      ]
+      ],
+      "totalEnemies": 10
     },
     {
-      "totalEnemies": 17,
       "enemies": [
         {
           "type": "basic",
@@ -197,12 +196,12 @@
         {
           "type": "medic",
           "count": 1,
-          "spawnInterval": 1.0
+          "spawnInterval": 1
         }
-      ]
+      ],
+      "totalEnemies": 17
     },
     {
-      "totalEnemies": 20,
       "enemies": [
         {
           "type": "basic",
@@ -212,12 +211,12 @@
         {
           "type": "fast",
           "count": 6,
-          "spawnInterval": 1.0
+          "spawnInterval": 1
         }
-      ]
+      ],
+      "totalEnemies": 20
     },
     {
-      "totalEnemies": 27,
       "enemies": [
         {
           "type": "basic",
@@ -232,17 +231,17 @@
         {
           "type": "tank",
           "count": 2,
-          "spawnInterval": 2.0
+          "spawnInterval": 2
         },
         {
           "type": "medic",
           "count": 1,
-          "spawnInterval": 1.0
+          "spawnInterval": 1
         }
-      ]
+      ],
+      "totalEnemies": 27
     },
     {
-      "totalEnemies": 31,
       "enemies": [
         {
           "type": "basic",
@@ -259,10 +258,10 @@
           "count": 3,
           "spawnInterval": 1.5
         }
-      ]
+      ],
+      "totalEnemies": 31
     },
     {
-      "totalEnemies": 38,
       "enemies": [
         {
           "type": "basic",
@@ -282,12 +281,12 @@
         {
           "type": "medic",
           "count": 2,
-          "spawnInterval": 1.0
+          "spawnInterval": 1
         }
-      ]
+      ],
+      "totalEnemies": 38
     },
     {
-      "totalEnemies": 41,
       "enemies": [
         {
           "type": "basic",
@@ -304,10 +303,10 @@
           "count": 5,
           "spawnInterval": 1.2
         }
-      ]
+      ],
+      "totalEnemies": 41
     },
     {
-      "totalEnemies": 53,
       "enemies": [
         {
           "type": "basic",
@@ -322,14 +321,15 @@
         {
           "type": "tank",
           "count": 8,
-          "spawnInterval": 1.0
+          "spawnInterval": 1
         },
         {
           "type": "medic",
           "count": 3,
-          "spawnInterval": 1.0
+          "spawnInterval": 1
         }
-      ]
+      ],
+      "totalEnemies": 53
     }
   ],
   "buildings": [
@@ -402,7 +402,7 @@
       "shape": "cylinder",
       "width": 0.75,
       "depth": 0.75,
-      "height": 2.0,
+      "height": 2,
       "color": "#6b7280"
     },
     {

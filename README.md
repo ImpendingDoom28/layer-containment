@@ -169,7 +169,7 @@ tooling, and the optimization notes.
 
 ### Live Browser Checks (for AI agents)
 
-Agents can verify the app in a browser using Cursor’s built-in browser MCP (no extra install needed):
+Agents can verify the app in a browser (any browser MCP works, or Playwright for scripted checks):
 
 1. Assume the dev server is already started
 2. Open `http://localhost:5173`

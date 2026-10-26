@@ -11,7 +11,7 @@
 ## Workflow
 - Before planning, skim `README.md` for existing functionality and library links.
 - After finishing a task (unless it's a code review):
-  - Run a browser smoke test with Playwright — reuse the known flow from `.cursor/smoke-test-handoff.md` before re-exploring.
+  - Run a browser smoke test with Playwright — reuse the known flow from `.agents/smoke-test-handoff.md` before re-exploring.
   - Run unit tests with RTTR: `npm run test:unit`.
 - New features (not bugfixes): document them briefly in `README.md`.
 
@@ -26,7 +26,7 @@
 - Do NOT run build commands or `npx tsc --noEmit` (assume the dev server is running).
 
 ## React Three Fiber
-- When working on three.js/R3F features, follow `.cursor/rules/react-three-fiber.mdc` (share geometries/materials, avoid unnecessary mounts).
+- When working on three.js/R3F features, follow `.agents/rules/react-three-fiber.md` (share geometries/materials, avoid unnecessary mounts).
 
 ## koota
 - When using entity actions (e.g. `enemyActions`), use them through koota's `useActions` hook so the code looks cleaner.

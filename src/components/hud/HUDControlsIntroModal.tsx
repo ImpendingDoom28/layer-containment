@@ -70,7 +70,7 @@ export const HUDControlsIntroModal: FC<HUDControlsIntroModalProps> = ({
             variant="buttons1"
             className="rounded-none border border-border bg-input/30 px-2 py-0.5"
           >
-            {key.startsWith("Key") || key.includes("+")
+            {/^(Key|Digit|Numpad)/.test(key) || key.includes("+")
               ? formatKeyCode(key)
               : key}
           </UITypography>

@@ -1,36 +1,38 @@
 import { useEffect, useState, type FC } from "react";
 import { useTranslation } from "react-i18next";
 
-import { formatKeyCode, normalizeKeyToBinding } from "../../core/keybindings";
 import {
-  DEFAULT_KEYBINDINGS,
-  KEYBINDING_DEFINITIONS,
+  formatKeyCode,
+  matchesControlSchemePreset,
+  normalizeKeyToBinding,
+} from "../../core/keybindings";
+import {
+  CONTROL_SCHEMES,
   VISIBLE_KEYBINDING_DEFINITIONS,
-  type KeybindingsConfig,
+  type ControlSchemeId,
   type KeybindingKey,
 } from "../../core/keybindingsConstants";
 import {
+  controlSchemeSelector,
   keybindingsSelector,
   resetKeybindingsSelector,
+  setControlSchemeSelector,
   setKeybindingSelector,
   useSettingsStore,
 } from "../../core/stores/useSettingsStore";
 import { UIButton } from "../ui/buttons/UIButton";
+import { UISelect } from "../ui/UISelect";
 import { UITable, UITableCell, UITableRow } from "../ui/UITable";
 import { UITypography } from "../ui/UITypography";
 import clsx from "clsx";
-
-const isAtDefaults = (config: KeybindingsConfig): boolean =>
-  KEYBINDING_DEFINITIONS.every(
-    (definition) =>
-      config[definition.key] === DEFAULT_KEYBINDINGS[definition.key]
-  );
 
 export const HUDSettingsControlsSection: FC = () => {
   const { t } = useTranslation();
   const keybindings = useSettingsStore(keybindingsSelector);
   const setKeybinding = useSettingsStore(setKeybindingSelector);
   const resetKeybindings = useSettingsStore(resetKeybindingsSelector);
+  const controlScheme = useSettingsStore(controlSchemeSelector);
+  const setControlScheme = useSettingsStore(setControlSchemeSelector);
   const [rebindingKey, setRebindingKey] = useState<KeybindingKey | null>(null);
 
   useEffect(() => {
@@ -69,11 +71,35 @@ export const HUDSettingsControlsSection: FC = () => {
           onClick={resetKeybindings}
           variant="ghost"
           size="xs"
-          disabled={isAtDefaults(keybindings) || !!rebindingKey}
+          disabled={
+            matchesControlSchemePreset(keybindings, controlScheme) ||
+            !!rebindingKey
+          }
         >
           {t("settings.reset")}
         </UIButton>
       </div>
+
+      <div className="flex items-center justify-between gap-4">
+        <UITypography variant="medium">{t("settings.controlScheme")}</UITypography>
+        <UISelect
+          data-testid="control-scheme-select"
+          value={controlScheme}
+          disabled={!!rebindingKey}
+          onChange={(event) =>
+            setControlScheme(event.target.value as ControlSchemeId)
+          }
+          className="w-36"
+          aria-label={t("settings.controlScheme")}
+        >
+          {CONTROL_SCHEMES.map((scheme) => (
+            <option key={scheme} value={scheme}>
+              {t(`settings.schemes.${scheme}`)}
+            </option>
+          ))}
+        </UISelect>
+      </div>
+
       <UITable>
         {VISIBLE_KEYBINDING_DEFINITIONS.map((definition) => {
           const isRebinding = rebindingKey === definition.key;
@@ -95,8 +121,8 @@ export const HUDSettingsControlsSection: FC = () => {
                   className={clsx(
                     "inline-flex min-w-[88px] items-center justify-center gap-1 rounded-none border px-2.5 py-1 text-xs",
                     isRebinding
-                      ? "border-primary bg-primary/15  text-primary-foreground"
-                      : " border-border bg-input/30  hover:bg-input/50"
+                      ? "border-primary bg-primary/15 text-primary-foreground"
+                      : "border-border bg-input/30 hover:bg-input/50"
                   )}
                 >
                   {isRebinding ? (

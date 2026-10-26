@@ -15,6 +15,11 @@ export const en = {
     controls: "Controls",
     reset: "Reset",
     pressAKey: "Press a key…",
+    controlScheme: "Control scheme",
+    schemes: {
+      keyboard: "Keyboard",
+      mobile: "Touch (mobile)",
+    },
   },
   controls: {
     cameraForward: "Move forward",
@@ -23,6 +28,7 @@ export const en = {
     cameraRight: "Move right",
     cameraUp: "Move up",
     cameraDown: "Move down",
+    rotateCamera: "Rotate camera",
     pause: "Pause / Resume",
     menu: "Open / close menu",
     toggleDebug: "Toggle debug overlay",

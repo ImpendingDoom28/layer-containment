@@ -9,7 +9,10 @@ import {
   type LanguageId,
 } from "../i18n/languages";
 import {
-  DEFAULT_KEYBINDINGS,
+  CONTROL_SCHEME_PRESETS,
+  CONTROL_SCHEMES,
+  DEFAULT_CONTROL_SCHEME,
+  type ControlSchemeId,
   type KeybindingsConfig,
   type KeybindingKey,
 } from "../keybindingsConstants";
@@ -17,22 +20,33 @@ import {
 type SettingsStoreState = {
   pauseWhenTabHidden: boolean;
   language: LanguageId;
+  controlScheme: ControlSchemeId;
   keybindings: KeybindingsConfig;
 };
 
 type SettingsStoreActions = {
   setPauseWhenTabHidden: (pause: boolean) => void;
   setLanguage: (language: LanguageId) => void;
+  setControlScheme: (scheme: ControlSchemeId) => void;
   setKeybinding: (key: KeybindingKey, value: string) => void;
   resetKeybindings: () => void;
 };
 
 type SettingsStore = SettingsStoreState & SettingsStoreActions;
 
+const normalizeControlScheme = (
+  scheme: unknown
+): ControlSchemeId =>
+  typeof scheme === "string" &&
+  (CONTROL_SCHEMES as readonly string[]).includes(scheme)
+    ? (scheme as ControlSchemeId)
+    : DEFAULT_CONTROL_SCHEME;
+
 const DEFAULT_STATE: SettingsStoreState = {
   pauseWhenTabHidden: true,
   language: DEFAULT_LANGUAGE_ID,
-  keybindings: { ...DEFAULT_KEYBINDINGS },
+  controlScheme: DEFAULT_CONTROL_SCHEME,
+  keybindings: { ...CONTROL_SCHEME_PRESETS[DEFAULT_CONTROL_SCHEME] },
 };
 
 export const useSettingsStore = create<SettingsStore>()(
@@ -49,6 +63,15 @@ export const useSettingsStore = create<SettingsStore>()(
         void i18n.changeLanguage(language);
       },
 
+      setControlScheme: (scheme) => {
+        // Switching schemes replaces the whole binding set with the scheme's
+        // preset; per-key rebinding stays available afterwards.
+        set({
+          controlScheme: scheme,
+          keybindings: { ...CONTROL_SCHEME_PRESETS[scheme] },
+        });
+      },
+
       setKeybinding: (key, value) => {
         set((state) => ({
           keybindings: { ...state.keybindings, [key]: value },
@@ -56,7 +79,9 @@ export const useSettingsStore = create<SettingsStore>()(
       },
 
       resetKeybindings: () => {
-        set({ keybindings: { ...DEFAULT_KEYBINDINGS } });
+        set((state) => ({
+          keybindings: { ...CONTROL_SCHEME_PRESETS[state.controlScheme] },
+        }));
       },
     }),
     {
@@ -68,6 +93,7 @@ export const useSettingsStore = create<SettingsStore>()(
           ...persistedState,
           // Guard against stale or malformed stored values.
           language: normalizeLanguageId(persistedState.language),
+          controlScheme: normalizeControlScheme(persistedState.controlScheme),
         };
       },
     }
@@ -85,3 +111,7 @@ export const setKeybindingSelector = (state: SettingsStore) =>
   state.setKeybinding;
 export const resetKeybindingsSelector = (state: SettingsStore) =>
   state.resetKeybindings;
+export const controlSchemeSelector = (state: SettingsStore) =>
+  state.controlScheme;
+export const setControlSchemeSelector = (state: SettingsStore) =>
+  state.setControlScheme;

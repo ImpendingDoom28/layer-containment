@@ -16,6 +16,7 @@ import { HUDGameMenu } from "../hud/HUDGameMenu";
 import { HUDControlsIntroModal } from "../hud/HUDControlsIntroModal";
 import { HUDUpgradePanel } from "../hud/HUDUpgradePanel";
 import { HUDPauseOverlay } from "../hud/HUDPauseOverlay";
+import { HUDMobileControls } from "../hud/HUDMobileControls";
 import { HUDLoading } from "../hud/HUDLoading";
 import { KeyboardHandlingSystem } from "../systems/KeyboardHandlingSystem";
 import { ShaderReadyGate } from "../systems/ShaderReadyGate";
@@ -266,6 +267,10 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
                   onStartWave={startWave}
                   onOpenGameMenu={openGameMenu}
                 />
+
+                {/* Mobile scheme: on-screen D-pad for camera moves (no WASD
+                    on touch screens). Self-gates on viewport + scheme. */}
+                <HUDMobileControls />
               </div>
 
               {/*

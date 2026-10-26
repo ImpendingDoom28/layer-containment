@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   formatKeyCode,
   getCameraMovesForEvent,
+  matchesControlSchemePreset,
   matchesKeybinding,
   normalizeKeyToBinding,
   resolveKeybinding,
 } from "./keybindings";
 import {
+  CONTROL_SCHEME_PRESETS,
   DEFAULT_KEYBINDINGS,
   KEYBINDING_BY_KEY,
   type KeybindingEvent,
@@ -148,6 +150,42 @@ describe("resolveKeybinding", () => {
         KEYBINDING_BY_KEY.toggleDebug
       )
     ).toBe("Ctrl+KeyB");
+  });
+});
+
+describe("matchesControlSchemePreset", () => {
+  it("matches the keyboard preset for the default bindings", () => {
+    expect(matchesControlSchemePreset(DEFAULT_KEYBINDINGS, "keyboard")).toBe(
+      true
+    );
+  });
+
+  it("matches the mobile preset only for an exact match", () => {
+    expect(
+      matchesControlSchemePreset(CONTROL_SCHEME_PRESETS.mobile, "mobile")
+    ).toBe(true);
+    expect(
+      matchesControlSchemePreset(
+        { ...CONTROL_SCHEME_PRESETS.mobile, cameraForward: "KeyW" },
+        "mobile"
+      )
+    ).toBe(false);
+  });
+
+  it("does not match a different scheme", () => {
+    expect(matchesControlSchemePreset(DEFAULT_KEYBINDINGS, "mobile")).toBe(
+      false
+    );
+    expect(matchesControlSchemePreset(CONTROL_SCHEME_PRESETS.mobile, "keyboard")).toBe(
+      false
+    );
+  });
+
+  it("does not match a partial config with missing keys", () => {
+    expect(matchesControlSchemePreset({}, "keyboard")).toBe(false);
+    expect(matchesControlSchemePreset(DEFAULT_KEYBINDINGS, "keyboard")).toBe(
+      true
+    );
   });
 });
 

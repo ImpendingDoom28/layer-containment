@@ -86,6 +86,42 @@ export const DEFAULT_KEYBINDINGS: KeybindingsConfig = {
   toggleDebug: "Ctrl+Shift+Alt+KeyD",
 };
 
+/**
+ * A named control scheme: a preset of keybindings the player can switch
+ * between in Settings. "keyboard" is the classic WASD/Q+E layout; "mobile" is
+ * a numpad-style layout (and, on touch devices, drives the on-screen D-pad)
+ * for screens without a WASD keyboard.
+ */
+export type ControlSchemeId = "keyboard" | "mobile";
+
+export const CONTROL_SCHEMES: readonly ControlSchemeId[] = [
+  "keyboard",
+  "mobile",
+];
+
+export const DEFAULT_CONTROL_SCHEME: ControlSchemeId = "keyboard";
+
+// The keybindings preset each scheme applies. Switching a scheme in Settings
+// resets the whole binding set to this preset; individual keys can still be
+// rebound afterwards.
+export const CONTROL_SCHEME_PRESETS: Record<
+  ControlSchemeId,
+  KeybindingsConfig
+> = {
+  keyboard: DEFAULT_KEYBINDINGS,
+  mobile: {
+    cameraForward: "Digit8",
+    cameraBackward: "Digit2",
+    cameraLeft: "Digit4",
+    cameraRight: "Digit6",
+    cameraUp: "Digit9",
+    cameraDown: "Digit3",
+    pause: "Space",
+    menu: "Escape",
+    toggleDebug: "Ctrl+Shift+Alt+KeyD",
+  },
+};
+
 export const MODIFIER_CODES = new Set([
   "ShiftLeft",
   "ShiftRight",

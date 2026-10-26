@@ -22,6 +22,11 @@ const ruValues = {
     controls: "Управление",
     reset: "Сбросить",
     pressAKey: "Нажмите клавишу…",
+    controlScheme: "Схема управления",
+    schemes: {
+      keyboard: "Клавиатура",
+      mobile: "Сенсорная (мобильная)",
+    },
   },
   controls: {
     cameraForward: "Двигаться вперёд",
@@ -30,6 +35,7 @@ const ruValues = {
     cameraRight: "Двигаться вправо",
     cameraUp: "Двигаться вверх",
     cameraDown: "Двигаться вниз",
+    rotateCamera: "Повернуть камеру",
     pause: "Пауза / Продолжить",
     menu: "Открыть / закрыть меню",
     toggleDebug: "Показать отладочную панель",

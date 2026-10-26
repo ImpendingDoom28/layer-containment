@@ -23,6 +23,10 @@ import {
   getPlanetRadius,
   getSurfaceQuaternion,
 } from "../../utils/planetSurfaceMapping";
+import {
+  FRUSTUM_CULLING_MARGIN,
+  useFrustumCulling,
+} from "../../core/hooks/useFrustumCulling";
 
 const baseMaterial = new MeshStandardMaterial({ color: "#4b5563" });
 const basePreviewMaterial = new MeshStandardMaterial({
@@ -72,6 +76,9 @@ export const Tower: FC<TowerProps> = memo(
     ];
 
     const groupRef = useRef<Group>(null);
+    // The preview tower follows the cursor and is always inside the view, so a
+    // zero margin (no grace band) is safe and keeps it from being culled.
+    useFrustumCulling(groupRef, isPreview ? 0 : FRUSTUM_CULLING_MARGIN);
 
     // Memoize base geometry to avoid recreation on each render
     const baseGeometry = useMemo(
@@ -191,6 +198,7 @@ export const Tower: FC<TowerProps> = memo(
     return (
       <group
         ref={groupRef}
+        userData={{ culledEntity: true }}
         position={footing.position}
         quaternion={footing.quaternion}
         onClick={

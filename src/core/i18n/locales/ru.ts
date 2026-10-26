@@ -140,7 +140,6 @@ const ruValues = {
     slowResistance: "+{{percent}}% сопротивления замедлению",
   },
   towerInfo: {
-    selectedTower: "Выбранная башня",
     damage: "Урон",
     range: "Дальность",
     fireRate: "Скорострельность",

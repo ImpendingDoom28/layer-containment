@@ -130,7 +130,6 @@ export const en = {
     slowResistance: "+{{percent}}% slow resistance",
   },
   towerInfo: {
-    selectedTower: "Selected Tower",
     damage: "Damage",
     range: "Range",
     fireRate: "Fire Rate",

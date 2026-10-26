@@ -1,28 +1,35 @@
-import {
-  FC,
-  MouseEvent as ReactMouseEvent,
-  PointerEvent as ReactPointerEvent,
-  useMemo,
-} from "react";
+import { FC, MouseEvent as ReactMouseEvent, useMemo } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 
 import { getEffectiveTowerCombatStats } from "../../core/relayBuffs";
 import type { Tower as TowerInstance } from "../../core/types/game";
 import { useTranslationInCanvas } from "../../core/i18n/useTranslationInCanvas";
 import {
+  towerBaseRadiusSelector,
+  towerHeightSelector,
   towerSellPriceMultiplierSelector,
+  tileSizeSelector,
   towerTypesSelector,
   useGameStore,
 } from "../../core/stores/useGameStore";
-import { towersSelector, useLevelStore } from "../../core/stores/useLevelStore";
+import {
+  gridSizeSelector,
+  towersSelector,
+  useLevelStore,
+} from "../../core/stores/useLevelStore";
+import {
+  flatFieldToSphereSurface,
+  getPlanetRadius,
+  getSurfaceQuaternion,
+} from "../../utils/planetSurfaceMapping";
 import { UIHoldButton } from "../ui/buttons/UIHoldButton";
 import {
   UICard,
   UICardContent,
   UICardFooter,
   UICardHeader,
-  UICardTitle,
 } from "../ui/UICard";
+import { UITable, UITableCell, UITableRow } from "../ui/UITable";
 import { UITypography } from "../ui/UITypography";
 import { GUIWrapper } from "./GUIWrapper";
 
@@ -41,121 +48,135 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
   );
   const towerTypes = useGameStore(towerTypesSelector);
   const towers = useLevelStore(towersSelector);
+  const towerHeight = useGameStore(towerHeightSelector);
+  const towerBaseRadius = useGameStore(towerBaseRadiusSelector);
+  const tileSize = useGameStore(tileSizeSelector);
+  const gridSize = useLevelStore(gridSizeSelector);
 
-  const sellPrice = useMemo(() => {
-    return Math.floor(tower.cost * towerSellPriceMultiplier);
-  }, [tower.cost, towerSellPriceMultiplier]);
+  const sellPrice = Math.floor(tower.cost * towerSellPriceMultiplier);
 
   const stats = useMemo(() => {
     if (tower.type === "relay") {
       const tpl = towerTypes?.relay;
-      const dmgPct = (tpl?.relayNeighborDamageBonusFraction ?? 0) * 100;
-      const rngPct = (tpl?.relayNeighborRangeBonusFraction ?? 0) * 100;
+      const damagePct = (tpl?.relayNeighborDamageBonusFraction ?? 0) * 100;
+      const rangePct = (tpl?.relayNeighborRangeBonusFraction ?? 0) * 100;
       return [
         { label: t("towerInfo.role"), value: t("towerInfo.support") },
         {
           label: t("towerInfo.neighborBuff"),
           value: t("towerInfo.neighborBuffValue", {
-            damage: dmgPct.toFixed(0),
-            range: rngPct.toFixed(0),
+            damage: damagePct.toFixed(0),
+            range: rangePct.toFixed(0),
           }),
         },
         { label: t("towerInfo.adjacency"), value: t("towerInfo.fourNeighbor") },
       ];
     }
 
-    const eff = towerTypes
+    const effective = towerTypes
       ? getEffectiveTowerCombatStats(tower, towers, towerTypes)
       : { damage: tower.damage, range: tower.range };
 
     return [
-      { label: t("towerInfo.damage"), value: eff.damage.toFixed(1) },
-      { label: t("towerInfo.range"), value: eff.range.toFixed(1) },
-      { label: t("towerInfo.fireRate"), value: `${tower.fireRate.toFixed(1)}s` },
+      { label: t("towerInfo.damage"), value: effective.damage.toFixed(1) },
+      { label: t("towerInfo.range"), value: effective.range.toFixed(1) },
+      {
+        label: t("towerInfo.fireRate"),
+        value: `${tower.fireRate.toFixed(1)}s`,
+      },
     ];
   }, [tower, towerTypes, towers, t]);
 
-  const onStopScenePropagation = (
-    event: ThreeEvent<MouseEvent> | ThreeEvent<PointerEvent>
-  ) => {
-    event.stopPropagation();
-  };
+  const footing = useMemo(() => {
+    const { surfacePoint, normal } = flatFieldToSphereSurface(
+      tower.x,
+      tower.z,
+      getPlanetRadius(gridSize, tileSize)
+    );
+    return {
+      position: surfacePoint,
+      quaternion: getSurfaceQuaternion(normal),
+    };
+  }, [tower.x, tower.z, gridSize, tileSize]);
 
-  const onStopPanelPropagation = (
+  // Mirrors the Tower entity's geometry: base (0.3H) + body (0.7H) + top.
+  // The body is a fixed towerHeight; topScale only scales the top, so keep
+  // the body contribution unscaled to match Tower.tsx.
+  const towerTopY = useMemo(() => {
+    const topScale = tower.topScale ?? 1;
+    switch (tower.topShape ?? "cone") {
+      case "cone":
+        return towerHeight + towerHeight * 0.3 * topScale;
+      case "sphere":
+        return towerHeight + towerBaseRadius * 0.8 * topScale;
+      case "cylinder":
+        return towerHeight + towerHeight * 0.2 * topScale;
+      case "coil":
+        return towerHeight + towerHeight * 0.25 * topScale;
+      default:
+        return towerHeight + towerHeight * 0.1 * topScale;
+    }
+  }, [tower.topShape, tower.topScale, towerHeight, towerBaseRadius]);
+
+  const onStopPropagation = (
     event:
+      | ThreeEvent<MouseEvent>
+      | ThreeEvent<PointerEvent>
       | ReactMouseEvent<HTMLDivElement | HTMLButtonElement>
-      | ReactPointerEvent<HTMLDivElement | HTMLButtonElement>
   ) => {
-    event.preventDefault();
     event.stopPropagation();
   };
-
-  const yOffset = 1.6;
-  const worldPosition: [number, number, number] = [tower.x, yOffset, tower.z];
 
   return (
     <group
-      position={worldPosition}
-      onClick={onStopScenePropagation}
-      onPointerDown={onStopScenePropagation}
+      position={footing.position}
+      quaternion={footing.quaternion}
+      onClick={onStopPropagation}
+      onPointerDown={onStopPropagation}
     >
-      <GUIWrapper position={[0, 0.48, 0]} distanceFactor={11}>
+      <GUIWrapper position={[0, towerTopY + 0.15, 0]} distanceFactor={11}>
+        {/* drei centers this element on the anchor point; shifting it up by
+            half its height puts its bottom edge there, so the panel floats
+            above the tower instead of covering it. */}
         <div
-          className="pointer-events-auto w-52"
-          onPointerDown={onStopPanelPropagation}
+          className="pointer-events-auto w-64"
+          style={{ transform: "translateY(-50%)" }}
+          onPointerDown={onStopPropagation}
         >
           <UICard
             size="sm"
             className="border border-border/80 bg-card/95 shadow-panel backdrop-blur-sm"
           >
             <UICardHeader className="border-b border-border/70">
-              <UICardTitle className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <UITypography
-                    variant="verySmall"
-                    className="text-primary uppercase tracking-[0.22em]"
-                  >
-                    {t("towerInfo.selectedTower")}
-                  </UITypography>
-                  <UITypography variant="medium" className="mt-1 font-semibold">
-                    {t(`towers.${tower.type}.name`)}
-                  </UITypography>
-                </div>
-                <UITypography
-                  variant="verySmall"
-                  className="shrink-0 text-muted-foreground uppercase tracking-[0.18em]"
-                >
-                  #{tower.id}
-                </UITypography>
-              </UICardTitle>
+              <UITypography variant="medium" className="font-semibold">
+                {t(`towers.${tower.type}.name`)}
+              </UITypography>
             </UICardHeader>
 
-            <UICardContent className="gap-2">
-              <UITypography variant="small" className="text-muted-foreground">
-                {t(`towers.${tower.type}.description`)}
-              </UITypography>
-
-              <div className="grid grid-cols-3 gap-1.5">
+            <UICardContent>
+              <UITable>
                 {stats.map((stat) => (
-                  <div
+                  <UITableRow
                     key={stat.label}
-                    className="border border-border/70 bg-muted/40 px-2 py-1.5"
+                    className="border-b border-border/50 last:border-b-0"
                   >
-                    <UITypography
+                    <UITableCell
+                      align="left"
                       variant="verySmall"
-                      className="text-muted-foreground uppercase tracking-[0.16em]"
+                      className="text-muted-foreground uppercase tracking-[0.1em]"
                     >
                       {stat.label}
-                    </UITypography>
-                    <UITypography
+                    </UITableCell>
+                    <UITableCell
+                      align="right"
                       variant="small"
-                      className="mt-1 font-semibold"
+                      className="font-semibold"
                     >
                       {stat.value}
-                    </UITypography>
-                  </div>
+                    </UITableCell>
+                  </UITableRow>
                 ))}
-              </div>
+              </UITable>
             </UICardContent>
 
             <UICardFooter className="p-0 border-border/70">

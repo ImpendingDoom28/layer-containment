@@ -29,7 +29,9 @@ const WARMUP = 300;
 
 await ensureStressServer();
 
-const browser = await chromium.launch({ args: ["--use-angle=metal"] });
+const browser = await chromium.launch({
+  args: process.argv.includes("--metal") ? ["--use-angle=metal"] : [],
+});
 const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
 const page = await context.newPage();
 const pageErrors = [];

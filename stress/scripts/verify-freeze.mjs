@@ -20,7 +20,9 @@ import {
 
 await ensureStressServer();
 
-const browser = await chromium.launch({ args: ["--use-angle=metal"] });
+const browser = await chromium.launch({
+  args: process.argv.includes("--metal") ? ["--use-angle=metal"] : [],
+});
 const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
 const page = await context.newPage();
 const pageErrors = [];
@@ -86,8 +88,15 @@ console.log("\n===== FROZEN-MATRIX CORRECTNESS =====");
 console.log(`frozen nodes checked: ${result.frozen}`);
 console.log(`max |baked - recompute| across 16 elements: ${result.maxDiff.toExponential(2)}`);
 console.log(`nodes with diff > 1e-6: ${result.badNodes}`);
-console.log(result.badNodes === 0 ? "PASS: all baked world matrices match a fresh recompute" : "FAIL: stale matrices detected");
-if (result.badNodes > 0) process.exitCode = 1;
+if (result.frozen === 0) {
+  console.log("FAIL: no frozen nodes found — nothing to verify (freeze not active?)");
+  process.exitCode = 1;
+} else if (result.badNodes > 0) {
+  console.log("FAIL: stale matrices detected");
+  process.exitCode = 1;
+} else {
+  console.log("PASS: all baked world matrices match a fresh recompute");
+}
 
 const shot = await page.screenshot({ path: "profiling/stress-freeze-on.png" });
 console.log("\n[screenshot] saved profiling/stress-freeze-on.png", shot.length, "bytes");

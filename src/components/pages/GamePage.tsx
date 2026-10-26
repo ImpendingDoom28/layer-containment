@@ -150,6 +150,22 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
   const isGameReady =
     isGameConfigLoaded && (isMenu || isLevelConfigLoaded) && areShadersReady;
 
+  const [isShowingLoading, setIsShowingLoading] = useState(true);
+  const [isClosingLoading, setIsClosingLoading] = useState(false);
+
+  // Loading stays mounted while its text slides out; only the finished
+  // animation (or the reduced-motion path) unmounts it.
+  useEffect(() => {
+    if (isGameReady && isShowingLoading) {
+      setIsClosingLoading(true);
+    }
+  }, [isGameReady, isShowingLoading]);
+
+  const handleLoadingExited = useCallback(() => {
+    setIsShowingLoading(false);
+    setIsClosingLoading(false);
+  }, []);
+
   const loadingMessage = (() => {
     if (!isGameConfigLoaded) {
       return t("common.loadingGame");
@@ -162,7 +178,13 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
 
   return (
     <PageWrapper>
-      {!isGameReady && <HUDLoading message={loadingMessage} />}
+      {isShowingLoading && (
+        <HUDLoading
+          message={loadingMessage}
+          closing={isClosingLoading}
+          onExited={handleLoadingExited}
+        />
+      )}
 
       <Canvas
         data-testid="game-canvas"

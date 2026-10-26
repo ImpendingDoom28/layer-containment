@@ -1,4 +1,4 @@
-import { Suspense, useCallback } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { useTranslation } from "react-i18next";
 
@@ -17,14 +17,34 @@ export const LevelEditorPage = ({ onBackToGame }: LevelEditorPageProps) => {
   const { t } = useTranslation();
   const { isGameConfigLoaded } = useGameSystem();
 
+  const [isShowingLoading, setIsShowingLoading] = useState(true);
+  const [isClosingLoading, setIsClosingLoading] = useState(false);
+
+  // Loading stays mounted while its text slides out; only the finished
+  // animation (or the reduced-motion path) unmounts it.
+  useEffect(() => {
+    if (isGameConfigLoaded && isShowingLoading) {
+      setIsClosingLoading(true);
+    }
+  }, [isGameConfigLoaded, isShowingLoading]);
+
+  const handleLoadingExited = useCallback(() => {
+    setIsShowingLoading(false);
+    setIsClosingLoading(false);
+  }, []);
+
   const onNavigateBack = useCallback(() => {
     onBackToGame();
   }, [onBackToGame]);
 
   return (
     <PageWrapper>
-      {isGameConfigLoaded ? null : (
-        <HUDLoading message={t("common.loadingEditor")} />
+      {isShowingLoading && (
+        <HUDLoading
+          message={t("common.loadingEditor")}
+          closing={isClosingLoading}
+          onExited={handleLoadingExited}
+        />
       )}
 
       <Canvas

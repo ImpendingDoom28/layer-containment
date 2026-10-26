@@ -60,20 +60,42 @@ test("shows the in-game HUD after starting a run", async ({ page }) => {
   await expect(page.getByText("Empower Next Wave")).not.toBeVisible();
 });
 
-test("opens Enemy Almanac from the main menu and returns", async ({ page }) => {
+test("opens the Almanac from the main menu, switches tabs, and returns", async ({
+  page,
+}) => {
+  // The almanac side panel carries a 3D tilt (ui-menu-tilt) whose transform is
+  // re-animated on every pointermove by useMenuParallax, including a proximity
+  // lift near the left edge where the back button lives. That keeps the button
+  // out of a stable position and makes Playwright click flaky, so disable the
+  // parallax (and the tilt transition) by emulating reduced motion.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+
   await onOpenMainMenu(page);
 
-  await page.getByRole("button", { name: "Enemy Almanac" }).click();
+  await page.getByRole("button", { name: "Almanac" }).click();
 
-  await expect(
-    page.getByRole("heading", { name: "Enemy Almanac" })
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Almanac" })).toBeVisible();
+  await expect(page.getByRole("tablist")).toBeVisible();
+
+  // The Enemies tab is shown by default.
+  await expect(page.getByRole("button", { name: "Enemies" })).toBeVisible();
+
+  // Switch to the Towers tab: tower cards render with names from the config.
+  await page.getByRole("button", { name: "Towers" }).click();
+  await expect(page.getByText("Basic Tower")).toBeVisible();
+  await expect(page.getByText("Laser Tower")).toBeVisible();
+
+  // Switch to the Upgrades tab: upgrade cards render with names from the config.
+  await page.getByRole("button", { name: "Upgrades" }).click();
+  await expect(page.getByText("Armored")).toBeVisible();
+  await expect(page.getByText("Regenerating")).toBeVisible();
+
+  // Back to the Enemies tab.
+  await page.getByRole("button", { name: "Enemies" }).click();
 
   await page.locator('[data-slot="card-title"] button').first().click();
 
-  await expect(
-    page.getByRole("button", { name: "Enemy Almanac" })
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Almanac" })).toBeVisible();
 });
 
 test("opens Settings from the main menu and closes", async ({ page }) => {

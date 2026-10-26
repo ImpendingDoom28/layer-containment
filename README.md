@@ -39,7 +39,7 @@ A 3D tower defense game built with React, Tailwind CSS, and React Three Fiber.
 - **Time-dilation pause** - Pausing eases the world to stillness over ~200ms (enemy movement, travelling projectiles, and decorative effects slow down instead of freezing instantly) and resumes with a matching ramp; `prefers-reduced-motion` snaps instead of easing. Game logic (slow expiry, regen, heal timing, tower fire) still freezes hard the instant the pause begins, and projectile hits / enemy end-of-path damage are deferred until the world resumes
 - **Level picker** - Play opens a sector list with SVG map previews, wave counts, and one-tap start for each playable level (menu-only `level_main` is not listed). Three playable sectors ship in the default build: **Sector 1** (single front), **Sector 2: The Convergence** (two fronts), and **Sector 3: The Coil** (a spiraling single channel). See [Levels](#levels)
 - **Mobile support (adaptive HUD/GUI)** - The HUD and GUI adapt to narrow screens (below the 768px `md` breakpoint): the tower shop becomes a horizontally scrollable bottom bar of compact tower buttons (scrollbar hidden), the money/health/wave HUD collapses into a compact top strip with the card background (the "Start next wave" button and the game menu button live inside the strip — desktop uses ESC), the main menu panel spans the full width, side panels (menu, almanac, level picker, game menu) are full-width with reduced padding, and the game-over stats wrap. `useIsMobile` (`src/core/hooks/useIsMobile.ts`) mirrors the Tailwind `md` breakpoint for layout switching, and the page tracks the mobile browser chrome via `100dvh` sizing
-- **Enemy Almanac** - Bestiary that tracks discovered enemy types with stats and descriptions (persists to localStorage)
+- **Almanac** - Reference panel with a tab selector between three sections: **Enemies** (bestiary that tracks discovered enemy types with stats and descriptions, persisting to localStorage), **Towers** (every tower type with its cost, damage, range, fire rate, targeting, and type-specific traits like slow/AoE/pierce/relay/chain), and **Upgrades** (every enemy upgrade with its effect and gold bonus)
 - **Wave controls** - Start waves early or wait for automatic wave progression
 - **3D graphics** - Built with React Three Fiber for immersive gameplay
 - **Frustum culling for entities** - Enemy and tower groups are culled against the camera view each frame: when a group's bounding sphere leaves the view (with a 2-unit hysteresis margin so fast units don't pop at the edge) its `visible` is toggled off and three.js skips the whole subtree in the render pass. Toggling `visible` doesn't remount anything and doesn't affect raycasting (three tests `layers`, not `visible`), so hover and click keep working. The bounding sphere is measured once per group and re-measured when a descendant's transform changes (a heal ring scaling up, an upgrade ring appearing) — detected cheaply by comparing a per-group transform snapshot each frame, so steady-state frames skip the bounding-box walk. The per-frame view frustum is built once and shared across all culled objects, and only rebuilt when the camera actually moves, rotates, or changes its FOV. The preview tower is exempt (it follows the cursor and is always in view). Separately, while the camera is being dragged with the mouse, R3F's full-scene raycast (normally fired on every `pointermove`) is suppressed in the capture phase, so dragging the camera stays smooth. That suppression has two follow-up costs the camera handles itself: R3F's click-distance check only gates `onPointerMissed` — a `click` after a drag would still dispatch `onClick` to the hit object and place a tower — so the camera swallows the click in the capture phase when the pointer travelled beyond R3F's own 2px threshold; and with no `pointermove` R3F never un-hovers the tile under the cursor, so on release the camera re-dispatches a `pointermove` on the canvas at the final position to reconcile the hover highlight
@@ -191,7 +191,7 @@ The dev server uses a fixed port (`5173`) and `strictPort: true`, so the URL is 
 ## How to Play
 
 1. **Start the game**: Click "Play" on the main menu to enter the game
-2. **View the almanac**: Click "Enemy Almanac" to see discovered enemies (undiscovered show as silhouettes)
+2. **View the almanac**: Click "Almanac" to see the reference panel — the Enemies tab shows discovered enemies (undiscovered show as silhouettes), and the Towers and Upgrades tabs list every tower and upgrade with their stats
 3. **Select a tower**: Click on a tower in the shop (left side) to select it
 4. **Place towers**: Click on a tile in the grid to place the selected tower (cannot place on paths or occupied tiles)
 5. **Manage towers**: Click on a placed tower to view its stats and sell it if needed
@@ -228,11 +228,11 @@ The dev server uses a fixed port (`5173`) and `strictPort: true`, so the URL is 
 - **Targeting**: Towers target either the nearest or furthest enemy based on their type
 - **Projectile Types**: Single-target, area-of-effect, and piercing beam projectiles
 - **Audio**: Adjustable volume controls for master, SFX, music, and ambient sounds
-- **Enemy Almanac**:
-  - Accessed from the main menu
-  - Undiscovered enemies appear as silhouettes with "???" names
-  - Enemies are revealed when you encounter them in battle
-  - Discovery progress persists across browser sessions via localStorage
+- **Almanac**:
+  - Accessed from the main menu, with a tab selector for the three sections
+  - **Enemies** tab: undiscovered enemies appear as silhouettes with "???" names, revealed when you encounter them in battle; discovery progress persists across browser sessions via localStorage
+  - **Towers** tab: lists every tower with cost, damage, range, fire rate, targeting, and type-specific traits (slow, area, pierce, neighbor buff, chain)
+  - **Upgrades** tab: lists every enemy upgrade with its effect and gold bonus
 - **Enemy Upgrades** (Risk/Reward System):
   - Between waves (starting from wave 4), you can optionally "empower" the next wave
   - Select upgrades to make enemies stronger in exchange for bonus gold rewards
@@ -276,7 +276,7 @@ Every playable level is checked in CI by `src/core/configs/levelFiles.test.ts`, 
 - **HUD layout**: HUD screens use structured wrappers in `src/components/hud`:
   - `HUDWrapper` as the root HUD overlay container on top of the 3D canvas.
   - `HUDOverlay` for centered modal-style overlays (game menu, game over).
-  - `HUDSidePanel` for right-side panels (main menu, enemy almanac) with responsive widths and scrollable content.
+  - `HUDSidePanel` for right-side panels (main menu, almanac) with responsive widths and scrollable content.
 - **Best practices**: Prefer these primitives and layout components when adding new HUD elements to keep visuals consistent, responsive, and easy to extend.
 
 ## Other

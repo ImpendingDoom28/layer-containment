@@ -33,6 +33,7 @@ import { useWaveSystem } from "../../core/hooks/useWaveSystem";
 import { useLevelSystem } from "../../core/hooks/useLevelSystem";
 import { useUpgradesSystem } from "../../core/hooks/useUpgradesSystem";
 import { useHeldClose } from "../../core/hooks/useHeldClose";
+import { useLoadingTransition } from "../../core/hooks/useLoadingTransition";
 import { useMenuParallax } from "../../core/hooks/useMenuParallax";
 import {
   hasSeenControlsIntro,
@@ -150,6 +151,14 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
   const isGameReady =
     isGameConfigLoaded && (isMenu || isLevelConfigLoaded) && areShadersReady;
 
+  // Loading stays mounted while its text slides out; only the finished
+  // animation (or the reduced-motion path) unmounts it.
+  const {
+    isShowing: isShowingLoading,
+    isClosing: isClosingLoading,
+    onExited: handleLoadingExited,
+  } = useLoadingTransition(isGameReady);
+
   const loadingMessage = (() => {
     if (!isGameConfigLoaded) {
       return t("common.loadingGame");
@@ -162,7 +171,13 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
 
   return (
     <PageWrapper>
-      {!isGameReady && <HUDLoading message={loadingMessage} />}
+      {isShowingLoading && (
+        <HUDLoading
+          message={loadingMessage}
+          closing={isClosingLoading}
+          onExited={handleLoadingExited}
+        />
+      )}
 
       <Canvas
         data-testid="game-canvas"

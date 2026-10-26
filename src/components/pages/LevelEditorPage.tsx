@@ -7,6 +7,7 @@ import { HUDLevelEditor } from "../hud/HUDLevelEditor";
 import { LevelEditorScene } from "../scenes/editor/LevelEditorScene";
 import { GAME_CANVAS_GL, GAME_CANVAS_STYLE } from "../../constants/canvas";
 import { useGameSystem } from "../../core/hooks/useGameSystem";
+import { useLoadingTransition } from "../../core/hooks/useLoadingTransition";
 import { PageWrapper } from "./PageWrapper";
 
 type LevelEditorPageProps = {
@@ -17,14 +18,26 @@ export const LevelEditorPage = ({ onBackToGame }: LevelEditorPageProps) => {
   const { t } = useTranslation();
   const { isGameConfigLoaded } = useGameSystem();
 
+  // Loading stays mounted while its text slides out; only the finished
+  // animation (or the reduced-motion path) unmounts it.
+  const {
+    isShowing: isShowingLoading,
+    isClosing: isClosingLoading,
+    onExited: handleLoadingExited,
+  } = useLoadingTransition(isGameConfigLoaded);
+
   const onNavigateBack = useCallback(() => {
     onBackToGame();
   }, [onBackToGame]);
 
   return (
     <PageWrapper>
-      {isGameConfigLoaded ? null : (
-        <HUDLoading message={t("common.loadingEditor")} />
+      {isShowingLoading && (
+        <HUDLoading
+          message={t("common.loadingEditor")}
+          closing={isClosingLoading}
+          onExited={handleLoadingExited}
+        />
       )}
 
       <Canvas

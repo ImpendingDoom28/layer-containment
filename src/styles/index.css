@@ -192,6 +192,75 @@
 }
 
 /*
+ * Loading screen text: slides in from the left and out to the right,
+ * passing through the corner it lives in.
+ */
+@keyframes ui-loading-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes ui-loading-slide-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(1.5rem);
+  }
+}
+
+@utility ui-loading-slide-in {
+  animation: ui-loading-slide-in var(--ui-loading-slide-in-duration, 250ms)
+    ease-out both;
+}
+
+@utility ui-loading-slide-out {
+  animation: ui-loading-slide-out var(--ui-loading-slide-out-duration, 200ms)
+    ease-in both;
+}
+
+/*
+ * Indeterminate loading bar (the SYSTEMS ONLINE badge line, animated):
+ * a sweep grows from the left, then the trailing edge drains to the right.
+ */
+@keyframes ui-loading-bar-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@utility ui-loading-bar {
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    display: block;
+    height: 100%;
+    width: 150%;
+    background: currentColor;
+    animation: ui-loading-bar-sweep var(--ui-loading-bar-duration, 3000ms)
+      cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-loading-bar::before {
+    animation: none;
+  }
+}
+
+/*
  * 3D tilt for menu panels: the canvas-side edge recedes into the scene,
  * so menus read as angled surfaces standing over the canvas instead of
  * flat overlays. Left-anchored menus tilt away from the left edge,

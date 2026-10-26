@@ -45,6 +45,25 @@ export const getPathRenderSegments = (
 };
 
 /**
+ * Total length of a path in world units (sum of segment lengths).
+ *
+ * Caching per `path` identity is safe: zustand keeps the same waypoint array
+ * for the lifetime of a level, a level reload produces a new array (and
+ * therefore a fresh cache), and an abandoned level's cache is reclaimed by GC
+ * via the WeakMap. The enemy movement system calls this per enemy per frame;
+ * the cache keeps that to a single lookup after the first frame.
+ */
+export const getPathLength = withCache((
+  path: PathWaypoint[]
+): number => {
+  let length = 0;
+  for (let i = 0; i < path.length - 1; i++) {
+    length += Math.hypot(path[i + 1].x - path[i].x, path[i + 1].z - path[i].z);
+  }
+  return length;
+});
+
+/**
  * Check if position is at the end of the path
  */
 export function isAtPathEnd(

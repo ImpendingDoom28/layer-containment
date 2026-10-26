@@ -45,7 +45,8 @@ export default defineConfig({
     command: "npm run build && npm run preview -- --port 5198 --strictPort",
     cwd: repoRoot,
     url: baseURL,
-    reuseExistingServer: true,
+    // A preview already on 5198 would serve a stale build; fail instead.
+    reuseExistingServer: false,
     stdout: "pipe",
     stderr: "pipe",
     timeout: 180_000,

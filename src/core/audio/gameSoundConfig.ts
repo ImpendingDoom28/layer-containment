@@ -9,6 +9,7 @@ import type {
   EnemyType,
   ProjectileType,
   TowerType,
+  UiActionDeniedData,
 } from "../../core/types/game";
 
 import { GAME_AUDIO_CATEGORIES } from "./useAudioStore";
@@ -151,10 +152,7 @@ export type AudioEventDataMap = {
     towerType: TowerType;
     worldPosition: WorldPosition;
   };
-  ui_action_denied: {
-    reason: "insufficient_funds" | "blocked_tile";
-    towerType: TowerType;
-  };
+  ui_action_denied: UiActionDeniedData;
   ui_action_hold_start: Record<string, never>;
   ui_action_hold_end: Record<string, never>;
   ui_action_hold_abort: {

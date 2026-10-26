@@ -59,6 +59,7 @@ import { useEntityIds } from "../contexts/EntityIdContext";
 import { gameEvents } from "../../utils/eventEmitter";
 import { GameEvent } from "../types/enums/events";
 import { getTowerPlacementDenyReason } from "../utils/towerPlacementDenyReason";
+import { towerShopRowElementId } from "../utils/towerShopRowElementId";
 import { enemyActions } from "../ecs/actions/enemyActions";
 import { statsActions } from "../ecs/actions/statsActions";
 
@@ -137,6 +138,7 @@ export const useLevelSystem = () => {
         gameEvents.emit(GameEvent.UI_ACTION_DENIED, {
           reason: denyReason,
           towerType,
+          elementId: towerShopRowElementId(towerType),
         });
         return false;
       }

@@ -12,7 +12,7 @@ import {
 } from "./lib/buttonVariants";
 import { useHoldButton } from "./lib/useHoldButton";
 import { cn } from "../lib/twUtils";
-import { TowerType } from "../../../core/types/game";
+import type { UiActionDeniedData } from "../../../core/types/game";
 
 const UI_HOLD_BUTTON_DEFAULT_DURATION_MS = 1200;
 const UI_HOLD_BUTTON_FILL_RESET_TRANSITION_MS = 200;
@@ -24,10 +24,7 @@ export type UIHoldButtonProps = Omit<ComponentProps<"button">, "onClick"> &
     holdingLabel?: ReactNode;
     onConfirm: () => void;
     onAbort?: (progress: number) => void;
-    deniedData?: {
-      reason: "insufficient_funds";
-      towerType: TowerType;
-    };
+    deniedData?: UiActionDeniedData;
   };
 
 export const UIHoldButton: FC<UIHoldButtonProps> = ({

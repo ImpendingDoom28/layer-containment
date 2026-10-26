@@ -8,6 +8,7 @@ import { Stats } from "@react-three/drei";
 import { GameScene } from "../scenes/game/GameScene";
 import { MainMenuScene } from "../scenes/mainMenu/MainMenuScene";
 import { HUDTowerShop } from "../hud/HUDTowerShop";
+import { HudAnimationSystem } from "../hud/HudAnimationSystem";
 import { HUDGameStats } from "../hud/HUDGameStats";
 import { HUDGameOver } from "../hud/HUDGameOver";
 import { HUDMainMenu } from "../hud/main/HUDMainMenu";
@@ -229,6 +230,8 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
       {isGameReady && !isMenu && (
         <>
           <HUDPauseOverlay gameStatus={gameStatus} />
+
+          <HudAnimationSystem />
 
           {(shouldDisableControls ? gameMenuClose.closing : true) && (
             <>

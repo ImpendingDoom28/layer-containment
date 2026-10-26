@@ -107,6 +107,7 @@ describe("useLevelSystem.placeTower denial feedback", () => {
       expect(deniedSpy).toHaveBeenCalledWith({
         reason: "blocked_tile",
         towerType: "basic",
+        elementId: "tower-shop-row-basic",
       });
     } finally {
       renderer.unmount();
@@ -124,6 +125,7 @@ describe("useLevelSystem.placeTower denial feedback", () => {
       expect(deniedSpy).toHaveBeenCalledWith({
         reason: "insufficient_funds",
         towerType: "basic",
+        elementId: "tower-shop-row-basic",
       });
     } finally {
       renderer.unmount();
@@ -203,6 +205,7 @@ describe("useLevelSystem.placeTower denial feedback", () => {
       expect(deniedSpy).toHaveBeenCalledWith({
         reason: "insufficient_funds",
         towerType: "basic",
+        elementId: "tower-shop-row-basic",
       });
     } finally {
       renderer.unmount();

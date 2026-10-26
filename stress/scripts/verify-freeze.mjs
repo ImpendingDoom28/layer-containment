@@ -6,6 +6,9 @@
  *  2. Screenshot the stress scene with the freeze active as a visual sanity
  *     check that tiles / path / ground / skybox / end-building are placed
  *     correctly.
+ *
+ * The check toggles only the originally-frozen nodes, so dynamic nodes
+ * (enemies/towers) keep their per-frame updates throughout.
  */
 import { chromium } from "@playwright/test";
 
@@ -31,25 +34,27 @@ await page.waitForTimeout(8_000);
 const result = await page.evaluate(() => {
   const scene = window.__stressScene;
 
-  // Capture the current (frozen) world matrices.
+  // The nodes the app froze.
   const frozen = [];
   scene.traverse((o) => {
-    if (o.matrixWorldAutoUpdate === false) {
-      frozen.push({ o, m: o.matrixWorld.clone() });
-    }
+    if (o.matrixWorldAutoUpdate === false) frozen.push(o);
   });
 
-  // Unfreeze everything and recompute from scratch (ground truth).
-  scene.traverse((o) => {
+  // Capture each frozen node's baked world matrix (ground truth to compare).
+  const baked = frozen.map((o) => ({ o, m: o.matrixWorld.clone() }));
+
+  // Unfreeze exactly those nodes and recompute the whole scene (all the
+  // ancestors/descendants that feed their world matrices get recomputed too).
+  for (const o of frozen) {
     o.matrixAutoUpdate = true;
     o.matrixWorldAutoUpdate = true;
-  });
+  }
   scene.updateMatrixWorld(true);
 
   // Compare each frozen node's baked matrix against the fresh recompute.
   let maxDiff = 0;
   let badNodes = 0;
-  for (const { o, m } of frozen) {
+  for (const { o, m } of baked) {
     const e = o.matrixWorld.elements;
     const r = m.elements;
     let d = 0;
@@ -58,12 +63,14 @@ const result = await page.evaluate(() => {
     if (d > maxDiff) maxDiff = d;
   }
 
-  // Restore the frozen state. `traverse` is parent-first, so re-baking each
-  // node's local matrix then its world matrix from its (already re-baked)
-  // parent reproduces the original frozen state exactly.
-  scene.traverse((o) => {
-    o.matrixAutoUpdate = o.matrixWorldAutoUpdate = false;
-  });
+  // Restore the app state: recompute (everything live), then re-freeze the
+  // original set. `traverse` is parent-first, so re-baking each node's local
+  // matrix then its world matrix from its already-re-baked parent is exact.
+  scene.updateMatrixWorld(true);
+  for (const o of frozen) {
+    o.matrixAutoUpdate = false;
+    o.matrixWorldAutoUpdate = false;
+  }
   scene.traverse((o) => {
     if (o.matrixWorldAutoUpdate === false) {
       o.updateMatrix();
@@ -73,13 +80,14 @@ const result = await page.evaluate(() => {
   });
 
   return { frozen: frozen.length, maxDiff, badNodes };
-}, );
+});
 
 console.log("\n===== FROZEN-MATRIX CORRECTNESS =====");
 console.log(`frozen nodes checked: ${result.frozen}`);
 console.log(`max |baked - recompute| across 16 elements: ${result.maxDiff.toExponential(2)}`);
 console.log(`nodes with diff > 1e-6: ${result.badNodes}`);
 console.log(result.badNodes === 0 ? "PASS: all baked world matrices match a fresh recompute" : "FAIL: stale matrices detected");
+if (result.badNodes > 0) process.exitCode = 1;
 
 const shot = await page.screenshot({ path: "profiling/stress-freeze-on.png" });
 console.log("\n[screenshot] saved profiling/stress-freeze-on.png", shot.length, "bytes");

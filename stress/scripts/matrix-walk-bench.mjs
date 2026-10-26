@@ -11,9 +11,10 @@
  * This script loads the stress scene, then measures the average cost of
  * `scene.updateMatrixWorld()` in two states:
  *   ON  — the real app state (static subtrees frozen, dynamic nodes live)
- *   OFF — every node unfrozen (the pre-optimization behavior)
+ *   OFF — the static subtrees unfrozen (the pre-optimization behavior)
  * The difference is the per-frame CPU saving of the freeze, measured
- * directly (no display-cap quantization).
+ * directly (no display-cap quantization). Dynamic nodes (enemies/towers) stay
+ * live in both phases, so only the frozen static subtrees are toggled.
  */
 import { chromium } from "@playwright/test";
 
@@ -43,17 +44,32 @@ const result = await page.evaluate(({ ITER, WARM }) => {
   const scene = window.__stressScene;
 
   let total = 0;
-  let frozen = 0;
+  const frozenNodes = [];
   scene.traverse((o) => {
     total += 1;
-    if (o.matrixWorldAutoUpdate === false) frozen += 1;
+    if (o.matrixWorldAutoUpdate === false) frozenNodes.push(o);
   });
 
-  const setFlags = (autoUpdate) => {
+  const setLive = () => {
+    for (const o of frozenNodes) {
+      o.matrixAutoUpdate = true;
+      o.matrixWorldAutoUpdate = true;
+    }
+  };
+  const setFrozen = () => {
+    for (const o of frozenNodes) {
+      o.matrixAutoUpdate = false;
+      o.matrixWorldAutoUpdate = false;
+    }
+  };
+  // Full recompute (all nodes live) then re-freeze only the original set.
+  const recomputeAndRefreeze = () => {
     scene.traverse((o) => {
-      o.matrixAutoUpdate = autoUpdate;
-      o.matrixWorldAutoUpdate = autoUpdate;
+      o.matrixAutoUpdate = true;
+      o.matrixWorldAutoUpdate = true;
     });
+    scene.updateMatrixWorld(true);
+    setFrozen();
   };
 
   const bench = () => {
@@ -66,16 +82,16 @@ const result = await page.evaluate(({ ITER, WARM }) => {
   // Phase ON: the real app state — static subtrees frozen, dynamic nodes live.
   const onMs = bench();
 
-  // Phase OFF: unfreeze everything (pre-optimization behavior), re-bake, measure.
-  setFlags(true);
+  // Phase OFF: unfreeze the static subtrees (pre-optimization behavior),
+  // re-bake so the matrices are valid, then measure.
+  setLive();
   scene.updateMatrixWorld(true);
   const offMs = bench();
 
-  // Restore the frozen state: re-bake with flags on, then freeze again.
-  setFlags(false);
-  scene.updateMatrixWorld(true);
+  // Restore the app state: recompute everything, then re-freeze the original set.
+  recomputeAndRefreeze();
 
-  return { total, frozen, onMs, offMs };
+  return { total, frozen: frozenNodes.length, onMs, offMs };
 }, { ITER: ITERATIONS, WARM: WARMUP });
 
 console.log("\n===== PER-FRAME MATRIX WALK (scene.updateMatrixWorld) =====");

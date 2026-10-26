@@ -124,13 +124,28 @@ test("shows the on-screen D-pad on mobile with the mobile scheme", async ({
     await expect(page.getByTestId(`mobile-dpad-${move}`)).toBeVisible();
   }
 
-  // The D-pad sits above the tower shop bar, in the lower half of the screen.
+  // The rotation joystick (touch analog of mouse-drag) appears too.
+  await expect(page.getByTestId("mobile-joystick")).toBeVisible();
+  await expect(page.getByTestId("mobile-joystick-knob")).toBeVisible();
+
+  // Two-thumb layout: the D-pad sits on the right, the joystick on the left,
+  // both above the tower shop bar in the lower half of the screen.
   const dpad = await page.getByTestId("mobile-dpad").boundingBox();
+  const joystick = await page.getByTestId("mobile-joystick").boundingBox();
   const shop = await page.getByTestId("tower-shop").boundingBox();
   expect(dpad).not.toBeNull();
+  expect(joystick).not.toBeNull();
   expect(shop).not.toBeNull();
+
+  // Both in the lower half, above the shop bar.
   expect(dpad!.y).toBeGreaterThan(667 * 0.5);
   expect(dpad!.y).toBeLessThan(shop!.y);
+  expect(joystick!.y).toBeGreaterThan(667 * 0.5);
+  expect(joystick!.y).toBeLessThan(shop!.y);
+
+  // D-pad on the right half, joystick on the left half.
+  expect(dpad!.x + dpad!.width / 2).toBeGreaterThan(375 / 2);
+  expect(joystick!.x + joystick!.width / 2).toBeLessThan(375 / 2);
 });
 
 const openInGameSettings = async (page: Page) => {
@@ -156,15 +171,17 @@ test("hides the D-pad when switching back to the keyboard scheme on mobile", asy
   await onOpenGame(page);
   await expect(page.getByTestId("tower-shop")).toBeVisible({ timeout: 20_000 });
 
-  // While the game menu is open the whole in-game HUD (and the D-pad with
-  // it) is hidden, so switch the scheme first, then inspect the pad.
+  // While the game menu is open the whole in-game HUD (and the D-pad and
+  // joystick with it) is hidden, so switch the scheme first, then inspect.
   await openInGameSettings(page);
   await selectScheme(page, "mobile");
   await closeInGameMenu(page);
   await expect(page.getByTestId("mobile-dpad")).toBeVisible();
+  await expect(page.getByTestId("mobile-joystick")).toBeVisible();
 
   await openInGameSettings(page);
   await selectScheme(page, "keyboard");
   await closeInGameMenu(page);
   await expect(page.getByTestId("mobile-dpad")).toBeHidden();
+  await expect(page.getByTestId("mobile-joystick")).toBeHidden();
 });

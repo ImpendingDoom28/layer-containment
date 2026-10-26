@@ -23,6 +23,11 @@ export const GameEvent = {
    * scheme). The camera consumes this in place of a physical key.
    */
   TOUCH_CAMERA_MOVE: "touch_camera_move",
+  /**
+   * On-screen rotation joystick (mobile control scheme) moved by a pixel
+   * delta. The camera applies it to its yaw/pitch exactly like a mouse drag.
+   */
+  TOUCH_CAMERA_ROTATE: "touch_camera_rotate",
 } as const;
 
 export type GameEvent = (typeof GameEvent)[keyof typeof GameEvent];

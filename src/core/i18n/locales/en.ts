@@ -28,6 +28,7 @@ export const en = {
     cameraRight: "Move right",
     cameraUp: "Move up",
     cameraDown: "Move down",
+    rotateCamera: "Rotate camera",
     pause: "Pause / Resume",
     menu: "Open / close menu",
     toggleDebug: "Toggle debug overlay",

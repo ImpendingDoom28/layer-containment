@@ -122,12 +122,31 @@ export const GameCamera = ({
       moveState.current[data.move] = data.down;
     };
 
+    // Rotation joystick: incremental pixel deltas, applied to yaw/pitch the
+    // same way the mouse-drag path does (delta * sensitivity, pitch clamped).
+    const handleTouchRotate = (data: { deltaX: number; deltaY: number }) => {
+      if (!data || shouldStopCamera) {
+        return;
+      }
+      rotation.current.yaw -= data.deltaX * rotationSensitivity;
+      rotation.current.pitch -= data.deltaY * rotationSensitivity;
+      rotation.current.pitch = Math.max(
+        -Math.PI / 2,
+        Math.min(Math.PI / 2, rotation.current.pitch)
+      );
+    };
+
     const unsubscribe = gameEvents.on(
       GameEvent.TOUCH_CAMERA_MOVE,
       handleTouchMove
     );
+    const unsubscribeRotate = gameEvents.on(
+      GameEvent.TOUCH_CAMERA_ROTATE,
+      handleTouchRotate
+    );
     return () => {
       unsubscribe();
+      unsubscribeRotate();
       // The pad (or the scheme) can hide while a D-pad button is still held,
       // so clear the flags it set instead of letting a stale move drive the
       // camera.
@@ -140,7 +159,7 @@ export const GameCamera = ({
         down: false,
       };
     };
-  }, [controlScheme, shouldStopCamera]);
+  }, [controlScheme, shouldStopCamera, rotationSensitivity]);
 
   useEffect(() => {
     if (shouldStopCamera) {

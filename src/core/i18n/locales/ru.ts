@@ -35,6 +35,7 @@ const ruValues = {
     cameraRight: "Двигаться вправо",
     cameraUp: "Двигаться вверх",
     cameraDown: "Двигаться вниз",
+    rotateCamera: "Повернуть камеру",
     pause: "Пауза / Продолжить",
     menu: "Открыть / закрыть меню",
     toggleDebug: "Показать отладочную панель",

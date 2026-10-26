@@ -237,13 +237,22 @@ export const Path: FC<PathProps> = memo(({ pathIndex }) => {
     ].filter((m): m is MergedPathMesh => m !== null);
   }, [path, sphereStrips, cornerTiles, pathWidth, tileSize, pathMaterials]);
 
+  // Geometries are replaced with the path, so dispose the outgoing ones.
+  // The materials are stable (created once) and still in use by the
+  // replacement meshes, so they are disposed only on unmount.
   useEffect(
     () => () => {
       pathMeshes.forEach((m) => m.geometry.dispose());
+    },
+    [pathMeshes]
+  );
+
+  useEffect(
+    () => () => {
       pathMaterials.gray500.dispose();
       pathMaterials.gray600.dispose();
     },
-    [pathMeshes, pathMaterials]
+    [pathMaterials]
   );
 
   const mergedMeshRefs = useRef<Array<Object3D | null>>([]);

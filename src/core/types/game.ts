@@ -8,6 +8,17 @@ export type GameStatus =
 export type TowerType = "basic" | "slow" | "aoe" | "laser" | "relay" | "chain";
 export type TowerTargeting = "nearest" | "furthest";
 
+/**
+ * Payload of the `UI_ACTION_DENIED` event. `elementId` names the HUD element
+ * (its `data-hud-animation-id` attribute) that should play the denial shake;
+ * omitted when the denied action has no targetable element.
+ */
+export type UiActionDeniedData = {
+  reason: "insufficient_funds" | "blocked_tile";
+  towerType: TowerType;
+  elementId?: string;
+};
+
 // Enemy types
 export type EnemyType = "basic" | "fast" | "tank" | "medic" | "splitter";
 

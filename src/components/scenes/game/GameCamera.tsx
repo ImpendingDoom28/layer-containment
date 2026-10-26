@@ -8,14 +8,13 @@ import {
   useLevelStore,
 } from "../../../core/stores/useLevelStore";
 import {
-  incrementDenyPulseSelector,
   tileSizeSelector,
   useGameStore,
 } from "../../../core/stores/useGameStore";
 import { isPointerOverGameCameraBlock } from "../../../utils/isPointerOverGameCameraBlock";
 import { gameEvents } from "../../../utils/eventEmitter";
 import { GameEvent } from "../../../core/types/enums/events";
-import type { AudioEventData } from "../../../core/audio/gameSoundConfig";
+import type { UiActionDeniedData } from "../../../core/types/game";
 import {
   MS_PER_SECOND,
   UI_ACTION_DENIED_CAMERA_SHAKE_AMPLITUDE,
@@ -84,22 +83,25 @@ export const GameCamera = ({
   const shakeOffsetRef = useRef(new Vector3());
   const shakeRemainingMsRef = useRef(0);
   const fovRef = useRef(PAUSE_FOV_BASE);
-  const incrementDenyPulse = useGameStore(incrementDenyPulseSelector);
   const keybindings = useSettingsStore(keybindingsSelector);
   const reducedMotion = useReducedMotion();
 
+  // The HUD denial shake is driven by `HudAnimationSystem` (DOM side); the
+  // camera only adds its own shake.
   useEffect(() => {
-    const unsubscribe = gameEvents.on<AudioEventData<"ui_action_denied">>(
+    const unsubscribe = gameEvents.on<UiActionDeniedData>(
       GameEvent.UI_ACTION_DENIED,
       (data) => {
+        if (!data) {
+          return;
+        }
         if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
           shakeRemainingMsRef.current = UI_ACTION_DENIED_CAMERA_SHAKE_DURATION_MS;
         }
-        incrementDenyPulse(data.towerType);
       }
     );
     return unsubscribe;
-  }, [incrementDenyPulse]);
+  }, []);
 
   useEffect(() => {
     if (shouldStopCamera) {

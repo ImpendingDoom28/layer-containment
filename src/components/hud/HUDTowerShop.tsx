@@ -6,7 +6,6 @@ import { UIButton } from "@/components/ui/buttons/UIButton";
 import { UITypography } from "../ui/UITypography";
 import { useIsMobile } from "../../core/hooks/useIsMobile";
 import {
-  denyPulseSelector,
   selectedTowerTypeToPlaceSelector,
   setSelectedTowerTypeToPlaceSelector,
   towerTypesSelector,
@@ -17,6 +16,7 @@ import { UICard, UICardContent, UICardHeader, UICardTitle } from "../ui/UICard";
 import { UIMoney } from "../ui/UIMoney";
 import { cn } from "@/components/ui/lib/twUtils";
 import { TOWER_SHOP_MONEY_ICON_SIZE_PX } from "../../constants/uiActionDeniedFeedback";
+import { towerShopRowElementId } from "../../core/utils/towerShopRowElementId";
 
 type HUDTowerShopProps = {
   money: number;
@@ -29,7 +29,6 @@ export const HUDTowerShop: FC<HUDTowerShopProps> = ({ money }) => {
     setSelectedTowerTypeToPlaceSelector
   );
   const selectedTowerType = useGameStore(selectedTowerTypeToPlaceSelector);
-  const denyPulse = useGameStore(denyPulseSelector);
   const towerTypes = useGameStore(towerTypesSelector);
   const towerTypesValues = useMemo(() => {
     return Object.values(towerTypes ?? {}).sort((a, b) => a.cost - b.cost);
@@ -48,6 +47,7 @@ export const HUDTowerShop: FC<HUDTowerShopProps> = ({ money }) => {
       : ({
           reason: "insufficient_funds",
           towerType: tower.id,
+          elementId: towerShopRowElementId(tower.id),
         } as const);
 
     let towerButtonVariant: "default" | "outline" | "ghost" = "ghost";
@@ -79,11 +79,9 @@ export const HUDTowerShop: FC<HUDTowerShopProps> = ({ money }) => {
 
     return (
       <div
-        className={cn(
-          "relative flex",
-          (denyPulse[tower.id] ?? 0) > 0 && "animate-hud-denied-shake"
-        )}
-        key={`${tower.id}-${denyPulse[tower.id] ?? 0}`}
+        className="relative flex"
+        data-hud-animation-id={towerShopRowElementId(tower.id)}
+        key={tower.id}
       >
         {isMobile ? (
           <UIButton

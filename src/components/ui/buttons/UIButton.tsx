@@ -7,15 +7,12 @@ import { buttonVariants } from "./lib/buttonVariants";
 import { cn } from "../lib/twUtils";
 import { gameEvents } from "../../../utils/eventEmitter";
 import { GameEvent } from "../../../core/types/enums/events";
-import { TowerType } from "../../../core/types/game";
+import type { UiActionDeniedData } from "../../../core/types/game";
 
 export type UIButtonProps = ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
-    deniedData?: {
-      reason: "insufficient_funds";
-      towerType: TowerType;
-    };
+    deniedData?: UiActionDeniedData;
   };
 
 export const UIButton: FC<UIButtonProps> = ({

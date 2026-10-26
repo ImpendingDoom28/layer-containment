@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import { GameEvent } from "../../../../core/types/enums/events";
+import type { UiActionDeniedData } from "../../../../core/types/game";
 import { gameEvents } from "../../../../utils/eventEmitter";
 
 type HoldButtonState = "idle" | "holding";
@@ -16,7 +17,7 @@ type UseHoldButtonOptions = {
   duration: number;
   fillResetTransitionMs: number;
   disabled?: boolean;
-  deniedData?: unknown;
+  deniedData?: UiActionDeniedData;
   onConfirm: () => void;
   onAbort?: (progress: number) => void;
 };

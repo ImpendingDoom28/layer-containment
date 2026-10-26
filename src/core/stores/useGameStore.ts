@@ -41,7 +41,6 @@ type GameStoreState = {
   previousStatus: GameStatus | null;
   debug: boolean;
   showSettings: boolean;
-  denyPulse: Partial<Record<TowerType, number>>;
   isPageVisible: boolean;
 };
 
@@ -55,7 +54,6 @@ type GameStoreActions = {
   setDebug: (debug: boolean) => void;
   resetGameState: () => void;
   startNewRun: () => void;
-  incrementDenyPulse: (towerType: TowerType) => void;
   setIsPageVisible: (visible: boolean) => void;
 };
 
@@ -74,7 +72,6 @@ const DEFAULT_STATE: GameStoreState = {
   gameStatus: "menu",
   debug: false,
   showSettings: false,
-  denyPulse: {},
   enemyHealthLoss: 0,
   tileSize: 0,
   towerBaseRadius: 0,
@@ -150,15 +147,6 @@ export const useGameStore = create<GameStore>((set) => ({
     set({ debug });
   },
 
-  incrementDenyPulse: (towerType) => {
-    set((state) => ({
-      denyPulse: {
-        ...state.denyPulse,
-        [towerType]: (state.denyPulse[towerType] ?? 0) + 1,
-      },
-    }));
-  },
-
   resetGameState: () => {
     set({
       ...DEFAULT_STATE,
@@ -171,7 +159,6 @@ export const useGameStore = create<GameStore>((set) => ({
       selectedTowerTypeToPlace: null,
       selectedTower: null,
       previousStatus: null,
-      denyPulse: {},
       showSettings: false,
       gameStatus: "playing",
     });
@@ -196,9 +183,6 @@ export const projectileSizeSelector = (state: GameStore) =>
 export const enemyUpgradesSelector = (state: GameStore) => state.enemyUpgrades;
 export const initializeGameStateSelector = (state: GameStore) =>
   state.initializeGameState;
-export const denyPulseSelector = (state: GameStore) => state.denyPulse;
-export const incrementDenyPulseSelector = (state: GameStore) =>
-  state.incrementDenyPulse;
 export const isPageVisibleSelector = (state: GameStore) => state.isPageVisible;
 export const selectedTowerTypeToPlaceSelector = (state: GameStore) =>
   state.selectedTowerTypeToPlace;

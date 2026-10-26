@@ -116,7 +116,7 @@ export const HUDLoading: FC<HUDLoadingProps> = ({
     >
       <div
         className={cn(
-          "flex flex-col items-end gap-2 p-4 sm:p-8",
+          "flex flex-col items-end gap-2 p-12 sm:p-8",
           closing ? "ui-loading-slide-out" : "ui-loading-slide-in"
         )}
         style={style}
@@ -125,7 +125,10 @@ export const HUDLoading: FC<HUDLoadingProps> = ({
         <UITypography variant="body" className="text-muted-foreground">
           {message ?? t("common.loading")}
         </UITypography>
-        <div className="ui-loading-bar h-0.5 w-40 text-primary" aria-hidden />
+        <div
+          className="ui-loading-bar h-0.5 w-[150%] text-primary"
+          aria-hidden
+        />
       </div>
     </HUDWrapper>
   );

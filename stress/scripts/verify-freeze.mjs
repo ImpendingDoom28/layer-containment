@@ -60,7 +60,13 @@ const result = await page.evaluate(() => {
     const e = o.matrixWorld.elements;
     const r = m.elements;
     let d = 0;
-    for (let i = 0; i < 16; i++) d = Math.max(d, Math.abs(e[i] - r[i]));
+    for (let i = 0; i < 16; i++) {
+      const diff =
+        Number.isFinite(e[i]) && Number.isFinite(r[i])
+          ? Math.abs(e[i] - r[i])
+          : Infinity;
+      d = Math.max(d, diff);
+    }
     if (d > 1e-6) badNodes += 1;
     if (d > maxDiff) maxDiff = d;
   }

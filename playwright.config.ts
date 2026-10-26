@@ -13,8 +13,10 @@ const serverCommand = new URL(baseURL).port
 export default defineConfig({
   testDir: "./tests/e2e",
   // The stress scene has its own Playwright config (stress/playwright.config.ts)
-  // and dev server on port 5174, so it is excluded from the default suite.
-  testIgnore: /stress\.spec\.ts$/,
+  // and dev server on port 5174, so it is excluded from the default suite. The
+  // PWA suite (pwa/playwright.config.ts) needs a production build, so it is
+  // excluded here as well.
+  testIgnore: [/stress\.spec\.ts$/, /pwa\.spec\.ts$/],
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : "50%",

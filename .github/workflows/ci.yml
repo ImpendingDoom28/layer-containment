@@ -49,6 +49,13 @@ jobs:
       - name: E2E tests
         run: npm run test:e2e
 
+      # The PWA suite builds first, then serves the built app through
+      # `vite preview` (the config handles both) so the service worker
+      # registration guard (production + secure origin) holds — unlike the
+      # dev-server suite, which excludes pwa.spec.ts.
+      - name: PWA E2E tests
+        run: npm run test:e2e:pwa
+
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4

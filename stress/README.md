@@ -2,7 +2,7 @@
 
 A dedicated, unattended stress-test entry saturates the renderer and simulation
 on a generated `64x64` level: 4096 shader-compiled grid tiles, a 64-waypoint
-serpentine path (~2,080 strip segments, each a pair of box meshes), 150
+serpentine path (~2,080 strip segments baked into two merged meshes), 150
 pre-placed towers of all six types, and 20 waves totalling ~2,330 enemies. The
 run loops forever with a very high base health so it never ends, and a live
 overlay shows FPS, frame time, draw calls, triangles, JS heap, and wave/entity
@@ -117,13 +117,20 @@ p90 ≈68 FPS, and only ~6% of frames dip below 60 FPS).
   full snapshot array for AOE (the common single/beam/chain hits don't), and
   the per-frame `getEnemiesById` Map + per-enemy snapshot in the instanced
   projectile system is replaced by the pooled registry.
+- **Merged path mesh and frozen static subtrees.** The ~2,080 path-strip box
+  meshes are baked into two merged meshes (one per material color) via
+  `mergeGeometries`, and the static scene subtrees (grid tiles, ground sphere,
+  skybox, merged path, end building) are baked and frozen with
+  `freezeSubtree()`, so the per-frame matrix walk skips ~72% of scene nodes.
+  `stress/scripts/matrix-walk-bench.mjs` measures the saving (~0.28 ms/frame)
+  and `stress/scripts/verify-freeze.mjs` checks the baked matrices match a
+  fresh recompute.
 
 These are the classic game-dev mechanics applied here: **object pooling**
 (projectiles were already pooled; now enemies too), **instancing / shared
-geometry & materials** (enemies, rocks, path strips), and **spatially cheap
-targeting reads** (pooled registry instead of fresh snapshot arrays).
-Remaining known costs (for future work): the ~4,200 path-strip box meshes and
-~450 star meshes are still individual draw calls — collapsing them into
-instanced/merged meshes is the next GPU-side win, and targeting could
-additionally be throttled to ~10–20 Hz or use a uniform-grid spatial hash to
-avoid O(towers × enemies) scans.
+geometry & materials** (enemies, rocks, merged path mesh), and **spatially
+cheap targeting reads** (pooled registry instead of fresh snapshot arrays).
+Remaining known costs (for future work): the ~450 star meshes are still
+individual draw calls — collapsing them into an instanced mesh is the next
+GPU-side win, and targeting could additionally be throttled to ~10–20 Hz or
+use a uniform-grid spatial hash to avoid O(towers × enemies) scans.

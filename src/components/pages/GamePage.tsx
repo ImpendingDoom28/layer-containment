@@ -33,6 +33,7 @@ import { useWaveSystem } from "../../core/hooks/useWaveSystem";
 import { useLevelSystem } from "../../core/hooks/useLevelSystem";
 import { useUpgradesSystem } from "../../core/hooks/useUpgradesSystem";
 import { useHeldClose } from "../../core/hooks/useHeldClose";
+import { useLoadingTransition } from "../../core/hooks/useLoadingTransition";
 import { useMenuParallax } from "../../core/hooks/useMenuParallax";
 import {
   hasSeenControlsIntro,
@@ -150,21 +151,13 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
   const isGameReady =
     isGameConfigLoaded && (isMenu || isLevelConfigLoaded) && areShadersReady;
 
-  const [isShowingLoading, setIsShowingLoading] = useState(true);
-  const [isClosingLoading, setIsClosingLoading] = useState(false);
-
   // Loading stays mounted while its text slides out; only the finished
   // animation (or the reduced-motion path) unmounts it.
-  useEffect(() => {
-    if (isGameReady && isShowingLoading) {
-      setIsClosingLoading(true);
-    }
-  }, [isGameReady, isShowingLoading]);
-
-  const handleLoadingExited = useCallback(() => {
-    setIsShowingLoading(false);
-    setIsClosingLoading(false);
-  }, []);
+  const {
+    isShowing: isShowingLoading,
+    isClosing: isClosingLoading,
+    onExited: handleLoadingExited,
+  } = useLoadingTransition(isGameReady);
 
   const loadingMessage = (() => {
     if (!isGameConfigLoaded) {

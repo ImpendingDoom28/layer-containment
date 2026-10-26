@@ -192,13 +192,13 @@
 }
 
 /*
- * Loading screen text: slides in from the right and back out to the right
- * (the corner it lives in), unlike panels which come from their side.
+ * Loading screen text: slides in from the left and out to the right,
+ * passing through the corner it lives in.
  */
 @keyframes ui-loading-slide-in {
   from {
     opacity: 0;
-    transform: translateX(1.5rem);
+    transform: translateX(-1.5rem);
   }
   to {
     opacity: 1;

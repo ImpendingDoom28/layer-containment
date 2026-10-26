@@ -105,7 +105,7 @@ export const HUDLoading: FC<HUDLoadingProps> = ({
   return (
     <HUDWrapper
       className={cn(
-        "items-end justify-end bg-card",
+        "items-end justify-end bg-black",
         // While sliding out the overlay must not keep swallowing clicks
         // even if it lingers for a moment.
         closing && "pointer-events-none",
@@ -122,10 +122,10 @@ export const HUDLoading: FC<HUDLoadingProps> = ({
         style={style}
         onAnimationEnd={handleAnimationEnd}
       >
-        <div className="ui-loading-bar h-0.5 w-40 text-primary" aria-hidden />
         <UITypography variant="body" className="text-muted-foreground">
           {message ?? t("common.loading")}
         </UITypography>
+        <div className="ui-loading-bar h-0.5 w-40 text-primary" aria-hidden />
       </div>
     </HUDWrapper>
   );

@@ -5,11 +5,23 @@ import { getEffectiveTowerCombatStats } from "../../core/relayBuffs";
 import type { Tower as TowerInstance } from "../../core/types/game";
 import { useTranslationInCanvas } from "../../core/i18n/useTranslationInCanvas";
 import {
+  towerBaseRadiusSelector,
+  towerHeightSelector,
   towerSellPriceMultiplierSelector,
+  tileSizeSelector,
   towerTypesSelector,
   useGameStore,
 } from "../../core/stores/useGameStore";
-import { towersSelector, useLevelStore } from "../../core/stores/useLevelStore";
+import {
+  gridSizeSelector,
+  towersSelector,
+  useLevelStore,
+} from "../../core/stores/useLevelStore";
+import {
+  flatFieldToSphereSurface,
+  getPlanetRadius,
+  getSurfaceQuaternion,
+} from "../../utils/planetSurfaceMapping";
 import { UIHoldButton } from "../ui/buttons/UIHoldButton";
 import {
   UICard,
@@ -17,6 +29,7 @@ import {
   UICardFooter,
   UICardHeader,
 } from "../ui/UICard";
+import { UITable, UITableCell, UITableRow } from "../ui/UITable";
 import { UITypography } from "../ui/UITypography";
 import { GUIWrapper } from "./GUIWrapper";
 
@@ -35,6 +48,10 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
   );
   const towerTypes = useGameStore(towerTypesSelector);
   const towers = useLevelStore(towersSelector);
+  const towerHeight = useGameStore(towerHeightSelector);
+  const towerBaseRadius = useGameStore(towerBaseRadiusSelector);
+  const tileSize = useGameStore(tileSizeSelector);
+  const gridSize = useLevelStore(gridSizeSelector);
 
   const sellPrice = Math.floor(tower.cost * towerSellPriceMultiplier);
 
@@ -70,6 +87,35 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
     ];
   }, [tower, towerTypes, towers, t]);
 
+  const footing = useMemo(() => {
+    const { surfacePoint, normal } = flatFieldToSphereSurface(
+      tower.x,
+      tower.z,
+      getPlanetRadius(gridSize, tileSize)
+    );
+    return {
+      position: surfacePoint,
+      quaternion: getSurfaceQuaternion(normal),
+    };
+  }, [tower.x, tower.z, gridSize, tileSize]);
+
+  // Mirrors the Tower entity's geometry: base (0.3H) + body (0.7H) + top.
+  const towerTopY = useMemo(() => {
+    const topScale = tower.topScale ?? 1;
+    switch (tower.topShape ?? "cone") {
+      case "cone":
+        return towerHeight * 1.3 * topScale;
+      case "sphere":
+        return towerHeight + towerBaseRadius * 0.8 * topScale;
+      case "cylinder":
+        return towerHeight * 1.2 * topScale;
+      case "coil":
+        return towerHeight * 1.25 * topScale;
+      default:
+        return towerHeight * 1.1 * topScale;
+    }
+  }, [tower.topShape, tower.topScale, towerHeight, towerBaseRadius]);
+
   const onStopPropagation = (
     event:
       | ThreeEvent<MouseEvent>
@@ -81,13 +127,18 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
 
   return (
     <group
-      position={[tower.x, 1.6, tower.z]}
+      position={footing.position}
+      quaternion={footing.quaternion}
       onClick={onStopPropagation}
       onPointerDown={onStopPropagation}
     >
-      <GUIWrapper position={[0, 0.48, 0]} distanceFactor={11}>
+      <GUIWrapper position={[0, towerTopY + 0.15, 0]} distanceFactor={11}>
+        {/* drei centers this element on the anchor point; shifting it up by
+            half its height puts its bottom edge there, so the panel floats
+            above the tower instead of covering it. */}
         <div
-          className="pointer-events-auto w-56"
+          className="pointer-events-auto w-64"
+          style={{ transform: "translateY(-50%)" }}
           onPointerDown={onStopPropagation}
         >
           <UICard
@@ -100,32 +151,30 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
               </UITypography>
             </UICardHeader>
 
-            <UICardContent className="gap-2">
-              <UITypography variant="small" className="text-muted-foreground">
-                {t(`towers.${tower.type}.description`)}
-              </UITypography>
-
-              <div className="grid grid-cols-3 gap-1.5">
+            <UICardContent>
+              <UITable>
                 {stats.map((stat) => (
-                  <div
+                  <UITableRow
                     key={stat.label}
-                    className="border border-border/70 bg-muted/40 px-1.5 py-1.5"
+                    className="border-b border-border/50 last:border-b-0"
                   >
-                    <UITypography
+                    <UITableCell
+                      align="left"
                       variant="verySmall"
-                      className="text-muted-foreground uppercase tracking-[0.12em]"
+                      className="text-muted-foreground uppercase tracking-[0.1em]"
                     >
                       {stat.label}
-                    </UITypography>
-                    <UITypography
+                    </UITableCell>
+                    <UITableCell
+                      align="right"
                       variant="small"
-                      className="mt-1 font-semibold"
+                      className="font-semibold"
                     >
                       {stat.value}
-                    </UITypography>
-                  </div>
+                    </UITableCell>
+                  </UITableRow>
                 ))}
-              </div>
+              </UITable>
             </UICardContent>
 
             <UICardFooter className="p-0 border-border/70">

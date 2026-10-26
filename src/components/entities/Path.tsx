@@ -1,15 +1,17 @@
-import { FC, memo, useEffect, useMemo } from "react";
+import { FC, memo, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 
 import {
   BoxGeometry,
   BufferGeometry,
   Matrix4,
   MeshStandardMaterial,
+  Object3D,
   Quaternion,
   Vector3,
 } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
 
+import { freezeSubtree } from "../../utils/freezeSubtree";
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import { GUINextWavePreview } from "../gui/GUINextWavePreview";
 import {
@@ -73,7 +75,7 @@ export const Path: FC<PathProps> = memo(({ pathIndex }) => {
   const sphereStrips = useMemo((): SphereStripMesh[] => {
     if (!path || segments.length === 0) return [];
     const out: SphereStripMesh[] = [];
-    segments.forEach((segment, segIdx) => {
+    segments.forEach((segment) => {
       const safeLen = Math.max(segment.length, 1e-8);
       const steps = Math.max(1, Math.ceil(safeLen / tileSize));
       const subLen = safeLen / steps;
@@ -244,12 +246,26 @@ export const Path: FC<PathProps> = memo(({ pathIndex }) => {
     [pathMeshes, pathMaterials]
   );
 
+  const mergedMeshRefs = useRef<Array<Object3D | null>>([]);
+  useLayoutEffect(() => {
+    mergedMeshRefs.current.forEach((mesh) => {
+      if (mesh) freezeSubtree(mesh);
+    });
+  }, [pathMeshes]);
+
   if (!path) return null;
 
   return (
     <group name="path">
-      {pathMeshes.map((m) => (
-        <mesh key={m.name} geometry={m.geometry} material={m.material} />
+      {pathMeshes.map((m, index) => (
+        <mesh
+          key={m.name}
+          ref={(el) => {
+            mergedMeshRefs.current[index] = el;
+          }}
+          geometry={m.geometry}
+          material={m.material}
+        />
       ))}
       {portalProps && (
         <Portal

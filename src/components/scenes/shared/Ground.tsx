@@ -1,6 +1,6 @@
-import { FC, memo, useMemo } from "react";
+import { FC, memo, useLayoutEffect, useMemo, useRef } from "react";
 
-import { MeshStandardMaterial, SphereGeometry } from "three";
+import { Mesh, MeshStandardMaterial, SphereGeometry } from "three";
 
 import {
   gridSizeSelector,
@@ -14,6 +14,7 @@ import {
   getPlanetRadius,
   getPlanetSphereMeshPositionY,
 } from "../../../utils/planetSurfaceMapping";
+import { freezeSubtree } from "../../../utils/freezeSubtree";
 import { getCssColorValue } from "../../ui/lib/cssUtils";
 
 const SPHERE_WIDTH_SEGMENTS = 100;
@@ -39,8 +40,14 @@ export const Ground: FC = memo(() => {
     });
   }, []);
 
+  const meshRef = useRef<Mesh>(null);
+  useLayoutEffect(() => {
+    if (meshRef.current) freezeSubtree(meshRef.current);
+  }, [radius]);
+
   return (
     <mesh
+      ref={meshRef}
       name="ground"
       geometry={geometry}
       material={material}

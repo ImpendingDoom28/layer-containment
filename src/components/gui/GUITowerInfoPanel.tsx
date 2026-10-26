@@ -1,9 +1,4 @@
-import {
-  FC,
-  MouseEvent as ReactMouseEvent,
-  PointerEvent as ReactPointerEvent,
-  useMemo,
-} from "react";
+import { FC, MouseEvent as ReactMouseEvent, useMemo } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 
 import { getEffectiveTowerCombatStats } from "../../core/relayBuffs";
@@ -21,7 +16,6 @@ import {
   UICardContent,
   UICardFooter,
   UICardHeader,
-  UICardTitle,
 } from "../ui/UICard";
 import { UITypography } from "../ui/UITypography";
 import { GUIWrapper } from "./GUIWrapper";
@@ -42,92 +36,68 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
   const towerTypes = useGameStore(towerTypesSelector);
   const towers = useLevelStore(towersSelector);
 
-  const sellPrice = useMemo(() => {
-    return Math.floor(tower.cost * towerSellPriceMultiplier);
-  }, [tower.cost, towerSellPriceMultiplier]);
+  const sellPrice = Math.floor(tower.cost * towerSellPriceMultiplier);
 
   const stats = useMemo(() => {
     if (tower.type === "relay") {
       const tpl = towerTypes?.relay;
-      const dmgPct = (tpl?.relayNeighborDamageBonusFraction ?? 0) * 100;
-      const rngPct = (tpl?.relayNeighborRangeBonusFraction ?? 0) * 100;
+      const damagePct = (tpl?.relayNeighborDamageBonusFraction ?? 0) * 100;
+      const rangePct = (tpl?.relayNeighborRangeBonusFraction ?? 0) * 100;
       return [
         { label: t("towerInfo.role"), value: t("towerInfo.support") },
         {
           label: t("towerInfo.neighborBuff"),
           value: t("towerInfo.neighborBuffValue", {
-            damage: dmgPct.toFixed(0),
-            range: rngPct.toFixed(0),
+            damage: damagePct.toFixed(0),
+            range: rangePct.toFixed(0),
           }),
         },
         { label: t("towerInfo.adjacency"), value: t("towerInfo.fourNeighbor") },
       ];
     }
 
-    const eff = towerTypes
+    const effective = towerTypes
       ? getEffectiveTowerCombatStats(tower, towers, towerTypes)
       : { damage: tower.damage, range: tower.range };
 
     return [
-      { label: t("towerInfo.damage"), value: eff.damage.toFixed(1) },
-      { label: t("towerInfo.range"), value: eff.range.toFixed(1) },
-      { label: t("towerInfo.fireRate"), value: `${tower.fireRate.toFixed(1)}s` },
+      { label: t("towerInfo.damage"), value: effective.damage.toFixed(1) },
+      { label: t("towerInfo.range"), value: effective.range.toFixed(1) },
+      {
+        label: t("towerInfo.fireRate"),
+        value: `${tower.fireRate.toFixed(1)}s`,
+      },
     ];
   }, [tower, towerTypes, towers, t]);
 
-  const onStopScenePropagation = (
-    event: ThreeEvent<MouseEvent> | ThreeEvent<PointerEvent>
-  ) => {
-    event.stopPropagation();
-  };
-
-  const onStopPanelPropagation = (
+  const onStopPropagation = (
     event:
+      | ThreeEvent<MouseEvent>
+      | ThreeEvent<PointerEvent>
       | ReactMouseEvent<HTMLDivElement | HTMLButtonElement>
-      | ReactPointerEvent<HTMLDivElement | HTMLButtonElement>
   ) => {
-    event.preventDefault();
     event.stopPropagation();
   };
-
-  const yOffset = 1.6;
-  const worldPosition: [number, number, number] = [tower.x, yOffset, tower.z];
 
   return (
     <group
-      position={worldPosition}
-      onClick={onStopScenePropagation}
-      onPointerDown={onStopScenePropagation}
+      position={[tower.x, 1.6, tower.z]}
+      onClick={onStopPropagation}
+      onPointerDown={onStopPropagation}
     >
       <GUIWrapper position={[0, 0.48, 0]} distanceFactor={11}>
         <div
-          className="pointer-events-auto w-52"
-          onPointerDown={onStopPanelPropagation}
+          className="pointer-events-auto w-56"
+          onPointerDown={onStopPropagation}
         >
           <UICard
             size="sm"
             className="border border-border/80 bg-card/95 shadow-panel backdrop-blur-sm"
           >
             <UICardHeader className="border-b border-border/70">
-              <UICardTitle className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <UITypography
-                    variant="verySmall"
-                    className="text-primary uppercase tracking-[0.22em]"
-                  >
-                    {t("towerInfo.selectedTower")}
-                  </UITypography>
-                  <UITypography variant="medium" className="mt-1 font-semibold">
-                    {t(`towers.${tower.type}.name`)}
-                  </UITypography>
-                </div>
-                <UITypography
-                  variant="verySmall"
-                  className="shrink-0 text-muted-foreground uppercase tracking-[0.18em]"
-                >
-                  #{tower.id}
-                </UITypography>
-              </UICardTitle>
+              <UITypography variant="medium" className="font-semibold">
+                {t(`towers.${tower.type}.name`)}
+              </UITypography>
             </UICardHeader>
 
             <UICardContent className="gap-2">
@@ -139,11 +109,11 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
                 {stats.map((stat) => (
                   <div
                     key={stat.label}
-                    className="border border-border/70 bg-muted/40 px-2 py-1.5"
+                    className="border border-border/70 bg-muted/40 px-1.5 py-1.5"
                   >
                     <UITypography
                       variant="verySmall"
-                      className="text-muted-foreground uppercase tracking-[0.16em]"
+                      className="text-muted-foreground uppercase tracking-[0.12em]"
                     >
                       {stat.label}
                     </UITypography>

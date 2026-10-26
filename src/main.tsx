@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { i18n } from "./core/i18n/i18n";
 import "./styles/index.css";
 import { App } from "./App";
+import { registerServiceWorker } from "./core/pwa/registerServiceWorker";
 import { AppRouter } from "./core/router";
 import { useSettingsStore } from "./core/stores/useSettingsStore";
 
@@ -27,3 +28,6 @@ void i18n.changeLanguage(useSettingsStore.getState().language);
 const rootElement = document.getElementById("root")!;
 rootElement.dataset.testid = "smoke-ready";
 ReactDOM.createRoot(rootElement).render(<Game />);
+
+// PWA: cache the app shell for offline loads (production builds only).
+registerServiceWorker();

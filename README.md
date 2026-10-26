@@ -47,7 +47,8 @@ A 3D tower defense game built with React, Tailwind CSS, and React Three Fiber.
 - **Explicit loading flow** - Full-screen black loading HUD while game and level configs load: the loading text in the bottom-right corner with an indeterminate loading bar (the animated SYSTEMS ONLINE badge line) below it, which slides in from the left on mount and slides out to the right before unmounting (via a shared `useLoadingTransition` hook that keeps the overlay mounted until the exit finishes); `isGameConfigLoaded` and `isLevelConfigLoaded` exposed from core hooks for UI coordination
 - **Simulation vs React frame order** - Wave spawning, tower combat, and instanced projectiles read `useGameStore.getState()` inside R3F `useFrame` so gameplay matches Zustand immediately after tab visibility changes (before the next React commit refreshes hook closures)
 - **Desktop app (Electron)** - The game can be packaged as a native desktop application (Windows `.exe`/NSIS installer, macOS `.dmg`/`.app`, Linux AppImage/deb) and distributed outside a browser (e.g. through Steam). The packaged app serves the built `dist/` from a local loopback HTTP server (`http://127.0.0.1`, random port) instead of `file://`, so Web Workers, config fetches, and WebGL behave exactly like the web build. The renderer stays fully sandboxed (contextIsolation on, no Node integration, no `webSecurity` relaxation); links open in the OS browser
-- **Playwright smoke coverage** - Canvas-aware E2E tests cover menu-to-game flow, first-tower placement, first-wave start, and editor route loading
+- **PWA (installable web app)** - The game is a progressive web app: `public/manifest.webmanifest` declares the app identity (name, theme color, standalone display) and 192/512px icons in both `any` and `maskable` purposes, and `index.html` links the manifest plus an `apple-touch-icon` and `theme-color` meta. A service worker (`public/sw.js`) precaches the app shell (HTML, manifest, icons) at install, serves navigations network-first with an offline fallback to the cached shell, and serves other same-origin assets cache-first with a background refresh — so the game loads offline after the first online visit. Registration (`src/core/pwa/registerServiceWorker.ts`) runs only in production builds on secure origins (https or localhost), so the dev server and the packaged desktop app are unaffected. Browsers can offer "Install app"; the installed app opens in a standalone window. `public/_headers` sets the manifest's `Content-Type` to `application/manifest+json` for the Netlify deployment (some browsers, e.g. Firefox, need the right MIME type to install)
+- **Playwright smoke coverage** - Canvas-aware E2E tests cover menu-to-game flow, first-tower placement, first-wave start, and editor route loading; a separate PWA suite (`npm run test:e2e:pwa`, run against `vite preview` because service workers need a production build) verifies the manifest, icon delivery, and service worker registration
 - **Localization (i18next)** - All in-game UI text is rendered through locale keys (no hardcoded strings). A language selector in Settings → General switches the whole app live; English is the default and Russian is the first alternate language. The choice persists to localStorage (settings store) and is applied before the first render on load. Locales live in `src/core/i18n/locales/` — `en` is the reference shape (`as const`) that drives TypeScript-checked `t()` keys, and new languages are validated against it by the locale parity tests (missing or misspelled keys fail those tests). Plurals follow i18next suffix rules (`_other`, and `_one/_few/_many` for Russian). React components use `useTranslation`; R3F canvas components use the context-free `useTranslationInCanvas` hook, and non-React code (e.g. upgrade summaries) uses the shared `i18n` singleton from `src/core/i18n/i18n.ts`
 
 ## Getting Started
@@ -115,6 +116,14 @@ npm run test:e2e
 ```
 
 The Playwright config targets `http://localhost:5173`, reuses an existing local dev server when one is already running, and otherwise starts `npm run dev` automatically. Canvas interactions use a fixed `1280x720` viewport with shared coordinate fixtures from `tests/e2e/fixtures/canvasPoints.ts`.
+
+A separate PWA suite verifies the web app manifest, icon delivery, and service worker registration:
+
+```bash
+npm run test:e2e:pwa
+```
+
+It runs against a production build (`vite preview` on port 5198, built and started automatically) because the service worker only registers in production builds on secure origins — the dev-server suite excludes `pwa.spec.ts` for the same reason.
 
 ### Vitest + RTTR Unit Tests
 

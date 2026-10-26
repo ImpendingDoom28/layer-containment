@@ -1,6 +1,14 @@
-import { FC, memo, useMemo } from "react";
+import { FC, memo, useEffect, useMemo } from "react";
 
-import { Quaternion, Vector3 } from "three";
+import {
+  BoxGeometry,
+  BufferGeometry,
+  Matrix4,
+  MeshStandardMaterial,
+  Quaternion,
+  Vector3,
+} from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
 
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import { GUINextWavePreview } from "../gui/GUINextWavePreview";
@@ -27,15 +35,22 @@ import { getPathRenderSegments } from "../../utils/pathUtils";
 import { Portal } from "./Portal";
 import { EndBuilding } from "./EndBuilding";
 
+const UNIT_SCALE = new Vector3(1, 1, 1);
+
 type PathProps = {
   pathIndex: number;
 };
 
 type SphereStripMesh = {
-  key: string;
   position: Vector3;
   quaternion: Quaternion;
   chunkLength: number;
+};
+
+type MergedPathMesh = {
+  name: string;
+  geometry: BufferGeometry;
+  material: MeshStandardMaterial;
 };
 
 export const Path: FC<PathProps> = memo(({ pathIndex }) => {
@@ -81,7 +96,6 @@ export const Path: FC<PathProps> = memo(({ pathIndex }) => {
           radius
         );
         out.push({
-          key: `path-${pathIndex}-seg-${segIdx}-step-${j}`,
           position: pos,
           quaternion: quat,
           chunkLength: subLen,
@@ -93,25 +107,14 @@ export const Path: FC<PathProps> = memo(({ pathIndex }) => {
 
   const cornerTiles = useMemo(() => {
     if (!path) return [];
-    return path.map((wp, index) => {
-      const body = flatFieldToSphereTilePose(
+    return path.map((wp) =>
+      flatFieldToSphereTilePose(
         wp.x,
         wp.z,
         radius,
         wp.y + pathYOffset + 0.01
-      );
-      const border = flatFieldToSphereTilePose(
-        wp.x,
-        wp.z,
-        radius,
-        wp.y + pathYOffset + 0.01
-      );
-      return {
-        key: `path-${pathIndex}-corner-${index}`,
-        body: body,
-        border: border,
-      };
-    });
+      )
+    );
   }, [path, pathIndex, radius, pathYOffset]);
 
   const portalProps = useMemo(() => {
@@ -159,35 +162,94 @@ export const Path: FC<PathProps> = memo(({ pathIndex }) => {
     };
   }, [path, radius]);
 
+  const pathMaterials = useMemo(
+    () => ({
+      gray500: new MeshStandardMaterial({
+        color: getCssColorValue("scene-gray-500"),
+      }),
+      gray600: new MeshStandardMaterial({
+        color: getCssColorValue("scene-gray-600"),
+      }),
+    }),
+    []
+  );
+
+  // The path is static per level, so its ~2,000 scene-graph nodes
+  // (group + two meshes per strip step, plus corner tiles) are baked into
+  // two merged meshes — one per material color — which the renderer walks
+  // once per frame instead of thousands of times.
+  const pathMeshes = useMemo((): MergedPathMesh[] => {
+    if (!path || (sphereStrips.length === 0 && cornerTiles.length === 0))
+      return [];
+
+    const bake = (
+      width: number,
+      height: number,
+      depth: number,
+      position: Vector3,
+      quaternion: Quaternion
+    ): BufferGeometry =>
+      new BoxGeometry(width, height, depth).applyMatrix4(
+        new Matrix4().compose(position, quaternion, UNIT_SCALE)
+      );
+
+    const gray500: BufferGeometry[] = [];
+    const gray600: BufferGeometry[] = [];
+    for (const strip of sphereStrips) {
+      gray500.push(
+        bake(strip.chunkLength, 0.02, pathWidth, strip.position, strip.quaternion)
+      );
+      gray600.push(
+        bake(
+          strip.chunkLength,
+          0.01,
+          pathWidth + 0.05,
+          strip.position,
+          strip.quaternion
+        )
+      );
+    }
+    for (const corner of cornerTiles) {
+      gray600.push(
+        bake(tileSize + 0.05, 0.01, tileSize + 0.05, corner.position, corner.quaternion)
+      );
+      gray500.push(
+        bake(tileSize, 0.02, tileSize, corner.position, corner.quaternion)
+      );
+    }
+
+    const merge = (
+      name: string,
+      list: BufferGeometry[],
+      material: MeshStandardMaterial
+    ): MergedPathMesh | null => {
+      if (list.length === 0) return null;
+      const geometry = mergeGeometries(list);
+      list.forEach((g) => g.dispose());
+      return { name, geometry, material };
+    };
+
+    return [
+      merge("path-strips", gray500, pathMaterials.gray500),
+      merge("path-base", gray600, pathMaterials.gray600),
+    ].filter((m): m is MergedPathMesh => m !== null);
+  }, [path, sphereStrips, cornerTiles, pathWidth, tileSize, pathMaterials]);
+
+  useEffect(
+    () => () => {
+      pathMeshes.forEach((m) => m.geometry.dispose());
+      pathMaterials.gray500.dispose();
+      pathMaterials.gray600.dispose();
+    },
+    [pathMeshes, pathMaterials]
+  );
+
   if (!path) return null;
 
   return (
     <group name="path">
-      {sphereStrips.map((strip) => (
-        <group key={strip.key}>
-          <mesh position={strip.position} quaternion={strip.quaternion}>
-            <boxGeometry args={[strip.chunkLength, 0.02, pathWidth]} />
-            <meshStandardMaterial color={getCssColorValue("scene-gray-500")} />
-          </mesh>
-
-          <mesh position={strip.position} quaternion={strip.quaternion}>
-            <boxGeometry args={[strip.chunkLength, 0.01, pathWidth + 0.05]} />
-            <meshStandardMaterial color={getCssColorValue("scene-gray-600")} />
-          </mesh>
-        </group>
-      ))}
-      {cornerTiles.map((c) => (
-        <group key={c.key}>
-          <mesh position={c.body.position} quaternion={c.body.quaternion}>
-            <boxGeometry args={[tileSize + 0.05, 0.01, tileSize + 0.05]} />
-            <meshStandardMaterial color={getCssColorValue("scene-gray-600")} />
-          </mesh>
-
-          <mesh position={c.border.position} quaternion={c.border.quaternion}>
-            <boxGeometry args={[tileSize, 0.02, tileSize]} />
-            <meshStandardMaterial color={getCssColorValue("scene-gray-500")} />
-          </mesh>
-        </group>
+      {pathMeshes.map((m) => (
+        <mesh key={m.name} geometry={m.geometry} material={m.material} />
       ))}
       {portalProps && (
         <Portal

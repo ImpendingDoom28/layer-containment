@@ -2,11 +2,13 @@ import {
   ARROW_MOVES,
   CAMERA_MOVE_BINDINGS,
   CHORD_FORBIDDEN_CODES,
+  CONTROL_SCHEME_PRESETS,
   DEFAULT_KEYBINDINGS,
   KEYBINDING_BY_KEY,
   KEY_CODE_LABELS,
   MODIFIER_CODES,
   type CameraMove,
+  type ControlSchemeId,
   type KeybindingDefinition,
   type KeybindingEvent,
   type KeybindingKey,
@@ -88,6 +90,18 @@ export const resolveKeybinding = (
     ? stored
     : DEFAULT_KEYBINDINGS[definition.key];
 };
+
+/**
+ * Whether a binding set is exactly one of the named scheme presets (used by
+ * the Settings UI to highlight the matching scheme).
+ */
+export const matchesControlSchemePreset = (
+  config: Partial<KeybindingsConfig>,
+  scheme: ControlSchemeId
+): boolean =>
+  (Object.keys(CONTROL_SCHEME_PRESETS[scheme]) as KeybindingKey[]).every(
+    (key) => config[key] === CONTROL_SCHEME_PRESETS[scheme][key]
+  );
 
 export const formatKeyCode = (code: string): string =>
   code

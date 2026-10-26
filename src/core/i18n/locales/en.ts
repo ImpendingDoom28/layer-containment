@@ -15,6 +15,11 @@ export const en = {
     controls: "Controls",
     reset: "Reset",
     pressAKey: "Press a key…",
+    controlScheme: "Control scheme",
+    schemes: {
+      keyboard: "Keyboard",
+      mobile: "Touch (mobile)",
+    },
   },
   controls: {
     cameraForward: "Move forward",

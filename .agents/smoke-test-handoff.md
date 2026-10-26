@@ -12,6 +12,7 @@
   - **`tests/e2e/gameplay.spec.ts`**: Basic Tower placement via fixed canvas coordinates, first wave start (`1 / 7`)
   - **`tests/e2e/editor.spec.ts`**: `/editor` route (`editor-canvas`, `Level`, `Waves`, `Publish`)
   - **`tests/e2e/mobile.spec.ts`**: mobile layout at a 375x667 viewport — main menu fits the viewport, in-game HUD uses a bottom shop bar (scrollbar hidden) + top stats strip (card background) with the mobile menu button inside the strip, a tower can be selected and deselected from the bottom bar (placement is not covered at this viewport — the fixed camera does not frame the game field), and the game menu opens from the mobile menu button
+  - **`tests/e2e/controlSchemes.spec.ts`**: Settings → Controls scheme switcher (`control-scheme-select`) — switching Keyboard ↔ Touch (mobile) applies each preset to the binding rows and persists the scheme to `containment-layer-settings-v1`; per-key rebinding survives a scheme switch and Reset returns to the *active scheme's* preset; on a 375x667 viewport with the Touch scheme the in-game D-pad (`mobile-dpad`, six `mobile-dpad-*` buttons, bottom-left above the shop bar) appears, and it disappears with the Keyboard scheme
 - Shared placement helpers: `tests/e2e/fixtures/towerPlacement.ts` (`onPlaceBasicTower`, `onPlaceMultipleBasicTowers`); coordinates in `tests/e2e/fixtures/canvasPoints.ts` (`1280x720` viewport)
 - The Empower smoke test uses `test.setTimeout(180_000)` and a 120s wait for the modal after wave 1 ends
 

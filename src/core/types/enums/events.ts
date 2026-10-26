@@ -18,6 +18,11 @@ export const GameEvent = {
   UI_ACTION_HOLD_START: "ui_action_hold_start",
   UI_ACTION_HOLD_END: "ui_action_hold_end",
   UI_ACTION_HOLD_ABORT: "ui_action_hold_abort",
+  /**
+   * On-screen touch D-pad held/released a camera move (mobile control
+   * scheme). The camera consumes this in place of a physical key.
+   */
+  TOUCH_CAMERA_MOVE: "touch_camera_move",
 } as const;
 
 export type GameEvent = (typeof GameEvent)[keyof typeof GameEvent];

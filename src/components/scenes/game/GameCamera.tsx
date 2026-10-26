@@ -31,7 +31,9 @@ import {
   PAUSE_FOV_MIN,
 } from "../../../constants/pauseVisuals";
 import { getCameraMovesForEvent } from "../../../core/keybindings";
+import type { CameraMove } from "../../../core/keybindingsConstants";
 import {
+  controlSchemeSelector,
   keybindingsSelector,
   useSettingsStore,
 } from "../../../core/stores/useSettingsStore";
@@ -84,6 +86,7 @@ export const GameCamera = ({
   const shakeRemainingMsRef = useRef(0);
   const fovRef = useRef(PAUSE_FOV_BASE);
   const keybindings = useSettingsStore(keybindingsSelector);
+  const controlScheme = useSettingsStore(controlSchemeSelector);
   const reducedMotion = useReducedMotion();
 
   // The HUD denial shake is driven by `HudAnimationSystem` (DOM side); the
@@ -102,6 +105,29 @@ export const GameCamera = ({
     );
     return unsubscribe;
   }, []);
+
+  // On-screen D-pad (mobile control scheme): the pad holds/releases camera
+  // moves through the event emitter, the same source of truth as physical
+  // keys. Only wired while the mobile scheme is active so keyboard players
+  // don't pay for a dead listener.
+  useEffect(() => {
+    if (controlScheme !== "mobile") {
+      return;
+    }
+
+    const handleTouchMove = (data: { move: CameraMove; down: boolean }) => {
+      if (!data || shouldStopCamera) {
+        return;
+      }
+      moveState.current[data.move] = data.down;
+    };
+
+    const unsubscribe = gameEvents.on(
+      GameEvent.TOUCH_CAMERA_MOVE,
+      handleTouchMove
+    );
+    return unsubscribe;
+  }, [controlScheme, shouldStopCamera]);
 
   useEffect(() => {
     if (shouldStopCamera) {

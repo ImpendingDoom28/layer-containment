@@ -22,6 +22,11 @@ const ruValues = {
     controls: "Управление",
     reset: "Сбросить",
     pressAKey: "Нажмите клавишу…",
+    controlScheme: "Схема управления",
+    schemes: {
+      keyboard: "Клавиатура",
+      mobile: "Сенсорная (мобильная)",
+    },
   },
   controls: {
     cameraForward: "Двигаться вперёд",

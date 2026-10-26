@@ -100,19 +100,21 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
   }, [tower.x, tower.z, gridSize, tileSize]);
 
   // Mirrors the Tower entity's geometry: base (0.3H) + body (0.7H) + top.
+  // The body is a fixed towerHeight; topScale only scales the top, so keep
+  // the body contribution unscaled to match Tower.tsx.
   const towerTopY = useMemo(() => {
     const topScale = tower.topScale ?? 1;
     switch (tower.topShape ?? "cone") {
       case "cone":
-        return towerHeight * 1.3 * topScale;
+        return towerHeight + towerHeight * 0.3 * topScale;
       case "sphere":
         return towerHeight + towerBaseRadius * 0.8 * topScale;
       case "cylinder":
-        return towerHeight * 1.2 * topScale;
+        return towerHeight + towerHeight * 0.2 * topScale;
       case "coil":
-        return towerHeight * 1.25 * topScale;
+        return towerHeight + towerHeight * 0.25 * topScale;
       default:
-        return towerHeight * 1.1 * topScale;
+        return towerHeight + towerHeight * 0.1 * topScale;
     }
   }, [tower.topShape, tower.topScale, towerHeight, towerBaseRadius]);
 

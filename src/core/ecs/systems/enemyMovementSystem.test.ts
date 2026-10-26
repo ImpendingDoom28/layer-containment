@@ -73,13 +73,14 @@ describe("enemyMovementSystem", () => {
   it("advances an enemy along the path and writes hot motion", () => {
     const entity = enemyActions(testWorld).spawnEnemy(makeEnemy(1));
 
-    // speed 10, delta 0.2 -> progressDelta = (10 * 0.2) / 20 = 0.1
+    // speed 10 on the 10-unit path, delta 0.2 -> 2 world units of travel,
+    // which is 0.2 of the path's fraction
     run(0.2, 0);
 
     const motion = motionOf(entity);
     const pos = positionOf(entity);
-    expect(motion.pathProgress).toBeCloseTo(0.1);
-    expect(pos.x).toBeCloseTo(1);
+    expect(motion.pathProgress).toBeCloseTo(0.2);
+    expect(pos.x).toBeCloseTo(2);
     expect(pos.z).toBeCloseTo(0);
 
     // The cold state is untouched by per-frame movement.
@@ -92,11 +93,28 @@ describe("enemyMovementSystem", () => {
     const entity = enemyActions(testWorld).spawnEnemy(makeEnemy(1));
     entity.add(EnemySlow({ multiplier: 0.5, until: 100 }));
 
-    // effective speed = 10 * 0.5 = 5 -> progressDelta = (5 * 0.2) / 20 = 0.05
+    // effective speed = 10 * 0.5 = 5 -> 1 world unit of travel -> progress 0.1
     run(0.2, 0);
 
+    expect(motionOf(entity).pathProgress).toBeCloseTo(0.1);
+    expect(positionOf(entity).x).toBeCloseTo(1);
+  });
+
+  it("moves at the same world-space speed on a longer path", () => {
+    // 40-unit path: speed 10, delta 0.2 -> still 2 world units of travel,
+    // but only 0.05 of the path's fraction (the old divisor-based math
+    // moved 2x as far in world space on this path).
+    const longPath: PathWaypoint[][] = [
+      [
+        { x: 0, y: 0, z: 0 },
+        { x: 40, y: 0, z: 0 },
+      ],
+    ];
+    const entity = enemyActions(testWorld).spawnEnemy(makeEnemy(1));
+    run(0.2, 0, { ...defaultOptions(), pathWaypoints: longPath });
+
     expect(motionOf(entity).pathProgress).toBeCloseTo(0.05);
-    expect(positionOf(entity).x).toBeCloseTo(0.5);
+    expect(positionOf(entity).x).toBeCloseTo(2);
   });
 
   it("moves at full speed when the slow has expired, without clearing the state", () => {
@@ -110,7 +128,7 @@ describe("enemyMovementSystem", () => {
     // is the ApplySlowSystem's job. It moves at full speed this frame.
     expect(entity.get(EnemySlow)).toEqual({ multiplier: 0.5, until: 0.1 });
     // The enemy still moved this frame, at full speed.
-    expect(motionOf(entity).pathProgress).toBeCloseTo(0.1);
+    expect(motionOf(entity).pathProgress).toBeCloseTo(0.2);
   });
 
   it("does not write the cold trait for a healthy, unslowed, non-regenerating enemy", () => {
@@ -125,7 +143,7 @@ describe("enemyMovementSystem", () => {
     unsubscribe();
     expect(coldEvents).toBe(0);
     // Motion was still advanced.
-    expect(motionOf(entity).pathProgress).toBeCloseTo(0.1);
+    expect(motionOf(entity).pathProgress).toBeCloseTo(0.2);
   });
 
   it("clamps motion at the path end and fires the end callbacks exactly once", () => {

@@ -6,8 +6,9 @@ import { EnemySlow } from "../traits/slow";
 import { Position } from "../traits/position";
 import { effectActions } from "../actions/effectActions";
 import {
-  isAtPathEnd,
+  getPathLength,
   getPositionAlongMultiplePaths,
+  isAtPathEnd,
 } from "../../../utils/pathUtils";
 import {
   flatFieldToSphereSurface,
@@ -24,9 +25,6 @@ import { useGameStore } from "../../stores/useGameStore";
  * stays visually smooth.
  */
 const REGEN_TICK_INTERVAL = 0.1;
-
-/** Path progress divisor shared with the pre-existing movement math. */
-const PATH_PROGRESS_DIVISOR = 20;
 
 // Module-level scratch vectors: a single world, single system instance,
 // so they are safe to share.
@@ -52,6 +50,12 @@ export type EnemyMovementSystemOptions = {
 
 /**
  * Advances all enemies along their paths in a single batched pass.
+ *
+ * `pathProgress` is a fraction of the enemy's own path, so progress advances
+ * by `speed / pathLength` per second — a constant world-space speed
+ * regardless of how long the path (or its waypoint gaps) are. (Previously
+ * the fraction advanced by a fixed divisor of speed, making enemies move
+ * faster in world units on longer paths.)
  *
  * Writes only `EnemyMotion` (hot, unsubscribed by React) per frame; the
  * cold `EnemyState` is written by other systems on discrete events (regen
@@ -85,8 +89,11 @@ export const runEnemyMovementSystem = (
           ? state.speed * slow.multiplier
           : state.speed;
 
-      const progressDelta = (effectiveSpeed * delta) / PATH_PROGRESS_DIVISOR;
-      motion.pathProgress += progressDelta;
+      const path = pathWaypoints[state.pathIndex];
+      const pathLength = path ? getPathLength(path) : 0;
+      if (pathLength > 0) {
+        motion.pathProgress += (effectiveSpeed * delta) / pathLength;
+      }
 
       if (isAtPathEnd(motion.pathProgress)) {
         // Clamp the motion to the path end. The hasReachedEnd flag (hot
@@ -97,7 +104,7 @@ export const runEnemyMovementSystem = (
           state.pathIndex,
           1
         );
-        motion.pathProgress = Math.max(motion.pathProgress, 1);
+        motion.pathProgress = 1;
         position.x = endPos.x;
         position.y = endPos.y;
         position.z = endPos.z;

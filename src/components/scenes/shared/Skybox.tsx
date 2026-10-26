@@ -1,5 +1,8 @@
-import { FC, useMemo } from "react";
+import { FC, useLayoutEffect, useMemo, useRef } from "react";
 
+import type { Group } from "three";
+
+import { freezeSubtree } from "../../../utils/freezeSubtree";
 import { getCssColorValue } from "../../ui/lib/cssUtils";
 
 type SkyboxProps = {
@@ -45,8 +48,13 @@ export const Skybox: FC<SkyboxProps> = ({
     return positions;
   }, [starCount]);
 
+  const groupRef = useRef<Group>(null);
+  useLayoutEffect(() => {
+    if (groupRef.current) freezeSubtree(groupRef.current);
+  }, [starPositions]);
+
   return (
-    <group name="skybox">
+    <group name="skybox" ref={groupRef}>
       <mesh renderOrder={-1}>
         <sphereGeometry args={[SKYBOX_RADIUS, 32, 32]} />
         <meshBasicMaterial

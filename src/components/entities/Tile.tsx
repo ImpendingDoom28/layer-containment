@@ -1,7 +1,15 @@
-import { FC, memo, useCallback, useEffect, useMemo } from "react";
+import {
+  FC,
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react";
 
 import type { ThreeEvent } from "@react-three/fiber";
-import { MeshStandardMaterial } from "three";
+import { Mesh, MeshStandardMaterial } from "three";
 
 import {
   flatFieldToSphereTilePose,
@@ -21,6 +29,7 @@ import {
 import { hashGrid2D } from "../../core/tileGridHash";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import { createPlanetTileMaterial } from "../../utils/planetTileMaterial";
+import { freezeSubtree } from "../../utils/freezeSubtree";
 
 type PlacementHoverKey = "idle" | "canPlace" | "cannotPlace";
 
@@ -72,6 +81,11 @@ export const Tile: FC<TileProps> = memo(
         ),
       [gridX, gridZ, gridSize, tileSize, pathYOffset]
     );
+
+    const meshRef = useRef<Mesh>(null);
+    useLayoutEffect(() => {
+      if (meshRef.current) freezeSubtree(meshRef.current);
+    }, [planetPose]);
 
     const placementHoverKey = useMemo<PlacementHoverKey>(() => {
       if (!isHovered) return "idle";
@@ -188,6 +202,7 @@ export const Tile: FC<TileProps> = memo(
 
     return (
       <mesh
+        ref={meshRef}
         position={planetPose.position}
         quaternion={planetPose.quaternion}
         material={material}

@@ -2,7 +2,7 @@
 
 A dedicated, unattended stress-test entry saturates the renderer and simulation
 on a generated `64x64` level: 4096 shader-compiled grid tiles, a 64-waypoint
-serpentine path (~2,080 strip segments, each a pair of box meshes), 150
+serpentine path (~2,080 strip segments baked into two merged meshes), 150
 pre-placed towers of all six types, and 20 waves totalling ~2,330 enemies. The
 run loops forever with a very high base health so it never ends, and a live
 overlay shows FPS, frame time, draw calls, triangles, JS heap, and wave/entity
@@ -63,6 +63,8 @@ slower regime and not representative of the 60 FPS target.
 | `stress/scripts/dip-find.mjs [--metal] [--seconds N]` | Correlates JS longtasks and rAF hitches with game context (wave, enemies, projectiles, towers, upgrade gate) to identify the trigger of periodic frame drops. |
 | `stress/scripts/moving-camera.mjs [--metal]` | A/B for the "moving the camera with the mouse" case: an IDLE phase (static camera) then a MOVE phase (continuous mouse drag + WASD), reporting FPS/frame/draw/tri per phase plus the live culled-group fraction (marked entity roots; an unmarked control build falls back to mesh-owning groups). The static benchmarks never move the camera, so they are blind to per-frame work that only runs during motion. Exits nonzero if steady state is never reached or a phase samples invalid data. |
 | `stress/scripts/cpu-profile-moving.mjs [--metal]` | CDP `Profiler` (2000 samples/s) over a ~12 s window of continuous camera motion (same input pattern as `moving-camera.mjs`), so the top self-time functions reflect the moving-camera cost; writes `profiling/cpu-profile-moving-*.cpuprofile`. Exits nonzero if the scene never reaches steady state before the profile is taken. |
+| `stress/scripts/matrix-walk-bench.mjs [--metal]` | Direct microbenchmark of `scene.updateMatrixWorld()` — the per-frame scene-graph matrix walk — in the live stress scene: reports the average cost per call with the frozen-subtree optimization ON (app state) vs OFF (all nodes unfrozen), i.e. the freeze's per-frame CPU saving, measured without display-cap quantization. |
+| `stress/scripts/verify-freeze.mjs [--metal]` | Correctness gate for the frozen-subtree optimization: unfreezes the whole scene, recomputes all world matrices from scratch, and checks that every frozen node's baked `matrixWorld` matches the fresh recompute (max element diff), then saves a screenshot. Prints PASS/FAIL; a nonzero diff means a stale matrix (e.g. baked before R3F applied the transform). |
 
 The stress app exposes a small debug bridge on `window`
 (`__stressScene`, `__stressGl`, `__stressGameStore`, `__stressLevelStore`) and
@@ -115,13 +117,20 @@ p90 ≈68 FPS, and only ~6% of frames dip below 60 FPS).
   full snapshot array for AOE (the common single/beam/chain hits don't), and
   the per-frame `getEnemiesById` Map + per-enemy snapshot in the instanced
   projectile system is replaced by the pooled registry.
+- **Merged path mesh and frozen static subtrees.** The ~2,080 path-strip box
+  meshes are baked into two merged meshes (one per material color) via
+  `mergeGeometries`, and the static scene subtrees (grid tiles, ground sphere,
+  skybox, merged path, end building) are baked and frozen with
+  `freezeSubtree()`, so the per-frame matrix walk skips ~72% of scene nodes.
+  `stress/scripts/matrix-walk-bench.mjs` measures the saving (~0.28 ms/frame)
+  and `stress/scripts/verify-freeze.mjs` checks the baked matrices match a
+  fresh recompute.
 
 These are the classic game-dev mechanics applied here: **object pooling**
 (projectiles were already pooled; now enemies too), **instancing / shared
-geometry & materials** (enemies, rocks, path strips), and **spatially cheap
-targeting reads** (pooled registry instead of fresh snapshot arrays).
-Remaining known costs (for future work): the ~4,200 path-strip box meshes and
-~450 star meshes are still individual draw calls — collapsing them into
-instanced/merged meshes is the next GPU-side win, and targeting could
-additionally be throttled to ~10–20 Hz or use a uniform-grid spatial hash to
-avoid O(towers × enemies) scans.
+geometry & materials** (enemies, rocks, merged path mesh), and **spatially
+cheap targeting reads** (pooled registry instead of fresh snapshot arrays).
+Remaining known costs (for future work): the ~450 star meshes are still
+individual draw calls — collapsing them into an instanced mesh is the next
+GPU-side win, and targeting could additionally be throttled to ~10–20 Hz or
+use a uniform-grid spatial hash to avoid O(towers × enemies) scans.

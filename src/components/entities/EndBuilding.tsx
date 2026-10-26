@@ -1,6 +1,7 @@
-import { FC, memo } from "react";
-import type { Quaternion } from "three";
+import { FC, memo, useLayoutEffect, useRef } from "react";
+import type { Group, Quaternion } from "three";
 
+import { freezeSubtree } from "../../utils/freezeSubtree";
 import { getCssColorValue } from "../ui/lib/cssUtils";
 
 type EndBuildingProps = {
@@ -14,8 +15,14 @@ export const EndBuilding: FC<EndBuildingProps> = memo(
     const buildingAccent = getCssColorValue("scene-gray-200");
     const roofColor = getCssColorValue("scene-gray-300");
 
+    const groupRef = useRef<Group>(null);
+    useLayoutEffect(() => {
+      if (groupRef.current) freezeSubtree(groupRef.current);
+    }, [position, quaternion]);
+
     return (
       <group
+        ref={groupRef}
         position={position}
         {...(quaternion ? { quaternion } : {})}
       >

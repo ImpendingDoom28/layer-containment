@@ -1,9 +1,4 @@
----
-description: This rule is used then creating functionality with react-three-fiber for the best practices and optimizations for it.
-alwaysApply: false
----
-
-# Performance pitfalls
+# React Three Fiber: performance pitfalls
 
 ## Tips and Tricks
 

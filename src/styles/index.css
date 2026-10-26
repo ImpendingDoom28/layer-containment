@@ -338,6 +338,21 @@
   }
 }
 
+/*
+ * Mobile: menu panels are full-width below the `md` breakpoint, so the 3D
+ * tilt has no canvas to lean toward — it only skews the surface and visually
+ * pins the content to the hinged (left) edge. Without the transform the
+ * full-width panel reads as centered: equal padding on both sides and a flat,
+ * symmetric surface. Text alignment stays as-is; only the panel's position
+ * changes. `!important` beats the parallax transforms above (the origin
+ * utilities become moot without a transform).
+ */
+@media (max-width: 767px) {
+  .ui-menu-tilt {
+    transform: none !important;
+  }
+}
+
 @utility ui-menu-tilt-shadow-left {
   box-shadow: 24px 0 48px -12px oklch(0 0 0 / 0.6);
 }

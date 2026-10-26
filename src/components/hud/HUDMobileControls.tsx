@@ -1,4 +1,4 @@
-import { type FC, type PointerEvent, type ReactNode } from "react";
+import { useEffect, type FC, type PointerEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
@@ -62,9 +62,25 @@ export const HUDMobileControls: FC = () => {
   const showUpgradePanel = useUpgradeStore(pendingEnemyUpgradeGateSelector);
   const { shouldLockCamera } = useGameSystem();
 
-  // The inter-wave upgrade panel takes over the screen; hide the pad while it
-  // is up so it doesn't sit behind the modal.
-  if (!isMobile || controlScheme !== "mobile" || showUpgradePanel) {
+  const isVisible =
+    isMobile && controlScheme === "mobile" && !showUpgradePanel;
+
+  // If the pad disappears while a D-pad button is still held (upgrade panel
+  // opens, scheme switches, or a viewport change), the button's release
+  // handler can no longer fire. Release every move in the visibility cleanup
+  // so no stale move keeps the camera moving.
+  useEffect(() => {
+    if (!isVisible) {
+      return;
+    }
+    return () => {
+      for (const move of Object.keys(ICONS) as CameraMove[]) {
+        gameEvents.emit(GameEvent.TOUCH_CAMERA_MOVE, { move, down: false });
+      }
+    };
+  }, [isVisible]);
+
+  if (!isVisible) {
     return null;
   }
 

@@ -126,7 +126,20 @@ export const GameCamera = ({
       GameEvent.TOUCH_CAMERA_MOVE,
       handleTouchMove
     );
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      // The pad (or the scheme) can hide while a D-pad button is still held,
+      // so clear the flags it set instead of letting a stale move drive the
+      // camera.
+      moveState.current = {
+        forward: false,
+        backward: false,
+        left: false,
+        right: false,
+        up: false,
+        down: false,
+      };
+    };
   }, [controlScheme, shouldStopCamera]);
 
   useEffect(() => {

@@ -1,4 +1,10 @@
-import { FC, useState, type ReactNode } from "react";
+import {
+  FC,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import {
   ArrowLeft,
   Crosshair,
@@ -56,7 +62,11 @@ type AlmanacTabButtonProps = {
   label: string;
   icon: LucideIcon;
   active: boolean;
+  tabIndex: number;
+  id: string;
+  panelId: string;
   onSelect: (tab: AlmanacTab) => void;
+  onRef: (tab: AlmanacTab, element: HTMLButtonElement | null) => void;
 };
 
 const AlmanacTabButton: FC<AlmanacTabButtonProps> = ({
@@ -64,11 +74,20 @@ const AlmanacTabButton: FC<AlmanacTabButtonProps> = ({
   label,
   icon: TabIcon,
   active,
+  tabIndex,
+  id,
+  panelId,
   onSelect,
+  onRef,
 }) => (
   <UIButton
+    ref={(element) => onRef(tab, element)}
+    role="tab"
+    id={id}
+    aria-selected={active}
+    aria-controls={panelId}
+    tabIndex={tabIndex}
     onClick={() => onSelect(tab)}
-    aria-pressed={active}
     variant={active ? "default" : "ghost"}
     className="flex-1 gap-1.5 text-xs uppercase tracking-wider"
   >
@@ -243,10 +262,21 @@ const getTowerStatEntries: TowerStatBuilder = (towerConfig, t) => {
     }
   };
 
-  addEntry(t("almanac.tower.damage"), towerConfig.damage.toFixed(1));
-  addEntry(t("almanac.tower.range"), towerConfig.range.toFixed(1));
-  addEntry(t("almanac.tower.fireRate"), `${towerConfig.fireRate.toFixed(1)}s`);
-  addEntry(t("almanac.tower.targeting"), towerConfig.targeting);
+  // Non-attacking towers (e.g. the relay) have zero damage/range and a
+  // meaningless fire rate/targeting, so their attack-only rows are omitted.
+  const attacks = towerConfig.damage > 0;
+  if (attacks) {
+    addEntry(t("almanac.tower.damage"), towerConfig.damage.toFixed(1));
+    addEntry(t("almanac.tower.range"), towerConfig.range.toFixed(1));
+    addEntry(
+      t("almanac.tower.fireRate"),
+      `${towerConfig.fireRate.toFixed(1)}s`
+    );
+    addEntry(
+      t("almanac.tower.targeting.label"),
+      t(`almanac.tower.targeting.${towerConfig.targeting}`)
+    );
+  }
   if (towerConfig.slowAmount !== undefined) {
     addEntry(
       t("almanac.tower.slow"),
@@ -403,6 +433,13 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
   const enemyUpgrades = useGameStore(enemyUpgradesSelector);
   const discoveredEnemies = useAlmanacStore(discoveredEnemiesSelector);
   const [activeTab, setActiveTab] = useState<AlmanacTab>("enemies");
+  const tabRefs = useRef<Partial<Record<AlmanacTab, HTMLButtonElement>>>({});
+  const tabIds = {
+    enemies: "almanac-tab-enemies",
+    towers: "almanac-tab-towers",
+    upgrades: "almanac-tab-upgrades",
+  };
+  const panelId = "almanac-tabpanel";
 
   const enemyEntries = (
     enemyTypes
@@ -437,6 +474,38 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
     { tab: "towers", label: t("almanac.tabTowers"), icon: GitBranch },
     { tab: "upgrades", label: t("almanac.tabUpgrades"), icon: Zap },
   ];
+
+  const onSelectTab = (tab: AlmanacTab) => {
+    setActiveTab(tab);
+    tabRefs.current[tab]?.focus();
+  };
+
+  // Roving tabindex + arrow-key navigation per the WAI-ARIA tabs pattern:
+  // Home/End jump to the first/last tab, left/right move to the previous/next
+  // tab (wrapping) and focus it.
+  const handleTablistKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const order = tabButtons.map(({ tab }) => tab);
+    const index = order.indexOf(activeTab);
+    let nextIndex: number;
+    switch (event.key) {
+      case "ArrowLeft":
+        nextIndex = (index - 1 + order.length) % order.length;
+        break;
+      case "ArrowRight":
+        nextIndex = (index + 1) % order.length;
+        break;
+      case "Home":
+        nextIndex = 0;
+        break;
+      case "End":
+        nextIndex = order.length - 1;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    onSelectTab(order[nextIndex]);
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -549,6 +618,7 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
         <div
           role="tablist"
           aria-label={t("almanac.title")}
+          onKeyDown={handleTablistKeyDown}
           className="flex gap-1 rounded-md bg-muted/40 p-1"
         >
           {tabButtons.map(({ tab, label, icon }) => (
@@ -558,13 +628,21 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
               label={label}
               icon={icon}
               active={activeTab === tab}
-              onSelect={setActiveTab}
+              tabIndex={activeTab === tab ? 0 : -1}
+              id={tabIds[tab]}
+              panelId={panelId}
+              onSelect={onSelectTab}
+              onRef={(nextTab, element) => {
+                tabRefs.current[nextTab] = element;
+              }}
             />
           ))}
         </div>
 
         <div
           role="tabpanel"
+          id={panelId}
+          aria-labelledby={tabIds[activeTab]}
           className="min-h-0 flex-1 flex flex-col gap-4 overflow-y-auto pr-1"
         >
           {renderTabContent()}

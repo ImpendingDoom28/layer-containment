@@ -131,7 +131,11 @@ const ruValues = {
       damage: "Урон",
       range: "Дальность",
       fireRate: "Скорострельность",
-      targeting: "Целеуказание",
+      targeting: {
+        label: "Целеуказание",
+        nearest: "Ближайший",
+        furthest: "Дальнейший",
+      },
       slow: "Замедление",
       aoe: "Область",
       pierce: "Пронзание",

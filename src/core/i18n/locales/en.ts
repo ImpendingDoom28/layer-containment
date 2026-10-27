@@ -121,7 +121,11 @@ export const en = {
       damage: "Damage",
       range: "Range",
       fireRate: "Fire Rate",
-      targeting: "Targeting",
+      targeting: {
+        label: "Targeting",
+        nearest: "Nearest",
+        furthest: "Furthest",
+      },
       slow: "Slow",
       aoe: "Area",
       pierce: "Pierce",

@@ -77,21 +77,45 @@ test("opens the Almanac from the main menu, switches tabs, and returns", async (
   await expect(page.getByRole("heading", { name: "Almanac" })).toBeVisible();
   await expect(page.getByRole("tablist")).toBeVisible();
 
-  // The Enemies tab is shown by default.
-  await expect(page.getByRole("button", { name: "Enemies" })).toBeVisible();
+  // The Enemies tab is selected by default.
+  await expect(page.getByRole("tab", { name: "Enemies" })).toHaveAttribute(
+    "aria-selected",
+    "true"
+  );
 
   // Switch to the Towers tab: tower cards render with names from the config.
-  await page.getByRole("button", { name: "Towers" }).click();
+  await page.getByRole("tab", { name: "Towers" }).click();
+  await expect(page.getByRole("tab", { name: "Towers" })).toHaveAttribute(
+    "aria-selected",
+    "true"
+  );
   await expect(page.getByText("Basic Tower")).toBeVisible();
   await expect(page.getByText("Laser Tower")).toBeVisible();
 
+  // Non-attacking towers (relay) omit attack-only stats but keep their buff.
+  const relayCard = page
+    .getByText("Relay Tower", { exact: true })
+    .locator("xpath=ancestor::*[@data-slot='card'][1]");
+  await expect(relayCard.getByText("Neighbor buff")).toBeVisible();
+  await expect(relayCard.getByText("Fire Rate")).not.toBeVisible();
+
   // Switch to the Upgrades tab: upgrade cards render with names from the config.
-  await page.getByRole("button", { name: "Upgrades" }).click();
+  await page.getByRole("tab", { name: "Upgrades" }).click();
   await expect(page.getByText("Armored")).toBeVisible();
   await expect(page.getByText("Regenerating")).toBeVisible();
 
-  // Back to the Enemies tab.
-  await page.getByRole("button", { name: "Enemies" }).click();
+  // Back to the Enemies tab via arrow-key navigation.
+  await page.getByRole("tab", { name: "Upgrades" }).focus();
+  await page.keyboard.press("ArrowLeft");
+  await expect(page.getByRole("tab", { name: "Towers" })).toHaveAttribute(
+    "aria-selected",
+    "true"
+  );
+  await page.keyboard.press("ArrowLeft");
+  await expect(page.getByRole("tab", { name: "Enemies" })).toHaveAttribute(
+    "aria-selected",
+    "true"
+  );
 
   await page.locator('[data-slot="card-title"] button').first().click();
 

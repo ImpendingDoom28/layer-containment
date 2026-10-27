@@ -25,7 +25,7 @@ type ClosingView = "settings" | "almanac" | "levelPicker";
 
 type MenuAction = Omit<UIButtonProps, "children" | "onClick"> & {
   // Locale key of the button label.
-  labelKey: "menu.play" | "menu.enemyAlmanac" | "menu.settings" | "menu.levelCreator";
+  labelKey: "menu.play" | "menu.almanac" | "menu.settings" | "menu.levelCreator";
   onClick: () => void;
 };
 
@@ -74,7 +74,7 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
         variant: "default",
       },
       {
-        labelKey: "menu.enemyAlmanac",
+        labelKey: "menu.almanac",
         onClick: () => {
           cancelClose();
           onOpenAlmanac();

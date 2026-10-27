@@ -43,7 +43,7 @@ const ruValues = {
   },
   menu: {
     play: "Играть",
-    enemyAlmanac: "Алманах врагов",
+    almanac: "Алманах",
     settings: "Настройки",
     levelCreator: "Создатель уровней",
     systemsOnline: "Системы в норме",

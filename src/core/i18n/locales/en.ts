@@ -36,7 +36,7 @@ export const en = {
   },
   menu: {
     play: "Play",
-    enemyAlmanac: "Enemy Almanac",
+    almanac: "Almanac",
     settings: "Settings",
     levelCreator: "Level Creator",
     systemsOnline: "Systems Online",

@@ -26,21 +26,23 @@ export const getStackTierForEnemy = (
   return Math.min(n, 3) as EnemyUpgradeStackTier;
 };
 
+export const getTierRoman = (tier: EnemyUpgradeStackTier): string => {
+  switch (tier) {
+    case 1:
+      return "I";
+    case 2:
+      return "II";
+    case 3:
+      return "III";
+  }
+};
+
 export const getPickTierForUpgrade = (
   stack: readonly EnemyUpgradeId[],
   upgradeId: EnemyUpgradeId
 ): EnemyUpgradeStackTier => {
   const n = countUpgradePicks(stack, upgradeId);
   return Math.min(n + 1, 3) as EnemyUpgradeStackTier;
-};
-
-export const getPickTierForStackEntryIndex = (
-  stack: readonly EnemyUpgradeId[],
-  index: number
-): EnemyUpgradeStackTier => {
-  const id = stack[index];
-  return (countUpgradePicks(stack.slice(0, index), id) +
-    1) as EnemyUpgradeStackTier;
 };
 
 export const getTieredUpgradeEffect = (
@@ -132,6 +134,57 @@ export const formatTieredUpgradeSummary = (
     );
   }
   return parts.join(" · ");
+};
+
+export type UpgradeTotalEffect = {
+  rewardMultiplier: number;
+  healthMultiplier?: number;
+  speedMultiplier?: number;
+  regeneration?: number;
+  slowResistance?: number;
+};
+
+export const getTotalUpgradeEffectForStack = (
+  config: EnemyUpgradeConfig,
+  tier: EnemyUpgradeStackTier
+): UpgradeTotalEffect => {
+  // Mirrors how spawns apply the upgrade: HP/speed/regen/slow use the
+  // top-tier effect value, while gold stacks multiplicatively per pick.
+  const top = getTieredUpgradeEffect(config, tier);
+  let reward = 1;
+  for (let t = 1 as EnemyUpgradeStackTier; t <= tier; t++) {
+    reward *= getTieredUpgradeEffect(config, t).rewardMultiplier;
+  }
+  return {
+    rewardMultiplier: reward,
+    ...(top.healthMultiplier !== undefined &&
+      top.healthMultiplier !== 1 && { healthMultiplier: top.healthMultiplier }),
+    ...(top.speedMultiplier !== undefined &&
+      top.speedMultiplier !== 1 && { speedMultiplier: top.speedMultiplier }),
+    ...(top.regeneration !== undefined &&
+      top.regeneration > 0 && { regeneration: top.regeneration }),
+    ...(top.slowResistance !== undefined &&
+      top.slowResistance > 0 && { slowResistance: top.slowResistance }),
+  };
+};
+
+export const formatTotalUpgradeSummary = (
+  config: EnemyUpgradeConfig,
+  tier: EnemyUpgradeStackTier
+): string => {
+  if (tier <= 1) return formatTieredUpgradeSummary(config, tier);
+  const base = formatTieredUpgradeSummary(config, 1);
+  const total = formatTieredUpgradeSummary(config, tier);
+  return `${base} (${i18n.t("upgrade.total", { summary: total })})`;
+};
+
+export const getTotalRewardBonusPercentForStack = (
+  config: EnemyUpgradeConfig,
+  tier: EnemyUpgradeStackTier
+): number => {
+  return Math.round(
+    (getTotalUpgradeEffectForStack(config, tier).rewardMultiplier - 1) * 100
+  );
 };
 
 export const getTotalRewardMultiplierFromStack = (

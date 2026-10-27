@@ -5,10 +5,14 @@ import type { EnemyUpgradeConfig, EnemyUpgradeId } from "../core/types/game";
 import {
   countUpgradePicks,
   formatTieredUpgradeSummary,
+  formatTotalUpgradeSummary,
   getStackTierForEnemy,
   getTieredUpgradeEffect,
   getTierRewardBonusPercent,
+  getTierRoman,
+  getTotalRewardBonusPercentForStack,
   getTotalRewardMultiplierFromStack,
+  getTotalUpgradeEffectForStack,
   getUniqueUpgradeIdsInStackOrder,
 } from "./enemyUpgradeTierEffects";
 
@@ -163,5 +167,77 @@ describe("getTotalRewardMultiplierFromStack", () => {
       r1 * r2,
       5
     );
+  });
+});
+
+describe("getTotalUpgradeEffectForStack", () => {
+  it("uses the top-tier stat effect and stacked gold at tier 2", () => {
+    const total = getTotalUpgradeEffectForStack(armoredBase, 2);
+    expect(total.healthMultiplier).toBeCloseTo(1.575, 5);
+    expect(total.rewardMultiplier).toBeCloseTo(2.156, 5);
+  });
+
+  it("keeps single-pick values at tier 1", () => {
+    const total = getTotalUpgradeEffectForStack(armoredBase, 1);
+    expect(total.healthMultiplier).toBe(1.5);
+    expect(total.rewardMultiplier).toBe(1.4);
+  });
+
+  it("caps slow resistance at full immunity by tier 3", () => {
+    expect(getTotalUpgradeEffectForStack(slowResistanceBase, 3).slowResistance).toBe(1);
+    expect(getTotalUpgradeEffectForStack(slowResistanceBase, 2).slowResistance).toBeCloseTo(
+      0.66,
+      2
+    );
+  });
+
+  it("gets the same gold multiplier as the per-pick product", () => {
+    const stack: EnemyUpgradeId[] = ["armored", "armored"];
+    expect(
+      getTotalRewardMultiplierFromStack(stack, allUpgrades)
+    ).toBeCloseTo(
+      getTotalUpgradeEffectForStack(armoredBase, 2).rewardMultiplier,
+      5
+    );
+  });
+});
+
+describe("formatTotalUpgradeSummary", () => {
+  it("is the plain summary at tier 1", () => {
+    expect(formatTotalUpgradeSummary(armoredBase, 1)).toBe("+50% HP");
+    expect(formatTotalUpgradeSummary(slowResistanceBase, 1)).toBe(
+      "+25% slow resistance"
+    );
+  });
+
+  it("shows the per-pick summary plus the total in parentheses", () => {
+    expect(formatTotalUpgradeSummary(armoredBase, 2)).toBe(
+      "+50% HP (total +57% HP)"
+    );
+    expect(formatTotalUpgradeSummary(swiftBase, 2)).toBe(
+      "+30% speed (total +36% speed)"
+    );
+    expect(formatTotalUpgradeSummary(slowResistanceBase, 2)).toBe(
+      "+25% slow resistance (total +66% slow resistance)"
+    );
+    expect(formatTotalUpgradeSummary(slowResistanceBase, 3)).toBe(
+      "+25% slow resistance (total Slow immune)"
+    );
+  });
+});
+
+describe("getTotalRewardBonusPercentForStack", () => {
+  it("rounds the stacked gold bonus percentage", () => {
+    expect(getTotalRewardBonusPercentForStack(armoredBase, 1)).toBe(40);
+    expect(getTotalRewardBonusPercentForStack(armoredBase, 2)).toBe(116);
+    expect(getTotalRewardBonusPercentForStack(slowResistanceBase, 3)).toBe(353);
+  });
+});
+
+describe("getTierRoman", () => {
+  it("maps tiers to roman numerals", () => {
+    expect(getTierRoman(1)).toBe("I");
+    expect(getTierRoman(2)).toBe("II");
+    expect(getTierRoman(3)).toBe("III");
   });
 });

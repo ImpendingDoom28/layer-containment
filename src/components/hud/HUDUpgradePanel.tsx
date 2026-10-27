@@ -28,10 +28,14 @@ import {
   useUpgradeStore,
 } from "../../core/stores/useUpgradeStore";
 import {
-  formatTieredUpgradeSummary,
+  formatTotalUpgradeSummary,
   getPickTierForUpgrade,
+  getStackTierForEnemy,
   getTierRewardBonusPercent,
+  getTierRoman,
+  getTotalRewardBonusPercentForStack,
   getTotalRewardMultiplierFromStack,
+  getUniqueUpgradeIdsInStackOrder,
 } from "../../utils/enemyUpgradeTierEffects";
 import { cn } from "../ui/lib/twUtils";
 
@@ -53,17 +57,6 @@ const UpgradeIcon: FC<UpgradeIconProps> = ({ upgradeId, className, size }) => {
       return <Heart className={className} size={size} />;
     default:
       return null;
-  }
-};
-
-const getTierLabel = (tier: 1 | 2 | 3): string => {
-  switch (tier) {
-    case 1:
-      return "I";
-    case 2:
-      return "II";
-    case 3:
-      return "III";
   }
 };
 
@@ -199,7 +192,7 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
                 levelEnemyUpgradeStack,
                 upgradeId
               );
-              const tierSummary = formatTieredUpgradeSummary(
+              const tierSummary = formatTotalUpgradeSummary(
                 upgrade,
                 nextStackTier
               );
@@ -231,7 +224,7 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
                       className={`font-bold shrink-0 ${getTierColor(nextStackTier)}`}
                       variant="medium"
                     >
-                      {getTierLabel(nextStackTier)}
+                      {getTierRoman(nextStackTier)}
                     </UITypography>
                   </div>
 
@@ -254,6 +247,61 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
               );
             })}
           </div>
+
+          {levelEnemyUpgradeStack.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-border/70">
+              <UITypography
+                variant="verySmall"
+                className="text-muted-foreground uppercase tracking-[0.16em]"
+              >
+                {t("upgrade.selected")}
+              </UITypography>
+              <div className="mt-2 flex flex-row flex-wrap gap-2">
+                {getUniqueUpgradeIdsInStackOrder(levelEnemyUpgradeStack).map(
+                  (upgradeId) => {
+                    const upgrade = enemyUpgrades[upgradeId];
+                    if (!upgrade) return null;
+                    const stackTier = getStackTierForEnemy(
+                      upgradeId,
+                      levelEnemyUpgradeStack
+                    );
+                    return (
+                      <div
+                        key={upgradeId}
+                        className="flex items-center gap-2 rounded-md border border-border/70 bg-muted/35 px-2 py-1.5"
+                      >
+                        <UpgradeIcon
+                          upgradeId={upgradeId}
+                          className="text-muted-foreground shrink-0"
+                          size={14}
+                        />
+                        <UITypography
+                          variant="small"
+                          className="font-medium"
+                        >
+                          {t(`enemyUpgrades.${upgradeId}.name`)}{" "}
+                          <span className={getTierColor(stackTier)}>
+                            {getTierRoman(stackTier)}
+                          </span>
+                        </UITypography>
+                        <UITypography
+                          variant="verySmall"
+                          className="text-muted-foreground"
+                        >
+                          {t("upgrade.bonusGold", {
+                            percent: getTotalRewardBonusPercentForStack(
+                              upgrade,
+                              stackTier
+                            ),
+                          })}
+                        </UITypography>
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+            </div>
+          )}
         </UICardContent>
       </UICard>
     </div>

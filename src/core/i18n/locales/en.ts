@@ -159,6 +159,7 @@ export const en = {
     regen: "{{amount}} HP/s regen",
     slowImmune: "Slow immune",
     slowResistance: "+{{percent}}% slow resistance",
+    selected: "Selected upgrades",
   },
   towerInfo: {
     damage: "Damage",

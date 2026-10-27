@@ -19,11 +19,13 @@ import {
   levelEnemyUpgradeStackSelector,
   useUpgradeStore,
 } from "../../core/stores/useUpgradeStore";
-import { EnemyConfig, EnemyUpgradeStackTier } from "../../core/types/game";
+import { EnemyConfig } from "../../core/types/game";
 import { useTranslationInCanvas } from "../../core/i18n/useTranslationInCanvas";
 import {
-  getPickTierForStackEntryIndex,
+  getStackTierForEnemy,
+  getTierRoman,
   getTotalRewardMultiplierFromStack,
+  getUniqueUpgradeIdsInStackOrder,
 } from "../../utils/enemyUpgradeTierEffects";
 import {
   nextWaveReadySelector,
@@ -34,17 +36,6 @@ type EnemyPreviewModelProps = {
   enemyConfig: EnemyConfig;
   name: string;
   count: number;
-};
-
-const getStackTierRoman = (tier: EnemyUpgradeStackTier): string => {
-  switch (tier) {
-    case 1:
-      return "I";
-    case 2:
-      return "II";
-    case 3:
-      return "III";
-  }
 };
 
 const EnemyPreviewModel: FC<EnemyPreviewModelProps> = ({
@@ -200,27 +191,25 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
                   )}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {levelEnemyUpgradeStack.map((upgradeId, index) => {
-                    const upgrade = enemyUpgrades[upgradeId];
-                    if (!upgrade) return null;
-                    const pickTier = getPickTierForStackEntryIndex(
-                      levelEnemyUpgradeStack,
-                      index
-                    );
-                    return (
-                      <UITypography
-                        key={`${upgradeId}-${index}`}
-                        variant="verySmall"
-                        className="px-1.5 py-1 font-medium uppercase tracking-[0.14em] text-black"
-                        style={{
-                          backgroundColor: upgrade.indicatorColor,
-                        }}
-                      >
-                        {t(`enemyUpgrades.${upgradeId}.name`)}{" "}
-                        {getStackTierRoman(pickTier)}
-                      </UITypography>
-                    );
-                  })}
+                  {getUniqueUpgradeIdsInStackOrder(levelEnemyUpgradeStack).map(
+                    (upgradeId) => {
+                      const upgrade = enemyUpgrades[upgradeId];
+                      if (!upgrade) return null;
+                      return (
+                        <UITypography
+                          key={upgradeId}
+                          variant="verySmall"
+                          className="px-1.5 py-1 font-medium uppercase tracking-[0.14em] text-black"
+                          style={{
+                            backgroundColor: upgrade.indicatorColor,
+                          }}
+                        >
+                          {t(`enemyUpgrades.${upgradeId}.name`)}{" "}
+                          {getTierRoman(getStackTierForEnemy(upgradeId, levelEnemyUpgradeStack))}
+                        </UITypography>
+                      );
+                    }
+                  )}
                 </div>
               </div>
             )}

@@ -168,16 +168,6 @@ export const getTotalUpgradeEffectForStack = (
   };
 };
 
-export const formatTotalUpgradeSummary = (
-  config: EnemyUpgradeConfig,
-  tier: EnemyUpgradeStackTier
-): string => {
-  if (tier <= 1) return formatTieredUpgradeSummary(config, tier);
-  const base = formatTieredUpgradeSummary(config, 1);
-  const total = formatTieredUpgradeSummary(config, tier);
-  return `${base} (${i18n.t("upgrade.total", { summary: total })})`;
-};
-
 export const getTotalRewardBonusPercentForStack = (
   config: EnemyUpgradeConfig,
   tier: EnemyUpgradeStackTier

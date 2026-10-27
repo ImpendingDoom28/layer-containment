@@ -144,7 +144,6 @@ const ruValues = {
     regen: "Регенерация: {{amount}} ХП/с",
     slowImmune: "Иммунитет к замедлению",
     slowResistance: "+{{percent}}% сопротивления замедлению",
-    total: "всего {{summary}}",
     selected: "Выбранные усиления",
   },
   towerInfo: {

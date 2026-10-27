@@ -5,7 +5,6 @@ import type { EnemyUpgradeConfig, EnemyUpgradeId } from "../core/types/game";
 import {
   countUpgradePicks,
   formatTieredUpgradeSummary,
-  formatTotalUpgradeSummary,
   getStackTierForEnemy,
   getTieredUpgradeEffect,
   getTierRewardBonusPercent,
@@ -198,30 +197,6 @@ describe("getTotalUpgradeEffectForStack", () => {
     ).toBeCloseTo(
       getTotalUpgradeEffectForStack(armoredBase, 2).rewardMultiplier,
       5
-    );
-  });
-});
-
-describe("formatTotalUpgradeSummary", () => {
-  it("is the plain summary at tier 1", () => {
-    expect(formatTotalUpgradeSummary(armoredBase, 1)).toBe("+50% HP");
-    expect(formatTotalUpgradeSummary(slowResistanceBase, 1)).toBe(
-      "+25% slow resistance"
-    );
-  });
-
-  it("shows the per-pick summary plus the total in parentheses", () => {
-    expect(formatTotalUpgradeSummary(armoredBase, 2)).toBe(
-      "+50% HP (total +57% HP)"
-    );
-    expect(formatTotalUpgradeSummary(swiftBase, 2)).toBe(
-      "+30% speed (total +36% speed)"
-    );
-    expect(formatTotalUpgradeSummary(slowResistanceBase, 2)).toBe(
-      "+25% slow resistance (total +66% slow resistance)"
-    );
-    expect(formatTotalUpgradeSummary(slowResistanceBase, 3)).toBe(
-      "+25% slow resistance (total Slow immune)"
     );
   });
 });

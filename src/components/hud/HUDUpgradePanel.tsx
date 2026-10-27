@@ -28,7 +28,7 @@ import {
   useUpgradeStore,
 } from "../../core/stores/useUpgradeStore";
 import {
-  formatTotalUpgradeSummary,
+  formatTieredUpgradeSummary,
   getPickTierForUpgrade,
   getStackTierForEnemy,
   getTierRewardBonusPercent,
@@ -192,7 +192,7 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
                 levelEnemyUpgradeStack,
                 upgradeId
               );
-              const tierSummary = formatTotalUpgradeSummary(
+              const tierSummary = formatTieredUpgradeSummary(
                 upgrade,
                 nextStackTier
               );
@@ -250,10 +250,7 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
 
           {levelEnemyUpgradeStack.length > 0 && (
             <div className="mt-4 pt-3 border-t border-border/70">
-              <UITypography
-                variant="verySmall"
-                className="text-muted-foreground uppercase tracking-[0.16em]"
-              >
+              <UITypography variant="verySmall" className="text-muted-foreground">
                 {t("upgrade.selected")}
               </UITypography>
               <div className="mt-2 flex flex-row flex-wrap gap-2">

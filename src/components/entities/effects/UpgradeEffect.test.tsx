@@ -120,12 +120,35 @@ describe("UpgradeEffect", () => {
     );
 
     try {
-      // 1 heart + 2 energy particles vs 1 shield only
-      expect(getIndicatorMeshes(withRegen)).toHaveLength(3);
+      // 1 heart + 4 energy particles vs 1 shield only
+      expect(getIndicatorMeshes(withRegen)).toHaveLength(5);
       expect(getIndicatorMeshes(withoutRegen)).toHaveLength(1);
     } finally {
       withRegen.unmount();
       withoutRegen.unmount();
+    }
+  });
+
+  it("floats the glyph row above the enemy body", async () => {
+    useGameStore.setState({ enemyUpgrades: upgradeConfigs });
+    const renderer = await ReactThreeTestRenderer.create(
+      <UpgradeEffect
+        enemySize={0.8}
+        upgradeStacks={[{ id: "armored", tier: 1 }]}
+        getTimeScale={() => 1}
+      />
+    );
+
+    try {
+      // The body is a sphere of radius `enemySize` (its top is at y =
+      // enemySize); the glyph row group must sit strictly above it.
+      const groups = renderer.scene
+        .findAll((n) => n.type === "Group")
+        .map((n) => objectOf(n) as { position: { y: number } });
+      const glyphRow = groups.find((g) => g.position.y > 0.8);
+      expect(glyphRow?.position.y).toBeGreaterThan(0.8);
+    } finally {
+      renderer.unmount();
     }
   });
 
@@ -144,9 +167,9 @@ describe("UpgradeEffect", () => {
         await renderer.advanceFrames(1, 1);
       });
       const [glyph] = getIndicatorMeshes(renderer);
-      // Base glyph size is 0.36 * enemySize (pulse keeps it within +/-5%)
-      expect(glyph.scale.x).toBeGreaterThan(0.8 * 0.36 * 0.9);
-      expect(glyph.scale.x).toBeLessThan(0.8 * 0.36 * 1.1);
+      // Base glyph size is 0.62 * enemySize (pulse keeps it within +/-5%)
+      expect(glyph.scale.x).toBeGreaterThan(0.8 * 0.62 * 0.9);
+      expect(glyph.scale.x).toBeLessThan(0.8 * 0.62 * 1.1);
     } finally {
       renderer.unmount();
     }

@@ -57,8 +57,8 @@ const GEOMETRY_BY_ID: Record<EnemyUpgradeId, BufferGeometry> = {
 };
 
 const FALLBACK_GLYPH_COLOR = "#ffffff";
-const GLYPH_OPACITY = 0.85;
-const REGEN_PARTICLE_COUNT = 2;
+const GLYPH_OPACITY = 1;
+const REGEN_PARTICLE_COUNT = 4;
 
 // One material per color: every enemy sharing an upgrade picks the same
 // compiled program. Per-frame animation is done on the meshes (scale,
@@ -71,7 +71,7 @@ const getGlyphMaterial = (color: string): MeshStandardMaterial => {
     material = new MeshStandardMaterial({
       color,
       emissive: color,
-      emissiveIntensity: 0.9,
+      emissiveIntensity: 1.25,
       transparent: true,
       opacity: GLYPH_OPACITY,
       depthWrite: false,
@@ -89,8 +89,8 @@ const buildUpgradeLayout = (
   enemySize: number
 ): UpgradeLayout => {
   const totalGlyphs = upgradeStacks.reduce((sum, stack) => sum + stack.tier, 0);
-  const spacing = enemySize * 0.42;
-  const glyphSize = enemySize * 0.36;
+  const spacing = enemySize * 0.72;
+  const glyphSize = enemySize * 0.62;
 
   let cursor = (1 - totalGlyphs) / 2;
   let hasRegen = false;
@@ -169,19 +169,21 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
       }
 
       if (layout.hasRegen) {
-        // Rising green energy: particles loop bottom -> top around the body.
+        // Rising green energy: a stream loops from the enemy's base to just
+        // above its head, kept in front of the body (the billboard's local
+        // +z always faces the camera), growing and fading as it climbs.
         for (let i = 0; i < REGEN_PARTICLE_COUNT; i++) {
           const particle = particleRefs.current[i];
           if (!particle) continue;
-          const progress = (time * 0.5 + i * 0.5) % 1;
+          const progress = (time * 0.65 + i * (1 / REGEN_PARTICLE_COUNT)) % 1;
           particle.position.set(
-            Math.sin(time * 2 + i * 2.1) * layout.spacing * 0.3,
-            enemySize * (-0.2 + progress * 1.45),
-            0
+            Math.sin(time * 2 + i * 2.1) * enemySize * 0.3,
+            enemySize * (0.05 + progress * 1.1),
+            enemySize * 1.05
           );
-          particle.scale.setScalar(0.7 + progress * 1.1);
+          particle.scale.setScalar(0.8 + progress * 1.6);
           (particle.material as MeshStandardMaterial).opacity =
-            0.8 * Math.sin(progress * Math.PI);
+            0.95 * Math.sin(progress * Math.PI);
         }
       }
     });
@@ -189,24 +191,28 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
     if (layout.entries.length === 0) return null;
 
     return (
-      <group position={[0, enemySize * 0.35, 0]}>
-        <Billboard>
-          {layout.entries.map((entry) =>
-            entry.slots.map((x, index) => (
-              <mesh
-                key={`${entry.id}-${index}`}
-                ref={(el) => {
-                  const meshes = glyphRefs.current[entry.id] ?? [];
-                  meshes[index] = el;
-                  glyphRefs.current[entry.id] = meshes;
-                }}
-                position={[x, 0, 0]}
-                geometry={entry.geometry}
-                material={entry.material}
-              />
-            ))
-          )}
-        </Billboard>
+      <group>
+        {/* Glyph row: floats above the body (and the health bar), one glyph
+            per pick per upgrade. */}
+        <group position={[0, enemySize + 0.62, 0]}>
+          <Billboard>
+            {layout.entries.map((entry) =>
+              entry.slots.map((x, index) => (
+                <mesh
+                  key={`${entry.id}-${index}`}
+                  ref={(el) => {
+                    const meshes = glyphRefs.current[entry.id] ?? [];
+                    meshes[index] = el;
+                    glyphRefs.current[entry.id] = meshes;
+                  }}
+                  position={[x, 0, 0]}
+                  geometry={entry.geometry}
+                  material={entry.material}
+                />
+              ))
+            )}
+          </Billboard>
+        </group>
         {layout.hasRegen && (
           <Billboard>
             {particleRefs.current.map((_, index) => (
@@ -215,10 +221,10 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
                 ref={(el) => {
                   particleRefs.current[index] = el;
                 }}
-                radius={0.05}
+                radius={0.07}
                 color={layout.regenColor}
-                emissiveIntensity={1.2}
-                opacity={0.8}
+                emissiveIntensity={1.5}
+                opacity={0.9}
               />
             ))}
           </Billboard>

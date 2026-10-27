@@ -33,6 +33,11 @@ import { Skybox } from "../shared/Skybox";
 import { Light } from "../shared/Light";
 import { useTileOccupancyMasks } from "../../../core/hooks/utils/useTileOccupancyMasks";
 
+// The menu's tiles are purely visual; stable no-ops keep the memoized
+// `Grid` from re-rendering every time an ambient kill updates the stores.
+const noopPlaceTower = () => undefined;
+const noopSetHoveredTile = () => undefined;
+
 const selectWeightedEnemyType = (
   enemyWeights: Record<EnemyType, number> | null
 ): EnemyType => {
@@ -143,9 +148,9 @@ export const MainMenuScene: FC = () => {
           impossible in the menu, so the tiles are purely visual and get
           no-op interaction wiring. */}
       <Grid
-        placeTower={() => undefined}
+        placeTower={noopPlaceTower}
         hoveredTile={null}
-        setHoveredTile={() => undefined}
+        setHoveredTile={noopSetHoveredTile}
         occupancy={occupancy}
       />
 

@@ -30,6 +30,10 @@ vi.mock("../shared/Skybox", () => ({ Skybox: () => null }));
 vi.mock("../shared/Light", () => ({ Light: () => null }));
 vi.mock("../shared/Ground", () => ({ Ground: () => null }));
 vi.mock("../../entities/Path", () => ({ Path: () => null }));
+vi.mock("../../entities/Grid", () => ({ Grid: () => null }));
+vi.mock("../../entities/PlanetTileDecorations", () => ({
+  PlanetTileDecorations: () => null,
+}));
 vi.mock("../../entities/effects/CombatJuice", () => ({
   CombatJuice: () => {
     combatJuiceRendered();

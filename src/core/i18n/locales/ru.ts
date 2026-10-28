@@ -166,6 +166,7 @@ const ruValues = {
     bonusGold: "+{{percent}}% золота",
     hp: "+{{percent}}% здоровья",
     speed: "+{{percent}}% скорости",
+    count: "+{{percent}}% врагов",
     regen: "Регенерация: {{amount}} ХП/с",
     slowImmune: "Иммунитет к замедлению",
     slowResistance: "+{{percent}}% сопротивления замедлению",
@@ -345,6 +346,11 @@ const ruValues = {
     regenerating: {
       name: "Регенерация",
       description: "Восстанавливает 5 HP/сек",
+    },
+    reinforcements: {
+      name: "Подкрепления",
+      description:
+        "Каждая волна поставляет на 20% больше врагов. Уровень 2: +40%, уровень 3: +65%.",
     },
   },
   rewardText: "+${{amount}}",

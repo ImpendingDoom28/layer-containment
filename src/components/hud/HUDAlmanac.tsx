@@ -17,6 +17,7 @@ import {
   Radar,
   Skull,
   Snowflake,
+  Users,
   Waves,
   Wind,
   Zap,
@@ -372,6 +373,7 @@ const ALMANAC_UPGRADE_ICONS: Record<EnemyUpgradeId, LucideIcon> = {
   swift: Wind,
   slowResistance: Zap,
   regenerating: Heart,
+  reinforcements: Users,
 };
 
 type AlmanacUpgradeCardProps = {

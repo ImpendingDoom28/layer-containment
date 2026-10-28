@@ -40,7 +40,11 @@ export type SplitConfig = {
 
 // Enemy upgrade types
 export type EnemyUpgradeId =
-  "armored" | "swift" | "slowResistance" | "regenerating";
+  | "armored"
+  | "swift"
+  | "slowResistance"
+  | "regenerating"
+  | "reinforcements";
 
 export type EnemyUpgradeStackTier = 1 | 2 | 3;
 
@@ -52,6 +56,8 @@ export type EnemyUpgradeConfig = {
   rewardMultiplier: number;
   healthMultiplier?: number;
   speedMultiplier?: number;
+  /** Reinforcements: base fraction of extra enemies per wave (e.g. 0.2 = +20%). */
+  countGrowth?: number;
   resistances?: {
     slow?: number;
   };

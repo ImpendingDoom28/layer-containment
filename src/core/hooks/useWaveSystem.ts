@@ -27,6 +27,10 @@ import { useUpgradeStore } from "../stores/useUpgradeStore";
 import { useWaveStore } from "../stores/useWaveStore";
 import { GameEvent } from "../types/enums/events";
 import { gameEvents } from "../../utils/eventEmitter";
+import {
+  applyWaveEnemyCountMultiplier,
+  getWaveCountMultiplierForStack,
+} from "../../utils/waveEnemyCounts";
 import { enemyActions } from "../ecs/actions/enemyActions";
 
 type SpawnQueueItem = {
@@ -132,11 +136,14 @@ export const useWaveSystem = (gameState: GameState) => {
     const waveConfig = waveConfigs[currentWaveIndex];
     if (!waveConfig) return;
 
-    const availableEnemyTypes: WaveEnemyGroup[] = waveConfig.enemies.map(
-      (enemy) => ({
-        ...enemy,
-        count: enemy.count,
-      })
+    const enemyUpgrades = useGameStore.getState().enemyUpgrades;
+    const countMultiplier = getWaveCountMultiplierForStack(
+      waveUpgrades,
+      enemyUpgrades
+    );
+    const availableEnemyTypes: WaveEnemyGroup[] = applyWaveEnemyCountMultiplier(
+      waveConfig.enemies,
+      countMultiplier
     );
     const spawnQueue: SpawnQueueItem[] = [];
     let remainingEnemyCount = 0;

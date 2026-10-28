@@ -5,7 +5,14 @@ import {
   useState,
   type AnimationEvent,
 } from "react";
-import { Zap, Shield, Wind, Heart, type LucideProps } from "lucide-react";
+import {
+  Zap,
+  Shield,
+  Wind,
+  Heart,
+  Users,
+  type LucideProps,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type { EnemyUpgradeId } from "../../core/types/game";
@@ -55,6 +62,8 @@ const UpgradeIcon: FC<UpgradeIconProps> = ({ upgradeId, className, size }) => {
       return <Zap className={className} size={size} />;
     case "regenerating":
       return <Heart className={className} size={size} />;
+    case "reinforcements":
+      return <Users className={className} size={size} />;
     default:
       return null;
   }

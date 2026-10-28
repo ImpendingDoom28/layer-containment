@@ -28,6 +28,10 @@ import {
   getUniqueUpgradeIdsInStackOrder,
 } from "../../utils/enemyUpgradeTierEffects";
 import {
+  applyWaveEnemyCountMultiplier,
+  getWaveCountMultiplierForStack,
+} from "../../utils/waveEnemyCounts";
+import {
   nextWaveReadySelector,
   useWaveStore,
 } from "../../core/stores/useWaveStore";
@@ -110,6 +114,15 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
     return waveConfigs[nextWaveIndex];
   }, [shouldShow, currentWave, waveConfigs]);
 
+  const reinforcedGroups = useMemo(() => {
+    if (!nextWaveConfig) return [];
+    const multiplier = getWaveCountMultiplierForStack(
+      levelEnemyUpgradeStack,
+      enemyUpgrades
+    );
+    return applyWaveEnemyCountMultiplier(nextWaveConfig.enemies, multiplier);
+  }, [nextWaveConfig, levelEnemyUpgradeStack, enemyUpgrades]);
+
   const worldPosition = useMemo(() => {
     const path = pathWaypoints[pathIndex];
     const startPosition = path?.[0];
@@ -157,7 +170,7 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
           </UICardHeader>
           <UICardContent className="gap-2">
             <div className="flex flex-col gap-1.5">
-              {nextWaveConfig.enemies.map((enemyGroup, index) => {
+              {reinforcedGroups.map((enemyGroup, index) => {
                 const enemyConfig = enemyTypes?.[enemyGroup.type];
                 if (!enemyConfig) return null;
 

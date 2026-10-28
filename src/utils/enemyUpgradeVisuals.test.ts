@@ -37,6 +37,14 @@ const sampleUpgrades: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     rewardMultiplier: 1,
     indicatorColor: "#ffff00",
   },
+  reinforcements: {
+    id: "reinforcements",
+    name: "rf",
+    description: "",
+    displayRank: 2,
+    rewardMultiplier: 1,
+    indicatorColor: "#f97316",
+  },
 };
 
 describe("getUpgradeIndicatorColors", () => {

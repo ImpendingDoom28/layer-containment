@@ -21,6 +21,7 @@ import {
   type EnemyStateData,
 } from "../traits/enemy";
 import { Position, type PositionData } from "../traits/position";
+import { splitRequest } from "../traits/split";
 import { isBase } from "../traits/base";
 import { damageRequest } from "../traits/damage";
 import { slowRequest } from "../traits/slow";
@@ -119,6 +120,32 @@ export const enemyActions = createActions((world) => ({
       .readEach(([state]) => {
         if (state.health > 0) count += 1;
       });
+    return count;
+  },
+
+  /**
+   * Enemies still on the field: alive enemies plus deaths not yet settled
+   * (`requestEnemyDeath`) plus splitter deaths not yet split (`splitRequest`).
+   *
+   * `getLivingEnemyCount` (health > 0) goes to zero the frame a tower lands
+   * the killing blow — before the death system settles the kill and the split
+   * system spawns the children. Counting the pending requests too means the
+   * wave system only sees "the field is cleared up" once every death,
+   * including a splitter's children, has actually resolved. Read-only, cheap.
+   */
+  getRemainingEnemyCount: (): number => {
+    let count = 0;
+    world
+      .query(IsEnemy, EnemyState, EnemyMotion, Position)
+      .readEach(([state]) => {
+        if (state.health > 0) count += 1;
+      });
+    world.query(IsEnemy, requestEnemyDeath).readEach(() => {
+      count += 1;
+    });
+    world.query(splitRequest).readEach(() => {
+      count += 1;
+    });
     return count;
   },
 

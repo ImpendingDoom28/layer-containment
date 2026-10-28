@@ -42,7 +42,9 @@ export const useWaveSystem = (gameState: GameState) => {
   const { winGame, gameStatus: initialGameStatus } = gameState;
   const isPageVisible = useGameStore(isPageVisibleSelector);
   const pauseWhenTabHidden = useSettingsStore(pauseWhenTabHiddenSelector);
-  const getLivingEnemyCount = useActions(enemyActions).getLivingEnemyCount;
+  const getRemainingEnemyCount = useActions(
+    enemyActions
+  ).getRemainingEnemyCount;
 
   const totalWaves = useLevelStore(totalWavesSelector);
   const waveConfigs = useLevelStore(waveConfigsSelector);
@@ -147,10 +149,10 @@ export const useWaveSystem = (gameState: GameState) => {
     if (currentWave >= totalWaves) return;
     if (currentWave > 0) {
       if (spawnQueueIndexRef.current < spawnQueueRef.current.length) return;
-      if (getLivingEnemyCount() > 0) return;
+      if (getRemainingEnemyCount() > 0) return;
     }
     startNextWave();
-  }, [currentWave, totalWaves, startNextWave, getLivingEnemyCount]);
+  }, [currentWave, totalWaves, startNextWave, getRemainingEnemyCount]);
 
   const updateWaveSpawning = useCallback(
     (currentTime: number) => {
@@ -184,7 +186,7 @@ export const useWaveSystem = (gameState: GameState) => {
 
       const waveCleared =
         spawnQueueIndexRef.current >= spawnQueueRef.current.length &&
-        getLivingEnemyCount() === 0;
+        getRemainingEnemyCount() === 0;
       const nextWaveReady =
         currentWave === 0 || (currentWave < totalWaves && waveCleared);
       if (useWaveStore.getState().nextWaveReady !== nextWaveReady) {
@@ -194,7 +196,7 @@ export const useWaveSystem = (gameState: GameState) => {
       if (currentWave === 0 || currentWave > totalWaves) return;
 
       if (spawnQueueIndexRef.current >= spawnQueueRef.current.length) {
-        if (waveStartedRef.current && getLivingEnemyCount() === 0) {
+        if (waveStartedRef.current && getRemainingEnemyCount() === 0) {
           waveStartedRef.current = false;
           if (currentTime - lastSpawnTimeRef.current > 300) {
             if (currentWave < totalWaves) {
@@ -226,7 +228,7 @@ export const useWaveSystem = (gameState: GameState) => {
         spawnQueueIndexRef.current += 1;
       }
     },
-    [currentWave, totalWaves, winGame, addEnemy, getLivingEnemyCount]
+    [currentWave, totalWaves, winGame, addEnemy, getRemainingEnemyCount]
   );
 
   const getRemainingEnemiesInWave = useCallback((): number => {
@@ -234,9 +236,9 @@ export const useWaveSystem = (gameState: GameState) => {
     return (
       spawnQueueRef.current.length -
       spawnQueueIndexRef.current +
-      getLivingEnemyCount()
+      getRemainingEnemyCount()
     );
-  }, [currentWave, totalWaves, getLivingEnemyCount]);
+  }, [currentWave, totalWaves, getRemainingEnemyCount]);
 
   return {
     updateWaveSpawning,

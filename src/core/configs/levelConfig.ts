@@ -162,7 +162,7 @@ const projectileSchema: z.ZodType<Projectile> = z.object({
 });
 
 export type LevelConfigFiles =
-  "level_main" | "level_1" | "level_2" | "level_3" | "stress";
+  "level_main" | "level_1" | "level_2" | "level_3" | "level_testing" | "stress";
 
 export const levelConfigSchema = z.object({
   name: z.string().min(1),

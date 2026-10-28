@@ -66,3 +66,15 @@ export const onOpenEditor = async (page: Page) => {
     timeout: 20_000,
   });
 };
+
+export const onOpenTestingLevel = async (page: Page) => {
+  await page.goto("/testing-level");
+
+  await expect(page.getByTestId("testing-level-canvas")).toBeVisible({
+    timeout: 20_000,
+  });
+
+  await expect(page.getByTestId("hud-loading")).not.toBeVisible({
+    timeout: 20_000,
+  });
+};

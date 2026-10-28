@@ -5,6 +5,7 @@ import { MAX_GRID_SIZE, MIN_GRID_SIZE } from "../../utils/gridSizeLimits";
 import type {
   Building,
   Enemy,
+  EnemyUpgradeStack,
   PathWaypoint,
   Projectile,
   WaterBody,
@@ -108,6 +109,11 @@ const enemyUpgradeIdSchema = z.enum([
   "reinforcements",
 ]);
 
+const enemyUpgradeStackSchema: z.ZodType<EnemyUpgradeStack> = z.object({
+  id: enemyUpgradeIdSchema,
+  tier: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+});
+
 const enemySchema: z.ZodType<Enemy> = z.object({
   id: z.number(),
   type: enemyTypeSchema,
@@ -124,7 +130,7 @@ const enemySchema: z.ZodType<Enemy> = z.object({
   x: z.number(),
   z: z.number(),
   upgrades: z.array(enemyUpgradeIdSchema),
-  upgradeIndicatorColors: z.array(z.string()).optional(),
+  upgradeStacks: z.array(enemyUpgradeStackSchema).optional(),
   regeneration: z.number().optional(),
   slowResistance: z.number().optional(),
   healPulse: healPulseConfigSchema.optional(),
@@ -156,11 +162,7 @@ const projectileSchema: z.ZodType<Projectile> = z.object({
 });
 
 export type LevelConfigFiles =
-  | "level_main"
-  | "level_1"
-  | "level_2"
-  | "level_3"
-  | "stress";
+  "level_main" | "level_1" | "level_2" | "level_3" | "stress";
 
 export const levelConfigSchema = z.object({
   name: z.string().min(1),

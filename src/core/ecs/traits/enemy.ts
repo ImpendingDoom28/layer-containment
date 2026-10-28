@@ -4,6 +4,7 @@ import type {
   Enemy,
   EnemyType,
   EnemyUpgradeId,
+  EnemyUpgradeStack,
   HealPulseConfig,
   SplitConfig,
 } from "../../types/game";
@@ -34,7 +35,7 @@ export type EnemyStateData = {
   description?: string;
   pathIndex: number;
   upgrades: EnemyUpgradeId[];
-  upgradeIndicatorColors?: string[];
+  upgradeStacks?: EnemyUpgradeStack[];
   regeneration?: number;
   slowResistance?: number;
   nextHealPulseAt?: number;
@@ -114,7 +115,7 @@ export const toEnemySnapshot = (
   x: position.x,
   z: position.z,
   upgrades: state.upgrades,
-  upgradeIndicatorColors: state.upgradeIndicatorColors,
+  upgradeStacks: state.upgradeStacks,
   regeneration: state.regeneration,
   slowResistance: state.slowResistance,
   nextHealPulseAt: state.nextHealPulseAt,

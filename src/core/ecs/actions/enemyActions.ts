@@ -58,8 +58,8 @@ const enemyToState = (enemyData: Enemy): EnemyStateData => ({
   description: enemyData.description,
   pathIndex: enemyData.pathIndex,
   upgrades: [...enemyData.upgrades],
-  upgradeIndicatorColors: enemyData.upgradeIndicatorColors
-    ? [...enemyData.upgradeIndicatorColors]
+  upgradeStacks: enemyData.upgradeStacks
+    ? enemyData.upgradeStacks.map((stack) => ({ ...stack }))
     : undefined,
   regeneration: enemyData.regeneration,
   slowResistance: enemyData.slowResistance,
@@ -354,7 +354,12 @@ export const enemyActions = createActions((world) => ({
         expiresAt: Math.max(pending.expiresAt, slowUntil),
       });
     } else {
-      entity.add(slowRequest({ multiplier: effectiveSlowMultiplier, expiresAt: slowUntil }));
+      entity.add(
+        slowRequest({
+          multiplier: effectiveSlowMultiplier,
+          expiresAt: slowUntil,
+        })
+      );
     }
   },
 

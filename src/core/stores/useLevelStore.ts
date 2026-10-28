@@ -11,13 +11,12 @@ import type {
   WaveConfig,
 } from "../types/game";
 import type { LevelConfigData } from "../configs/levelConfig";
-import { getCssColorValue } from "../../components/ui/lib/cssUtils";
 import {
   getLevelGridOffset,
   withRecalculatedBuildingCoordinates,
   withRecalculatedWaterCoordinates,
 } from "../../utils/levelEditor";
-import { getUpgradeIndicatorColors } from "../../utils/enemyUpgradeVisuals";
+import { getUpgradeStacks } from "../../utils/upgradeStacks";
 import { enemyActions } from "../ecs/actions/enemyActions";
 import { splitRequest } from "../ecs/traits/split";
 import { world } from "../ecs/world";
@@ -88,9 +87,6 @@ const buildLevelConfigEnemies = (
   levelData: LevelConfigData,
   enemyTypes: NonNullable<
     ReturnType<typeof useGameStore.getState>["enemyTypes"]
-  >,
-  enemyUpgrades: NonNullable<
-    ReturnType<typeof useGameStore.getState>["enemyUpgrades"]
   >
 ): Enemy[] =>
   levelData.enemies.map((enemy) => ({
@@ -98,13 +94,7 @@ const buildLevelConfigEnemies = (
     ...enemy,
     pathIndex: enemy.pathIndex ?? 0,
     maxHealth: enemy.health,
-    upgradeIndicatorColors:
-      enemy.upgradeIndicatorColors ??
-      getUpgradeIndicatorColors(
-        enemy.upgrades,
-        enemyUpgrades,
-        getCssColorValue("scene-white")
-      ),
+    upgradeStacks: enemy.upgradeStacks ?? getUpgradeStacks(enemy.upgrades),
   }));
 
 export const useLevelStore = create<LevelStore>((set) => ({
@@ -121,11 +111,7 @@ export const useLevelStore = create<LevelStore>((set) => ({
     const actions = enemyActions(world);
 
     actions.clearAllEnemies();
-    for (const enemy of buildLevelConfigEnemies(
-      levelData,
-      enemyTypes,
-      enemyUpgrades
-    )) {
+    for (const enemy of buildLevelConfigEnemies(levelData, enemyTypes)) {
       actions.spawnEnemy(enemy);
     }
 

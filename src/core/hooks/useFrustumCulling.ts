@@ -70,10 +70,7 @@ const getSharedFrustum = (camera: Camera): SharedFrustum => {
   return shared;
 };
 
-const cameraChanged = (
-  camera: Camera,
-  shared: SharedFrustum
-): boolean =>
+const cameraChanged = (camera: Camera, shared: SharedFrustum): boolean =>
   shared.dirty ||
   !camera.position.equals(shared.lastPosition) ||
   !camera.quaternion.equals(shared.lastQuaternion) ||
@@ -88,7 +85,7 @@ const cameraChanged = (
  *
  * The bounding radius is measured once per group and re-measured whenever a
  * descendant transform or the child set changes (e.g. a heal ring scaling up,
- * an upgrade ring appearing), so a growing effect never outgrows its culling
+ * an upgrade glyph appearing), so a growing effect never outgrows its culling
  * sphere.
  */
 export const useFrustumCulling = (
@@ -119,10 +116,7 @@ export const useFrustumCulling = (
     // Every hook must rebuild its own margin-expanded hide frustum when the
     // shared view was rebuilt or its margin changed — only the first hook
     // rebuilds the shared frustum, the rest see `cameraChanged() === false`.
-    if (
-      state.hideVersion !== shared.version ||
-      state.hideMargin !== margin
-    ) {
+    if (state.hideVersion !== shared.version || state.hideMargin !== margin) {
       state.hideFrustum.copy(shared.show);
       expandFrustum(state.hideFrustum, margin);
       state.hideVersion = shared.version;

@@ -196,6 +196,31 @@ describe("3D asset showcase level", () => {
     }
   });
 
+  it("shows each of the four enemy upgrades at every tier (1-3) on basic enemies", () => {
+    // The upgrades showcase reuses the `basic` enemy so the upgrade glyphs
+    // (armored / swift / slow-resistance / regenerating) are shown against a
+    // known body, one column per tier. Reinforcements is a run/portal upgrade
+    // (rendered on the spawn portal, not on an enemy), so it is not here.
+    const basicWithUpgrades = level.enemies.filter(
+      (e) => e.type === "basic" && e.upgrades.length > 0
+    );
+    const upgradesShown = new Set(basicWithUpgrades.map((e) => e.upgrades[0]));
+    for (const id of ["armored", "swift", "slowResistance", "regenerating"]) {
+      expect(upgradesShown.has(id as never), `upgrade ${id} missing`).toBe(true);
+    }
+    // Each upgrade id appears exactly three times (tiers 1, 2, 3).
+    const count = (id: string) =>
+      level.enemies.filter(
+        (e) =>
+          e.type === "basic" &&
+          e.upgrades.length > 0 &&
+          e.upgrades.every((u) => u === (id as never))
+      ).length;
+    for (const id of ["armored", "swift", "slowResistance", "regenerating"]) {
+      expect(count(id), `upgrade ${id} should have 3 tiers`).toBe(3);
+    }
+  });
+
   it("is not playable: no waves and no enemy weights", () => {
     expect(level.waveConfigs.length).toBe(0);
     expect(level.enemyWeights).toBeNull();

@@ -4,6 +4,7 @@ import { useQuery } from "koota/react";
 import { LevelSystem } from "../../systems/LevelSystem";
 import { Grid } from "../../entities/Grid";
 import { Path } from "../../entities/Path";
+import { Portal } from "../../entities/Portal";
 import { Building } from "../../entities/Building";
 import { Water } from "../../entities/Water";
 import { Tower } from "../../entities/Tower";
@@ -47,10 +48,22 @@ const noopSetHoveredTile = () => undefined;
 const getFrozenSimulationTime: GetSimulationTime = () => 0;
 const getFrozenTimeScale: GetTimeScale = () => 0;
 
+// Reinforcements showcase portals: the level's own `Path` portal always renders
+// at tier 0 (no reinforcements picked for the run), so the upgrade's visual is
+// shown here instead — one portal per tier (1-3), spaced by one tile on the
+// projectile row's right side. They float at the in-game portal height.
+const REINFORCEMENT_PORTALS: { tier: number; position: [number, number, number] }[] = [
+  { tier: 1, position: [3.5, 0.5, 5.5] },
+  { tier: 2, position: [5.5, 0.5, 5.5] },
+  { tier: 3, position: [7.5, 0.5, 5.5] },
+];
+
 /**
  * Static 3D asset showcase. Loads `level_testing` — every enemy, tower and
  * its projectile, plus buildings, water, the path (spawn portal + end
- * building) — spaced by one tile so the whole roster is visible at once.
+ * building), and every enemy upgrade across all its tiers (armored, swift,
+ * slow-resistance, regenerating on `basic` enemies) plus the reinforcements
+ * portal tiers — spaced by one tile so the whole roster is visible at once.
  *
  * It deliberately does NOT mount `EntitiesSystem`, so none of the
  * movement / tower-fire / projectile / death / split systems run. Enemies and
@@ -125,6 +138,13 @@ export const TestingLevelScene: FC = () => {
       </group>
 
       <StaticProjectiles />
+
+      {/* Reinforcements upgrade shown as spawn portals: the in-game portal
+          warms from green toward orange and grows one pulsing ring per pick,
+          so tiers 1-3 are lined up to the right of the projectile row. */}
+      {REINFORCEMENT_PORTALS.map(({ tier, position }) => (
+        <Portal key={`reinforcement-${tier}`} position={position} reinforcementsTier={tier} />
+      ))}
     </>
   );
 };

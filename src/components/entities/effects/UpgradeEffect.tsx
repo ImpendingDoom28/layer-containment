@@ -43,6 +43,9 @@ const FALLBACK_COLOR = "#ffffff";
 const REGEN_PARTICLE_BASE = 3;
 const REGEN_RING_SCALE_BASE = 1.1;
 const REGEN_RING_SCALE_STEP = 0.15;
+// Mid radius of the ring annulus (see REGEN_RING_GEOMETRY); particles rise
+// from the band at this distance from the body.
+const REGEN_RING_RADIUS = 1.41;
 
 /**
  * White-to-transparent fade along the strap length (u=0 is the tail, u=1 the
@@ -239,25 +242,29 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
       }
 
       if (layout.hasRegen) {
-        // Ring unit radius is 0.9–1.5; the per-tier scale keeps the band
-        // outside the body and wider each tier.
+        // Per-tier ring scale keeps the band outside the body and wider each
+        // tier; the same value anchors the particle stream to the band.
+        const ringScale =
+          REGEN_RING_SCALE_BASE +
+          (layout.regenTier - 1) * REGEN_RING_SCALE_STEP;
         if (ringRef.current) {
-          const scale =
-            REGEN_RING_SCALE_BASE +
-            (layout.regenTier - 1) * REGEN_RING_SCALE_STEP;
-          ringRef.current.scale.setScalar(enemySize * scale * pulse);
+          ringRef.current.scale.setScalar(enemySize * ringScale * pulse);
         }
         const particleCount = layout.regenParticleCount;
         for (let i = 0; i < particleCount; i++) {
           const particle = particleRefs.current[i];
           if (!particle) continue;
           const progress = (time * 0.6 + i * (1 / particleCount)) % 1;
-          // Rise from the ring (feet plane, y = 0) up past the body top
-          // (y = 1.55*size) so the energy stream is visible from the camera.
+          // Particles rise from the ring's circumference (not the body core),
+          // each anchored to a fixed angle on the band and drifting outward a
+          // touch as it climbs, so the stream reads as emanating from the ring
+          // itself.
+          const angle = i * (Math.PI * 2 / particleCount) + time * 0.25;
+          const radius = enemySize * ringScale * (REGEN_RING_RADIUS + progress * 0.1);
           particle.position.set(
-            Math.sin(time * 2 + i * 2.1) * enemySize * 0.35,
-            enemySize * (0.05 + progress * 1.6),
-            Math.cos(time * 1.7 + i * 1.7) * enemySize * 0.35
+            Math.cos(angle) * radius,
+            enemySize * (0.06 + progress * 1.5),
+            Math.sin(angle) * radius
           );
           particle.scale.setScalar(0.7 + progress * 1.3);
           (particle.material as MeshStandardMaterial).opacity =
@@ -398,7 +405,9 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
                   (layout.regenTier - 1) * REGEN_RING_SCALE_STEP)
               }
               geometry={REGEN_RING_GEOMETRY}
-              material={getEmissiveMaterial(layout.regenColor, 0.5, 1.1)}
+              // Faint: the ring is a subtle emitter, not a bold green slab —
+              // the particle stream carries the "regenerating" read.
+              material={getEmissiveMaterial(layout.regenColor, 0.3, 0.7)}
             />
             {Array.from({ length: layout.regenParticleCount }, (_, index) => (
               <EmissiveParticleSphere

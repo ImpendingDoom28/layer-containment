@@ -41,12 +41,13 @@ extrudedShield.translate(0, 0, -0.07);
 export const SHIELD_PLATE_GEOMETRY: BufferGeometry = extrudedShield;
 export const GLOW_SHELL_GEOMETRY: BufferGeometry = new SphereGeometry(1, 10, 8);
 
-// Annulus (not a filled disc) so the ring reads as a ring from the top-down
-// camera: it is hidden where it sits under the body and only its outer band
-// is visible. The outer radius (1.5) is wider than the body radius (1) so the
-// ring clearly surrounds the enemy.
+// A thin annulus (not a bold band) so the ground ring stays a subtle
+// emitter rather than a cluttered green slab at tier 3. It is hidden where
+// it sits under the body and only a faint outer sliver shows; particles rise
+// from its circumference, so the ring's exact width matters less than its
+// presence. The outer radius (1.5) sits just past the body radius (1).
 export const REGEN_RING_GEOMETRY: BufferGeometry = new RingGeometry(
-  0.9,
+  1.32,
   1.5,
   24
 );

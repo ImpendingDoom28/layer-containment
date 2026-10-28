@@ -13,6 +13,10 @@ import {
   towerTypesSelector,
   useGameStore,
 } from "../../core/stores/useGameStore";
+import {
+  totalWavesSelector,
+  useLevelStore,
+} from "../../core/stores/useLevelStore";
 import { UIButton } from "../ui/buttons/UIButton";
 import {
   UICard,
@@ -26,6 +30,14 @@ import { UITable, UITableCell, UITableRow } from "../ui/UITable";
 import { UITypography } from "../ui/UITypography";
 import { cn } from "../ui/lib/twUtils";
 import { HUDOverlay } from "./HUDOverlay";
+
+// Damage totals grow into the thousands over a full run; trim them so the
+// stats table stays readable (980 -> "980", 1234 -> "1.2k", 45678 -> "46k").
+const formatDamage = (damage: number): string => {
+  if (damage < 1000) return String(Math.round(damage));
+  if (damage < 10000) return `${(damage / 1000).toFixed(1)}k`;
+  return `${Math.round(damage / 1000)}k`;
+};
 
 type HUDGameOverProps = {
   gameStatus: GameStatus;
@@ -48,6 +60,12 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
 }) => {
   const { t } = useTranslation();
 
+  // Tower/enemy types come from the game config, so new types added there
+  // show up in the stats table automatically.
+  const towerTypes = useGameStore(towerTypesSelector);
+  const enemyTypes = useGameStore(enemyTypesSelector);
+  const totalWaves = useLevelStore(totalWavesSelector);
+
   // Keep the overlay mounted through its exit animation: `hasOpened` stays
   // true while the card slides out, then everything resets and it unmounts.
   const [hasOpened, setHasOpened] = useState(false);
@@ -57,16 +75,12 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
   // stay stable during the exit.
   const [frozen, setFrozen] = useState({
     currentWave,
+    totalWaves,
     money,
     enemiesKilled,
     stats,
     isWin: false,
   });
-
-  // Tower/enemy types come from the game config, so new types added there
-  // show up in the stats table automatically.
-  const towerTypes = useGameStore(towerTypesSelector);
-  const enemyTypes = useGameStore(enemyTypesSelector);
 
   const isEnd = gameStatus === "gameOver" || gameStatus === "won";
 
@@ -74,6 +88,7 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
     if (isEnd) {
       setFrozen({
         currentWave,
+        totalWaves,
         money,
         enemiesKilled,
         stats,
@@ -84,7 +99,16 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
     } else if (hasOpened) {
       setClosing(true);
     }
-  }, [isEnd, hasOpened, gameStatus, currentWave, money, enemiesKilled, stats]);
+  }, [
+    isEnd,
+    hasOpened,
+    gameStatus,
+    currentWave,
+    totalWaves,
+    money,
+    enemiesKilled,
+    stats,
+  ]);
 
   const handleCardAnimationEnd = (event: AnimationEvent<HTMLDivElement>) => {
     // Only the card's own exit animation unmounts the overlay (child
@@ -187,7 +211,9 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
               <UITypography variant="small" className="text-muted-foreground">
                 {t("gameOver.wavesSurvived")}
               </UITypography>
-              <UITypography variant="h3">{frozen.currentWave} / 7</UITypography>
+              <UITypography variant="h3">
+                {frozen.currentWave} / {frozen.totalWaves}
+              </UITypography>
             </div>
           </div>
 
@@ -217,7 +243,9 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
                     <UITableRow key={towerType} className="border-t border-white/10">
                       <UITableCell>{t(`towers.${towerType}.name`)}</UITableCell>
                       <UITableCell align="right">
-                        {runStats.damageByTowerType[towerType] ?? 0}
+                        {formatDamage(
+                          runStats.damageByTowerType[towerType] ?? 0
+                        )}
                       </UITableCell>
                       <UITableCell align="right" plain>
                         <UIMoney

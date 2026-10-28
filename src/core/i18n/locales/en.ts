@@ -161,6 +161,7 @@ export const en = {
     slowImmune: "Slow immune",
     slowResistance: "+{{percent}}% slow resistance",
     selected: "Selected upgrades",
+    viewTitle: "Enemy upgrades",
   },
   towerInfo: {
     damage: "Damage",

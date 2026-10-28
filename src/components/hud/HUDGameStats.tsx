@@ -17,6 +17,7 @@ import {
   useWaveStore,
 } from "../../core/stores/useWaveStore";
 import { HUDWrapper } from "./HUDWrapper";
+import { HUDEnemyUpgrades } from "./HUDEnemyUpgrades";
 import { UIMoney } from "../ui/UIMoney";
 import { PauseIcon } from "../ui/assets/PauseIcon";
 
@@ -99,6 +100,11 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
             <Play size={14} /> {t("gameStats.startNextWave")}
           </UIButton>
         )}
+        {showStartWave && (
+          <div className="shrink-0">
+            <HUDEnemyUpgrades isMobile />
+          </div>
+        )}
         {paused && (
           <UIButton
             variant="default"
@@ -163,7 +169,8 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
                 )}
             </div>
 
-            <div>
+            <div className="flex flex-col gap-2">
+              <HUDEnemyUpgrades />
               {currentWave < totalWaves && nextWaveReady && (
                 <div className="flex flex-col justify-center flex-1 gap-1">
                   <UIButton data-testid="wave-start" onClick={onStartWave} variant="outline">

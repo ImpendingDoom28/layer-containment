@@ -171,6 +171,7 @@ const ruValues = {
     slowImmune: "Иммунитет к замедлению",
     slowResistance: "+{{percent}}% сопротивления замедлению",
     selected: "Выбранные усиления",
+    viewTitle: "Усиления врагов",
   },
   towerInfo: {
     damage: "Урон",

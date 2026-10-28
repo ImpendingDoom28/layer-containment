@@ -1,17 +1,24 @@
-import { Billboard } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { FC, memo, useMemo, useRef } from "react";
 import {
+  AdditiveBlending,
+  CanvasTexture,
   DoubleSide,
+  Matrix4,
+  MeshBasicMaterial,
   MeshStandardMaterial,
-  type BufferGeometry,
+  Quaternion,
+  Vector3,
+  type Group,
   type Mesh,
 } from "three";
+import type { Entity } from "koota";
 
 import {
   enemyUpgradesSelector,
   useGameStore,
 } from "../../../core/stores/useGameStore";
+import { Position } from "../../../core/ecs/traits/position";
 import type {
   EnemyUpgradeId,
   EnemyUpgradeStack,
@@ -19,215 +26,372 @@ import type {
 
 import { EmissiveParticleSphere } from "./primitives/EmissiveParticleSphere";
 import {
-  UPGRADE_GLYPH_BOLT_GEOMETRY,
-  UPGRADE_GLYPH_HEART_GEOMETRY,
-  UPGRADE_GLYPH_SHIELD_GEOMETRY,
-  UPGRADE_GLYPH_WIND_GEOMETRY,
-} from "./primitives/UpgradeGlyphGeometries";
+  GLOW_SHELL_GEOMETRY,
+  REGEN_DISC_GEOMETRY,
+  SHIELD_PLATE_GEOMETRY,
+  STRAP_PLANE_GEOMETRY,
+} from "./primitives/UpgradeVisualGeometries";
 import type { EnemyAttachedEffectProps } from "./types";
 
 type UpgradeEffectProps = EnemyAttachedEffectProps & {
+  entity: Entity;
   enemySize: number;
   upgradeStacks: EnemyUpgradeStack[];
 };
 
-type LayoutEntry = {
-  id: EnemyUpgradeId;
-  tier: number;
-  color: string;
-  geometry: BufferGeometry;
-  material: MeshStandardMaterial;
-  /** X offset of each glyph in this upgrade's row. */
-  slots: number[];
-};
-
-type UpgradeLayout = {
-  entries: LayoutEntry[];
-  hasRegen: boolean;
-  regenColor: string;
-  spacing: number;
-  glyphSize: number;
-};
-
-const GEOMETRY_BY_ID: Record<EnemyUpgradeId, BufferGeometry> = {
-  armored: UPGRADE_GLYPH_SHIELD_GEOMETRY,
-  regenerating: UPGRADE_GLYPH_HEART_GEOMETRY,
-  slowResistance: UPGRADE_GLYPH_BOLT_GEOMETRY,
-  swift: UPGRADE_GLYPH_WIND_GEOMETRY,
-};
-
-const FALLBACK_GLYPH_COLOR = "#ffffff";
-const GLYPH_OPACITY = 1;
+const FALLBACK_COLOR = "#ffffff";
 const REGEN_PARTICLE_COUNT = 4;
 
-// One material per color: every enemy sharing an upgrade picks the same
-// compiled program. Per-frame animation is done on the meshes (scale,
-// position), never on the shared material, so the phase is per-enemy.
-const glyphMaterialCache = new Map<string, MeshStandardMaterial>();
+/**
+ * White-to-transparent fade along the strap length (u=0 is the tail, u=1 the
+ * head), so the ribbon melts out behind the enemy. Built once in the browser;
+ * in node (RTTR) `document` is absent and the map is simply omitted.
+ */
+const createStrapFadeTexture = (): CanvasTexture | null => {
+  if (typeof document === "undefined") return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = 64;
+  canvas.height = 8;
+  const context = canvas.getContext("2d");
+  if (!context) return null;
+  const gradient = context.createLinearGradient(0, 0, 64, 0);
+  // u=0 is the far tail, u=1 the head (inside the body). Solid from just
+  // behind the body out to a soft point at the far tail, so the ribbon reads
+  // clearly from the top-down camera.
+  gradient.addColorStop(0, "rgba(255,255,255,0)");
+  gradient.addColorStop(0.35, "rgba(255,255,255,1)");
+  gradient.addColorStop(1, "rgba(255,255,255,1)");
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, 64, 8);
+  return new CanvasTexture(canvas);
+};
 
-const getGlyphMaterial = (color: string): MeshStandardMaterial => {
-  let material = glyphMaterialCache.get(color);
+const STRAP_FADE_TEXTURE = createStrapFadeTexture();
+
+// One material per (color, opacity, intensity): every enemy sharing an
+// upgrade picks the same compiled program; per-enemy animation lives on the
+// meshes (scale/position/quaternion), never on the shared material.
+const materialCache = new Map<string, MeshStandardMaterial>();
+const getEmissiveMaterial = (
+  color: string,
+  opacity: number,
+  emissiveIntensity: number
+): MeshStandardMaterial => {
+  const key = `${color}|${opacity}|${emissiveIntensity}`;
+  let material = materialCache.get(key);
   if (!material) {
     material = new MeshStandardMaterial({
       color,
       emissive: color,
-      emissiveIntensity: 1.25,
+      emissiveIntensity,
       transparent: true,
-      opacity: GLYPH_OPACITY,
+      opacity,
       depthWrite: false,
-      side: DoubleSide,
     });
-    glyphMaterialCache.set(color, material);
+    materialCache.set(key, material);
   }
   return material;
 };
 
-const buildUpgradeLayout = (
+// All swift straps are white, so a single shared additive material. The fade
+// map is omitted in node (no canvas) where the straps render solid.
+const STRAP_MATERIAL = new MeshBasicMaterial({
+  color: "#ffffff",
+  transparent: true,
+  opacity: 0.8,
+  blending: AdditiveBlending,
+  depthWrite: false,
+  side: DoubleSide,
+});
+if (STRAP_FADE_TEXTURE) STRAP_MATERIAL.map = STRAP_FADE_TEXTURE;
+
+const WORLD_UP = new Vector3(0, 1, 0);
+const tmpDir = new Vector3();
+const tmpPerp = new Vector3();
+const tmpMatrix = new Matrix4();
+const tmpQuat = new Quaternion();
+
+type EffectLayout = {
+  hasShield: boolean;
+  shieldTier: number;
+  shieldColor: string;
+  hasGlow: boolean;
+  glowScale: number;
+  glowOpacity: number;
+  glowColor: string;
+  hasRegen: boolean;
+  regenColor: string;
+  hasSwift: boolean;
+  swiftTier: number;
+};
+
+const buildEffectLayout = (
   upgradeStacks: EnemyUpgradeStack[],
   upgradeConfigs:
-    Record<EnemyUpgradeId, { indicatorColor: string }> | null | undefined,
-  enemySize: number
-): UpgradeLayout => {
-  const totalGlyphs = upgradeStacks.reduce((sum, stack) => sum + stack.tier, 0);
-  const spacing = enemySize * 0.72;
-  const glyphSize = enemySize * 0.62;
-
-  let cursor = (1 - totalGlyphs) / 2;
-  let hasRegen = false;
-  let regenColor = FALLBACK_GLYPH_COLOR;
-  const entries: LayoutEntry[] = upgradeStacks.map((stack) => {
-    const slots: number[] = [];
-    for (let i = 0; i < stack.tier; i++) {
-      slots.push(cursor * spacing);
-      cursor += 1;
-    }
-    const color =
-      upgradeConfigs?.[stack.id]?.indicatorColor ?? FALLBACK_GLYPH_COLOR;
-    if (stack.id === "regenerating") {
-      hasRegen = true;
-      regenColor = color;
-    }
-    return {
-      id: stack.id,
-      tier: stack.tier,
-      color,
-      geometry: GEOMETRY_BY_ID[stack.id],
-      material: getGlyphMaterial(color),
-      slots,
-    };
-  });
-
-  return {
-    entries,
-    hasRegen,
-    regenColor,
-    spacing,
-    glyphSize,
+    Record<EnemyUpgradeId, { indicatorColor: string }> | null | undefined
+): EffectLayout => {
+  const colorOf = (id: EnemyUpgradeId) =>
+    upgradeConfigs?.[id]?.indicatorColor ?? FALLBACK_COLOR;
+  const layout: EffectLayout = {
+    hasShield: false,
+    shieldTier: 0,
+    shieldColor: FALLBACK_COLOR,
+    hasGlow: false,
+    glowScale: 1,
+    glowOpacity: 0,
+    glowColor: FALLBACK_COLOR,
+    hasRegen: false,
+    regenColor: FALLBACK_COLOR,
+    hasSwift: false,
+    swiftTier: 0,
   };
+  for (const stack of upgradeStacks) {
+    switch (stack.id) {
+      case "armored":
+        layout.hasShield = true;
+        layout.shieldTier = stack.tier;
+        layout.shieldColor = colorOf(stack.id);
+        break;
+      case "slowResistance":
+        layout.hasGlow = true;
+        layout.glowScale = 1.16 + (stack.tier - 1) * 0.06;
+        layout.glowOpacity = 0.12 + stack.tier * 0.03;
+        layout.glowColor = colorOf(stack.id);
+        break;
+      case "regenerating":
+        layout.hasRegen = true;
+        layout.regenColor = colorOf(stack.id);
+        break;
+      case "swift":
+        layout.hasSwift = true;
+        layout.swiftTier = stack.tier;
+        break;
+      default:
+        break;
+    }
+  }
+  return layout;
 };
 
 /**
- * Camera-facing upgrade glyphs: one glyph per pick per upgrade (1 pick = 1
- * glyph, 3 picks = 3 glyphs), laid out in a row per upgrade around the
- * enemy. Glyph shape shows what the upgrade does — shield (Armored), bolt
- * (Unstoppable), heart + rising green energy (Regenerating), wind swoosh
- * (Swift, drifting sideways like a gust).
+ * Physical upgrade visuals anchored to the enemy (no floating icons):
+ *
+ * - Armored: small 3D shield plates standing on the ground in front of the
+ *   body (1/2/3 per tier).
+ * - Unstoppable: a shallow purple glow shell hugging the body; the higher the
+ *   tier, the wider and brighter the halo.
+ * - Regenerating: a green disc on the ground emitting a stream of green
+ *   particles that rise and fade out.
+ * - Swift: white speed straps trailing behind the enemy along its travel
+ *   direction (1/2/3 per tier).
  */
 export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
-  ({ enemySize, upgradeStacks, getTimeScale }) => {
+  ({ entity, enemySize, upgradeStacks, getTimeScale }) => {
     const enemyUpgrades = useGameStore(enemyUpgradesSelector);
     const timeRef = useRef(0);
-    const glyphRefs = useRef<Partial<Record<EnemyUpgradeId, (Mesh | null)[]>>>(
-      {}
-    );
-    const particleRefs = useRef<(Mesh | null)[]>(
-      Array.from({ length: REGEN_PARTICLE_COUNT }, () => null)
-    );
+    const prevPosRef = useRef<{ x: number; y: number; z: number } | null>(null);
+    const dirRef = useRef(new Vector3(0, 0, -1));
+    const dirGroupRef = useRef<Group>(null);
+    const glowRef = useRef<Mesh>(null);
+    const discRef = useRef<Mesh>(null);
+    const strapRefs = useRef<(Mesh | null)[]>([]);
+    const particleRefs = useRef<(Mesh | null)[]>([]);
 
     const layout = useMemo(
-      () => buildUpgradeLayout(upgradeStacks, enemyUpgrades, enemySize),
-      [upgradeStacks, enemyUpgrades, enemySize]
+      () => buildEffectLayout(upgradeStacks, enemyUpgrades),
+      [upgradeStacks, enemyUpgrades]
     );
 
     useFrame((_, delta) => {
-      timeRef.current += delta * getTimeScale();
+      const scaledDelta = delta * getTimeScale();
+      timeRef.current += scaledDelta;
       const time = timeRef.current;
-      const pulse = 1 + Math.sin(time * 2) * 0.05;
 
-      for (const entry of layout.entries) {
-        const meshes = glyphRefs.current[entry.id];
-        if (!meshes) continue;
-        for (let i = 0; i < entry.tier; i++) {
-          const mesh = meshes[i];
-          if (!mesh) continue;
-          mesh.scale.setScalar(layout.glyphSize * pulse);
-          if (entry.id === "swift") {
-            mesh.position.x =
-              entry.slots[i] + Math.sin(time * 3) * layout.spacing * 0.2;
+      // Smooth the travel direction from the Position trait (the movement
+      // system advances it before this frame mirrors it onto the mesh).
+      const pos = entity.get(Position);
+      if (pos) {
+        const prev = prevPosRef.current;
+        if (prev) {
+          tmpDir.set(pos.x - prev.x, pos.y - prev.y, pos.z - prev.z);
+          const len = tmpDir.length();
+          if (len > 1e-4) {
+            tmpDir.divideScalar(len);
+            const k = Math.min(1, scaledDelta * 8);
+            dirRef.current.lerp(tmpDir, k).normalize();
           }
         }
+        prevPosRef.current = pos;
+      }
+
+      const pulse = 1 + Math.sin(time * 2.4) * 0.04;
+
+      if (layout.hasGlow && glowRef.current) {
+        glowRef.current.scale.setScalar(enemySize * layout.glowScale * pulse);
       }
 
       if (layout.hasRegen) {
-        // Rising green energy: a stream loops from the enemy's base to just
-        // above its head, kept in front of the body (the billboard's local
-        // +z always faces the camera), growing and fading as it climbs.
+        if (discRef.current) {
+          discRef.current.scale.setScalar(enemySize * 0.85 * pulse);
+        }
         for (let i = 0; i < REGEN_PARTICLE_COUNT; i++) {
           const particle = particleRefs.current[i];
           if (!particle) continue;
-          const progress = (time * 0.65 + i * (1 / REGEN_PARTICLE_COUNT)) % 1;
+          const progress = (time * 0.6 + i * (1 / REGEN_PARTICLE_COUNT)) % 1;
+          // Rise from the ground disc (feet plane, y = 0) up past the body top
+          // (y = 1.55*size) so the energy stream is visible from the camera.
           particle.position.set(
-            Math.sin(time * 2 + i * 2.1) * enemySize * 0.3,
-            enemySize * (0.05 + progress * 1.1),
-            enemySize * 1.05
+            Math.sin(time * 2 + i * 2.1) * enemySize * 0.35,
+            enemySize * (0.05 + progress * 1.6),
+            Math.cos(time * 1.7 + i * 1.7) * enemySize * 0.35
           );
-          particle.scale.setScalar(0.8 + progress * 1.6);
+          particle.scale.setScalar(0.7 + progress * 1.3);
           (particle.material as MeshStandardMaterial).opacity =
-            0.95 * Math.sin(progress * Math.PI);
+            0.9 * Math.sin(progress * Math.PI);
+        }
+      }
+
+      if (layout.hasShield || layout.hasSwift) {
+        // Orient the direction group: local +x = travel direction, +y = world
+        // up. The shield sits on the +x side (in front of the enemy) and the
+        // swift straps trail on the -x side.
+        const d = dirRef.current;
+        tmpPerp.crossVectors(d, WORLD_UP);
+        if (tmpPerp.lengthSq() < 1e-6) {
+          tmpPerp.set(1, 0, 0);
+        }
+        tmpPerp.normalize();
+        tmpMatrix.makeBasis(d, WORLD_UP, tmpPerp);
+        tmpQuat.setFromRotationMatrix(tmpMatrix);
+        if (dirGroupRef.current) {
+          dirGroupRef.current.quaternion.copy(tmpQuat);
+        }
+        for (let i = 0; i < layout.swiftTier; i++) {
+          const strap = strapRefs.current[i];
+          if (!strap) continue;
+          const offset = (i - (layout.swiftTier - 1) / 2) * enemySize * 0.6;
+          // Flat ribbon just above the ground (the feet plane is y = 0),
+          // trailing well behind the body along the travel direction; u fades
+          // toward the tail.
+          strap.position.set(-1.5 * enemySize, 0.04 * enemySize, offset);
         }
       }
     });
 
-    if (layout.entries.length === 0) return null;
+    if (upgradeStacks.length === 0) return null;
+
+    // Shield plates stand on the ground (the feet plane is y = 0, so the
+    // center sits at half the plate height) in front of the body, on the +x
+    // side of the direction group (which faces the travel direction).
+    const shieldPlacements: {
+      position: [number, number, number];
+      scale: [number, number, number];
+    }[] = [];
+    if (layout.hasShield) {
+      const tier = layout.shieldTier;
+      if (tier === 1) {
+        shieldPlacements.push({
+          position: [enemySize * 1.15, 0.48 * enemySize, 0],
+          scale: [enemySize * 0.7, enemySize * 0.95, enemySize * 0.5],
+        });
+      } else if (tier === 2) {
+        shieldPlacements.push(
+          {
+            position: [enemySize * 1.1, 0.38 * enemySize, -0.45 * enemySize],
+            scale: [enemySize * 0.55, enemySize * 0.75, enemySize * 0.5],
+          },
+          {
+            position: [enemySize * 1.1, 0.38 * enemySize, 0.45 * enemySize],
+            scale: [enemySize * 0.55, enemySize * 0.75, enemySize * 0.5],
+          }
+        );
+      } else {
+        shieldPlacements.push(
+          {
+            position: [enemySize * 1.15, 0.48 * enemySize, 0],
+            scale: [enemySize * 0.7, enemySize * 0.95, enemySize * 0.5],
+          },
+          {
+            position: [enemySize * 1.05, 0.35 * enemySize, -0.64 * enemySize],
+            scale: [enemySize * 0.55, enemySize * 0.7, enemySize * 0.5],
+          },
+          {
+            position: [enemySize * 1.05, 0.35 * enemySize, 0.64 * enemySize],
+            scale: [enemySize * 0.55, enemySize * 0.7, enemySize * 0.5],
+          }
+        );
+      }
+    }
 
     return (
       <group>
-        {/* Glyph row: floats above the body (and the health bar), one glyph
-            per pick per upgrade. */}
-        <group position={[0, enemySize + 0.62, 0]}>
-          <Billboard>
-            {layout.entries.map((entry) =>
-              entry.slots.map((x, index) => (
+        {(layout.hasShield || layout.hasSwift) && (
+          <group ref={dirGroupRef}>
+            {layout.hasShield &&
+              shieldPlacements.map((placement, index) => (
                 <mesh
-                  key={`${entry.id}-${index}`}
-                  ref={(el) => {
-                    const meshes = glyphRefs.current[entry.id] ?? [];
-                    meshes[index] = el;
-                    glyphRefs.current[entry.id] = meshes;
-                  }}
-                  position={[x, 0, 0]}
-                  geometry={entry.geometry}
-                  material={entry.material}
+                  key={`shield-${index}`}
+                  position={placement.position}
+                  // Plate normal (local +z) rotated to the travel direction so
+                  // the shield face is perpendicular to the path.
+                  rotation={[0, Math.PI / 2, 0]}
+                  scale={placement.scale}
+                  geometry={SHIELD_PLATE_GEOMETRY}
+                  material={getEmissiveMaterial(layout.shieldColor, 0.95, 0.9)}
                 />
-              ))
+              ))}
+            {layout.hasSwift &&
+              Array.from({ length: layout.swiftTier }, (_, index) => (
+                <mesh
+                  key={`strap-${index}`}
+                  ref={(el) => {
+                    if (el) strapRefs.current[index] = el;
+                  }}
+                  rotation={[Math.PI / 2, 0, 0]}
+                  scale={[4 * enemySize, 0.8 * enemySize, 1]}
+                  geometry={STRAP_PLANE_GEOMETRY}
+                  material={STRAP_MATERIAL}
+                />
+              ))}
+          </group>
+        )}
+
+        {layout.hasGlow && (
+          <mesh
+            ref={glowRef}
+            position={[0, enemySize * 0.5, 0]}
+            scale={enemySize * layout.glowScale}
+            geometry={GLOW_SHELL_GEOMETRY}
+            material={getEmissiveMaterial(
+              layout.glowColor,
+              layout.glowOpacity,
+              1.2
             )}
-          </Billboard>
-        </group>
+          />
+        )}
+
         {layout.hasRegen && (
-          <Billboard>
-            {particleRefs.current.map((_, index) => (
+          <>
+            <mesh
+              ref={discRef}
+              position={[0, 0.03 * enemySize, 0]}
+              scale={enemySize * 0.85}
+              geometry={REGEN_DISC_GEOMETRY}
+              material={getEmissiveMaterial(layout.regenColor, 0.5, 1.1)}
+            />
+            {Array.from({ length: REGEN_PARTICLE_COUNT }, (_, index) => (
               <EmissiveParticleSphere
                 key={`regen-particle-${index}`}
                 ref={(el) => {
-                  particleRefs.current[index] = el;
+                  if (el) particleRefs.current[index] = el;
                 }}
-                radius={0.07}
+                radius={0.06}
                 color={layout.regenColor}
                 emissiveIntensity={1.5}
                 opacity={0.9}
               />
             ))}
-          </Billboard>
+          </>
         )}
       </group>
     );

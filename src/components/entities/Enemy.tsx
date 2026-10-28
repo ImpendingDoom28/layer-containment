@@ -289,6 +289,7 @@ export const Enemy: FC<EnemyProps> = memo(
         {/* Upgrade indicators: one glyph per pick (1 pick = 1 glyph) */}
         {(snapshot.upgradeStacks?.length ?? 0) > 0 && (
           <UpgradeEffect
+            entity={entity}
             enemySize={size}
             upgradeStacks={snapshot.upgradeStacks!}
             getTimeScale={getTimeScale}

@@ -15,8 +15,11 @@ import {
   moneyEarnedRequest,
 } from "../traits/stats";
 import { testWorld } from "../world";
+import { splitRequest } from "../traits/split";
 import { useGameStore } from "../../stores/useGameStore";
-import type { Enemy } from "../../types/game";
+import type { Enemy, EnemyConfig, EnemyType } from "../../types/game";
+import { runEnemyDeathSystem } from "../systems/enemyDeathSystem";
+import { runEnemySplitSystem } from "../systems/enemySplitSystem";
 import { GameEvent } from "../../types/enums/events";
 import { gameEvents } from "../../../utils/eventEmitter";
 import {
@@ -42,6 +45,25 @@ const baseEnemy = (id: number, health: number): Enemy => ({
   x: 0,
   z: 0,
   upgrades: [],
+});
+
+const splitterEnemy = (id: number, health: number): Enemy => ({
+  id,
+  type: "splitter",
+  name: "Splitter",
+  health,
+  maxHealth: health,
+  speed: 1.5,
+  reward: 18,
+  color: "#06b6d4",
+  size: 0.45,
+  healthLoss: 2,
+  pathProgress: 0.4,
+  pathIndex: 1,
+  x: 3,
+  z: 4,
+  upgrades: [],
+  split: { minChildren: 2, maxChildren: 4 },
 });
 
 describe("enemyActions", () => {
@@ -271,5 +293,83 @@ describe("enemyActions", () => {
 
     expect(testWorld.queryFirst(moneyEarnedRequest)).toBeUndefined();
     expect(testWorld.queryFirst(IsStats)).toBeUndefined();
+  });
+});
+
+describe("enemyActions.getRemainingEnemyCount (wave-end clarity)", () => {
+  let ids: number[];
+  let idCounter: number;
+
+  beforeEach(() => {
+    useGameStore.setState({ gameStatus: "playing" });
+    useGameStore.setState({
+      enemyTypes: {
+        splitter: {
+          id: "splitter",
+          name: "Splitter",
+          health: 90,
+          speed: 1.5,
+          reward: 18,
+          color: "#06b6d4",
+          size: 0.45,
+          healthLoss: 2,
+          split: { minChildren: 2, maxChildren: 4 },
+        },
+      } as Record<EnemyType, EnemyConfig>,
+    });
+    enemyActions(testWorld).clearAllEnemies();
+    for (const entity of testWorld.query(splitRequest)) entity.destroy();
+    ids = [];
+    idCounter = 1000;
+  });
+
+  const nextId = () => {
+    ids.push(idCounter);
+    return idCounter++;
+  };
+
+  it("stays above zero from the killing blow until the splitter's children are all dead", () => {
+    const actions = enemyActions(testWorld);
+    actions.spawnEnemy(splitterEnemy(10, 90));
+
+    // The killing blow: health clamps to 0, so the health-based count sees
+    // an empty field one frame before the death is settled (the regression).
+    actions.damageEnemy(10, 90);
+    expect(actions.getLivingEnemyCount()).toBe(0);
+    expect(actions.getRemainingEnemyCount()).toBe(1);
+
+    // The death system settles the kill: parent destroyed, split pending.
+    runEnemyDeathSystem(testWorld);
+    expect(actions.getLivingEnemyCount()).toBe(0);
+    expect(actions.getRemainingEnemyCount()).toBe(1);
+
+    // The split system spawns the children: the field has real enemies again.
+    runEnemySplitSystem(testWorld, nextId);
+    const children = getEnemySnapshots(testWorld);
+    expect(children.length).toBeGreaterThanOrEqual(2);
+    expect(actions.getRemainingEnemyCount()).toBe(children.length);
+
+    // Killing the children leaves pending deaths until they are settled.
+    for (const child of children) {
+      actions.damageEnemy(child.id, child.maxHealth + 1);
+    }
+    expect(actions.getLivingEnemyCount()).toBe(0);
+    expect(actions.getRemainingEnemyCount()).toBe(children.length);
+
+    runEnemyDeathSystem(testWorld);
+    // Only now is the field actually cleared up.
+    expect(actions.getRemainingEnemyCount()).toBe(0);
+    expect(actions.getLivingEnemyCount()).toBe(0);
+  });
+
+  it("reaches zero as soon as a non-splitter death is settled", () => {
+    const actions = enemyActions(testWorld);
+    actions.spawnEnemy(baseEnemy(20, 100));
+
+    actions.damageEnemy(20, 100);
+    expect(actions.getRemainingEnemyCount()).toBe(1);
+
+    runEnemyDeathSystem(testWorld);
+    expect(actions.getRemainingEnemyCount()).toBe(0);
   });
 });

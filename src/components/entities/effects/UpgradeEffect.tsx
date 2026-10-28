@@ -40,7 +40,9 @@ type UpgradeEffectProps = EnemyAttachedEffectProps & {
 };
 
 const FALLBACK_COLOR = "#ffffff";
-const REGEN_PARTICLE_COUNT = 4;
+const REGEN_PARTICLE_BASE = 3;
+const REGEN_RING_SCALE_BASE = 1.1;
+const REGEN_RING_SCALE_STEP = 0.15;
 
 /**
  * White-to-transparent fade along the strap length (u=0 is the tail, u=1 the
@@ -120,6 +122,8 @@ type EffectLayout = {
   glowOpacity: number;
   glowColor: string;
   hasRegen: boolean;
+  regenTier: number;
+  regenParticleCount: number;
   regenColor: string;
   hasSwift: boolean;
   swiftTier: number;
@@ -141,6 +145,8 @@ const buildEffectLayout = (
     glowOpacity: 0,
     glowColor: FALLBACK_COLOR,
     hasRegen: false,
+    regenTier: 0,
+    regenParticleCount: 0,
     regenColor: FALLBACK_COLOR,
     hasSwift: false,
     swiftTier: 0,
@@ -160,6 +166,8 @@ const buildEffectLayout = (
         break;
       case "regenerating":
         layout.hasRegen = true;
+        layout.regenTier = stack.tier;
+        layout.regenParticleCount = REGEN_PARTICLE_BASE + (stack.tier - 1);
         layout.regenColor = colorOf(stack.id);
         break;
       case "swift":
@@ -231,15 +239,19 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
       }
 
       if (layout.hasRegen) {
-        // Ring unit radius is 0.9–1.5, so a ~1.3x scale puts the whole band
-        // outside the body (radius = size) and clearly wider than the enemy.
+        // Ring unit radius is 0.9–1.5; the per-tier scale keeps the band
+        // outside the body and wider each tier.
         if (ringRef.current) {
-          ringRef.current.scale.setScalar(enemySize * 1.3 * pulse);
+          const scale =
+            REGEN_RING_SCALE_BASE +
+            (layout.regenTier - 1) * REGEN_RING_SCALE_STEP;
+          ringRef.current.scale.setScalar(enemySize * scale * pulse);
         }
-        for (let i = 0; i < REGEN_PARTICLE_COUNT; i++) {
+        const particleCount = layout.regenParticleCount;
+        for (let i = 0; i < particleCount; i++) {
           const particle = particleRefs.current[i];
           if (!particle) continue;
-          const progress = (time * 0.6 + i * (1 / REGEN_PARTICLE_COUNT)) % 1;
+          const progress = (time * 0.6 + i * (1 / particleCount)) % 1;
           // Rise from the ring (feet plane, y = 0) up past the body top
           // (y = 1.55*size) so the energy stream is visible from the camera.
           particle.position.set(
@@ -376,12 +388,19 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
           <>
             <mesh
               ref={ringRef}
+              // The group origin is the enemy's feet (on the path surface); the
+              // tiny +y keeps the flat ring just above the path to avoid
+              // z-fighting. The frame loop drives the per-tier scale.
               position={[0, 0.03 * enemySize, 0]}
-              scale={enemySize * 1.3}
+              scale={
+                enemySize *
+                (REGEN_RING_SCALE_BASE +
+                  (layout.regenTier - 1) * REGEN_RING_SCALE_STEP)
+              }
               geometry={REGEN_RING_GEOMETRY}
               material={getEmissiveMaterial(layout.regenColor, 0.5, 1.1)}
             />
-            {Array.from({ length: REGEN_PARTICLE_COUNT }, (_, index) => (
+            {Array.from({ length: layout.regenParticleCount }, (_, index) => (
               <EmissiveParticleSphere
                 key={`regen-particle-${index}`}
                 ref={(el) => {

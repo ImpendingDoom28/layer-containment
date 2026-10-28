@@ -127,9 +127,9 @@ describe("UpgradeEffect", () => {
     }
   });
 
-  it("renders a ground ring plus rising particles (Regenerating)", async () => {
+  it("renders a ground ring plus rising particles, scaled by tier (Regenerating)", async () => {
     useGameStore.setState({ enemyUpgrades: upgradeConfigs });
-    const renderer = await ReactThreeTestRenderer.create(
+    const tier1 = await ReactThreeTestRenderer.create(
       <UpgradeEffect
         entity={makeEntity()}
         enemySize={0.4}
@@ -137,13 +137,25 @@ describe("UpgradeEffect", () => {
         getTimeScale={() => 1}
       />
     );
+    const tier3 = await ReactThreeTestRenderer.create(
+      <UpgradeEffect
+        entity={makeEntity()}
+        enemySize={0.4}
+        upgradeStacks={[{ id: "regenerating", tier: 3 }]}
+        getTimeScale={() => 1}
+      />
+    );
 
     try {
-      // 1 ground ring + 4 rising energy particles.
-      expect(countGeometry(renderer, "RingGeometry")).toBe(1);
-      expect(countGeometry(renderer, "SphereGeometry")).toBe(4);
+      // 1 ground ring per stack; the particle stream grows with the tier
+      // (3 + tier - 1) so tiers are distinguishable.
+      expect(countGeometry(tier1, "RingGeometry")).toBe(1);
+      expect(countGeometry(tier3, "RingGeometry")).toBe(1);
+      expect(countGeometry(tier1, "SphereGeometry")).toBe(3);
+      expect(countGeometry(tier3, "SphereGeometry")).toBe(5);
     } finally {
-      renderer.unmount();
+      tier1.unmount();
+      tier3.unmount();
     }
   });
 

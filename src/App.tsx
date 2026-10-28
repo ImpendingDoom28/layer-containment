@@ -34,7 +34,10 @@ const AppRoutes: FC = () => {
         element={
           <WorldProvider world={world}>
             <EntityIdProvider>
-              <GamePage onOpenLevelEditor={() => navigate("/editor")} />
+              <GamePage
+              onOpenLevelEditor={() => navigate("/editor")}
+              onOpenTestingLevel={() => navigate("/testing-level")}
+            />
             </EntityIdProvider>
           </WorldProvider>
         }

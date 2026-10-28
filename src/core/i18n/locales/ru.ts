@@ -46,6 +46,7 @@ const ruValues = {
     almanac: "Алманах",
     settings: "Настройки",
     levelCreator: "Создатель уровней",
+    testingLevel: "Тестовый уровень",
     systemsOnline: "Системы в норме",
     tagline: "вы не выигрываете войну — вы держите границу.",
     viewSource: "Посмотреть исходный код на GitHub",

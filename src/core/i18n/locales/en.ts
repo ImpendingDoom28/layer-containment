@@ -39,6 +39,7 @@ export const en = {
     almanac: "Almanac",
     settings: "Settings",
     levelCreator: "Level Creator",
+    testingLevel: "Testing Level",
     systemsOnline: "Systems Online",
     tagline: "you’re not winning a war; — you’re holding a boundary.",
     viewSource: "View source on GitHub",

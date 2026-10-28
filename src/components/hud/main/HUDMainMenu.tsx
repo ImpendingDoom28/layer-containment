@@ -25,12 +25,21 @@ type ClosingView = "settings" | "almanac" | "levelPicker";
 
 type MenuAction = Omit<UIButtonProps, "children" | "onClick"> & {
   // Locale key of the button label.
-  labelKey: "menu.play" | "menu.almanac" | "menu.settings" | "menu.levelCreator";
+  labelKey:
+    | "menu.play"
+    | "menu.almanac"
+    | "menu.settings"
+    | "menu.levelCreator"
+    | "menu.testingLevel";
   onClick: () => void;
 };
 
+// The 3D asset showcase is a developer aid: the /testing-level route stays
+// reachable in every build, but its menu entry only appears in dev builds.
+const isDevBuild = import.meta.env.DEV;
+
 export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
-  ({ onStartGameWithLevel, onOpenLevelEditor }) => {
+  ({ onStartGameWithLevel, onOpenLevelEditor, onOpenTestingLevel }) => {
     const { t } = useTranslation();
     const { menuRef, blurDimensions, setBlurDimensions } = useBlurBackdrop();
 
@@ -92,6 +101,14 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
         onClick: onOpenLevelEditor,
         className: "mt-8",
       },
+      ...(isDevBuild
+        ? [
+            {
+              labelKey: "menu.testingLevel" as const,
+              onClick: onOpenTestingLevel,
+            },
+          ]
+        : []),
     ];
 
     const title = GAME_NAME.split(" ");

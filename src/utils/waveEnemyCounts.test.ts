@@ -8,6 +8,7 @@ import type {
 import {
   applyEnemyUpgradeCounts,
   applyWaveEnemyCountMultiplier,
+  buildWaveSpawnQueue,
   getWaveCountMultiplierForStack,
 } from "./waveEnemyCounts";
 
@@ -178,5 +179,60 @@ describe("applyEnemyUpgradeCounts (cap scaling)", () => {
     expect(applyEnemyUpgradeCounts(capGroups, [], allUpgrades, 10).total).toBe(
       4
     );
+  });
+});
+
+describe("buildWaveSpawnQueue", () => {
+  it("queues exactly sum(count) enemies — the old loop halved this", () => {
+    // basic 10 + fast 3 + medic 1 (level 1 wave 2, no upgrade): 14, not 7.
+    const g = [
+      { type: "basic", count: 10, spawnInterval: 1 },
+      { type: "fast", count: 3, spawnInterval: 1 },
+      { type: "medic", count: 1, spawnInterval: 1 },
+    ];
+    const q = buildWaveSpawnQueue(g);
+    expect(q.length).toBe(14);
+    expect(q.filter((i) => i.type === "basic").length).toBe(10);
+    expect(q.filter((i) => i.type === "fast").length).toBe(3);
+    expect(q.filter((i) => i.type === "medic").length).toBe(1);
+  });
+
+  it("keeps the per-type distribution exact with a weighted random draw", () => {
+    // Deterministic draws: always pick the first non-exhausted group, so the
+    // queue is 5 basic, then 3 tank — order is group order, not a coin flip.
+    const alwaysFirst = () => 0;
+    const g = [
+      { type: "basic", count: 5, spawnInterval: 1 },
+      { type: "tank", count: 3, spawnInterval: 2 },
+    ];
+    const q = buildWaveSpawnQueue(g, alwaysFirst);
+    expect(q.length).toBe(8);
+    expect(q.filter((i) => i.type === "basic").length).toBe(5);
+    expect(q.filter((i) => i.type === "tank").length).toBe(3);
+  });
+
+  it("assigns cumulative per-group spawn intervals as delays", () => {
+    // basic x2 (interval 1s) then tank x1 (interval 2s): delays 0, 1000, 2000.
+    const alwaysFirst = () => 0;
+    const g = [
+      { type: "basic", count: 2, spawnInterval: 1 },
+      { type: "tank", count: 1, spawnInterval: 2 },
+    ];
+    const q = buildWaveSpawnQueue(g, alwaysFirst);
+    expect(q.map((i) => i.delay)).toEqual([0, 1000, 2000]);
+  });
+
+  it("does not mutate the input groups", () => {
+    const g = [
+      { type: "basic", count: 3, spawnInterval: 1 },
+      { type: "tank", count: 2, spawnInterval: 1 },
+    ];
+    const before = g.map((x) => x.count);
+    buildWaveSpawnQueue(g, () => 0.5);
+    expect(g.map((x) => x.count)).toEqual(before);
+  });
+
+  it("returns an empty queue for empty groups", () => {
+    expect(buildWaveSpawnQueue([])).toEqual([]);
   });
 });

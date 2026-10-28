@@ -4,7 +4,6 @@ import { useActions } from "koota/react";
 import type {
   EnemyType,
   EnemyUpgradeId,
-  WaveEnemyGroup,
   GameStatus,
 } from "../types/game";
 import type { GameState } from "./useGameSystem";
@@ -27,45 +26,16 @@ import { useUpgradeStore } from "../stores/useUpgradeStore";
 import { useWaveStore } from "../stores/useWaveStore";
 import { GameEvent } from "../types/enums/events";
 import { gameEvents } from "../../utils/eventEmitter";
-import { applyEnemyUpgradeCounts } from "../../utils/waveEnemyCounts";
+import {
+  applyEnemyUpgradeCounts,
+  buildWaveSpawnQueue,
+} from "../../utils/waveEnemyCounts";
 import { enemyActions } from "../ecs/actions/enemyActions";
 
 type SpawnQueueItem = {
   type: EnemyType;
   delay: number;
   upgrades: EnemyUpgradeId[];
-};
-
-/**
- * Selects an enemy type from available enemy groups using weighted random selection.
- * The weight is based on the remaining count of each enemy type.
- * @param availableEnemies Array of enemy groups with their remaining counts
- * @returns The selected enemy group, or null if no enemies are available
- */
-const selectWeightedEnemy = (
-  availableEnemies: WaveEnemyGroup[]
-): WaveEnemyGroup | null => {
-  if (availableEnemies.length === 0) return null;
-  if (availableEnemies.length === 1) return availableEnemies[0];
-
-  const totalWeight = availableEnemies.reduce(
-    (sum, enemy) => sum + enemy.count,
-    0
-  );
-
-  if (totalWeight === 0) return null;
-
-  const random = Math.random() * totalWeight;
-
-  let cumulativeWeight = 0;
-  for (const enemy of availableEnemies) {
-    cumulativeWeight += enemy.count;
-    if (random < cumulativeWeight) {
-      return enemy;
-    }
-  }
-
-  return availableEnemies[availableEnemies.length - 1];
 };
 
 export const useWaveSystem = (gameState: GameState) => {
@@ -135,36 +105,17 @@ export const useWaveSystem = (gameState: GameState) => {
 
     // Reinforcements scales the per-group counts *and* the spawn cap, so a
     // cap-bound wave still grows with the upgrade; what remains is exactly the
-    // groups the spawn loop will drain (in the same order).
+    // groups the spawn queue will drain (in the same order).
     const enemyUpgrades = useGameStore.getState().enemyUpgrades;
-    const availableEnemyTypes: WaveEnemyGroup[] = applyEnemyUpgradeCounts(
+    const availableEnemyTypes = applyEnemyUpgradeCounts(
       waveConfig.enemies,
       waveUpgrades,
       enemyUpgrades,
       waveConfig.totalEnemies
     ).groups;
-    const spawnQueue: SpawnQueueItem[] = [];
-    let remainingEnemyCount = 0;
-    let cumulativeDelay = 0;
-
-    for (const enemy of availableEnemyTypes) {
-      remainingEnemyCount += enemy.count;
-    }
-
-    for (let i = 0; i < remainingEnemyCount; i++) {
-      const chosenEnemy = selectWeightedEnemy(availableEnemyTypes);
-      if (!chosenEnemy) break;
-
-      spawnQueue.push({
-        type: chosenEnemy.type,
-        delay: cumulativeDelay,
-        upgrades: waveUpgrades,
-      });
-
-      cumulativeDelay += chosenEnemy.spawnInterval * 1000;
-      chosenEnemy.count -= 1;
-      remainingEnemyCount -= 1;
-    }
+    const spawnQueue: SpawnQueueItem[] = buildWaveSpawnQueue(
+      availableEnemyTypes
+    ).map((item) => ({ ...item, upgrades: waveUpgrades }));
 
     spawnQueueRef.current = spawnQueue;
     totalPauseDurationRef.current = 0;

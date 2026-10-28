@@ -78,3 +78,50 @@ export const applyEnemyUpgradeCounts = (
   }
   return { groups: out, total };
 };
+
+export type WaveSpawnQueueItem = {
+  type: WaveEnemyGroup["type"];
+  delay: number;
+};
+
+/**
+ * Expands enemy groups into the full spawn queue: exactly `sum(groups.count)`
+ * enemies, each picking its group with weight = remaining count, and each
+ * adding the picked group's `spawnInterval` (ms) to the previous enemy's
+ * delay. The input groups are not mutated.
+ */
+export const buildWaveSpawnQueue = (
+  groups: WaveEnemyGroup[],
+  random: () => number = Math.random
+): WaveSpawnQueueItem[] => {
+  const remaining = groups.map((group) => ({ ...group }));
+  const totalCount = remaining.reduce((sum, group) => sum + group.count, 0);
+  let remainingCount = totalCount;
+
+  const selectWeighted = (): WaveEnemyGroup | null => {
+    if (remainingCount === 0) return null;
+    const roll = random() * remainingCount;
+    let cumulativeWeight = 0;
+    for (const group of remaining) {
+      if (group.count <= 0) continue;
+      cumulativeWeight += group.count;
+      if (roll < cumulativeWeight) return group;
+    }
+    for (let i = remaining.length - 1; i >= 0; i--) {
+      if (remaining[i].count > 0) return remaining[i];
+    }
+    return null;
+  };
+
+  const queue: WaveSpawnQueueItem[] = [];
+  let cumulativeDelay = 0;
+  for (let i = 0; i < totalCount; i++) {
+    const chosen = selectWeighted();
+    if (!chosen) break;
+    queue.push({ type: chosen.type, delay: cumulativeDelay });
+    cumulativeDelay += chosen.spawnInterval * 1000;
+    chosen.count -= 1;
+    remainingCount -= 1;
+  }
+  return queue;
+};

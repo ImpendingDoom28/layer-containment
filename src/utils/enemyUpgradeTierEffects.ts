@@ -9,6 +9,7 @@ export type TieredUpgradeEffect = {
   rewardMultiplier: number;
   healthMultiplier?: number;
   speedMultiplier?: number;
+  countMultiplier?: number;
   regeneration?: number;
   slowResistance?: number;
 };
@@ -72,6 +73,15 @@ export const getTieredUpgradeEffect = (
       const reward = tier === 1 ? r1 : tier === 2 ? r1 * 1.08 : r1 * 1.2;
       return { speedMultiplier: speed, rewardMultiplier: reward };
     }
+    case "reinforcements": {
+      // Each tier adds a fraction of the base growth (t2: +2x base, t3: +3.25x
+      // base), so a 20% base becomes +40% at tier 2 and +65% at tier 3.
+      const g1 = config.countGrowth ?? 0.2;
+      const growth =
+        tier === 1 ? g1 : tier === 2 ? g1 * 2 : g1 * 3.25;
+      const reward = tier === 1 ? r1 : tier === 2 ? r1 * 1.08 : r1 * 1.18;
+      return { countMultiplier: 1 + growth, rewardMultiplier: reward };
+    }
     case "slowResistance": {
       // Tiers 1-2 scale the base slow resistance (capped); tier 3 grants
       // full immunity no matter what base value the config carries.
@@ -121,6 +131,13 @@ export const formatTieredUpgradeSummary = (
       })
     );
   }
+  if (e.countMultiplier !== undefined && e.countMultiplier !== 1) {
+    parts.push(
+      i18n.t("upgrade.count", {
+        percent: Math.round((e.countMultiplier - 1) * 100),
+      })
+    );
+  }
   if (e.regeneration !== undefined && e.regeneration > 0) {
     parts.push(i18n.t("upgrade.regen", { amount: e.regeneration.toFixed(1) }));
   }
@@ -140,6 +157,7 @@ export type UpgradeTotalEffect = {
   rewardMultiplier: number;
   healthMultiplier?: number;
   speedMultiplier?: number;
+  countMultiplier?: number;
   regeneration?: number;
   slowResistance?: number;
 };
@@ -161,6 +179,8 @@ export const getTotalUpgradeEffectForStack = (
       top.healthMultiplier !== 1 && { healthMultiplier: top.healthMultiplier }),
     ...(top.speedMultiplier !== undefined &&
       top.speedMultiplier !== 1 && { speedMultiplier: top.speedMultiplier }),
+    ...(top.countMultiplier !== undefined &&
+      top.countMultiplier !== 1 && { countMultiplier: top.countMultiplier }),
     ...(top.regeneration !== undefined &&
       top.regeneration > 0 && { regeneration: top.regeneration }),
     ...(top.slowResistance !== undefined &&

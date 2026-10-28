@@ -58,6 +58,15 @@ const allUpgrades: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     abilities: { regeneration: 3 },
     indicatorColor: "#22c55e",
   },
+  reinforcements: {
+    id: "reinforcements",
+    name: "Reinforcements",
+    description: "",
+    displayRank: 2,
+    rewardMultiplier: 1.3,
+    countGrowth: 0.2,
+    indicatorColor: "#f97316",
+  },
 };
 
 describe("getTieredUpgradeEffect", () => {
@@ -124,6 +133,41 @@ describe("getTieredUpgradeEffect", () => {
     );
     expect(formatTieredUpgradeSummary(armoredBase, 1)).not.toContain("% gold");
     expect(formatTieredUpgradeSummary(armoredBase, 1)).toBe("+50% HP");
+  });
+
+  it("scales Reinforcements enemy counts by tier (+20% / +40% / +65%)", () => {
+    const t1 = getTieredUpgradeEffect(allUpgrades.reinforcements, 1);
+    const t2 = getTieredUpgradeEffect(allUpgrades.reinforcements, 2);
+    const t3 = getTieredUpgradeEffect(allUpgrades.reinforcements, 3);
+    expect(t1.countMultiplier).toBe(1.2);
+    expect(t2.countMultiplier).toBe(1.4);
+    expect(t3.countMultiplier).toBe(1.65);
+  });
+
+  it("falls back to a 20% base growth when the config omits countGrowth", () => {
+    const noGrowth = {
+      ...allUpgrades.reinforcements,
+      countGrowth: undefined,
+    };
+    expect(getTieredUpgradeEffect(noGrowth, 1).countMultiplier).toBe(1.2);
+  });
+
+  it("describes Reinforcements as +X% enemies in the summary", () => {
+    expect(formatTieredUpgradeSummary(allUpgrades.reinforcements, 1)).toBe(
+      "+20% enemies"
+    );
+    expect(formatTieredUpgradeSummary(allUpgrades.reinforcements, 3)).toBe(
+      "+65% enemies"
+    );
+  });
+
+  it("keeps the stacked total effect at the top-tier count multiplier", () => {
+    const total = getTotalUpgradeEffectForStack(allUpgrades.reinforcements, 3);
+    expect(total.countMultiplier).toBe(1.65);
+    expect(total.rewardMultiplier).toBeCloseTo(
+      1.3 * (1.3 * 1.08) * (1.3 * 1.18),
+      5
+    );
   });
 
   it("reports the per-pick gold bonus percentage", () => {

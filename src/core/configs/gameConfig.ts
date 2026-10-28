@@ -34,6 +34,7 @@ const enemyUpgradeIdSchema = z.enum([
   "swift",
   "slowResistance",
   "regenerating",
+  "reinforcements",
 ]);
 
 const towerConfigSchema: z.ZodType<TowerConfig> = z.object({
@@ -84,6 +85,7 @@ const enemyUpgradeConfigSchema: z.ZodType<EnemyUpgradeConfig> = z.object({
   rewardMultiplier: z.number(),
   healthMultiplier: z.number().optional(),
   speedMultiplier: z.number().optional(),
+  countGrowth: z.number().optional(),
   resistances: z
     .object({
       slow: z.number().optional(),

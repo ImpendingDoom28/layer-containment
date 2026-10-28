@@ -54,6 +54,15 @@ const upgradeConfigs: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     abilities: { regeneration: 3 },
     indicatorColor: "#22c55e",
   },
+  reinforcements: {
+    id: "reinforcements",
+    name: "Reinforcements",
+    description: "",
+    displayRank: 2,
+    rewardMultiplier: 1.3,
+    countGrowth: 0.2,
+    indicatorColor: "#f97316",
+  },
 };
 
 const flushEffects = () => act(() => {});

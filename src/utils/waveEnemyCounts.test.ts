@@ -6,6 +6,7 @@ import type {
   WaveEnemyGroup,
 } from "../core/types/game";
 import {
+  applyEnemyUpgradeCounts,
   applyWaveEnemyCountMultiplier,
   getWaveCountMultiplierForStack,
 } from "./waveEnemyCounts";
@@ -125,5 +126,57 @@ describe("applyWaveEnemyCountMultiplier", () => {
   it("keeps the relative enemy mix when scaling", () => {
     const scaled = applyWaveEnemyCountMultiplier(groups, 1.4);
     expect(scaled[0].count).toBeGreaterThan(scaled[1].count);
+  });
+});
+
+// Fresh arrays: the shared `groups` above is mutated by an earlier test.
+const capGroups: WaveEnemyGroup[] = [
+  { type: "basic", count: 2, spawnInterval: 1 },
+  { type: "tank", count: 2, spawnInterval: 2 },
+];
+
+describe("applyEnemyUpgradeCounts (cap scaling)", () => {
+  it("leaves the cap unchanged without Reinforcements", () => {
+    const r = applyEnemyUpgradeCounts(capGroups, [], allUpgrades, 4);
+    expect(r.groups.map((x) => x.count)).toEqual([2, 2]);
+    expect(r.total).toBe(4);
+  });
+
+  it("scales the cap with the tier so a cap-bound wave grows", () => {
+    // Tier 1: cap 4 -> 5, groups 2/2 -> 3/3, capped at 5.
+    const t1 = applyEnemyUpgradeCounts(
+      capGroups,
+      ["reinforcements"],
+      allUpgrades,
+      4
+    );
+    expect(t1.groups.map((x) => x.count)).toEqual([3, 2]);
+    expect(t1.total).toBe(5);
+
+    // Tier 2: cap 4 -> 6, groups 3/3, capped at 6.
+    const t2 = applyEnemyUpgradeCounts(
+      capGroups,
+      ["reinforcements", "reinforcements"],
+      allUpgrades,
+      4
+    );
+    expect(t2.groups.map((x) => x.count)).toEqual([3, 3]);
+    expect(t2.total).toBe(6);
+  });
+
+  it("is cap-limited even when the scaled group sum is larger", () => {
+    // Groups total 4; with tier 1 they become 3/3 (6) but the cap only grows
+    // to 5, so 5 spawn.
+    expect(
+      applyEnemyUpgradeCounts(capGroups, ["reinforcements"], allUpgrades, 4)
+        .total
+    ).toBe(5);
+  });
+
+  it("clamps to the group sum when the cap is larger than the groups", () => {
+    // No upgrade: cap 10, groups total 4 -> only 4 spawn.
+    expect(applyEnemyUpgradeCounts(capGroups, [], allUpgrades, 10).total).toBe(
+      4
+    );
   });
 });

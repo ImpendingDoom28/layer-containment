@@ -27,10 +27,7 @@ import { useUpgradeStore } from "../stores/useUpgradeStore";
 import { useWaveStore } from "../stores/useWaveStore";
 import { GameEvent } from "../types/enums/events";
 import { gameEvents } from "../../utils/eventEmitter";
-import {
-  applyWaveEnemyCountMultiplier,
-  getWaveCountMultiplierForStack,
-} from "../../utils/waveEnemyCounts";
+import { applyEnemyUpgradeCounts } from "../../utils/waveEnemyCounts";
 import { enemyActions } from "../ecs/actions/enemyActions";
 
 type SpawnQueueItem = {
@@ -136,15 +133,16 @@ export const useWaveSystem = (gameState: GameState) => {
     const waveConfig = waveConfigs[currentWaveIndex];
     if (!waveConfig) return;
 
+    // Reinforcements scales the per-group counts *and* the spawn cap, so a
+    // cap-bound wave still grows with the upgrade; what remains is exactly the
+    // groups the spawn loop will drain (in the same order).
     const enemyUpgrades = useGameStore.getState().enemyUpgrades;
-    const countMultiplier = getWaveCountMultiplierForStack(
-      waveUpgrades,
-      enemyUpgrades
-    );
-    const availableEnemyTypes: WaveEnemyGroup[] = applyWaveEnemyCountMultiplier(
+    const availableEnemyTypes: WaveEnemyGroup[] = applyEnemyUpgradeCounts(
       waveConfig.enemies,
-      countMultiplier
-    );
+      waveUpgrades,
+      enemyUpgrades,
+      waveConfig.totalEnemies
+    ).groups;
     const spawnQueue: SpawnQueueItem[] = [];
     let remainingEnemyCount = 0;
     let cumulativeDelay = 0;
@@ -153,12 +151,7 @@ export const useWaveSystem = (gameState: GameState) => {
       remainingEnemyCount += enemy.count;
     }
 
-    const totalEnemiesToQueue = Math.min(
-      waveConfig.totalEnemies,
-      remainingEnemyCount
-    );
-
-    for (let i = 0; i < totalEnemiesToQueue && remainingEnemyCount > 0; i++) {
+    for (let i = 0; i < remainingEnemyCount; i++) {
       const chosenEnemy = selectWeightedEnemy(availableEnemyTypes);
       if (!chosenEnemy) break;
 

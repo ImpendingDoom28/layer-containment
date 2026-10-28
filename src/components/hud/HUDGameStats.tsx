@@ -170,8 +170,8 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
             </div>
 
             <div className="flex flex-col gap-2">
-              <HUDEnemyUpgrades />
-              {currentWave < totalWaves && nextWaveReady && (
+              {showStartWave && <HUDEnemyUpgrades />}
+              {showStartWave && (
                 <div className="flex flex-col justify-center flex-1 gap-1">
                   <UIButton data-testid="wave-start" onClick={onStartWave} variant="outline">
                     <Play /> {t("gameStats.startNextWave")}

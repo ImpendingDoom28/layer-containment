@@ -15,6 +15,7 @@ import {
   getStackTierForEnemy,
   getTierRoman,
   getTotalRewardBonusPercentForStack,
+  getTotalRewardMultiplierFromStack,
   getUniqueUpgradeIdsInStackOrder,
 } from "../../utils/enemyUpgradeTierEffects";
 import { UIButton } from "@/components/ui/buttons/UIButton";
@@ -80,15 +81,19 @@ export const HUDEnemyUpgrades: FC<HUDEnemyUpgradesProps> = ({
       .filter((entry) => entry.upgrade !== undefined);
   }, [enemyUpgrades, levelEnemyUpgradeStack]);
 
+  // Gold multipliers stack multiplicatively per pick, so the button total
+  // must be the combined multiplier — not a sum of the per-upgrade percents.
+  const totalBonusPercentage = useMemo(() => {
+    const multiplier = getTotalRewardMultiplierFromStack(
+      levelEnemyUpgradeStack,
+      enemyUpgrades
+    );
+    return Math.round((multiplier - 1) * 100);
+  }, [levelEnemyUpgradeStack, enemyUpgrades]);
+
   if (upgradeEntries.length === 0) {
     return null;
   }
-
-  const totalBonusPercentage = upgradeEntries.reduce(
-    (sum, { upgrade, stackTier }) =>
-      sum + getTotalRewardBonusPercentForStack(upgrade, stackTier),
-    0
-  );
 
   return (
     <>

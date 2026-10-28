@@ -9,6 +9,7 @@ import {
   waypointToTile,
   waypointToTileUnclamped,
 } from "../../utils/levelEditor";
+import { MIN_GRID_SIZE } from "../../utils/gridSizeLimits";
 import { isGridTileOnPath } from "../../utils/pathUtils";
 import { parseLevelConfigData, type LevelConfigData } from "./levelConfig";
 
@@ -160,4 +161,83 @@ describe("playable level files", () => {
       }
     });
   }
+});
+
+// The 3D asset showcase (`/testing-level`) is not a playable level, so it sits
+// outside `PLAYABLE_LEVEL_IDS` and skips the wave/buildable checks above. It
+// still ships as level JSON, so it must validate against the schema and
+// actually carry the showcase rows (every asset category the page displays).
+describe("3D asset showcase level", () => {
+  const level = loadLevel("level_testing");
+
+  it("exists and parses against the level schema", () => {
+    expect(level.name).toBeTruthy();
+    expect(level.gridSize).toBeGreaterThanOrEqual(MIN_GRID_SIZE);
+  });
+
+  it("shows the full roster: enemies, towers, buildings, water, projectiles, path", () => {
+    expect(level.enemies.length).toBeGreaterThan(0);
+    expect(level.towers.length).toBeGreaterThan(0);
+    expect(level.buildings.length).toBeGreaterThan(0);
+    expect(level.waters.length).toBeGreaterThan(0);
+    expect(level.projectiles.length).toBeGreaterThan(0);
+    expect(level.pathWaypoints.length).toBeGreaterThan(0);
+    expect(level.pathWaypoints.every((path) => path.length > 1)).toBe(true);
+  });
+
+  it("covers every enemy and tower type once each", () => {
+    const enemyTypes = new Set(level.enemies.map((e) => e.type));
+    const towerTypes = new Set(level.towers.map((t) => t.type));
+    for (const type of ["basic", "fast", "tank", "medic", "splitter"]) {
+      expect(enemyTypes.has(type as never), `enemy type ${type} missing`).toBe(true);
+    }
+    for (const type of ["basic", "slow", "aoe", "laser", "relay", "chain"]) {
+      expect(towerTypes.has(type as never), `tower type ${type} missing`).toBe(true);
+    }
+  });
+
+  it("shows each of the four enemy upgrades at every tier (1-3) on basic enemies", () => {
+    // The upgrades showcase reuses the `basic` enemy so the upgrade glyphs
+    // (armored / swift / slow-resistance / regenerating) are shown against a
+    // known body, one column per tier. Reinforcements is a run/portal upgrade
+    // (rendered on the spawn portal, not on an enemy), so it is not here.
+    const basicWithUpgrades = level.enemies.filter(
+      (e) => e.type === "basic" && e.upgrades.length > 0
+    );
+    const upgradesShown = new Set(basicWithUpgrades.map((e) => e.upgrades[0]));
+    for (const id of ["armored", "swift", "slowResistance", "regenerating"]) {
+      expect(upgradesShown.has(id as never), `upgrade ${id} missing`).toBe(true);
+    }
+    // Each upgrade id appears exactly three times (tiers 1, 2, 3).
+    const count = (id: string) =>
+      level.enemies.filter(
+        (e) =>
+          e.type === "basic" &&
+          e.upgrades.length > 0 &&
+          e.upgrades.every((u) => u === (id as never))
+      ).length;
+    for (const id of ["armored", "swift", "slowResistance", "regenerating"]) {
+      expect(count(id), `upgrade ${id} should have 3 tiers`).toBe(3);
+    }
+  });
+
+  it("is not playable: no waves and no enemy weights", () => {
+    expect(level.waveConfigs.length).toBe(0);
+    expect(level.enemyWeights).toBeNull();
+  });
+
+  it("keeps every showcase entity within the grid bounds", () => {
+    const inBounds = (v: number) => v >= 0 && v < level.gridSize;
+    for (const tower of level.towers) {
+      expect(inBounds(tower.gridX)).toBe(true);
+      expect(inBounds(tower.gridZ)).toBe(true);
+    }
+    // Enemy world coords sit one tile inside the board (offset −gridSize/2,
+    // tile size 1): a 20×20 grid spans [−9.5, 10.5) per axis.
+    const worldInBounds = (v: number) => v >= -level.gridSize / 2 && v <= level.gridSize / 2 + 1;
+    for (const enemy of level.enemies) {
+      expect(worldInBounds(enemy.x)).toBe(true);
+      expect(worldInBounds(enemy.z)).toBe(true);
+    }
+  });
 });

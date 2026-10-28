@@ -46,9 +46,13 @@ import { getRunStats } from "../../core/ecs/selectors/runStats";
 
 type GamePageProps = {
   onOpenLevelEditor: () => void;
+  onOpenTestingLevel: () => void;
 };
 
-export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
+export const GamePage: FC<GamePageProps> = ({
+  onOpenLevelEditor,
+  onOpenTestingLevel,
+}) => {
   const { t } = useTranslation();
   const [activePlayableLevel, setActivePlayableLevel] =
     useState<PlayableLevelId>(PLAYABLE_LEVEL_IDS[0]);
@@ -240,6 +244,7 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
         <HUDMainMenu
           onStartGameWithLevel={onStartGameWithLevel}
           onOpenLevelEditor={onOpenLevelEditor}
+          onOpenTestingLevel={onOpenTestingLevel}
         />
       )}
 

@@ -15,6 +15,12 @@ const LevelEditorPage = lazy(() =>
   }))
 );
 
+const TestingLevelPage = lazy(() =>
+  import("./components/pages/TestingLevelPage").then((mod) => ({
+    default: mod.TestingLevelPage,
+  }))
+);
+
 const AppRoutes: FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -28,7 +34,10 @@ const AppRoutes: FC = () => {
         element={
           <WorldProvider world={world}>
             <EntityIdProvider>
-              <GamePage onOpenLevelEditor={() => navigate("/editor")} />
+              <GamePage
+              onOpenLevelEditor={() => navigate("/editor")}
+              onOpenTestingLevel={() => navigate("/testing-level")}
+            />
             </EntityIdProvider>
           </WorldProvider>
         }
@@ -47,6 +56,25 @@ const AppRoutes: FC = () => {
                 }
               >
                 <LevelEditorPage onBackToGame={() => navigate("/")} />
+              </Suspense>
+            </EntityIdProvider>
+          </WorldProvider>
+        }
+      />
+      <Route
+        path="/testing-level"
+        element={
+          <WorldProvider world={world}>
+            <EntityIdProvider>
+              <Suspense
+                fallback={
+                  <HUDLoading
+                    className="fixed inset-0"
+                    message={t("common.loading")}
+                  />
+                }
+              >
+                <TestingLevelPage onBackToMenu={() => navigate("/")} />
               </Suspense>
             </EntityIdProvider>
           </WorldProvider>

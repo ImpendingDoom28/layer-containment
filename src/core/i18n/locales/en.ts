@@ -39,6 +39,7 @@ export const en = {
     almanac: "Almanac",
     settings: "Settings",
     levelCreator: "Level Creator",
+    testingLevel: "Testing Level",
     systemsOnline: "Systems Online",
     tagline: "you’re not winning a war; — you’re holding a boundary.",
     viewSource: "View source on GitHub",
@@ -336,6 +337,12 @@ export const en = {
       description:
         "+20% more enemies spawn each wave. Tier 2: +40%, tier 3: +65%.",
     },
+  },
+  testingLevel: {
+    title: "3D Asset Showcase",
+    description:
+      "Every enemy, tower and projectile, plus buildings, water, the path, the spawn portal and the end building — and every enemy upgrade at all its tiers (armored, swift, slow-resistance, regenerating) plus the reinforcements spawn portals — laid out one tile apart so the whole roster is visible at once. Drag to orbit, scroll to zoom.",
+    backToMenu: "Back to menu",
   },
   rewardText: "+${{amount}}",
 } as const;

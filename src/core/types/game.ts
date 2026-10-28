@@ -48,6 +48,16 @@ export type EnemyUpgradeId =
 
 export type EnemyUpgradeStackTier = 1 | 2 | 3;
 
+/**
+ * One upgrade the enemy carries, with how many times it was picked (1-3).
+ * The pick count is the glyph count shown on the enemy (1 pick = 1 glyph,
+ * 3 picks = 3 glyphs).
+ */
+export type EnemyUpgradeStack = {
+  id: EnemyUpgradeId;
+  tier: EnemyUpgradeStackTier;
+};
+
 export type EnemyUpgradeConfig = {
   id: EnemyUpgradeId;
   name: string;
@@ -150,7 +160,7 @@ export type Enemy = Omit<EnemyConfig, "id"> & {
   x: number;
   z: number;
   upgrades: EnemyUpgradeId[];
-  upgradeIndicatorColors?: string[];
+  upgradeStacks?: EnemyUpgradeStack[];
   regeneration?: number;
   slowResistance?: number;
   nextHealPulseAt?: number;

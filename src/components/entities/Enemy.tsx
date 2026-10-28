@@ -96,12 +96,7 @@ const getHealthTier = (percent: number): HealthTier =>
   percent > 0.5 ? "high" : percent > 0.25 ? "medium" : "low";
 
 export const Enemy: FC<EnemyProps> = memo(
-  ({
-    entity,
-    getSimulationTime,
-    getTimeScale,
-    debug = false,
-  }) => {
+  ({ entity, getSimulationTime, getTimeScale, debug = false }) => {
     // Read the cold state once at mount: every field the JSX uses
     // (size, color, upgrades, healPulse, maxHealth) is set at spawn and never
     // mutated afterwards — only health changes over the enemy's lifetime, and
@@ -150,11 +145,9 @@ export const Enemy: FC<EnemyProps> = memo(
     const fillBarRef = useRef<Mesh>(null);
     const flashMeshRef = useRef<Mesh>(null);
     const healthTierRef = useRef<HealthTier>("high");
-    const upgradeFirstRingRef = useRef<Mesh>(null);
     const hasTriggeredSpawnEffect = useRef(false);
     const [isSlowed, setIsSlowed] = useState(false);
     const isSlowedRef = useRef(false);
-    const ringTimeRef = useRef(0);
     const prevHealthRef = useRef(snapshot?.health ?? 0);
     const hitFlashRef = useRef(0);
 
@@ -278,15 +271,6 @@ export const Enemy: FC<EnemyProps> = memo(
       const now = state.clock.elapsedTime;
       const adjustedTime = getSimulationTime(now);
 
-      ringTimeRef.current += delta * getTimeScale();
-      const ringTime = ringTimeRef.current;
-      if ((snapshot?.upgrades.length ?? 0) > 0 && upgradeFirstRingRef.current) {
-        upgradeFirstRingRef.current.rotation.y = ringTime * 1.5;
-        const pulse = Math.sin(ringTime * 2) * 0.05 + 1;
-        const baseRadius = size * 1.1;
-        upgradeFirstRingRef.current.scale.setScalar(baseRadius * pulse);
-      }
-
       // The enemy carries the EnemySlow trait only while a slow is in effect
       // (the ApplySlowSystem adds/removes it), so absence means full speed.
       const slow = entity.get(EnemySlow);
@@ -302,15 +286,15 @@ export const Enemy: FC<EnemyProps> = memo(
 
     return (
       <group ref={meshRef} userData={{ culledEntity: true }}>
-        {/* Upgrade indicators */}
-        {snapshot.upgrades.length > 0 &&
-          (snapshot.upgradeIndicatorColors?.length ?? 0) > 0 && (
-            <UpgradeEffect
-              enemySize={size}
-              indicatorColors={snapshot.upgradeIndicatorColors!}
-              firstRingRef={upgradeFirstRingRef}
-            />
-          )}
+        {/* Upgrade indicators: one glyph per pick (1 pick = 1 glyph) */}
+        {(snapshot.upgradeStacks?.length ?? 0) > 0 && (
+          <UpgradeEffect
+            entity={entity}
+            enemySize={size}
+            upgradeStacks={snapshot.upgradeStacks!}
+            getTimeScale={getTimeScale}
+          />
+        )}
 
         {/* Slow effect indicator */}
         {isSlowed && (

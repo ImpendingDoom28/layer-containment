@@ -26,6 +26,11 @@ import {
   useGameStore,
 } from "../../core/stores/useGameStore";
 import {
+  levelEnemyUpgradeStackSelector,
+  useUpgradeStore,
+} from "../../core/stores/useUpgradeStore";
+import { countUpgradePicks } from "../../utils/enemyUpgradeTierEffects";
+import {
   flatFieldToSphereSurface,
   flatFieldToSphereTileMeshCenter,
   flatFieldToSphereTilePose,
@@ -61,6 +66,7 @@ export const Path: FC<PathProps> = memo(({ pathIndex }) => {
   const tileSize = useGameStore(tileSizeSelector);
   const pathYOffset = useGameStore(pathYOffsetSelector);
   const pathWidth = useGameStore(pathWidthSelector);
+  const upgradeStack = useUpgradeStore(levelEnemyUpgradeStackSelector);
 
   const [path, segments] = useMemo(() => {
     const path = pathWaypoints[pathIndex];
@@ -118,6 +124,10 @@ export const Path: FC<PathProps> = memo(({ pathIndex }) => {
       )
     );
   }, [path, pathIndex, radius, pathYOffset]);
+
+  // The Reinforcements tier picked for this run (0-3); the portal warms up
+  // and shows one ring per pick so the upgrade is visible at the spawn point.
+  const reinforcementsTier = countUpgradePicks(upgradeStack, "reinforcements");
 
   const portalProps = useMemo(() => {
     if (!path || path.length === 0) return null;
@@ -281,6 +291,7 @@ export const Path: FC<PathProps> = memo(({ pathIndex }) => {
           position={portalProps.position}
           quaternion={portalProps.quaternion}
           surfaceNormal={portalProps.surfaceNormal}
+          reinforcementsTier={reinforcementsTier}
         />
       )}
 

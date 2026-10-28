@@ -1,24 +1,37 @@
-import { FC, useRef, useEffect, memo } from "react";
+import { FC, useRef, useEffect, useMemo, memo } from "react";
 import { useFrame } from "@react-three/fiber";
-import type { Group, Mesh, Quaternion } from "three";
+import { Color } from "three";
+import type { Group, Mesh, MeshStandardMaterial, Quaternion } from "three";
 
 import { getCssColorValue } from "../ui/lib/cssUtils";
+
+// How far toward orange a fully stacked (tier 3) Reinforcements portal shifts.
+// 1 keeps a clear green base, 3 reads as hot orange.
+const REINFORCEMENT_TINT_MAX = 0.85;
+const ORANGE_TINT = new Color("#f59e0b");
+
+/** Maps the Reinforcements tier (0-3) to a green->orange lerp factor. */
+const getReinforcementTint = (tier: number): number =>
+  (Math.min(Math.max(tier, 0), 3) / 3) * REINFORCEMENT_TINT_MAX;
 
 type PortalProps = {
   position: [number, number, number];
   pathYaw?: number;
   quaternion?: Quaternion;
   surfaceNormal?: [number, number, number];
+  /** Reinforcements tier picked for the run (0 = none); tints the portal orange. */
+  reinforcementsTier?: number;
 };
 
 export const Portal: FC<PortalProps> = memo(
-  ({ position, pathYaw = 0, quaternion, surfaceNormal }) => {
+  ({ position, pathYaw = 0, quaternion, surfaceNormal, reinforcementsTier = 0 }) => {
     const outerRingRef = useRef<Mesh>(null);
     const middleRingRef = useRef<Mesh>(null);
     const innerRingRef = useRef<Mesh>(null);
     const portalCoreRef = useRef<Mesh>(null);
     const particlesRef = useRef<(Mesh | null)[]>([]);
     const groupRef = useRef<Group>(null);
+    const indicatorRefs = useRef<(Mesh | null)[]>([]);
 
     useEffect(() => {
       particlesRef.current = Array.from({ length: 12 }, () => null);
@@ -58,6 +71,18 @@ export const Portal: FC<PortalProps> = memo(
         particle.rotation.x = time * 1.5;
       });
 
+      // Reinforcements tier rings: a gentle pulse marks how many extra
+      // enemies the portal will throw, growing outward from the core.
+      for (let i = 0; i < indicatorRefs.current.length; i++) {
+        const indicator = indicatorRefs.current[i];
+        if (!indicator) continue;
+        const phase = ((time * 1.6 - i * 0.35) % 1 + 1) % 1;
+        const scale = 0.5 + phase * 0.45;
+        indicator.scale.setScalar(scale);
+        (indicator.material as MeshStandardMaterial).opacity =
+          0.5 * (1 - phase);
+      }
+
       if (groupRef.current) {
         const pulse = Math.sin(time * 1.2) * 0.05;
         if (surfaceNormal) {
@@ -73,8 +98,19 @@ export const Portal: FC<PortalProps> = memo(
       }
     });
 
+    const reinforcementTier = Math.min(Math.max(reinforcementsTier, 0), 3);
+    const tint = getReinforcementTint(reinforcementTier);
+
+    // The portal's emissive drives its glow: keep the base colour on the
+    // green scene identity and lerp the emissive toward orange as the
+    // Reinforcements stack grows, so the portal itself warms up with the
+    // upgrade. The emissive material is not shared across tiers, so the
+    // per-tier tint never churns the cached base materials.
     const portalColor = getCssColorValue("scene-portal");
-    const portalGlow = getCssColorValue("scene-portal-glow");
+    const portalGlow = useMemo(
+      () => new Color(getCssColorValue("scene-portal-glow")).lerp(ORANGE_TINT, tint),
+      [tint]
+    );
 
     return (
       <group
@@ -146,6 +182,27 @@ export const Portal: FC<PortalProps> = memo(
           </mesh>
         ))}
 
+        {reinforcementTier > 0 &&
+          Array.from({ length: reinforcementTier }, (_, index) => (
+            <mesh
+              key={`reinforcement-tier-${index}`}
+              ref={(el) => {
+                if (el) indicatorRefs.current[index] = el;
+              }}
+              position={[0, 0.06, 0]}
+            >
+              <torusGeometry args={[0.52, 0.02, 8, 40]} />
+              <meshStandardMaterial
+                color={portalGlow}
+                emissive={portalGlow}
+                emissiveIntensity={1}
+                transparent
+                opacity={0.4}
+                depthWrite={false}
+              />
+            </mesh>
+          ))}
+
         <mesh position={[0, -0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.45, 0.45, 0.05, 16]} />
           <meshStandardMaterial
@@ -164,7 +221,8 @@ export const Portal: FC<PortalProps> = memo(
       prevProps.position[2] === nextProps.position[2] &&
       (prevProps.pathYaw ?? 0) === (nextProps.pathYaw ?? 0) &&
       prevProps.quaternion === nextProps.quaternion &&
-      prevProps.surfaceNormal === nextProps.surfaceNormal
+      prevProps.surfaceNormal === nextProps.surfaceNormal &&
+      prevProps.reinforcementsTier === nextProps.reinforcementsTier
     );
   }
 );

@@ -45,8 +45,7 @@ import {
   TowerType,
 } from "../types/game";
 import { getPositionAlongMultiplePaths } from "../../utils/pathUtils";
-import { getCssColorValue } from "../../components/ui/lib/cssUtils";
-import { getUpgradeIndicatorColors } from "../../utils/enemyUpgradeVisuals";
+import { getUpgradeStacks } from "../../utils/upgradeStacks";
 import {
   getStackTierForEnemy,
   getTieredUpgradeEffect,
@@ -273,11 +272,7 @@ export const useLevelSystem = () => {
         }
       }
 
-      const upgradeIndicatorColors = getUpgradeIndicatorColors(
-        applyUpgrades,
-        enemyUpgrades,
-        getCssColorValue("scene-white")
-      );
+      const upgradeStacks = getUpgradeStacks(applyUpgrades);
 
       const enemy: Enemy = {
         ...enemyConfig,
@@ -292,7 +287,7 @@ export const useLevelSystem = () => {
         x: startPosition.x,
         z: startPosition.z,
         upgrades: uniqueUpgradeIds,
-        upgradeIndicatorColors,
+        upgradeStacks,
         regeneration,
         slowResistance,
       };

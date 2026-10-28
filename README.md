@@ -155,10 +155,22 @@ Enforcement is two-tiered:
 
 To lint a single commit by hand: `npx commitlint --last` (checks the most recent commit), or pipe a message: `echo "feat: x" | npx commitlint`.
 
+### Branch Naming
+
+All branches must start with `feature/`, `bugfix/`, `ci/`, `refactor/` or
+`chore/` — e.g. `feature/slow-tower`. Note the prefix is `feature/`, not
+`feat/`. The mainline `master` is the only exception.
+
+Enforced locally by the [`husky`](https://typicode.github.io/husky/)
+`pre-push` hook: a push containing any other branch name is rejected with a
+list of the offending branches. Ref deletions, tags, and pushes to `master`
+are not affected.
+
 ### Pre-push Verification (husky)
 
-The `pre-push` hook runs `npm run verify` (build + unit + e2e) before a push,
-but only when the push could affect the app. It diffs the refs you push
+The `pre-push` hook first validates the branch names being pushed (see
+[Branch Naming](#branch-naming)) and then runs `npm run verify` (build +
+unit + e2e) before a push, but only when the push could affect the app. It diffs the refs you push
 against their previous remote state (for a new branch, against the merge base
 with `master`) and skips verify when every changed file is non-code: all
 `*.md` files, `docs/`, `package-lock.json` (alone), and other generated/log

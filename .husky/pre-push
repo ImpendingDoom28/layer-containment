@@ -14,6 +14,10 @@
 # exposes its code path and triggers verify. If any ref cannot be inspected
 # (e.g. its remote sha is not available locally), verify runs rather than
 # skipping.
+#
+# Before verify, the remote branch names being pushed are validated: every
+# pushed branch must start with feature/, bugfix/, ci/, refactor/ or chore/
+# (the mainline master is exempt). Ref deletions are skipped.
 
 zero=0000000000000000000000000000000000000000
 
@@ -21,9 +25,20 @@ zero=0000000000000000000000000000000000000000
 # is treated as code (the safe default is to run verify).
 non_code='^docs/|\.(md|mdx)$|^package-lock\.json$|\.(log|lock)$|^\.DS_Store$|^Thumbs\.db$'
 
+# Allowed remote branch names: mainline master plus the task-branch prefixes.
+# The regex is built from the prefix list so both the check and the error
+# message stay in sync.
+branch_prefixes='feature bugfix ci refactor chore'
+branch_re='^(master|'
+for prefix in $branch_prefixes; do
+  branch_re="$branch_re${prefix}/.+|"
+done
+branch_re="${branch_re%|})$"
+
 changed_files=''
 refs_seen=0
 inspection_failed=0
+bad_branches=''
 
 # Print the changed file names between $1 and $2; rename detection off so
 # moved/renamed files keep their source path in the list.
@@ -39,6 +54,17 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     # Remote ref is being deleted: it removes no app code, so nothing to verify.
     continue
   fi
+
+  # Only branches (refs/heads/*) are validated; tags and other refs pass.
+  case "$remote_ref" in
+    refs/heads/*)
+      branch_name=${remote_ref#refs/heads/}
+      if ! printf '%s\n' "$branch_name" | grep -Eq "$branch_re"; then
+        bad_branches="$bad_branches  - $branch_name
+"
+      fi
+      ;;
+  esac
 
   if [ "$remote_sha" = "$zero" ]; then
     # New remote ref: diff against the default branch's merge base.
@@ -66,6 +92,16 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   changed_files="$changed_files$files
 "
 done
+
+# Reject pushes whose branch names do not follow the conventions, before any
+# verify work.
+if [ -n "$bad_branches" ]; then
+  echo "husky - pre-push: invalid branch name(s) — branches must be named:" >&2
+  echo "$bad_branches" | sed '$d' >&2
+  echo "" >&2
+  echo "  feature/*, bugfix/*, ci/*, refactor/* or chore/* (or the mainline master)" >&2
+  exit 1
+fi
 
 # No ref info, or a ref we could not inspect: verify (the safe default).
 if [ "$refs_seen" -eq 0 ] || [ "$inspection_failed" -ne 0 ]; then

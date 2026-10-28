@@ -186,11 +186,7 @@ const ruValues = {
     selling: "Продажа…",
   },
   nextWavePreview: {
-    pathEntrance: "Вход на путь",
     nextWave: "Следующая волна",
-    empowered: "Усилено",
-    units: "ед.",
-    units_other: "ед.",
   },
   editor: {
     backToGame: "Назад в игру",

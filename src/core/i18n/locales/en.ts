@@ -176,11 +176,7 @@ export const en = {
     selling: "Selling...",
   },
   nextWavePreview: {
-    pathEntrance: "Path Entrance",
     nextWave: "Next Wave",
-    empowered: "Empowered",
-    units: "unit",
-    units_other: "units",
   },
   editor: {
     backToGame: "Back to game",

@@ -21,12 +21,6 @@ import {
 } from "../../core/stores/useUpgradeStore";
 import { EnemyConfig } from "../../core/types/game";
 import { useTranslationInCanvas } from "../../core/i18n/useTranslationInCanvas";
-import {
-  getStackTierForEnemy,
-  getTierRoman,
-  getTotalRewardMultiplierFromStack,
-  getUniqueUpgradeIdsInStackOrder,
-} from "../../utils/enemyUpgradeTierEffects";
 import { applyEnemyUpgradeCounts } from "../../utils/waveEnemyCounts";
 import {
   nextWaveReadySelector,
@@ -44,9 +38,8 @@ const EnemyPreviewModel: FC<EnemyPreviewModelProps> = ({
   name,
   count,
 }) => {
-  const t = useTranslationInCanvas();
   return (
-    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border border-border/70 bg-muted/35 px-2 py-1.5">
+    <div className="grid grid-cols-[auto_1fr] items-center gap-2 border border-border/70 bg-muted/35 px-2 py-1.5">
       <UITypography
         variant="verySmall"
         className="min-w-9 text-muted-foreground uppercase tracking-[0.16em]"
@@ -62,9 +55,6 @@ const EnemyPreviewModel: FC<EnemyPreviewModelProps> = ({
           {name}
         </UITypography>
       </div>
-      <UITypography variant="verySmall" className="text-muted-foreground">
-        {t("nextWavePreview.units", { count })}
-      </UITypography>
     </div>
   );
 };
@@ -89,17 +79,6 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
   const levelEnemyUpgradeStack = useUpgradeStore(
     levelEnemyUpgradeStackSelector
   );
-
-  const totalRewardMultiplier = useMemo(() => {
-    return getTotalRewardMultiplierFromStack(
-      levelEnemyUpgradeStack,
-      enemyUpgrades
-    );
-  }, [levelEnemyUpgradeStack, enemyUpgrades]);
-
-  const bonusPercentage = useMemo(() => {
-    return Math.round((totalRewardMultiplier - 1) * 100);
-  }, [totalRewardMultiplier]);
 
   const shouldShow = useMemo(() => {
     return nextWaveReady && currentWave > 0 && currentWave < totalWaves;
@@ -156,17 +135,9 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
           className="border w-52 border-border/80 bg-card/95 shadow-panel backdrop-blur-sm"
         >
           <UICardHeader className="gap-1 border-b border-border/70">
-            <UITypography
-              variant="verySmall"
-              className="text-primary uppercase tracking-[0.22em]"
-            >
-              {t("nextWavePreview.pathEntrance")}
+            <UITypography variant="medium" className="font-semibold">
+              {t("nextWavePreview.nextWave")}
             </UITypography>
-            <div className="flex items-center justify-between gap-3">
-              <UITypography variant="medium" className="font-semibold">
-                {t("nextWavePreview.nextWave")}
-              </UITypography>
-            </div>
           </UICardHeader>
           <UICardContent className="gap-2">
             <div className="flex flex-col gap-1.5">
@@ -184,48 +155,6 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
                 );
               })}
             </div>
-
-            {levelEnemyUpgradeStack.length > 0 && enemyUpgrades && (
-              <div className="pt-2 border-t border-border/70">
-                <div className="flex items-center justify-between gap-2">
-                  <UITypography
-                    variant="verySmall"
-                    className="text-primary uppercase tracking-[0.16em]"
-                  >
-                    {t("nextWavePreview.empowered")}
-                  </UITypography>
-                  {bonusPercentage > 0 && (
-                    <UITypography
-                      variant="verySmall"
-                      className="text-green-400"
-                    >
-                      {t("upgrade.bonusGold", { percent: bonusPercentage })}
-                    </UITypography>
-                  )}
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {getUniqueUpgradeIdsInStackOrder(levelEnemyUpgradeStack).map(
-                    (upgradeId) => {
-                      const upgrade = enemyUpgrades[upgradeId];
-                      if (!upgrade) return null;
-                      return (
-                        <UITypography
-                          key={upgradeId}
-                          variant="verySmall"
-                          className="px-1.5 py-1 font-medium uppercase tracking-[0.14em] text-black"
-                          style={{
-                            backgroundColor: upgrade.indicatorColor,
-                          }}
-                        >
-                          {t(`enemyUpgrades.${upgradeId}.name`)}{" "}
-                          {getTierRoman(getStackTierForEnemy(upgradeId, levelEnemyUpgradeStack))}
-                        </UITypography>
-                      );
-                    }
-                  )}
-                </div>
-              </div>
-            )}
           </UICardContent>
         </UICard>
       </GUIWrapper>

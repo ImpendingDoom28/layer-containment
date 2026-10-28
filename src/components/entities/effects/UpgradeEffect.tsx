@@ -27,7 +27,7 @@ import type {
 import { EmissiveParticleSphere } from "./primitives/EmissiveParticleSphere";
 import {
   GLOW_SHELL_GEOMETRY,
-  REGEN_DISC_GEOMETRY,
+  REGEN_RING_GEOMETRY,
   SHIELD_PLATE_GEOMETRY,
   STRAP_PLANE_GEOMETRY,
 } from "./primitives/UpgradeVisualGeometries";
@@ -98,7 +98,7 @@ const getEmissiveMaterial = (
 const STRAP_MATERIAL = new MeshBasicMaterial({
   color: "#ffffff",
   transparent: true,
-  opacity: 0.8,
+  opacity: 0.4,
   blending: AdditiveBlending,
   depthWrite: false,
   side: DoubleSide,
@@ -193,7 +193,7 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
     const dirRef = useRef(new Vector3(0, 0, -1));
     const dirGroupRef = useRef<Group>(null);
     const glowRef = useRef<Mesh>(null);
-    const discRef = useRef<Mesh>(null);
+    const ringRef = useRef<Mesh>(null);
     const strapRefs = useRef<(Mesh | null)[]>([]);
     const particleRefs = useRef<(Mesh | null)[]>([]);
 
@@ -231,14 +231,16 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
       }
 
       if (layout.hasRegen) {
-        if (discRef.current) {
-          discRef.current.scale.setScalar(enemySize * 0.85 * pulse);
+        // Ring unit radius is 0.9–1.5, so a ~1.3x scale puts the whole band
+        // outside the body (radius = size) and clearly wider than the enemy.
+        if (ringRef.current) {
+          ringRef.current.scale.setScalar(enemySize * 1.3 * pulse);
         }
         for (let i = 0; i < REGEN_PARTICLE_COUNT; i++) {
           const particle = particleRefs.current[i];
           if (!particle) continue;
           const progress = (time * 0.6 + i * (1 / REGEN_PARTICLE_COUNT)) % 1;
-          // Rise from the ground disc (feet plane, y = 0) up past the body top
+          // Rise from the ring (feet plane, y = 0) up past the body top
           // (y = 1.55*size) so the energy stream is visible from the camera.
           particle.position.set(
             Math.sin(time * 2 + i * 2.1) * enemySize * 0.35,
@@ -271,9 +273,9 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
           if (!strap) continue;
           const offset = (i - (layout.swiftTier - 1) / 2) * enemySize * 0.6;
           // Flat ribbon just above the ground (the feet plane is y = 0),
-          // trailing well behind the body along the travel direction; u fades
+          // trailing behind the body along the travel direction; u fades
           // toward the tail.
-          strap.position.set(-1.5 * enemySize, 0.04 * enemySize, offset);
+          strap.position.set(-1.0 * enemySize, 0.04 * enemySize, offset);
         }
       }
     });
@@ -348,7 +350,7 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
                     if (el) strapRefs.current[index] = el;
                   }}
                   rotation={[Math.PI / 2, 0, 0]}
-                  scale={[4 * enemySize, 0.8 * enemySize, 1]}
+                  scale={[2.6 * enemySize, 0.55 * enemySize, 1]}
                   geometry={STRAP_PLANE_GEOMETRY}
                   material={STRAP_MATERIAL}
                 />
@@ -373,10 +375,10 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
         {layout.hasRegen && (
           <>
             <mesh
-              ref={discRef}
+              ref={ringRef}
               position={[0, 0.03 * enemySize, 0]}
-              scale={enemySize * 0.85}
-              geometry={REGEN_DISC_GEOMETRY}
+              scale={enemySize * 1.3}
+              geometry={REGEN_RING_GEOMETRY}
               material={getEmissiveMaterial(layout.regenColor, 0.5, 1.1)}
             />
             {Array.from({ length: REGEN_PARTICLE_COUNT }, (_, index) => (

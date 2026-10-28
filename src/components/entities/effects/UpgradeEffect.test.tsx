@@ -121,13 +121,13 @@ describe("UpgradeEffect", () => {
       expect(countGeometry(renderer, "SphereGeometry")).toBe(1);
       expect(countGeometry(renderer, "ExtrudeGeometry")).toBe(0);
       expect(countGeometry(renderer, "PlaneGeometry")).toBe(0);
-      expect(countGeometry(renderer, "CircleGeometry")).toBe(0);
+      expect(countGeometry(renderer, "RingGeometry")).toBe(0);
     } finally {
       renderer.unmount();
     }
   });
 
-  it("renders a ground disc plus rising particles (Regenerating)", async () => {
+  it("renders a ground ring plus rising particles (Regenerating)", async () => {
     useGameStore.setState({ enemyUpgrades: upgradeConfigs });
     const renderer = await ReactThreeTestRenderer.create(
       <UpgradeEffect
@@ -139,8 +139,8 @@ describe("UpgradeEffect", () => {
     );
 
     try {
-      // 1 ground disc + 4 rising energy particles.
-      expect(countGeometry(renderer, "CircleGeometry")).toBe(1);
+      // 1 ground ring + 4 rising energy particles.
+      expect(countGeometry(renderer, "RingGeometry")).toBe(1);
       expect(countGeometry(renderer, "SphereGeometry")).toBe(4);
     } finally {
       renderer.unmount();

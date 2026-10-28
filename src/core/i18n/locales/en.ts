@@ -156,6 +156,7 @@ export const en = {
     bonusGold: "+{{percent}}% gold",
     hp: "+{{percent}}% HP",
     speed: "+{{percent}}% speed",
+    count: "+{{percent}}% enemies",
     regen: "{{amount}} HP/s regen",
     slowImmune: "Slow immune",
     slowResistance: "+{{percent}}% slow resistance",
@@ -329,6 +330,11 @@ export const en = {
     regenerating: {
       name: "Regenerating",
       description: "Heals 5 HP/sec",
+    },
+    reinforcements: {
+      name: "Reinforcements",
+      description:
+        "+20% more enemies spawn each wave. Tier 2: +40%, tier 3: +65%.",
     },
   },
   rewardText: "+${{amount}}",

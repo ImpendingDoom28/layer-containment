@@ -27,6 +27,7 @@ import {
   getTotalRewardMultiplierFromStack,
   getUniqueUpgradeIdsInStackOrder,
 } from "../../utils/enemyUpgradeTierEffects";
+import { applyEnemyUpgradeCounts } from "../../utils/waveEnemyCounts";
 import {
   nextWaveReadySelector,
   useWaveStore,
@@ -110,6 +111,18 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
     return waveConfigs[nextWaveIndex];
   }, [shouldShow, currentWave, waveConfigs]);
 
+  // Mirrors the spawn loop: Reinforcements scales the group counts *and* the
+  // spawn cap, so the counts shown here are exactly what will spawn.
+  const reinforcedGroups = useMemo(() => {
+    if (!nextWaveConfig) return [];
+    return applyEnemyUpgradeCounts(
+      nextWaveConfig.enemies,
+      levelEnemyUpgradeStack,
+      enemyUpgrades,
+      nextWaveConfig.totalEnemies
+    ).groups;
+  }, [nextWaveConfig, levelEnemyUpgradeStack, enemyUpgrades]);
+
   const worldPosition = useMemo(() => {
     const path = pathWaypoints[pathIndex];
     const startPosition = path?.[0];
@@ -157,7 +170,7 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
           </UICardHeader>
           <UICardContent className="gap-2">
             <div className="flex flex-col gap-1.5">
-              {nextWaveConfig.enemies.map((enemyGroup, index) => {
+              {reinforcedGroups.map((enemyGroup, index) => {
                 const enemyConfig = enemyTypes?.[enemyGroup.type];
                 if (!enemyConfig) return null;
 

@@ -105,6 +105,7 @@ const enemyUpgradeIdSchema = z.enum([
   "swift",
   "slowResistance",
   "regenerating",
+  "reinforcements",
 ]);
 
 const enemySchema: z.ZodType<Enemy> = z.object({

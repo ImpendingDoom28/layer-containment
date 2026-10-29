@@ -41,7 +41,10 @@ import { useGameSystem } from "../../src/core/hooks/useGameSystem";
 import { useLevelSystem } from "../../src/core/hooks/useLevelSystem";
 import { useProjectileSystem } from "../../src/core/hooks/useProjectileSystem";
 import { useWaveSystem } from "../../src/core/hooks/useWaveSystem";
-import { startNewRunSelector, useGameStore } from "../../src/core/stores/useGameStore";
+import {
+  startNewRunSelector,
+  useGameStore,
+} from "../../src/core/stores/useGameStore";
 import { useLevelStore } from "../../src/core/stores/useLevelStore";
 import {
   resetLevelEnemyUpgradesSelector,
@@ -369,30 +372,17 @@ const StressTestGame = () => {
   // on every enemy kill/spawn (money / activeEffects subscriptions), and an
   // inline `() => {}` here would give `Grid` a new prop each time, defeating
   // its memo and re-rendering all 4096 tile meshes per kill.
-  const onPlaceTowerNoop = useCallback(
-    () => {
-      /* stress level is fully pre-built; placement is disabled */
-    },
-    []
-  );
+  const onPlaceTowerNoop = useCallback(() => {
+    /* stress level is fully pre-built; placement is disabled */
+  }, []);
   const resetLevelEnemyUpgrades = useUpgradeStore(
     resetLevelEnemyUpgradesSelector
   );
 
-  const {
-    gameStatus,
-    isGameConfigLoaded,
-    selectedTower,
-    activeEffects,
-    shouldDisableControls,
-    shouldStopMovement,
-    onSpawnEffect,
-    onEndEffect,
-    onEffectComplete,
-  } = gameSystem;
+  const { gameStatus, isGameConfigLoaded, selectedTower, shouldStopMovement } =
+    gameSystem;
 
   const {
-    money,
     sellTower,
     resetState: resetLevelState,
     isLevelConfigLoaded,
@@ -462,19 +452,13 @@ const StressTestGame = () => {
           >
             <GameScene
               placeTower={onPlaceTowerNoop}
-              onSpawnEffect={onSpawnEffect}
-              onEndEffect={onEndEffect}
-              onEffectComplete={onEffectComplete}
               selectedTower={selectedTower}
-              money={money}
-              activeEffects={activeEffects}
               gameStatus={gameStatus}
               waveSystem={waveSystem}
               onEnemyReachEnd={onEnemyReachEnd}
               onProjectileHit={onProjectileHit}
               onProjectileRemove={onProjectileRemove}
               onSellTower={sellTower}
-              shouldDisableControls={shouldDisableControls}
               shouldStopMovement={shouldStopMovement}
               shouldStopCamera={shouldStopMovement}
               playableLevelId={STRESS_LEVEL_ID}

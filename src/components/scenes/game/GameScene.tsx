@@ -45,7 +45,6 @@ import { Skybox } from "../shared/Skybox";
 type GameSceneProps = {
   placeTower: (gridX: number, gridZ: number, towerType: TowerType) => void;
   selectedTower: TowerInstance | null;
-  shouldDisableControls: boolean;
   shouldStopMovement: boolean;
   shouldStopCamera: boolean;
   gameStatus: GameStatus;

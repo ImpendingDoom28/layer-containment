@@ -18,7 +18,9 @@ const PARALLAX_STATUSES: ReadonlySet<GameStatus> = new Set([
 export const useMenuParallax = () => {
   useEffect(() => {
     const root = document.documentElement;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const reducedMotion = globalThis.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    );
     let enabled = false;
 
     const clearVariables = () => {

@@ -90,10 +90,7 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     const towers = useLevelStore(towersSelector);
     const isLevelConfigLoaded = useLevelStore(isLevelConfigLoadedSelector);
 
-    const towerIds = useMemo(
-      () => new Set(towers.map((t) => t.id)),
-      [towers]
-    );
+    const towerIds = useMemo(() => new Set(towers.map((t) => t.id)), [towers]);
 
     // Tower ids are re-issued from 1 when a level (re)loads, so a reused id
     // would otherwise carry the previous level's fire timestamp. Clear the
@@ -249,7 +246,7 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
         if (tower.type === "laser" && tower.maxPierce) {
           const dx = target.x - tower.x;
           const dz = target.z - tower.z;
-          const distToTarget = Math.sqrt(dx * dx + dz * dz);
+          const distToTarget = Math.hypot(dx, dz);
 
           if (distToTarget > 0) {
             const extendFactor = 1.5;

@@ -11,7 +11,7 @@ export function distance2D(
 ): number {
   const dx = x2 - x1;
   const dz = z2 - z1;
-  return Math.sqrt(dx * dx + dz * dz);
+  return Math.hypot(dx, dz);
 }
 
 /**
@@ -96,7 +96,7 @@ export function findEnemiesInLine(
 
   const dx = targetX - startX;
   const dz = targetZ - startZ;
-  const lineLength = Math.sqrt(dx * dx + dz * dz);
+  const lineLength = Math.hypot(dx, dz);
 
   if (lineLength === 0) return [];
 
@@ -134,3 +134,14 @@ export function findEnemiesInLine(
 
   return enemiesInLine.slice(0, maxPierce).map((item) => item.enemy);
 }
+
+export const isAdjacent4 = (
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number
+): boolean => {
+  const dx = Math.abs(ax - bx);
+  const dz = Math.abs(az - bz);
+  return (dx === 1 && dz === 0) || (dx === 0 && dz === 1);
+};

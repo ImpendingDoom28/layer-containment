@@ -1,5 +1,4 @@
 {
-  "enemyHealthLoss": 1,
   "enemyTypes": {
     "basic": {
       "color": "#22c55e",
@@ -159,6 +158,24 @@
       "topScale": 1,
       "topShape": "cone"
     },
+    "chain": {
+      "bodyWidthScale": 1,
+      "chainDamageMultiplierPerHop": 0.85,
+      "color": "#fbbf24",
+      "cost": 120,
+      "damage": 28,
+      "description": "Chain lightning jumps to nearby enemies (-15% damage per hop, up to 3 hops).",
+      "fireRate": 1.1,
+      "id": "chain",
+      "maxChainHops": 3,
+      "name": "Chain Lightning",
+      "projectileSpeed": 14,
+      "projectileType": "chain",
+      "range": 3.5,
+      "targeting": "nearest",
+      "topScale": 1,
+      "topShape": "coil"
+    },
     "laser": {
       "bodyWidthScale": 1,
       "color": "#00ffff",
@@ -175,24 +192,6 @@
       "targeting": "furthest",
       "topScale": 1,
       "topShape": "coil"
-    },
-    "slow": {
-      "bodyWidthScale": 0.9,
-      "color": "#8b5cf6",
-      "cost": 80,
-      "damage": 10,
-      "description": "Slows enemies on hit",
-      "fireRate": 0.8,
-      "id": "slow",
-      "name": "Slow Tower",
-      "projectileSpeed": 10,
-      "projectileType": "single",
-      "range": 3,
-      "slowAmount": 0.6,
-      "slowDuration": 2,
-      "targeting": "nearest",
-      "topScale": 1,
-      "topShape": "sphere"
     },
     "relay": {
       "bodyWidthScale": 1,
@@ -213,23 +212,23 @@
       "topScale": 1,
       "topShape": "cylinder"
     },
-    "chain": {
-      "bodyWidthScale": 1,
-      "chainDamageMultiplierPerHop": 0.85,
-      "color": "#fbbf24",
-      "cost": 120,
-      "damage": 28,
-      "description": "Chain lightning jumps to nearby enemies (-15% damage per hop, up to 3 hops).",
-      "fireRate": 1.1,
-      "id": "chain",
-      "maxChainHops": 3,
-      "name": "Chain Lightning",
-      "projectileSpeed": 14,
-      "projectileType": "chain",
-      "range": 3.5,
+    "slow": {
+      "bodyWidthScale": 0.9,
+      "color": "#8b5cf6",
+      "cost": 80,
+      "damage": 10,
+      "description": "Slows enemies on hit",
+      "fireRate": 0.8,
+      "id": "slow",
+      "name": "Slow Tower",
+      "projectileSpeed": 10,
+      "projectileType": "single",
+      "range": 3,
+      "slowAmount": 0.6,
+      "slowDuration": 2,
       "targeting": "nearest",
       "topScale": 1,
-      "topShape": "coil"
+      "topShape": "sphere"
     }
   }
 }

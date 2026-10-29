@@ -1,15 +1,5 @@
 import type { Tower, TowerConfig, TowerType } from "./types/game";
-
-const isAdjacent4 = (
-  ax: number,
-  az: number,
-  bx: number,
-  bz: number
-): boolean => {
-  const dx = Math.abs(ax - bx);
-  const dz = Math.abs(az - bz);
-  return (dx === 1 && dz === 0) || (dx === 0 && dz === 1);
-};
+import { isAdjacent4 } from "../utils/mathUtils";
 
 export const getEffectiveTowerCombatStats = (
   tower: Tower,

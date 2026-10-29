@@ -53,9 +53,7 @@ export const getPathRenderSegments = (
  * via the WeakMap. The enemy movement system calls this per enemy per frame;
  * the cache keeps that to a single lookup after the first frame.
  */
-export const getPathLength = withCache((
-  path: PathWaypoint[]
-): number => {
+export const getPathLength = withCache((path: PathWaypoint[]): number => {
   let length = 0;
   for (let i = 0; i < path.length - 1; i++) {
     length += Math.hypot(path[i + 1].x - path[i].x, path[i + 1].z - path[i].z);
@@ -92,7 +90,7 @@ export function pointToLineSegmentDistance(
     // Segment is a point
     const distX = px - x1;
     const distZ = pz - z1;
-    return Math.sqrt(distX * distX + distZ * distZ);
+    return Math.hypot(distX, distZ);
   }
 
   // Calculate t (parameter along the segment)
@@ -108,7 +106,7 @@ export function pointToLineSegmentDistance(
   // Return distance to closest point
   const distX = px - closestX;
   const distZ = pz - closestZ;
-  return Math.sqrt(distX * distX + distZ * distZ);
+  return Math.hypot(distX, distZ);
 }
 
 /**
@@ -130,7 +128,7 @@ export function getPositionAlongPath(
     const p2 = pathWaypoints[i + 1];
     const dx = p2.x - p1.x;
     const dz = p2.z - p1.z;
-    const length = Math.sqrt(dx * dx + dz * dz);
+    const length = Math.hypot(dx, dz);
     segments.push({ p1, p2, length, startProgress: totalLength });
     totalLength += length;
   }
@@ -184,74 +182,76 @@ export function isPointInTile(
  * WeakMap. Without the cache this is O(waypoints + segments * 5) per tile,
  * which made it the single hottest function in the CPU profile.
  */
-export const isGridTileOnPath = withCache((
-  pathWaypoints: PathWaypoint[][],
-  gridX: number,
-  gridZ: number,
-  gridOffset: number,
-  tileSize: number,
-  pathWidth: number
-): boolean => {
-  // Convert grid coordinates to world coordinates (tile center)
-  const tileCenterX = gridOffset + gridX + tileSize / 2;
-  const tileCenterZ = gridOffset + gridZ + tileSize / 2;
+export const isGridTileOnPath = withCache(
+  (
+    pathWaypoints: PathWaypoint[][],
+    gridX: number,
+    gridZ: number,
+    gridOffset: number,
+    tileSize: number,
+    pathWidth: number
+  ): boolean => {
+    // Convert grid coordinates to world coordinates (tile center)
+    const tileCenterX = gridOffset + gridX + tileSize / 2;
+    const tileCenterZ = gridOffset + gridZ + tileSize / 2;
 
-  // Calculate tile bounds (corners)
-  const halfTile = tileSize / 2;
+    // Calculate tile bounds (corners)
+    const halfTile = tileSize / 2;
 
-  // First, check if any waypoint (corner) is within this tile
-  // Corners take up the whole tile
-  for (const path of pathWaypoints) {
-    for (const waypoint of path) {
-      if (
-        isPointInTile(
-          waypoint.x,
-          waypoint.z,
-          tileCenterX,
-          tileCenterZ,
-          halfTile
-        )
-      ) {
-        return true;
-      }
-    }
-  }
-
-  const tileCorners = [
-    { x: tileCenterX - halfTile, z: tileCenterZ - halfTile }, // bottom-left
-    { x: tileCenterX + halfTile, z: tileCenterZ - halfTile }, // bottom-right
-    { x: tileCenterX - halfTile, z: tileCenterZ + halfTile }, // top-left
-    { x: tileCenterX + halfTile, z: tileCenterZ + halfTile }, // top-right
-    { x: tileCenterX, z: tileCenterZ }, // center
-  ];
-
-  // Check each path segment (narrower path within tiles)
-  for (const element of pathWaypoints) {
-    for (let i = 0; i < element.length - 1; i++) {
-      const p1 = element[i];
-      const p2 = element[i + 1];
-
-      // Check if any tile corner or center is within PATH_WIDTH/2 of the path segment
-      for (const corner of tileCorners) {
-        const distance = pointToLineSegmentDistance(
-          corner.x,
-          corner.z,
-          p1.x,
-          p1.z,
-          p2.x,
-          p2.z
-        );
-
-        // If any point is within half the path width, the tile intersects
-        if (distance <= pathWidth / 2) {
+    // First, check if any waypoint (corner) is within this tile
+    // Corners take up the whole tile
+    for (const path of pathWaypoints) {
+      for (const waypoint of path) {
+        if (
+          isPointInTile(
+            waypoint.x,
+            waypoint.z,
+            tileCenterX,
+            tileCenterZ,
+            halfTile
+          )
+        ) {
           return true;
         }
       }
     }
-  }
 
-  return false;
-});
+    const tileCorners = [
+      { x: tileCenterX - halfTile, z: tileCenterZ - halfTile }, // bottom-left
+      { x: tileCenterX + halfTile, z: tileCenterZ - halfTile }, // bottom-right
+      { x: tileCenterX - halfTile, z: tileCenterZ + halfTile }, // top-left
+      { x: tileCenterX + halfTile, z: tileCenterZ + halfTile }, // top-right
+      { x: tileCenterX, z: tileCenterZ }, // center
+    ];
+
+    // Check each path segment (narrower path within tiles)
+    for (const element of pathWaypoints) {
+      for (let i = 0; i < element.length - 1; i++) {
+        const p1 = element[i];
+        const p2 = element[i + 1];
+
+        // Check if any tile corner or center is within PATH_WIDTH/2 of the path segment
+        for (const corner of tileCorners) {
+          const distance = pointToLineSegmentDistance(
+            corner.x,
+            corner.z,
+            p1.x,
+            p1.z,
+            p2.x,
+            p2.z
+          );
+
+          // If any point is within half the path width, the tile intersects
+          if (distance <= pathWidth / 2) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+);
 
 export const getPositionAlongMultiplePaths = (
   paths: PathWaypoint[][],

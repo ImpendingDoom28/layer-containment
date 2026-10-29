@@ -95,8 +95,8 @@ export const buildFrustumFromCamera = (
 export const expandFrustum = (frustum: Frustum, margin: number): Frustum => {
   if (margin <= 0) return frustum;
   const planes = frustum.planes;
-  for (let i = 0; i < planes.length; i++) {
-    planes[i].constant += margin;
+  for (const element of planes) {
+    element.constant += margin;
   }
   return frustum;
 };
@@ -171,7 +171,9 @@ const TRANSFORM_FLOATS_PER_NODE = 10;
 export const captureTransformSnapshot = (object: Object3D): Float64Array => {
   const values: number[] = [];
   const walk = (o: Object3D): void => {
-    const p = o.position, q = o.quaternion, s = o.scale;
+    const p = o.position,
+      q = o.quaternion,
+      s = o.scale;
     values.push(p.x, p.y, p.z, q.x, q.y, q.z, q.w, s.x, s.y, s.z);
     for (const c of o.children) walk(c);
   };
@@ -199,12 +201,20 @@ export const isTransformSnapshotStale = (
       stale = true;
       return;
     }
-    const p = o.position, q = o.quaternion, s = o.scale;
+    const p = o.position,
+      q = o.quaternion,
+      s = o.scale;
     stale =
-      p.x !== snapshot[i] || p.y !== snapshot[i + 1] || p.z !== snapshot[i + 2] ||
-      q.x !== snapshot[i + 3] || q.y !== snapshot[i + 4] ||
-      q.z !== snapshot[i + 5] || q.w !== snapshot[i + 6] ||
-      s.x !== snapshot[i + 7] || s.y !== snapshot[i + 8] || s.z !== snapshot[i + 9];
+      p.x !== snapshot[i] ||
+      p.y !== snapshot[i + 1] ||
+      p.z !== snapshot[i + 2] ||
+      q.x !== snapshot[i + 3] ||
+      q.y !== snapshot[i + 4] ||
+      q.z !== snapshot[i + 5] ||
+      q.w !== snapshot[i + 6] ||
+      s.x !== snapshot[i + 7] ||
+      s.y !== snapshot[i + 8] ||
+      s.z !== snapshot[i + 9];
     if (stale) return;
     i += TRANSFORM_FLOATS_PER_NODE;
     for (const c of o.children) walk(c);

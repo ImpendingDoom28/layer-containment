@@ -37,7 +37,7 @@ import { GameEvent } from "../types/enums/events";
 
 export const useGameSystem = () => {
   const { spawnBase } = useActions(worldBaseActions);
-  const stats = useActions(statsActions);
+  const { endRunStats, startRunStats, markRunEnded } = useActions(statsActions);
 
   const gameStatus = useGameStore(gameStatusSelector);
   const previousStatus = useGameStore(previousStatusSelector);
@@ -100,9 +100,9 @@ export const useGameSystem = () => {
     setGameStatus("won");
     // Signal the run ended; the stats system flushes the receipts raised in
     // this same frame so the end screen freezes a complete snapshot.
-    stats.markRunEnded();
+    markRunEnded();
     gameEvents.emit(GameEvent.GAME_WON, { gameWonType: "win" });
-  }, [setGameStatus, stats]);
+  }, [setGameStatus, markRunEnded]);
 
   const canPause = getCanPause(gameStatus, nextWaveReady);
 
@@ -122,16 +122,16 @@ export const useGameSystem = () => {
 
   const startGame = useCallback(async () => {
     startNewRun();
-    stats.startRunStats();
+    startRunStats();
     const maxHealth = useGameStore.getState().startingHealth;
     spawnBase(maxHealth);
-  }, [startNewRun, spawnBase, stats]);
+  }, [startNewRun, spawnBase, startRunStats]);
 
   const goToMainMenu = useCallback(() => {
-    stats.endRunStats();
+    endRunStats();
     resetGameState();
     setGameStatus("menu");
-  }, [resetGameState, setGameStatus, stats]);
+  }, [resetGameState, setGameStatus, endRunStats]);
 
   const openGameMenu = useCallback(() => {
     setShowSettings(false);

@@ -53,10 +53,10 @@ export const createWorldRegistry = <Key, Entry, Row>(options: {
       const key = options.key(row);
       seenKeys.add(key);
       const existing = registry.get(key);
-      if (!existing) {
-        registry.set(key, options.create(row));
-      } else {
+      if (existing) {
         options.update(existing, row);
+      } else {
+        registry.set(key, options.create(row));
       }
     });
     for (const key of registry.keys()) {

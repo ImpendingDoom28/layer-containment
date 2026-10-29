@@ -165,8 +165,7 @@ export const runEnemyMovementSystem = (
           }
         }
       }
-    }
-  );
+    });
 
   for (const id of reachedEndIds) {
     onEnemyReachEnd?.(id);
@@ -188,10 +187,15 @@ export const runEnemyMovementFrame = (
   const { tileSize } = useGameStore.getState();
   const radius = getPlanetRadius(gridSize, tileSize);
 
-  runEnemyMovementSystem(world, delta, getSimulationTime(state.clock.elapsedTime), {
-    pathWaypoints,
-    radius,
-    onEnemyReachEnd: callbacks.onEnemyReachEnd,
-    canFinish: callbacks.canFinish,
-  });
+  runEnemyMovementSystem(
+    world,
+    delta,
+    getSimulationTime(state.clock.elapsedTime),
+    {
+      pathWaypoints,
+      radius,
+      onEnemyReachEnd: callbacks.onEnemyReachEnd,
+      canFinish: callbacks.canFinish,
+    }
+  );
 };

@@ -14,7 +14,6 @@ import { GameConfigData } from "../configs/gameConfig";
 import { getIsDocumentVisible } from "../../utils/isDocumentVisible";
 
 type GameStoreState = {
-  enemyHealthLoss: number;
   startingHealth: number;
   /**
    * The type of tower that is currently selected to place from the tower shop
@@ -72,7 +71,6 @@ const DEFAULT_STATE: GameStoreState = {
   gameStatus: "menu",
   debug: false,
   showSettings: false,
-  enemyHealthLoss: 0,
   tileSize: 0,
   towerBaseRadius: 0,
   towerHeight: 0,
@@ -91,7 +89,6 @@ export const useGameStore = create<GameStore>((set) => ({
     const {
       startingHealth,
       tileSize,
-      enemyHealthLoss,
       towerBaseRadius,
       towerHeight,
       towerSellPriceMultiplier,
@@ -107,7 +104,6 @@ export const useGameStore = create<GameStore>((set) => ({
       startingHealth,
       tileSize,
       towerBaseRadius,
-      enemyHealthLoss,
       towerHeight,
       towerSellPriceMultiplier,
       enemyTypes: enemyTypes as Record<EnemyType, EnemyConfig>,

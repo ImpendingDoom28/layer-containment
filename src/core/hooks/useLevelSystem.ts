@@ -96,8 +96,8 @@ export const useLevelSystem = () => {
     resetLevelEnemyUpgradesSelector
   );
 
-  const actions = useActions(enemyActions);
-  const stats = useActions(statsActions);
+  const { spawnEnemy } = useActions(enemyActions);
+  const { recordTowerPurchase } = useActions(statsActions);
 
   const { getNextTowerId, getNextEnemyId, getNextProjectileId } =
     useEntityIds();
@@ -130,7 +130,7 @@ export const useLevelSystem = () => {
 
       const placementState = getTilePlacementState(gridX, gridZ);
       const denyReason = getTowerPlacementDenyReason(
-        money >= towerConfig.cost,
+        useLevelStore.getState().money >= towerConfig.cost,
         placementState
       );
       if (denyReason) {
@@ -159,7 +159,7 @@ export const useLevelSystem = () => {
       setTowers((prev) => [...prev, newTower]);
 
       spendMoney(towerConfig.cost);
-      stats.recordTowerPurchase(towerType, towerConfig.cost);
+      recordTowerPurchase(towerType, towerConfig.cost);
       setSelectedTowerTypeToPlace(null);
       const emitterY =
         towerType === "laser" ? towerHeight * 0.5 : towerHeight * 0.7;
@@ -178,14 +178,13 @@ export const useLevelSystem = () => {
     },
     [
       towerTypes,
-      money,
       getTilePlacementState,
       gridSize,
       tileSize,
       getNextTowerId,
       setTowers,
       spendMoney,
-      stats,
+      recordTowerPurchase,
       setSelectedTowerTypeToPlace,
       towerHeight,
     ]
@@ -292,7 +291,7 @@ export const useLevelSystem = () => {
         slowResistance,
       };
 
-      actions.spawnEnemy(enemy);
+      spawnEnemy(enemy);
       return enemy;
     },
     [
@@ -301,7 +300,7 @@ export const useLevelSystem = () => {
       calcPathIndex,
       pathWaypoints,
       getNextEnemyId,
-      actions,
+      spawnEnemy,
     ]
   );
 

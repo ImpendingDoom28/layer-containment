@@ -201,7 +201,6 @@ export const GamePage: FC<GamePageProps> = ({ onOpenLevelEditor }) => {
             <GameScene
               placeTower={placeTower}
               selectedTower={selectedTower}
-              money={money}
               gameStatus={gameStatus}
               waveSystem={waveSystem}
               onEnemyReachEnd={onEnemyReachEnd}

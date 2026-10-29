@@ -50,7 +50,6 @@ type GameSceneProps = {
   shouldStopCamera: boolean;
   gameStatus: GameStatus;
   waveSystem: WaveSystem;
-  money: number;
   onEnemyReachEnd: (enemyId: number) => void;
   onProjectileHit: (
     projectile: ProjectileInstance,
@@ -92,17 +91,6 @@ export const GameScene: React.FC<GameSceneProps> = ({
     waters,
   });
 
-  const handleTileHover = useCallback(
-    (gridX: number, gridZ: number) => {
-      setHoveredTile({ gridX, gridZ });
-    },
-    [setHoveredTile]
-  );
-
-  const handleTileHoverEnd = useCallback(() => {
-    setHoveredTile(null);
-  }, [setHoveredTile]);
-
   return (
     <>
       <LevelSystem levelName={playableLevelId} />
@@ -127,9 +115,7 @@ export const GameScene: React.FC<GameSceneProps> = ({
       <Grid
         placeTower={placeTower}
         hoveredTile={hoveredTile}
-        onTileHover={handleTileHover}
         setHoveredTile={setHoveredTile}
-        onTileHoverEnd={handleTileHoverEnd}
         occupancy={occupancy}
       />
 

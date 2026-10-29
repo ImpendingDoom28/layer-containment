@@ -1,10 +1,4 @@
-import {
-  FC,
-  Dispatch,
-  memo,
-  SetStateAction,
-  useCallback,
-} from "react";
+import { FC, Dispatch, memo, SetStateAction, useCallback } from "react";
 
 import type { TileOccupancyMasks } from "../../utils/tileOccupancy";
 import { Tile } from "./Tile";
@@ -22,8 +16,6 @@ type GridProps = {
   hoveredTile: TileData | null;
   setHoveredTile: Dispatch<SetStateAction<TileData | null>>;
   placeTower: (gridX: number, gridZ: number, towerType: TowerType) => void;
-  onTileHover?: (gridX: number, gridZ: number) => void;
-  onTileHoverEnd?: () => void;
   occupancy: TileOccupancyMasks;
 };
 

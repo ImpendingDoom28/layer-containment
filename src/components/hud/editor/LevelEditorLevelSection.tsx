@@ -20,6 +20,7 @@ import {
   UIAccordionTrigger,
 } from "../../ui/UIAccordion";
 import { UIInput } from "../../ui/UIInput";
+import { UITextarea } from "../../ui/UITextarea";
 
 import { EditorColorField } from "./EditorColorField";
 import { EditorField } from "./EditorField";
@@ -31,6 +32,9 @@ export const LevelEditorLevelSection = () => {
   const {
     draftLevel,
     setLevelName,
+    setLabel,
+    setDescription,
+    setStartingHealth,
     setStartingMoney,
     setGridSize,
     setEnemyWeight,
@@ -53,13 +57,58 @@ export const LevelEditorLevelSection = () => {
           />
         </EditorField>
 
-        <EditorField label={t("editor.startingMoney")}>
+        <EditorField
+          label={t("editor.label")}
+          description={t("editor.labelDescription")}
+          htmlFor="level-editor-label"
+        >
           <UIInput
-            type="number"
-            value={draftLevel.startingMoney}
-            onChange={(event) => setStartingMoney(parseNumberInputOr(event, 0))}
+            id="level-editor-label"
+            value={draftLevel.label}
+            onChange={(event) => setLabel(event.target.value)}
+            placeholder={t("editor.labelPlaceholder")}
           />
         </EditorField>
+
+        <EditorField
+          label={t("editor.description")}
+          description={t("editor.descriptionDescription")}
+          htmlFor="level-editor-description"
+        >
+          <UITextarea
+            id="level-editor-description"
+            value={draftLevel.description}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder={t("editor.descriptionPlaceholder")}
+            rows={2}
+          />
+        </EditorField>
+
+        <div className="grid grid-cols-2 gap-2">
+          <EditorField
+            label={t("editor.startingHealth")}
+            htmlFor="level-editor-starting-health"
+          >
+            <UIInput
+              id="level-editor-starting-health"
+              type="number"
+              min={1}
+              value={draftLevel.startingHealth}
+              onChange={(event) =>
+                setStartingHealth(parseNumberInputOr(event, 1))
+              }
+            />
+          </EditorField>
+          <EditorField label={t("editor.startingMoney")}>
+            <UIInput
+              type="number"
+              value={draftLevel.startingMoney}
+              onChange={(event) =>
+                setStartingMoney(parseNumberInputOr(event, 0))
+              }
+            />
+          </EditorField>
+        </div>
 
         <EditorField label={t("editor.gridSize")}>
           <UIInput

@@ -26,6 +26,16 @@ export const validateLevel = (
   }
 
   if (
+    level.startingHealth !== undefined &&
+    (!Number.isFinite(level.startingHealth) || level.startingHealth < 1)
+  ) {
+    customIssues.push({
+      path: "startingHealth",
+      message: "Starting health must be at least 1.",
+    });
+  }
+
+  if (
     !Number.isFinite(level.gridSize) ||
     !Number.isInteger(level.gridSize) ||
     level.gridSize < MIN_GRID_SIZE ||

@@ -119,7 +119,6 @@
   "pathWidth": 0.85,
   "pathYOffset": 0.05,
   "projectileSize": 0.1,
-  "startingHealth": 20,
   "tileSize": 1,
   "towerBaseRadius": 0.3,
   "towerHeight": 1.2,

@@ -1,4 +1,12 @@
-import { FC, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  FC,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "../ui/lib/twUtils";
@@ -33,6 +41,7 @@ import { useProjectileSystem } from "../../core/hooks/useProjectileSystem";
 import { useWaveSystem } from "../../core/hooks/useWaveSystem";
 import { useLevelSystem } from "../../core/hooks/useLevelSystem";
 import { useUpgradesSystem } from "../../core/hooks/useUpgradesSystem";
+import { DEFAULT_STARTING_HEALTH } from "../../core/configs/levelConfig";
 import { useHeldClose } from "../../core/hooks/useHeldClose";
 import { useLoadingTransition } from "../../core/hooks/useLoadingTransition";
 import { useMenuParallax } from "../../core/hooks/useMenuParallax";
@@ -102,16 +111,24 @@ export const GamePage: FC<GamePageProps> = ({
 
   const { getRemainingEnemiesInWave, startWave } = waveSystem;
 
+  // The base is spawned in startGame, so its health comes from the level
+  // config. The picker already holds each level's parsed config and passes
+  // it in here; cache it per run so a restart (same level) does not need a
+  // fresh config load, while a level reselected from the picker always reads
+  // the value the picker loaded.
+  const levelStartingHealthRef = useRef<number>(DEFAULT_STARTING_HEALTH);
+
   const onStartGameWithLevel = useCallback(
-    async (level: PlayableLevelId) => {
+    async (level: PlayableLevelId, startingHealth: number) => {
+      levelStartingHealthRef.current = startingHealth;
       setActivePlayableLevel(level);
-      await startGame();
+      await startGame(startingHealth);
     },
     [startGame]
   );
 
   const onRestart = useCallback(() => {
-    startGame();
+    void startGame(levelStartingHealthRef.current);
     resetLevelState();
   }, [startGame, resetLevelState]);
 

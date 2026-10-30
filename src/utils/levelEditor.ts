@@ -1,4 +1,7 @@
-import type { LevelConfigData } from "../core/configs/levelConfig";
+import {
+  DEFAULT_STARTING_HEALTH,
+  type LevelConfigData,
+} from "../core/configs/levelConfig";
 import {
   DEFAULT_WATER_BODY_DEPTH,
   DEFAULT_WATER_BODY_HEIGHT,
@@ -144,6 +147,9 @@ export const createEmptyLevelConfig = (
 ): LevelConfigData => {
   return {
     name,
+    label: "",
+    description: "",
+    startingHealth: DEFAULT_STARTING_HEALTH,
     startingMoney: DEFAULT_STARTING_MONEY,
     gridSize: DEFAULT_GRID_SIZE,
     waters: [],

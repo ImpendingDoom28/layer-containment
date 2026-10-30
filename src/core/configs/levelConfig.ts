@@ -164,9 +164,17 @@ const projectileSchema: z.ZodType<Projectile> = z.object({
 export type LevelConfigFiles =
   "level_main" | "level_1" | "level_2" | "level_3" | "level_testing" | "stress";
 
+export const DEFAULT_STARTING_HEALTH = 20;
+
 export const levelConfigSchema = z.object({
   name: z.string().min(1),
+  /** Human-facing name shown in the level picker (falls back to `name`, then the id). */
+  label: z.string().default(""),
+  /** One-line blurb shown under the label in the level picker. */
+  description: z.string().default(""),
   startingMoney: z.number(),
+  /** Base (player HQ) max health for this level; each level can set its own. */
+  startingHealth: z.number().finite().min(1).default(DEFAULT_STARTING_HEALTH),
   gridSize: z.number().finite().int().min(MIN_GRID_SIZE).max(MAX_GRID_SIZE),
   tileColor: z.string().optional(),
   groundColor: z.string().optional(),

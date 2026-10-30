@@ -1,5 +1,8 @@
 {
   "name": "2",
+  "label": "Sector 2: The Convergence",
+  "description": "Two gates, one shared corridor. Split your defense across both fronts.",
+  "startingHealth": 20,
   "startingMoney": 200,
   "gridSize": 20,
   "waters": [

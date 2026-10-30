@@ -33,7 +33,7 @@ type LevelPickerEntry = {
 
 type HUDLevelPickerProps = {
   onBack: () => void;
-  onSelectLevel: (level: PlayableLevelId) => void;
+  onSelectLevel: (level: PlayableLevelId, startingHealth: number) => void;
 };
 
 export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
@@ -102,14 +102,15 @@ export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
         )}
         {entries?.map(({ id, data }, index) => {
           const waveCount = data.waveConfigs.length;
-          const title = data.name.trim() || id;
+          const title = data.label.trim() || data.name.trim() || id;
+          const description = data.description.trim();
 
           return (
             <button
               key={id}
               type="button"
               data-testid={`level-picker-${id}`}
-              onClick={() => onSelectLevel(id)}
+              onClick={() => onSelectLevel(id, data.startingHealth)}
               className={cn(
                 "text-left transition-all duration-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
                 "rounded-xl"
@@ -147,6 +148,11 @@ export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
                         {title}
                       </UITypography>
                     </UICardTitle>
+                    {description ? (
+                      <UICardDescription className="p-0 line-clamp-2">
+                        {description}
+                      </UICardDescription>
+                    ) : null}
                     <UICardDescription className="p-0">
                       {t("menu.waves", { count: waveCount })}
                     </UICardDescription>

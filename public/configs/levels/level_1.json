@@ -101,6 +101,9 @@
   "enemyWeights": null,
   "gridSize": 20,
   "name": "1",
+  "label": "Sector 1",
+  "description": "A single containment line. Hold the front across 7 waves.",
+  "startingHealth": 20,
   "pathWaypoints": [
     [
       {

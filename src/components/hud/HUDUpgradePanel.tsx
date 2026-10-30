@@ -5,14 +5,7 @@ import {
   useState,
   type AnimationEvent,
 } from "react";
-import {
-  Zap,
-  Shield,
-  Wind,
-  Heart,
-  Users,
-  type LucideProps,
-} from "lucide-react";
+import { Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type { EnemyUpgradeId } from "../../core/types/game";
@@ -40,45 +33,13 @@ import {
   getStackTierForEnemy,
   getTierRewardBonusPercent,
   getTierRoman,
-  getTotalRewardBonusPercentForStack,
   getTotalRewardMultiplierFromStack,
   getUniqueUpgradeIdsInStackOrder,
 } from "../../utils/enemyUpgradeTierEffects";
 import { cn } from "../ui/lib/twUtils";
-
-type UpgradeIconProps = {
-  upgradeId: EnemyUpgradeId;
-  className?: string;
-  size: LucideProps["size"];
-};
-
-const UpgradeIcon: FC<UpgradeIconProps> = ({ upgradeId, className, size }) => {
-  switch (upgradeId) {
-    case "armored":
-      return <Shield className={className} size={size} />;
-    case "swift":
-      return <Wind className={className} size={size} />;
-    case "slowResistance":
-      return <Zap className={className} size={size} />;
-    case "regenerating":
-      return <Heart className={className} size={size} />;
-    case "reinforcements":
-      return <Users className={className} size={size} />;
-    default:
-      return null;
-  }
-};
-
-const getTierColor = (tier: 1 | 2 | 3): string => {
-  switch (tier) {
-    case 1:
-      return "text-amber-600";
-    case 2:
-      return "text-slate-400";
-    case 3:
-      return "text-yellow-400";
-  }
-};
+import { EnemyUpgradeRow } from "./EnemyUpgradeRow";
+import { UpgradeIcon } from "./UpgradeIcon";
+import { getTierColor } from "./upgradeTierColors";
 
 type HUDUpgradePanelProps = {
   onEnemyUpgradePick: (id: EnemyUpgradeId) => void;
@@ -272,36 +233,12 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
                       levelEnemyUpgradeStack
                     );
                     return (
-                      <div
+                      <EnemyUpgradeRow
                         key={upgradeId}
-                        className="flex items-center gap-2 rounded-md border border-border/70 bg-muted/35 px-2 py-1.5"
-                      >
-                        <UpgradeIcon
-                          upgradeId={upgradeId}
-                          className="text-muted-foreground shrink-0"
-                          size={14}
-                        />
-                        <UITypography
-                          variant="small"
-                          className="font-medium"
-                        >
-                          {t(`enemyUpgrades.${upgradeId}.name`)}{" "}
-                          <span className={getTierColor(stackTier)}>
-                            {getTierRoman(stackTier)}
-                          </span>
-                        </UITypography>
-                        <UITypography
-                          variant="verySmall"
-                          className="text-muted-foreground"
-                        >
-                          {t("upgrade.bonusGold", {
-                            percent: getTotalRewardBonusPercentForStack(
-                              upgrade,
-                              stackTier
-                            ),
-                          })}
-                        </UITypography>
-                      </div>
+                        upgrade={upgrade}
+                        stackTier={stackTier}
+                        className="px-2 py-1.5"
+                      />
                     );
                   }
                 )}

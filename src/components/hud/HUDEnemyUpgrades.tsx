@@ -1,8 +1,7 @@
 import { FC, useMemo, useState } from "react";
-import { Shield, Wind, Zap, Heart, Users } from "lucide-react";
+import { Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import type { EnemyUpgradeId } from "../../core/types/game";
 import {
   enemyUpgradesSelector,
   useGameStore,
@@ -13,56 +12,14 @@ import {
 } from "../../core/stores/useUpgradeStore";
 import {
   getStackTierForEnemy,
-  getTierRoman,
-  getTotalRewardBonusPercentForStack,
   getTotalRewardMultiplierFromStack,
   getUniqueUpgradeIdsInStackOrder,
 } from "../../utils/enemyUpgradeTierEffects";
 import { UIButton } from "@/components/ui/buttons/UIButton";
 import { UIModal } from "../ui/UIModal";
-import { UITypography } from "../ui/UITypography";
+import { EnemyUpgradeRow } from "./EnemyUpgradeRow";
 
-type UpgradeIconProps = {
-  upgradeId: EnemyUpgradeId;
-  className?: string;
-  size: number;
-};
-
-const UpgradeIcon: FC<UpgradeIconProps> = ({ upgradeId, className, size }) => {
-  switch (upgradeId) {
-    case "armored":
-      return <Shield className={className} size={size} />;
-    case "swift":
-      return <Wind className={className} size={size} />;
-    case "slowResistance":
-      return <Zap className={className} size={size} />;
-    case "regenerating":
-      return <Heart className={className} size={size} />;
-    case "reinforcements":
-      return <Users className={className} size={size} />;
-    default:
-      return null;
-  }
-};
-
-const getTierColor = (tier: 1 | 2 | 3): string => {
-  switch (tier) {
-    case 1:
-      return "text-amber-600";
-    case 2:
-      return "text-slate-400";
-    case 3:
-      return "text-yellow-400";
-  }
-};
-
-type HUDEnemyUpgradesProps = {
-  isMobile?: boolean;
-};
-
-export const HUDEnemyUpgrades: FC<HUDEnemyUpgradesProps> = ({
-  isMobile = false,
-}) => {
+export const HUDEnemyUpgrades: FC = () => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -101,10 +58,9 @@ export const HUDEnemyUpgrades: FC<HUDEnemyUpgradesProps> = ({
         data-testid="upgrades-button"
         onClick={() => setIsOpen(true)}
         variant="outline"
-        size={isMobile ? "xs" : "sm"}
-        className="w-full justify-center gap-1.5"
+        size="sm"
       >
-        <Zap className="text-yellow-400 shrink-0" size={isMobile ? 12 : 14} />
+        <Zap className="text-yellow-400 shrink-0" />
         {t("upgrade.selected")}
         {totalBonusPercentage > 0 && (
           <span className="text-green-400 font-semibold">
@@ -126,34 +82,11 @@ export const HUDEnemyUpgrades: FC<HUDEnemyUpgradesProps> = ({
       >
         <div className="flex flex-col gap-2">
           {upgradeEntries.map(({ upgrade, stackTier }) => (
-            <div
+            <EnemyUpgradeRow
               key={upgrade.id}
-              className="flex items-center gap-2 rounded-md border border-border/70 bg-muted/35 px-2.5 py-2"
-            >
-              <UpgradeIcon
-                upgradeId={upgrade.id}
-                className="text-muted-foreground shrink-0"
-                size={16}
-              />
-              <UITypography variant="small" className="font-medium flex-1">
-                {t(`enemyUpgrades.${upgrade.id}.name`)}
-                <span className={getTierColor(stackTier)}>
-                  {" "}
-                  {getTierRoman(stackTier)}
-                </span>
-              </UITypography>
-              <UITypography
-                variant="verySmall"
-                className="text-muted-foreground"
-              >
-                {t("upgrade.bonusGold", {
-                  percent: getTotalRewardBonusPercentForStack(
-                    upgrade,
-                    stackTier
-                  ),
-                })}
-              </UITypography>
-            </div>
+              upgrade={upgrade}
+              stackTier={stackTier}
+            />
           ))}
         </div>
       </UIModal>

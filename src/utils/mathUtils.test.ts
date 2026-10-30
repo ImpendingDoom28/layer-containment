@@ -52,6 +52,21 @@ describe("segmentCrossesObstacles", () => {
     // z = 5 is outside the z slab even though the x ranges overlap.
     expect(segmentCrossesObstacles(0, 5, 10, 5, [square])).toBe(false);
   });
+
+  it("blocks when the segment crosses one obstacle among several it misses", () => {
+    // Segment (0, 0) → (10, 0): the z-5 square (z in [4, 6]) is missed, the
+    // square at (8, 0) is crossed. Either order must block.
+    const offLine: LineOfSightObstacle = { x: 4, z: 5, halfWidth: 1, halfDepth: 1 };
+    const onLine: LineOfSightObstacle = { x: 8, z: 0, halfWidth: 1, halfDepth: 1 };
+    expect(segmentCrossesObstacles(0, 0, 10, 0, [offLine, onLine])).toBe(true);
+    expect(segmentCrossesObstacles(0, 0, 10, 0, [onLine, offLine])).toBe(true);
+  });
+
+  it("does not block when the segment misses every obstacle", () => {
+    const offA: LineOfSightObstacle = { x: 4, z: 5, halfWidth: 1, halfDepth: 1 };
+    const offB: LineOfSightObstacle = { x: 8, z: 5, halfWidth: 1, halfDepth: 1 };
+    expect(segmentCrossesObstacles(0, 0, 10, 0, [offA, offB])).toBe(false);
+  });
 });
 
 describe("getRayObstacleClipDistance", () => {

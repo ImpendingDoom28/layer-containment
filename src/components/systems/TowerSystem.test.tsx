@@ -290,4 +290,23 @@ describe("TowerSystem line of sight", () => {
       renderer.unmount();
     }
   });
+
+  it("still blocks a hidden enemy when other buildings sit off the sight line", async () => {
+    // Regression: the slab check must test each building independently.
+    // The (0.5, 0.5) building is off both the tower→A and tower→B segments;
+    // the (0.5, 0) building sits on the tower→A segment. A check that
+    // stopped at the first (non-blocking) building let the tower shoot A
+    // through the second one.
+    const renderer = await setupWith(
+      [makeBuilding(0.5, 0.5), makeBuilding(0.5, 0)],
+      [enemyA, enemyB]
+    );
+
+    try {
+      expect(fireProjectile).toHaveBeenCalledTimes(1);
+      expect(fireProjectile.mock.calls[0][0].targetId).toBe(2);
+    } finally {
+      renderer.unmount();
+    }
+  });
 });

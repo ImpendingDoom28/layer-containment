@@ -151,7 +151,9 @@ export function findEnemiesInLine(
 
 /**
  * Whether the straight line from (x1, z1) to (x2, z2) crosses the interior
- * of any obstacle (slab test). Degenerate segments never block.
+ * of any obstacle (per-obstacle slab test). A single obstacle failing to
+ * cross never clears the line — the check continues with the next one.
+ * Degenerate segments never block.
  */
 export function segmentCrossesObstacles(
   x1: number,
@@ -160,15 +162,9 @@ export function segmentCrossesObstacles(
   z2: number,
   obstacles: readonly LineOfSightObstacle[]
 ): boolean {
-  if (obstacles.length === 0) return false;
-
   const dx = x2 - x1;
   const dz = z2 - z1;
   if (dx === 0 && dz === 0) return false;
-
-  // t-interval of the segment: [0, 1]
-  let tMin = 0;
-  let tMax = 1;
 
   for (const o of obstacles) {
     const ox1 = o.x - o.halfWidth;
@@ -176,33 +172,37 @@ export function segmentCrossesObstacles(
     const oz1 = o.z - o.halfDepth;
     const oz2 = o.z + o.halfDepth;
 
+    // t-interval of the segment portion inside this obstacle: [0, 1]
+    let tMin = 0;
+    let tMax = 1;
+
     // X slab
     if (Math.abs(dx) < 1e-9) {
       // Parallel to the slab: outside it means the segment never crosses.
-      if (x1 < ox1 || x1 > ox2) return false;
+      if (x1 < ox1 || x1 > ox2) continue;
     } else {
       let t0 = (ox1 - x1) / dx;
       let t1 = (ox2 - x1) / dx;
       if (t0 > t1) [t0, t1] = [t1, t0];
       tMin = Math.max(tMin, t0);
       tMax = Math.min(tMax, t1);
-      if (tMin > tMax) return false;
     }
 
     // Z slab
     if (Math.abs(dz) < 1e-9) {
-      if (z1 < oz1 || z1 > oz2) return false;
+      if (z1 < oz1 || z1 > oz2) continue;
     } else {
       let t0 = (oz1 - z1) / dz;
       let t1 = (oz2 - z1) / dz;
       if (t0 > t1) [t0, t1] = [t1, t0];
       tMin = Math.max(tMin, t0);
       tMax = Math.min(tMax, t1);
-      if (tMin > tMax) return false;
     }
+
+    if (tMin <= tMax) return true;
   }
 
-  return true;
+  return false;
 }
 
 /**

@@ -289,7 +289,7 @@ export const Enemy: FC<EnemyProps> = memo(
           // Inner bar quaternion = cameraWorldQ * barWorldQ^-1, computed from
           // the group's transform as it is being written this frame, so the
           // bar is always exactly face-on (no one-frame lag).
-          camera.getWorldQuaternion(scratchCameraQuat.current);
+          state.camera.getWorldQuaternion(scratchCameraQuat.current);
           bar.getWorldQuaternion(scratchBillboardQuat.current);
           scratchBillboardQuat.current
             .invert()

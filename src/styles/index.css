@@ -399,3 +399,27 @@ body {
     height: 100dvh;
   }
 }
+
+/*
+ * Full-bleed standalone PWA (viewport-fit=cover in index.html): the content
+ * extends into the device's safe areas (status bar, notch, home indicator),
+ * so edge-pinned HUD elements inset themselves to stay clear of them.
+ * env(safe-area-inset-*) resolves to 0 outside a standalone mobile PWA, and
+ * the Tailwind classes these pair with remain as the fallback, so desktop
+ * and in-browser layouts are unchanged.
+ */
+.hud-safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Adds the home-indicator inset on top of the wrapper's base 0.5rem padding
+   (env() resolves to 0 outside a standalone PWA, so this keeps the 0.5rem). */
+.hud-safe-bottom {
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+}
+
+/* The mobile camera controls sit above the 96px tower-shop bar
+   (bottom-24); the safe-area class adds the home-indicator inset on top. */
+.hud-safe-bottom-offset {
+  bottom: calc(6rem + env(safe-area-inset-bottom));
+}

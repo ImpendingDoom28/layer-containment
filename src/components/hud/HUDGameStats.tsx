@@ -62,7 +62,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
     return (
       <HUDWrapper
         data-testid="game-stats-header"
-        className="inset-x-0 top-0 bottom-auto flex flex-col border-b border-white/10 bg-card backdrop-blur-sm"
+        className="inset-x-0 top-0 bottom-auto hud-safe-top flex flex-col border-b border-white/10 bg-card backdrop-blur-sm"
       >
         <div
           data-testid="game-stats"

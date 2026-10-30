@@ -226,7 +226,7 @@ export const HUDMobileControls: FC = () => {
         // A tight bottom-left box (above the tower shop bar): the wrapper is a
         // camera-block area, so the surrounding field stays draggable for
         // placement and mouse camera-drag.
-        className="inset-x-auto left-3 right-auto top-auto bottom-24"
+        className="inset-x-auto left-3 right-auto top-auto bottom-24 hud-safe-bottom-offset"
       >
         <MobileRotationJoystick disabled={shouldLockCamera} />
       </HUDWrapper>
@@ -235,7 +235,7 @@ export const HUDMobileControls: FC = () => {
         data-testid="mobile-dpad"
         // A tight bottom-right box (above the tower shop bar), opposite the
         // joystick: two-thumb layout (left = look, right = move).
-        className="inset-x-auto left-auto right-3 top-auto bottom-24"
+        className="inset-x-auto left-auto right-3 top-auto bottom-24 hud-safe-bottom-offset"
       >
         <div
           className="grid grid-cols-3 grid-rows-3 gap-1"

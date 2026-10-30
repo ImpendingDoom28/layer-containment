@@ -1,4 +1,7 @@
-import type { LevelConfigData } from "../core/configs/levelConfig";
+import {
+  DEFAULT_STARTING_HEALTH,
+  type LevelConfigData,
+} from "../core/configs/levelConfig";
 import {
   DEFAULT_WATER_BODY_DEPTH,
   DEFAULT_WATER_BODY_HEIGHT,
@@ -13,7 +16,6 @@ import type { TileData } from "../core/types/utils";
 
 const DEFAULT_LEVEL_NAME = "custom";
 const DEFAULT_STARTING_MONEY = 1000;
-const DEFAULT_STARTING_HEALTH = 20;
 const DEFAULT_GRID_SIZE = 20;
 const DEFAULT_PATH_HEIGHT = 0;
 

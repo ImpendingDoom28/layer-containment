@@ -33,7 +33,7 @@ type LevelPickerEntry = {
 
 type HUDLevelPickerProps = {
   onBack: () => void;
-  onSelectLevel: (level: PlayableLevelId) => void;
+  onSelectLevel: (level: PlayableLevelId, startingHealth: number) => void;
 };
 
 export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
@@ -110,7 +110,7 @@ export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
               key={id}
               type="button"
               data-testid={`level-picker-${id}`}
-              onClick={() => onSelectLevel(id)}
+              onClick={() => onSelectLevel(id, data.startingHealth)}
               className={cn(
                 "text-left transition-all duration-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
                 "rounded-xl"

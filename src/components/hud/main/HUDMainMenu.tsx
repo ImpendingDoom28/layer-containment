@@ -203,9 +203,9 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
         {activeView === "levelPicker" && (
           <HUDLevelPicker
             onBack={() => startClosing("levelPicker")}
-            onSelectLevel={async (level) => {
+            onSelectLevel={async (level, startingHealth) => {
               onCloseLevelPicker();
-              await onStartGameWithLevel(level);
+              await onStartGameWithLevel(level, startingHealth);
             }}
           />
         )}

@@ -60,8 +60,10 @@ export const LevelEditorLevelSection = () => {
         <EditorField
           label={t("editor.label")}
           description={t("editor.labelDescription")}
+          htmlFor="level-editor-label"
         >
           <UIInput
+            id="level-editor-label"
             value={draftLevel.label}
             onChange={(event) => setLabel(event.target.value)}
             placeholder={t("editor.labelPlaceholder")}
@@ -71,8 +73,10 @@ export const LevelEditorLevelSection = () => {
         <EditorField
           label={t("editor.description")}
           description={t("editor.descriptionDescription")}
+          htmlFor="level-editor-description"
         >
           <UITextarea
+            id="level-editor-description"
             value={draftLevel.description}
             onChange={(event) => setDescription(event.target.value)}
             placeholder={t("editor.descriptionPlaceholder")}
@@ -81,8 +85,12 @@ export const LevelEditorLevelSection = () => {
         </EditorField>
 
         <div className="grid grid-cols-2 gap-2">
-          <EditorField label={t("editor.startingHealth")}>
+          <EditorField
+            label={t("editor.startingHealth")}
+            htmlFor="level-editor-starting-health"
+          >
             <UIInput
+              id="level-editor-starting-health"
               type="number"
               min={1}
               value={draftLevel.startingHealth}
@@ -95,7 +103,9 @@ export const LevelEditorLevelSection = () => {
             <UIInput
               type="number"
               value={draftLevel.startingMoney}
-              onChange={(event) => setStartingMoney(parseNumberInputOr(event, 0))}
+              onChange={(event) =>
+                setStartingMoney(parseNumberInputOr(event, 0))
+              }
             />
           </EditorField>
         </div>

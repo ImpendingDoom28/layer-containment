@@ -3,11 +3,11 @@ import { useFrame } from "@react-three/fiber";
 import { useWorld } from "koota/react";
 
 import {
-  findNearestEnemy,
-  findFurthestEnemy,
   distance2D,
   findEnemiesInLine,
-  findEnemiesInRange,
+  getRayObstacleClipDistance,
+  hasLineOfSight,
+  type LineOfSightObstacle,
 } from "../../utils/mathUtils";
 import { computeChainAdditionalHits } from "../../core/chainLightning";
 import { getEffectiveTowerCombatStats } from "../../core/relayBuffs";
@@ -28,6 +28,7 @@ import {
   useGameStore,
 } from "../../core/stores/useGameStore";
 import {
+  buildingsSelector,
   gridSizeSelector,
   isLevelConfigLoadedSelector,
   pathWaypointsSelector,
@@ -49,6 +50,10 @@ import {
   useSettingsStore,
 } from "../../core/stores/useSettingsStore";
 import type { GetSimulationTime } from "../../core/hooks/useSimulationClock";
+
+// The base (`EndBuilding`) sits on a round platform of radius 0.4, so its
+// ground footprint half-extent is 0.4.
+const BASE_FOOTPRINT_HALF = 0.4;
 
 type TowerSystemProps = {
   fireProjectile: (
@@ -88,9 +93,34 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     const gridSize = useLevelStore(gridSizeSelector);
     const pathWaypoints = useLevelStore(pathWaypointsSelector);
     const towers = useLevelStore(towersSelector);
+    const buildings = useLevelStore(buildingsSelector);
     const isLevelConfigLoaded = useLevelStore(isLevelConfigLoadedSelector);
 
     const towerIds = useMemo(() => new Set(towers.map((t) => t.id)), [towers]);
+
+    // Static objects that block a tower's line of sight: buildings plus the
+    // base (the path's final waypoint). Footprints are in flat ground-plane
+    // coordinates; a cylinder is approximated by its circumscribing square.
+    // Towers do not block each other.
+    const lineOfSightObstacles = useMemo<LineOfSightObstacle[]>(() => {
+      const obstacles = buildings.map((b) => ({
+        x: b.x,
+        z: b.z,
+        halfWidth: b.width / 2,
+        halfDepth: b.depth / 2,
+      }));
+      const path = pathWaypoints[0];
+      const base = path?.[path.length - 1];
+      if (base) {
+        obstacles.push({
+          x: base.x,
+          z: base.z,
+          halfWidth: BASE_FOOTPRINT_HALF,
+          halfDepth: BASE_FOOTPRINT_HALF,
+        });
+      }
+      return obstacles;
+    }, [buildings, pathWaypoints]);
 
     // Tower ids are re-issued from 1 when a level (re)loads, so a reused id
     // would otherwise carry the previous level's fire timestamp. Clear the
@@ -203,23 +233,49 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
           towerTypes ?? {}
         );
 
+        // A tower can only shoot at enemies it has line of sight on: an
+        // enemy behind a static building or the base is skipped so the tower
+        // falls back to the next-best candidate it can actually hit. Towers
+        // do not block each other's shots.
         let target: Enemy | null = null;
 
         if (towerConfig.targeting === "furthest") {
-          const enemiesInRange = findEnemiesInRange(
-            enemies,
-            tower.x,
-            tower.z,
-            eff.range
-          );
-          target = findFurthestEnemy(enemiesInRange, tower.x, tower.z);
+          let maxDistance = -1;
+          for (const enemy of enemies) {
+            if (enemy.health <= 0) continue;
+            const dist = distance2D(tower.x, tower.z, enemy.x, enemy.z);
+            if (dist > eff.range || dist <= maxDistance) continue;
+            if (
+              !hasLineOfSight(
+                tower.x,
+                tower.z,
+                enemy.x,
+                enemy.z,
+                lineOfSightObstacles
+              )
+            )
+              continue;
+            maxDistance = dist;
+            target = enemy;
+          }
         } else {
-          target = findNearestEnemy(enemies, tower.x, tower.z);
-          if (
-            target &&
-            distance2D(tower.x, tower.z, target.x, target.z) > eff.range
-          ) {
-            target = null;
+          let minDistance = Infinity;
+          for (const enemy of enemies) {
+            if (enemy.health <= 0) continue;
+            const dist = distance2D(tower.x, tower.z, enemy.x, enemy.z);
+            if (dist > eff.range || dist >= minDistance) continue;
+            if (
+              !hasLineOfSight(
+                tower.x,
+                tower.z,
+                enemy.x,
+                enemy.z,
+                lineOfSightObstacles
+              )
+            )
+              continue;
+            minDistance = dist;
+            target = enemy;
           }
         }
 
@@ -250,10 +306,25 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
 
           if (distToTarget > 0) {
             const extendFactor = 1.5;
-            const extendedX =
-              tower.x + (dx / distToTarget) * distToTarget * extendFactor;
-            const extendedZ =
-              tower.z + (dz / distToTarget) * distToTarget * extendFactor;
+            const dirX = dx / distToTarget;
+            const dirZ = dz / distToTarget;
+
+            // The beam extends slightly past the target to catch enemies in
+            // line, but stops at the first building (or the base) it hits so
+            // nothing behind the obstacle is pierced.
+            const beamLength = Math.min(
+              distToTarget * extendFactor,
+              getRayObstacleClipDistance(
+                tower.x,
+                tower.z,
+                dirX,
+                dirZ,
+                lineOfSightObstacles
+              )
+            );
+
+            const extendedX = tower.x + dirX * beamLength;
+            const extendedZ = tower.z + dirZ * beamLength;
 
             const enemiesInLine = findEnemiesInLine(
               enemies,

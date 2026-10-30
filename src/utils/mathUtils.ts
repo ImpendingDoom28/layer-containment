@@ -1,6 +1,20 @@
 import type { Enemy } from "../core/types/game";
 
 /**
+ * A flat (ground-plane) rectangular obstacle that blocks tower line of
+ * sight, e.g. a building or the base. `halfWidth`/`halfDepth` are the
+ * footprint half-extends around the center; a cylinder footprint is
+ * approximated by its circumscribing square, which is conservative for
+ * line-of-sight (blocks at least as much as the circle does).
+ */
+export type LineOfSightObstacle = {
+  x: number;
+  z: number;
+  halfWidth: number;
+  halfDepth: number;
+};
+
+/**
  * Calculate distance between two 2D points (ignoring Y)
  */
 export function distance2D(
@@ -133,6 +147,129 @@ export function findEnemiesInLine(
   enemiesInLine.sort((a, b) => a.distance - b.distance);
 
   return enemiesInLine.slice(0, maxPierce).map((item) => item.enemy);
+}
+
+/**
+ * Whether the straight line from (x1, z1) to (x2, z2) crosses the interior
+ * of any obstacle (slab test). Degenerate segments never block.
+ */
+export function segmentCrossesObstacles(
+  x1: number,
+  z1: number,
+  x2: number,
+  z2: number,
+  obstacles: readonly LineOfSightObstacle[]
+): boolean {
+  if (obstacles.length === 0) return false;
+
+  const dx = x2 - x1;
+  const dz = z2 - z1;
+  if (dx === 0 && dz === 0) return false;
+
+  // t-interval of the segment: [0, 1]
+  let tMin = 0;
+  let tMax = 1;
+
+  for (const o of obstacles) {
+    const ox1 = o.x - o.halfWidth;
+    const ox2 = o.x + o.halfWidth;
+    const oz1 = o.z - o.halfDepth;
+    const oz2 = o.z + o.halfDepth;
+
+    // X slab
+    if (Math.abs(dx) < 1e-9) {
+      // Parallel to the slab: outside it means the segment never crosses.
+      if (x1 < ox1 || x1 > ox2) return false;
+    } else {
+      let t0 = (ox1 - x1) / dx;
+      let t1 = (ox2 - x1) / dx;
+      if (t0 > t1) [t0, t1] = [t1, t0];
+      tMin = Math.max(tMin, t0);
+      tMax = Math.min(tMax, t1);
+      if (tMin > tMax) return false;
+    }
+
+    // Z slab
+    if (Math.abs(dz) < 1e-9) {
+      if (z1 < oz1 || z1 > oz2) return false;
+    } else {
+      let t0 = (oz1 - z1) / dz;
+      let t1 = (oz2 - z1) / dz;
+      if (t0 > t1) [t0, t1] = [t1, t0];
+      tMin = Math.max(tMin, t0);
+      tMax = Math.min(tMax, t1);
+      if (tMin > tMax) return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Whether a tower at (towerX, towerZ) has an unobstructed line of sight to
+ * (targetX, targetZ) — i.e. no static obstacle sits strictly between them.
+ */
+export function hasLineOfSight(
+  towerX: number,
+  towerZ: number,
+  targetX: number,
+  targetZ: number,
+  obstacles: readonly LineOfSightObstacle[]
+): boolean {
+  return !segmentCrossesObstacles(
+    towerX,
+    towerZ,
+    targetX,
+    targetZ,
+    obstacles
+  );
+}
+
+/**
+ * Distance along the (unit) ray from (originX, originZ) where it first
+ * enters any obstacle's footprint; `Infinity` when the ray misses them all.
+ */
+export function getRayObstacleClipDistance(
+  originX: number,
+  originZ: number,
+  dirX: number,
+  dirZ: number,
+  obstacles: readonly LineOfSightObstacle[]
+): number {
+  let clipDistance = Infinity;
+
+  for (const o of obstacles) {
+    let tMin = 0;
+    let tMax = Infinity;
+
+    // X slab
+    if (Math.abs(dirX) < 1e-9) {
+      if (originX < o.x - o.halfWidth || originX > o.x + o.halfWidth) continue;
+    } else {
+      let t0 = (o.x - o.halfWidth - originX) / dirX;
+      let t1 = (o.x + o.halfWidth - originX) / dirX;
+      if (t0 > t1) [t0, t1] = [t1, t0];
+      tMin = Math.max(tMin, t0);
+      tMax = Math.min(tMax, t1);
+      if (tMin > tMax) continue;
+    }
+
+    // Z slab
+    if (Math.abs(dirZ) < 1e-9) {
+      if (originZ < o.z - o.halfDepth || originZ > o.z + o.halfDepth) continue;
+    } else {
+      let t0 = (o.z - o.halfDepth - originZ) / dirZ;
+      let t1 = (o.z + o.halfDepth - originZ) / dirZ;
+      if (t0 > t1) [t0, t1] = [t1, t0];
+      tMin = Math.max(tMin, t0);
+      tMax = Math.min(tMax, t1);
+      if (tMin > tMax) continue;
+    }
+
+    if (tMin < clipDistance) clipDistance = tMin;
+  }
+
+  return clipDistance;
 }
 
 export const isAdjacent4 = (

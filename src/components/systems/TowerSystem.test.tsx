@@ -10,7 +10,14 @@ import { useSimulationClock } from "../../core/hooks/useSimulationClock";
 import { useGameStore } from "../../core/stores/useGameStore";
 import { useLevelStore } from "../../core/stores/useLevelStore";
 import { useSettingsStore } from "../../core/stores/useSettingsStore";
-import type { Enemy, Projectile, Tower, TowerConfig } from "../../core/types/game";
+import type {
+  Building,
+  Enemy,
+  PathWaypoint,
+  Projectile,
+  Tower,
+  TowerConfig,
+} from "../../core/types/game";
 import { TowerSystem } from "./TowerSystem";
 
 // The tower mesh is purely visual and not under test.
@@ -111,31 +118,31 @@ const setPaused = async (paused: boolean) => {
   });
 };
 
-describe("TowerSystem fire timing", () => {
-  beforeEach(() => {
-    fireProjectile.mockClear();
-    enemyActions(testWorld).clearAllEnemies();
-    useLevelStore.getState().resetLevelState();
-    useLevelStore.setState({
-      gridSize: 8,
-      pathWaypoints: [],
-      towers: [tower],
-      isLevelConfigLoaded: true,
-    });
-    useGameStore.setState({
-      gameStatus: "playing",
-      isPageVisible: true,
-      towerTypes: { basic: basicConfig } as Record<
-        (typeof basicConfig)["id"],
-        TowerConfig
-      >,
-      tileSize: 1,
-      pathWidth: 1,
-      towerHeight: 1,
-    });
-    useSettingsStore.setState({ pauseWhenTabHidden: false });
+beforeEach(() => {
+  fireProjectile.mockClear();
+  enemyActions(testWorld).clearAllEnemies();
+  useLevelStore.getState().resetLevelState();
+  useLevelStore.setState({
+    gridSize: 8,
+    pathWaypoints: [],
+    towers: [tower],
+    isLevelConfigLoaded: true,
   });
+  useGameStore.setState({
+    gameStatus: "playing",
+    isPageVisible: true,
+    towerTypes: { basic: basicConfig } as Record<
+      (typeof basicConfig)["id"],
+      TowerConfig
+    >,
+    tileSize: 1,
+    pathWidth: 1,
+    towerHeight: 1,
+  });
+  useSettingsStore.setState({ pauseWhenTabHidden: false });
+});
 
+describe("TowerSystem fire timing", () => {
   it("keeps firing at its fire rate while playing", async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <WorldProvider world={testWorld}>
@@ -195,6 +202,90 @@ describe("TowerSystem fire timing", () => {
       // One full fire-rate of simulation time later, the tower fires again.
       await advanceFrame(renderer, 8);
       expect(fireProjectile).toHaveBeenCalledTimes(2);
+    } finally {
+      renderer.unmount();
+    }
+  });
+});
+
+describe("TowerSystem line of sight", () => {
+  const pathWaypoints: PathWaypoint[][] = [];
+
+  // A 0.4-wide square building; positioned per test.
+  const makeBuilding = (gridX: number, gridZ: number): Building => ({
+    id: 1,
+    gridX,
+    gridZ,
+    x: gridX,
+    z: gridZ,
+    shape: "box",
+    width: 0.4,
+    depth: 0.4,
+    height: 1,
+    color: "#fff",
+  });
+
+  const enemyA = (): Enemy => ({ ...makeEnemy(1), x: 1, z: 0 });
+  const enemyB = (): Enemy => ({ ...makeEnemy(2), x: 0, z: 1 });
+
+  const setupWith = async (
+    buildings: Building[],
+    spawn: Array<() => Enemy>
+  ) => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <WorldProvider world={testWorld}>
+        <TowerHarness />
+      </WorldProvider>
+    );
+    // Set up the store (and the ECS world) inside `act` so the re-render
+    // with the new buildings is flushed before the frame under test runs.
+    await ReactThreeTestRenderer.act(async () => {
+      useLevelStore.getState().setBuildings(buildings);
+      for (const make of spawn) {
+        enemyActions(testWorld).spawnEnemy(make());
+      }
+    });
+    await advanceFrame(renderer, 1);
+    return renderer;
+  };
+
+  it("does not shoot through a building: skips the hidden enemy", async () => {
+    // Building at (0.5, 0) sits between the tower (0, 0) and enemy A (1, 0),
+    // so the tower must skip A and fire at enemy B (0, 1) instead.
+    const renderer = await setupWith(
+      [makeBuilding(0.5, 0)],
+      [enemyA, enemyB]
+    );
+
+    try {
+      expect(fireProjectile).toHaveBeenCalledTimes(1);
+      expect(fireProjectile.mock.calls[0][0].targetId).toBe(2);
+    } finally {
+      renderer.unmount();
+    }
+  });
+
+  it("fires at the nearest enemy when the building is off the sight line", async () => {
+    // Building at (0, 0.5) blocks nothing on the tower→A segment, so the
+    // tower still picks the nearest enemy, A.
+    const renderer = await setupWith(
+      [makeBuilding(0, 0.5)],
+      [enemyA, enemyB]
+    );
+
+    try {
+      expect(fireProjectile).toHaveBeenCalledTimes(1);
+      expect(fireProjectile.mock.calls[0][0].targetId).toBe(1);
+    } finally {
+      renderer.unmount();
+    }
+  });
+
+  it("does not fire when every in-range enemy is hidden behind a building", async () => {
+    const renderer = await setupWith([makeBuilding(0.5, 0)], [enemyA]);
+
+    try {
+      expect(fireProjectile).not.toHaveBeenCalled();
     } finally {
       renderer.unmount();
     }

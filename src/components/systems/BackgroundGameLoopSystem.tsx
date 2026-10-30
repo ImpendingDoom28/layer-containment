@@ -5,6 +5,12 @@ import BackgroundTickerWorker from "../../core/workers/backgroundTicker.worker?w
 import { useGameStore } from "../../core/stores/useGameStore";
 import { useSettingsStore } from "../../core/stores/useSettingsStore";
 
+/**
+ * System for the game to continue running in background
+ * (when page is out of focus)
+ *
+ * Only works, if we have a setting enabled
+ */
 export const BackgroundGameLoopSystem = () => {
   const rootStore = useStore();
 
@@ -21,8 +27,7 @@ export const BackgroundGameLoopSystem = () => {
 
     worker.addEventListener("message", () => {
       const isPageVisible = useGameStore.getState().isPageVisible;
-      const pauseWhenTabHidden =
-        useSettingsStore.getState().pauseWhenTabHidden;
+      const pauseWhenTabHidden = useSettingsStore.getState().pauseWhenTabHidden;
 
       if (isPageVisible || pauseWhenTabHidden) {
         return;

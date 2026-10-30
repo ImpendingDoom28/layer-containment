@@ -45,12 +45,10 @@ import { Skybox } from "../shared/Skybox";
 type GameSceneProps = {
   placeTower: (gridX: number, gridZ: number, towerType: TowerType) => void;
   selectedTower: TowerInstance | null;
-  shouldDisableControls: boolean;
   shouldStopMovement: boolean;
   shouldStopCamera: boolean;
   gameStatus: GameStatus;
   waveSystem: WaveSystem;
-  money: number;
   onEnemyReachEnd: (enemyId: number) => void;
   onProjectileHit: (
     projectile: ProjectileInstance,
@@ -92,17 +90,6 @@ export const GameScene: React.FC<GameSceneProps> = ({
     waters,
   });
 
-  const handleTileHover = useCallback(
-    (gridX: number, gridZ: number) => {
-      setHoveredTile({ gridX, gridZ });
-    },
-    [setHoveredTile]
-  );
-
-  const handleTileHoverEnd = useCallback(() => {
-    setHoveredTile(null);
-  }, [setHoveredTile]);
-
   return (
     <>
       <LevelSystem levelName={playableLevelId} />
@@ -127,9 +114,7 @@ export const GameScene: React.FC<GameSceneProps> = ({
       <Grid
         placeTower={placeTower}
         hoveredTile={hoveredTile}
-        onTileHover={handleTileHover}
         setHoveredTile={setHoveredTile}
-        onTileHoverEnd={handleTileHoverEnd}
         occupancy={occupancy}
       />
 

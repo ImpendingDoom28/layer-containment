@@ -205,14 +205,12 @@ export const GamePage: FC<GamePageProps> = ({
             <GameScene
               placeTower={placeTower}
               selectedTower={selectedTower}
-              money={money}
               gameStatus={gameStatus}
               waveSystem={waveSystem}
               onEnemyReachEnd={onEnemyReachEnd}
               onProjectileHit={onProjectileHit}
               onProjectileRemove={onProjectileRemove}
               onSellTower={sellTower}
-              shouldDisableControls={shouldDisableControls}
               shouldStopMovement={shouldStopMovement}
               // The camera stays controllable while paused so the held frame
               // can be inspected from any angle; only menu, intro, and

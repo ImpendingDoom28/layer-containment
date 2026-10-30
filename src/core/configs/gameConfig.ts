@@ -103,7 +103,6 @@ export const gameConfigSchema = z.object({
   tileSize: z.number(),
   startingHealth: z.number(),
   towerSellPriceMultiplier: z.number(),
-  enemyHealthLoss: z.number(),
   towerTypes: z.record(towerTypeSchema, towerConfigSchema),
   enemyTypes: z.record(enemyTypeSchema, enemyConfigSchema),
   enemyUpgrades: z.record(enemyUpgradeIdSchema, enemyUpgradeConfigSchema),

@@ -99,9 +99,9 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     const towerIds = useMemo(() => new Set(towers.map((t) => t.id)), [towers]);
 
     // Static objects that block a tower's line of sight: buildings plus the
-    // base (the path's final waypoint). Footprints are in flat ground-plane
-    // coordinates; a cylinder is approximated by its circumscribing square.
-    // Towers do not block each other.
+    // base of every path (each path ends in its own base). Footprints are in
+    // flat ground-plane coordinates; a cylinder is approximated by its
+    // circumscribing square. Towers do not block each other.
     const lineOfSightObstacles = useMemo<LineOfSightObstacle[]>(() => {
       const obstacles = buildings.map((b) => ({
         x: b.x,
@@ -109,9 +109,9 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
         halfWidth: b.width / 2,
         halfDepth: b.depth / 2,
       }));
-      const path = pathWaypoints[0];
-      const base = path?.[path.length - 1];
-      if (base) {
+      for (const path of pathWaypoints) {
+        const base = path?.[path.length - 1];
+        if (!base) continue;
         obstacles.push({
           x: base.x,
           z: base.z,

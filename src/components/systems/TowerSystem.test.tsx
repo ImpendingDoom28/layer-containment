@@ -13,7 +13,6 @@ import { useSettingsStore } from "../../core/stores/useSettingsStore";
 import type {
   Building,
   Enemy,
-  PathWaypoint,
   Projectile,
   Tower,
   TowerConfig,
@@ -209,8 +208,6 @@ describe("TowerSystem fire timing", () => {
 });
 
 describe("TowerSystem line of sight", () => {
-  const pathWaypoints: PathWaypoint[][] = [];
-
   // A 0.4-wide square building; positioned per test.
   const makeBuilding = (gridX: number, gridZ: number): Building => ({
     id: 1,

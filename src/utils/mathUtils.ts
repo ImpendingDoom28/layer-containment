@@ -172,14 +172,16 @@ export function segmentCrossesObstacles(
     const oz1 = o.z - o.halfDepth;
     const oz2 = o.z + o.halfDepth;
 
-    // t-interval of the segment portion inside this obstacle: [0, 1]
+    // t-interval of the segment portion inside this obstacle: [0, 1].
+    // Only interior crossings count: a line that merely grazes a corner or
+    // runs along an edge is not blocked.
     let tMin = 0;
     let tMax = 1;
 
     // X slab
     if (Math.abs(dx) < 1e-9) {
-      // Parallel to the slab: outside it means the segment never crosses.
-      if (x1 < ox1 || x1 > ox2) continue;
+      // Parallel to the slab: the constant x must be strictly inside it.
+      if (x1 <= ox1 || x1 >= ox2) continue;
     } else {
       let t0 = (ox1 - x1) / dx;
       let t1 = (ox2 - x1) / dx;
@@ -190,7 +192,7 @@ export function segmentCrossesObstacles(
 
     // Z slab
     if (Math.abs(dz) < 1e-9) {
-      if (z1 < oz1 || z1 > oz2) continue;
+      if (z1 <= oz1 || z1 >= oz2) continue;
     } else {
       let t0 = (oz1 - z1) / dz;
       let t1 = (oz2 - z1) / dz;
@@ -199,7 +201,7 @@ export function segmentCrossesObstacles(
       tMax = Math.min(tMax, t1);
     }
 
-    if (tMin <= tMax) return true;
+    if (tMin < tMax) return true;
   }
 
   return false;

@@ -40,9 +40,16 @@ describe("segmentCrossesObstacles", () => {
     expect(segmentCrossesObstacles(0, 0, 0, 0, [square])).toBe(false);
   });
 
-  it("a corner-grazing diagonal does not block (no interior crossing)", () => {
-    // z = x touches the square only at its (1, 1) corner.
-    expect(segmentCrossesObstacles(3, 3, 10, 10, [square])).toBe(false);
+  it("does not block when the segment only touches a corner", () => {
+    // (2, 0) → (0, 2) is the line x + z = 2, which touches the square only
+    // at its (1, 1) corner — no interior crossing, so it must not block.
+    expect(segmentCrossesObstacles(2, 0, 0, 2, [square])).toBe(false);
+  });
+
+  it("does not block when the segment runs along an obstacle edge", () => {
+    // (-2, 1) → (2, 1) is the line z = 1, the square's top edge: it grazes
+    // the boundary but never enters the interior.
+    expect(segmentCrossesObstacles(-2, 1, 2, 1, [square])).toBe(false);
   });
 
   it("handles axis-aligned segments against slabs", () => {

@@ -28,13 +28,17 @@ export const computeChainAdditionalHits = (
     currentDamage *= multiplierPerHop;
     const candidates = enemies.filter((e) => {
       if (e.health <= 0 || hitIds.has(e.id)) return false;
-      const inTowerRange =
-        distance2D(tower.x, tower.z, e.x, e.z) <= towerRange &&
-        !segmentCrossesObstacles(tower.x, tower.z, e.x, e.z, obstacles);
-      const inLastRange =
-        distance2D(lastX, lastZ, e.x, e.z) <= towerRange &&
-        !segmentCrossesObstacles(lastX, lastZ, e.x, e.z, obstacles);
-      return inTowerRange || inLastRange;
+      const inRange =
+        distance2D(tower.x, tower.z, e.x, e.z) <= towerRange ||
+        distance2D(lastX, lastZ, e.x, e.z) <= towerRange;
+      // The bolt travels from the previous hit to the candidate, so that is
+      // the segment that must be unobstructed (an enemy visible from the
+      // tower but hidden from the previous hit would be zapped through a
+      // building).
+      return (
+        inRange &&
+        !segmentCrossesObstacles(lastX, lastZ, e.x, e.z, obstacles)
+      );
     });
     const next = findNearestEnemy(candidates, lastX, lastZ);
     if (!next) break;

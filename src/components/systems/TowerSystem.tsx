@@ -295,7 +295,8 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
             eff.damage,
             eff.range,
             maxHops,
-            mult
+            mult,
+            lineOfSightObstacles
           );
         }
 

@@ -1,5 +1,10 @@
 import type { Enemy, Tower } from "./types/game";
-import { distance2D, findNearestEnemy } from "../utils/mathUtils";
+import {
+  distance2D,
+  findNearestEnemy,
+  segmentCrossesObstacles,
+  type LineOfSightObstacle,
+} from "../utils/mathUtils";
 
 export type ChainAdditionalHit = { enemyId: number; damage: number };
 
@@ -10,7 +15,8 @@ export const computeChainAdditionalHits = (
   baseDamage: number,
   towerRange: number,
   maxHops: number,
-  multiplierPerHop: number
+  multiplierPerHop: number,
+  obstacles: readonly LineOfSightObstacle[] = []
 ): ChainAdditionalHit[] => {
   const hitIds = new Set<number>([firstTarget.id]);
   let lastX = firstTarget.x;
@@ -22,9 +28,13 @@ export const computeChainAdditionalHits = (
     currentDamage *= multiplierPerHop;
     const candidates = enemies.filter((e) => {
       if (e.health <= 0 || hitIds.has(e.id)) return false;
-      const fromTower = distance2D(tower.x, tower.z, e.x, e.z) <= towerRange;
-      const fromLast = distance2D(lastX, lastZ, e.x, e.z) <= towerRange;
-      return fromTower || fromLast;
+      const inTowerRange =
+        distance2D(tower.x, tower.z, e.x, e.z) <= towerRange &&
+        !segmentCrossesObstacles(tower.x, tower.z, e.x, e.z, obstacles);
+      const inLastRange =
+        distance2D(lastX, lastZ, e.x, e.z) <= towerRange &&
+        !segmentCrossesObstacles(lastX, lastZ, e.x, e.z, obstacles);
+      return inTowerRange || inLastRange;
     });
     const next = findNearestEnemy(candidates, lastX, lastZ);
     if (!next) break;

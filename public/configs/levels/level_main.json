@@ -1,5 +1,8 @@
 {
   "name": "main",
+  "label": "Main",
+  "description": "Background sector rendered behind the main menu.",
+  "startingHealth": 20,
   "buildings": [],
   "enemies": [],
   "enemySpawning": {

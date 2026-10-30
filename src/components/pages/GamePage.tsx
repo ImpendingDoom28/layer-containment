@@ -1,4 +1,12 @@
-import { FC, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  FC,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "../ui/lib/twUtils";
@@ -33,6 +41,7 @@ import { useProjectileSystem } from "../../core/hooks/useProjectileSystem";
 import { useWaveSystem } from "../../core/hooks/useWaveSystem";
 import { useLevelSystem } from "../../core/hooks/useLevelSystem";
 import { useUpgradesSystem } from "../../core/hooks/useUpgradesSystem";
+import { loadLevelConfigFile } from "../../core/configs/levelConfig";
 import { useHeldClose } from "../../core/hooks/useHeldClose";
 import { useLoadingTransition } from "../../core/hooks/useLoadingTransition";
 import { useMenuParallax } from "../../core/hooks/useMenuParallax";
@@ -102,18 +111,38 @@ export const GamePage: FC<GamePageProps> = ({
 
   const { getRemainingEnemiesInWave, startWave } = waveSystem;
 
+  // The base is spawned in startGame (before the level config finishes
+  // loading), so its health must come from the level config. The level does
+  // not change between selecting it and restarting, so cache the fetched
+  // health to keep restart synchronous and avoid a refetch.
+  const levelStartingHealthRef = useRef<Record<string, number>>({});
+
+  const loadLevelStartingHealth = useCallback(
+    async (level: PlayableLevelId): Promise<number> => {
+      const cached = levelStartingHealthRef.current[level];
+      if (cached !== undefined) return cached;
+      const levelConfig = await loadLevelConfigFile(level);
+      levelStartingHealthRef.current[level] = levelConfig.startingHealth;
+      return levelConfig.startingHealth;
+    },
+    []
+  );
+
   const onStartGameWithLevel = useCallback(
     async (level: PlayableLevelId) => {
       setActivePlayableLevel(level);
-      await startGame();
+      const startingHealth = await loadLevelStartingHealth(level);
+      await startGame(startingHealth);
     },
-    [startGame]
+    [startGame, loadLevelStartingHealth]
   );
 
   const onRestart = useCallback(() => {
-    startGame();
+    void loadLevelStartingHealth(activePlayableLevel).then((startingHealth) =>
+      startGame(startingHealth)
+    );
     resetLevelState();
-  }, [startGame, resetLevelState]);
+  }, [startGame, loadLevelStartingHealth, activePlayableLevel, resetLevelState]);
 
   const onGoToMainMenu = useCallback(() => {
     goToMainMenu();

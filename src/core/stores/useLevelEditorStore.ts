@@ -50,6 +50,9 @@ type LevelEditorStoreActions = {
   setActiveTool: (tool: LevelEditorTool) => void;
   setHoveredTile: (tile: TileData | null) => void;
   setLevelName: (name: string) => void;
+  setLabel: (value: string) => void;
+  setDescription: (value: string) => void;
+  setStartingHealth: (value: number) => void;
   setStartingMoney: (value: number) => void;
   setGridSize: (gridSize: number, tileSize: number) => void;
   setEnemyWeight: (enemyType: EnemyType, value: number | null) => void;
@@ -244,6 +247,27 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
         ...state.draftLevel,
         name,
       },
+      hasUnsavedChanges: true,
+    }));
+  },
+
+  setLabel: (value) => {
+    set((state) => ({
+      draftLevel: { ...state.draftLevel, label: value },
+      hasUnsavedChanges: true,
+    }));
+  },
+
+  setDescription: (value) => {
+    set((state) => ({
+      draftLevel: { ...state.draftLevel, description: value },
+      hasUnsavedChanges: true,
+    }));
+  },
+
+  setStartingHealth: (value) => {
+    set((state) => ({
+      draftLevel: { ...state.draftLevel, startingHealth: value },
       hasUnsavedChanges: true,
     }));
   },

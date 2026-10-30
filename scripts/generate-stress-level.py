@@ -100,6 +100,9 @@ print(f"Total enemies across all waves: {sum(w['totalEnemies'] for w in wave_con
 # --- Build the level config ---
 level = {
     "name": "stress",
+    "label": "Stress",
+    "description": "Performance stress-test level: 64x64 grid, 150 towers, 20 waves.",
+    "startingHealth": 20,
     "startingMoney": 99999,
     "gridSize": GRID_SIZE,
     "tileColor": "#374151",

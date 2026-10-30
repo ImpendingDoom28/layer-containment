@@ -10,6 +10,9 @@ const makeLevel = (
   overrides: Partial<LevelConfigData> = {}
 ): LevelConfigData => ({
   name: "test",
+  label: "Test",
+  description: "A test sector.",
+  startingHealth: 20,
   startingMoney: 100,
   gridSize: 10,
   waters: [],

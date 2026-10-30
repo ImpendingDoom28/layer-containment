@@ -1,5 +1,8 @@
 {
   "name": "3D Asset Showcase",
+  "label": "3D Asset Showcase",
+  "description": "Non-playable showcase of every 3D asset, laid out in rows.",
+  "startingHealth": 20,
   "startingMoney": 100,
   "gridSize": 20,
   "enemyWeights": null,

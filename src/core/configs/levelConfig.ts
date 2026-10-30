@@ -166,7 +166,13 @@ export type LevelConfigFiles =
 
 export const levelConfigSchema = z.object({
   name: z.string().min(1),
+  /** Human-facing name shown in the level picker (falls back to `name`, then the id). */
+  label: z.string().default(""),
+  /** One-line blurb shown under the label in the level picker. */
+  description: z.string().default(""),
   startingMoney: z.number(),
+  /** Base (player HQ) max health for this level; each level can set its own. */
+  startingHealth: z.number().positive().default(20),
   gridSize: z.number().finite().int().min(MIN_GRID_SIZE).max(MAX_GRID_SIZE),
   tileColor: z.string().optional(),
   groundColor: z.string().optional(),

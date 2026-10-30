@@ -1,5 +1,8 @@
 {
   "name": "3",
+  "label": "Sector 3: The Coil",
+  "description": "One spiraling channel. Cover the concentric loops before they converge.",
+  "startingHealth": 20,
   "startingMoney": 250,
   "gridSize": 20,
   "waters": [

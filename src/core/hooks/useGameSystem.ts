@@ -120,12 +120,14 @@ export const useGameSystem = () => {
     }
   }, [setGameStatus, gameStatus, canPause]);
 
-  const startGame = useCallback(async () => {
-    startNewRun();
-    startRunStats();
-    const maxHealth = useGameStore.getState().startingHealth;
-    spawnBase(maxHealth);
-  }, [startNewRun, spawnBase, startRunStats]);
+  const startGame = useCallback(
+    async (startingHealth: number) => {
+      startNewRun();
+      startRunStats();
+      spawnBase(startingHealth);
+    },
+    [startNewRun, spawnBase, startRunStats]
+  );
 
   const goToMainMenu = useCallback(() => {
     endRunStats();

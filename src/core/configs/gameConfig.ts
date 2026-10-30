@@ -101,7 +101,6 @@ const enemyUpgradeConfigSchema: z.ZodType<EnemyUpgradeConfig> = z.object({
 
 export const gameConfigSchema = z.object({
   tileSize: z.number(),
-  startingHealth: z.number(),
   towerSellPriceMultiplier: z.number(),
   towerTypes: z.record(towerTypeSchema, towerConfigSchema),
   enemyTypes: z.record(enemyTypeSchema, enemyConfigSchema),

@@ -13,6 +13,7 @@ import type { TileData } from "../core/types/utils";
 
 const DEFAULT_LEVEL_NAME = "custom";
 const DEFAULT_STARTING_MONEY = 1000;
+const DEFAULT_STARTING_HEALTH = 20;
 const DEFAULT_GRID_SIZE = 20;
 const DEFAULT_PATH_HEIGHT = 0;
 
@@ -144,6 +145,9 @@ export const createEmptyLevelConfig = (
 ): LevelConfigData => {
   return {
     name,
+    label: "",
+    description: "",
+    startingHealth: DEFAULT_STARTING_HEALTH,
     startingMoney: DEFAULT_STARTING_MONEY,
     gridSize: DEFAULT_GRID_SIZE,
     waters: [],

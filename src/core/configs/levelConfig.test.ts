@@ -6,6 +6,9 @@ const makeLevel = (
   enemies: Array<Record<string, unknown>>
 ): Record<string, unknown> => ({
   name: "Test",
+  label: "Test Sector",
+  description: "A test sector.",
+  startingHealth: 20,
   startingMoney: 100,
   gridSize: 5,
   pathWaypoints: [[{ x: 0, y: 0, z: 0 }, { x: 4, y: 0, z: 4 }]],

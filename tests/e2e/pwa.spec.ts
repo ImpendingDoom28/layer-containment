@@ -33,27 +33,6 @@ test.describe("PWA", () => {
     expect(text).toContain('content="black-translucent"');
   });
 
-  test("built stylesheet defines the HUD safe-area insets", async ({
-    request,
-  }) => {
-    const doc = await (await request.get("/")).text();
-
-    // Vite emits the entry stylesheet as a hashed asset linked from
-    // index.html; locate it (base is "./" so the href is relative).
-    const cssHref = doc
-      .match(/href="([^"]*\.css)"/)
-      ?.[1]
-      .replace(/^\.\//, "");
-    expect(cssHref, "a stylesheet link should exist in index.html").toBeTruthy();
-
-    const css = await (await request.get(`/${cssHref}`)).text();
-    // The edge-pinned HUD insets itself into the safe areas on a full-bleed
-    // PWA; these utilities carry the env(safe-area-inset-*) values.
-    expect(css).toContain("safe-area-inset");
-    expect(css).toContain(".hud-safe-top");
-    expect(css).toContain(".hud-safe-bottom");
-  });
-
   test("manifest lists app identity and icons", async ({ request }) => {
     const response = await request.get("/manifest.webmanifest");
     expect(response.ok()).toBe(true);

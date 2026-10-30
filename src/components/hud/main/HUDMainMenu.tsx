@@ -119,7 +119,7 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
       <HUDWrapper className="pointer-events-none">
         <div
           className={cn(
-            `relative pointer-events-auto flex h-full w-full hud-safe-top transition-all duration-1000 ease-out`,
+            `relative pointer-events-auto flex h-full w-full transition-all duration-1000 ease-out`,
             hasInteracted
               ? "opacity-100 translate-x-0"
               : "opacity-0 -translate-x-16"

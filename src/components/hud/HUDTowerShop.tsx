@@ -135,7 +135,7 @@ export const HUDTowerShop: FC<HUDTowerShopProps> = ({ money }) => {
 
   if (isMobile) {
     return (
-      <HUDWrapper className="inset-x-0 bottom-0 top-auto hud-safe-bottom p-2">
+      <HUDWrapper className="inset-x-0 bottom-0 top-auto p-2">
         <div
           data-testid="tower-shop"
           className="ui-menu-tilt ui-menu-tilt-right flex min-w-0 flex-1 items-end justify-between gap-2"
@@ -158,9 +158,7 @@ export const HUDTowerShop: FC<HUDTowerShopProps> = ({ money }) => {
         <UICard className="flex-1">
           <UICardHeader>
             <UICardTitle>
-              <UITypography variant="h4">
-                {t("towerShop.title")}
-              </UITypography>
+              <UITypography variant="h4">{t("towerShop.title")}</UITypography>
             </UICardTitle>
           </UICardHeader>
           <UICardContent className="gap-2">

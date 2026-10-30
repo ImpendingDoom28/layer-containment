@@ -62,7 +62,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
     return (
       <HUDWrapper
         data-testid="game-stats-header"
-        className="inset-x-0 top-0 bottom-auto hud-safe-top flex flex-col border-b border-white/10 bg-card backdrop-blur-sm"
+        className="inset-x-0 top-0 bottom-auto flex flex-col border-b border-white/10 bg-card backdrop-blur-sm"
       >
         <div
           data-testid="game-stats"
@@ -79,7 +79,11 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
             <UITypography variant="small" className="text-gray-300">
               {t("gameStats.wave")}:
             </UITypography>
-            <UITypography variant="medium" whiteSpace="nowrap" data-testid="wave-count">
+            <UITypography
+              variant="medium"
+              whiteSpace="nowrap"
+              data-testid="wave-count"
+            >
               {waveLabel}
             </UITypography>
           </div>
@@ -148,7 +152,11 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
                 <UITypography variant="body">
                   {t("gameStats.wave")}:
                 </UITypography>
-                <UITypography variant="medium" whiteSpace="nowrap" data-testid="wave-count">
+                <UITypography
+                  variant="medium"
+                  whiteSpace="nowrap"
+                  data-testid="wave-count"
+                >
                   {`${currentWave} / ${totalWaves}`}
                 </UITypography>
               </div>
@@ -170,7 +178,11 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
             <div className="flex flex-col gap-2">
               <HUDEnemyUpgrades />
               {showStartWave && (
-                <UIButton data-testid="wave-start" onClick={onStartWave} variant="default">
+                <UIButton
+                  data-testid="wave-start"
+                  onClick={onStartWave}
+                  variant="default"
+                >
                   <Play /> {t("gameStats.startNextWave")}
                 </UIButton>
               )}

@@ -9,7 +9,6 @@ import {
   useCallback,
 } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Billboard } from "@react-three/drei";
 import {
   BoxGeometry,
   Matrix4,
@@ -41,6 +40,7 @@ import {
 } from "../../utils/planetSurfaceMapping";
 import { useFrustumCulling } from "../../core/hooks/useFrustumCulling";
 import { EnemyMotion, EnemyState } from "../../core/ecs/traits/enemy";
+import { FacingDirection } from "../../core/ecs/traits/facing";
 import { EnemySlow } from "../../core/ecs/traits/slow";
 import { Position } from "../../core/ecs/traits/position";
 import type {
@@ -124,6 +124,11 @@ export const Enemy: FC<EnemyProps> = memo(
     // stored facing, +y the surface normal — same basis as the path strips).
     const scratchFacingQuat = useRef(new Quaternion());
     const scratchFacingMatrix = useRef(new Matrix4());
+    // The health bar is billboarded by hand in the same frame the group
+    // rotates (drei's Billboard reads the parent's matrix one frame stale,
+    // which shows as a lagging bar during turns).
+    const scratchCameraQuat = useRef(new Quaternion());
+    const scratchBillboardQuat = useRef(new Quaternion());
 
     const applySphereFooting = useCallback(
       (
@@ -131,7 +136,7 @@ export const Enemy: FC<EnemyProps> = memo(
         worldZ: number,
         pathY: number,
         halfHeight: number,
-        motion?: { facingX: number; facingZ: number }
+        facing?: { x: number; z: number }
       ) => {
         flatFieldToSphereSurface(
           worldX,
@@ -144,10 +149,10 @@ export const Enemy: FC<EnemyProps> = memo(
           .copy(scratchSurface.current)
           .addScaledVector(scratchNormal.current, pathY + halfHeight);
         getSurfaceQuaternion(scratchNormal.current, scratchQuat.current);
-        if (motion) {
+        if (facing) {
           getFacingQuaternionOnSphere(
-            motion.facingX,
-            motion.facingZ,
+            facing.x,
+            facing.z,
             scratchNormal.current,
             scratchFacingMatrix.current,
             scratchFacingQuat.current
@@ -155,7 +160,7 @@ export const Enemy: FC<EnemyProps> = memo(
         }
         return {
           position: scratchGroupPos.current,
-          quaternion: motion ? scratchFacingQuat.current : scratchQuat.current,
+          quaternion: facing ? scratchFacingQuat.current : scratchQuat.current,
         };
       },
       [radius]
@@ -163,6 +168,7 @@ export const Enemy: FC<EnemyProps> = memo(
 
     const meshRef = useRef<Group>(null);
     useFrustumCulling(meshRef);
+    const healthBarRef = useRef<Group>(null);
     const fillBarRef = useRef<Mesh>(null);
     const flashMeshRef = useRef<Mesh>(null);
     const healthTierRef = useRef<HealthTier>("high");
@@ -231,16 +237,21 @@ export const Enemy: FC<EnemyProps> = memo(
       const live = entity.get(EnemyState);
       const pos = entity.get(Position);
       if (!meshRef.current || !live || !pos || live.health <= 0) return;
-      const motion = entity.get(EnemyMotion);
+      const facing = entity.get(FacingDirection);
       const footing = applySphereFooting(
         pos.x,
         pos.z,
         pos.y,
         live.size / 2,
-        motion
+        facing
       );
       meshRef.current.position.copy(footing.position);
+      // The group starts exactly at the target orientation — the smooth
+      // slerp in useFrame is only needed once the facing changes.
       meshRef.current.quaternion.copy(footing.quaternion);
+      if (healthBarRef.current) {
+        healthBarRef.current.quaternion.identity();
+      }
     }, [entity, applySphereFooting]);
 
     useFrame((state, delta) => {
@@ -252,16 +263,39 @@ export const Enemy: FC<EnemyProps> = memo(
       // frame just mirrors both onto the mesh (allocation-free via scratch
       // vectors). The group's local +x axis points along the path.
       if (meshRef.current) {
-        const motion = entity.get(EnemyMotion);
+        const facing = entity.get(FacingDirection);
         const footing = applySphereFooting(
           pos.x,
           pos.z,
           pos.y,
           live.size / 2,
-          motion
+          facing
         );
         meshRef.current.position.copy(footing.position);
-        meshRef.current.quaternion.copy(footing.quaternion);
+        // Smooth the rotation toward the new facing so corner turns read as
+        // a gradual turn instead of an instant snap (the same ease the old
+        // UpgradeEffect travel-direction smoothing gave).
+        meshRef.current.quaternion.slerpQuaternions(
+          meshRef.current.quaternion,
+          footing.quaternion,
+          Math.min(1, delta * getTimeScale() * 8)
+        );
+
+        // Billboard the health bar against the camera in this same frame,
+        // so it never lags the group's rotation by a frame (drei's Billboard
+        // reads the parent's world quaternion one frame stale).
+        const bar = healthBarRef.current;
+        if (bar) {
+          // Inner bar quaternion = cameraWorldQ * barWorldQ^-1, computed from
+          // the group's transform as it is being written this frame, so the
+          // bar is always exactly face-on (no one-frame lag).
+          camera.getWorldQuaternion(scratchCameraQuat.current);
+          bar.getWorldQuaternion(scratchBillboardQuat.current);
+          scratchBillboardQuat.current
+            .invert()
+            .premultiply(scratchCameraQuat.current);
+          bar.quaternion.copy(scratchBillboardQuat.current);
+        }
       }
 
       // Emissive hit-flash: a drop in health bumps a decaying flash rendered by
@@ -363,24 +397,23 @@ export const Enemy: FC<EnemyProps> = memo(
           material={flashMaterial}
         />
 
-        {/* Health bar - always faces camera */}
-        <Billboard position={[0, size + 0.3, 0]}>
-          <group>
-            <mesh
-              position={[0, 0, 0]}
-              geometry={sharedUnitBox}
-              material={sharedBlackBarMaterial}
-              scale={[size * 2, 0.1, 0.05]}
-            />
-            <mesh
-              ref={fillBarRef}
-              geometry={sharedUnitBox}
-              material={healthTierMaterials.high}
-              scale={[size * 2, 0.08, 0.06]}
-              position={[0, 0, 0.01]}
-            />
-          </group>
-        </Billboard>
+        {/* Health bar - faces the camera, billboarded by hand in useFrame so
+            it never lags the group's rotation by a frame */}
+        <group ref={healthBarRef} position={[0, size + 0.3, 0]}>
+          <mesh
+            position={[0, 0, 0]}
+            geometry={sharedUnitBox}
+            material={sharedBlackBarMaterial}
+            scale={[size * 2, 0.1, 0.05]}
+          />
+          <mesh
+            ref={fillBarRef}
+            geometry={sharedUnitBox}
+            material={healthTierMaterials.high}
+            scale={[size * 2, 0.08, 0.06]}
+            position={[0, 0, 0.01]}
+          />
+        </group>
 
         {/* Debug info */}
         {debug && <GUIDebugInfo entity={entity} offsetY={size + 0.7} />}

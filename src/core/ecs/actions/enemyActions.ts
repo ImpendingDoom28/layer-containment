@@ -22,6 +22,7 @@ import {
   type EnemyStateData,
 } from "../traits/enemy";
 import { Position, type PositionData } from "../traits/position";
+import { FacingDirection } from "../traits/facing";
 import { splitRequest } from "../traits/split";
 import { isBase } from "../traits/base";
 import { damageRequest } from "../traits/damage";
@@ -69,21 +70,19 @@ const enemyToState = (enemyData: Enemy): EnemyStateData => ({
   split: enemyData.split,
 });
 
-const enemyToMotion = (enemyData: Enemy): EnemyMotionData => {
+const enemyToMotion = (enemyData: Enemy): EnemyMotionData => ({
+  pathProgress: enemyData.pathProgress,
+  // Sentinel "no baseline yet" — see lastRegenTick in traits/enemy.ts.
+  lastRegenTick: -1,
+  hasReachedEnd: false,
+});
+
+const enemyToFacing = (enemyData: Enemy): { x: number; z: number } => {
   // Face the direction of travel at the spawn point so every enemy — whatever
   // its type — spawns looking down the path. The level's waypoint array is
   // read here; the movement system refreshes this as the enemy turns corners.
   const path = useLevelStore.getState().pathWaypoints[enemyData.pathIndex];
-  const facing = getPathDirection(path, enemyData.pathProgress);
-
-  return {
-    pathProgress: enemyData.pathProgress,
-    facingX: facing.x,
-    facingZ: facing.z,
-    // Sentinel "no baseline yet" — see lastRegenTick in traits/enemy.ts.
-    lastRegenTick: -1,
-    hasReachedEnd: false,
-  };
+  return getPathDirection(path, enemyData.pathProgress);
 };
 
 const enemyToPosition = (enemyData: Enemy): PositionData => ({
@@ -168,10 +167,17 @@ export const enemyActions = createActions((world) => ({
       existingEntity.destroy();
     }
 
-    const entity = world.spawn(IsEnemy, EnemyState, EnemyMotion, Position);
+    const entity = world.spawn(
+      IsEnemy,
+      EnemyState,
+      EnemyMotion,
+      Position,
+      FacingDirection
+    );
     entity.set(EnemyState, enemyToState(enemyData));
     entity.set(EnemyMotion, enemyToMotion(enemyData));
     entity.set(Position, enemyToPosition(enemyData));
+    entity.set(FacingDirection, enemyToFacing(enemyData));
 
     enemyEntitiesById.set(enemyData.id, entity);
 

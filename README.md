@@ -258,7 +258,7 @@ The dev server uses a fixed port (`5173`) and `strictPort: true`, so the URL is 
   - Upgraded enemies show a physical effect per pick (1 pick = 1, 3 picks = 3): shield plates in front (Armored), purple glow shell (Unstoppable), ground ring that grows per tier with rising green energy (Regenerating), white speed straps trailing behind (Swift)
   - Unstoppable enemies resist slows: each tier adds slow resistance (25% / 66% / 100%), fully negating Slow Tower effects at tier 3
   - Regenerating enemies heal over time (can be countered with burst damage)
-- **Enemy Facing**: every enemy spawns facing along the path (the direction of travel at its spawn point) and keeps refreshing its facing each frame, so all enemy types — including splitter children — always face down the path, around corners, and from any spawn point
+- **Enemy Facing**: every enemy spawns facing along the path (the direction of travel at its spawn point) and its facing refreshes each frame with a smooth turn, so all enemy types — including splitter children — always face down the path, around corners, and from any spawn point
 
 ## Levels
 

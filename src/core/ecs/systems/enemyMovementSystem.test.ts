@@ -7,6 +7,7 @@ import { getEnemySnapshots } from "../selectors/enemySnapshots";
 import { EnemyMotion, EnemyState } from "../traits/enemy";
 import { EnemySlow } from "../traits/slow";
 import { Position } from "../traits/position";
+import { FacingDirection } from "../traits/facing";
 import { spawnEffectRequest } from "../traits/effect";
 import { testWorld } from "../world";
 import type { Enemy, PathWaypoint } from "../../../core/types/game";
@@ -54,6 +55,7 @@ const defaultOptions = (): TestOptions => ({
 const stateOf = (entity: Entity) => entity.get(EnemyState)!;
 const motionOf = (entity: Entity) => entity.get(EnemyMotion)!;
 const positionOf = (entity: Entity) => entity.get(Position)!;
+const facingOf = (entity: Entity) => entity.get(FacingDirection)!;
 
 /** Counts end-of-path spawn-effect requests currently in the world. */
 const countEndRequests = () =>
@@ -264,8 +266,8 @@ describe("enemyMovementSystem", () => {
 
     // The straight +X path: the facing follows the segment direction.
     run(0.2, 0);
-    expect(motionOf(entity).facingX).toBeCloseTo(1);
-    expect(motionOf(entity).facingZ).toBeCloseTo(0);
+    expect(facingOf(entity).x).toBeCloseTo(1);
+    expect(facingOf(entity).z).toBeCloseTo(0);
   });
 
   it("turns the facing when an enemy rounds a corner", () => {
@@ -284,8 +286,8 @@ describe("enemyMovementSystem", () => {
       ...defaultOptions(),
       pathWaypoints: corneredPath,
     });
-    expect(motionOf(entity).facingX).toBeCloseTo(4 / L);
-    expect(motionOf(entity).facingZ).toBeCloseTo(4 / L);
+    expect(facingOf(entity).x).toBeCloseTo(4 / L);
+    expect(facingOf(entity).z).toBeCloseTo(4 / L);
 
     // Force the enemy just past the corner (the corner sits at progress 0.5).
     entity.set(EnemyMotion, { ...motionOf(entity), pathProgress: 0.55 });
@@ -295,8 +297,8 @@ describe("enemyMovementSystem", () => {
     });
 
     // Second segment direction is (-4, +4)/√32.
-    expect(motionOf(entity).facingX).toBeCloseTo(-4 / L);
-    expect(motionOf(entity).facingZ).toBeCloseTo(4 / L);
+    expect(facingOf(entity).x).toBeCloseTo(-4 / L);
+    expect(facingOf(entity).z).toBeCloseTo(4 / L);
   });
 
   it("keeps enemies at the path end when no removal callback is given (menu scene)", () => {

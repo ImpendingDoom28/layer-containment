@@ -4,13 +4,9 @@ import { enemyActions } from "./enemyActions";
 import { statsActions, sweepStatsReceipts } from "./statsActions";
 import { worldBaseActions } from "./baseActions";
 import { getEnemySnapshots } from "../selectors/enemySnapshots";
-import {
-  EnemyMotion,
-  EnemyState,
-  IsEnemy,
-  requestEnemyDeath,
-} from "../traits/enemy";
+import { EnemyState, IsEnemy, requestEnemyDeath } from "../traits/enemy";
 import { isBase } from "../traits/base";
+import { FacingDirection } from "../traits/facing";
 import { damageRequest } from "../traits/damage";
 import { EnemySlow, slowRequest } from "../traits/slow";
 import { HealthInfo } from "../traits/health";
@@ -108,18 +104,18 @@ describe("enemyActions", () => {
     });
     const entity = enemyActions(testWorld).spawnEnemy(baseEnemy(1, 100));
 
-    const motion = entity.get(EnemyMotion)!;
-    expect(motion.facingX).toBeCloseTo(1);
-    expect(motion.facingZ).toBeCloseTo(0);
+    const facing = entity.get(FacingDirection)!;
+    expect(facing.x).toBeCloseTo(1);
+    expect(facing.z).toBeCloseTo(0);
   });
 
   it("falls back to +x facing when the path is missing", () => {
     useLevelStore.setState({ pathWaypoints: [] });
     const entity = enemyActions(testWorld).spawnEnemy(baseEnemy(1, 100));
 
-    const motion = entity.get(EnemyMotion)!;
-    expect(motion.facingX).toBeCloseTo(1);
-    expect(motion.facingZ).toBeCloseTo(0);
+    const facing = entity.get(FacingDirection)!;
+    expect(facing.x).toBeCloseTo(1);
+    expect(facing.z).toBeCloseTo(0);
   });
 
   it("gives split children the path direction at their spawn point", () => {
@@ -147,9 +143,9 @@ describe("enemyActions", () => {
       const entity = testWorld
         .query(EnemyState)
         .find((e) => e.get(EnemyState)?.id === child.id)!;
-      const motion = entity.get(EnemyMotion)!;
-      expect(motion.facingX).toBeCloseTo(1);
-      expect(motion.facingZ).toBeCloseTo(0);
+      const facing = entity.get(FacingDirection)!;
+      expect(facing.x).toBeCloseTo(1);
+      expect(facing.z).toBeCloseTo(0);
     }
   });
 

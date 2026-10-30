@@ -4,6 +4,7 @@ import { Vector3 } from "three";
 import { EnemyMotion, EnemyState } from "../traits/enemy";
 import { EnemySlow } from "../traits/slow";
 import { Position } from "../traits/position";
+import { FacingDirection } from "../traits/facing";
 import { effectActions } from "../actions/effectActions";
 import {
   getPathDirection,
@@ -76,8 +77,8 @@ export const runEnemyMovementSystem = (
   const reachedEndIds: number[] = [];
 
   world
-    .query(EnemyState, EnemyMotion, Position)
-    .updateEach(([state, motion, position], entity) => {
+    .query(EnemyState, EnemyMotion, Position, FacingDirection)
+    .updateEach(([state, motion, position, facing], entity) => {
       if (state.health <= 0) return;
 
       // Reads the slow state written by the ApplySlowSystem (which runs
@@ -99,11 +100,11 @@ export const runEnemyMovementSystem = (
       // Keep the facing aligned to the direction of travel so the enemy always
       // faces down the path (refreshed here so corner turns and mid-path spawns
       // stay correct; spawnEnemy sets the initial value too).
-      const facing = path
+      const direction = path
         ? getPathDirection(path, motion.pathProgress)
         : { x: 1, z: 0 };
-      motion.facingX = facing.x;
-      motion.facingZ = facing.z;
+      facing.x = direction.x;
+      facing.z = direction.z;
 
       if (isAtPathEnd(motion.pathProgress)) {
         // Clamp the motion to the path end. The hasReachedEnd flag (hot

@@ -62,11 +62,11 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
     return (
       <HUDWrapper
         data-testid="game-stats-header"
-        className="inset-x-0 top-0 bottom-auto flex border-b border-white/10 bg-card backdrop-blur-sm"
+        className="inset-x-0 top-0 bottom-auto flex flex-col border-b border-white/10 bg-card backdrop-blur-sm"
       >
         <div
           data-testid="game-stats"
-          className="ui-menu-tilt ui-menu-tilt-left flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2 px-3 py-1.5"
+          className="ui-menu-tilt ui-menu-tilt-left flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-2 gap-y-1 px-3 py-1.5"
         >
           <UIMoney money={money} variant="medium" iconSize={14} />
           <div className="flex items-center gap-1.5">
@@ -88,43 +88,41 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
               {remainingEnemies}
             </UITypography>
           )}
-        </div>
-        {showStartWave && (
           <UIButton
-            data-testid="wave-start"
-            onClick={onStartWave}
-            variant="default"
-            size="sm"
+            data-testid="mobile-menu-button"
+            onClick={onOpenGameMenu}
+            variant="secondary"
+            size="icon"
+            aria-label={t("gameMenu.title")}
             className="shrink-0"
           >
-            <Play size={14} /> {t("gameStats.startNextWave")}
+            <Menu />
           </UIButton>
-        )}
-        {showStartWave && (
-          <div className="shrink-0">
-            <HUDEnemyUpgrades isMobile />
-          </div>
-        )}
-        {paused && (
-          <UIButton
-            variant="default"
-            size="icon-sm"
-            className="px-1 shrink-0"
-            data-testid="paused-indicator"
-          >
-            <PauseIcon />
-          </UIButton>
-        )}
-        <UIButton
-          data-testid="mobile-menu-button"
-          onClick={onOpenGameMenu}
-          variant="secondary"
-          size="icon"
-          aria-label={t("gameMenu.title")}
-          className="shrink-0"
-        >
-          <Menu />
-        </UIButton>
+        </div>
+        <div className="flex min-w-0 flex-wrap items-center gap-2 px-3 pb-2">
+          {showStartWave && (
+            <UIButton
+              data-testid="wave-start"
+              onClick={onStartWave}
+              variant="default"
+              size="sm"
+              className="shrink-0"
+            >
+              <Play size={14} /> {t("gameStats.startNextWave")}
+            </UIButton>
+          )}
+          {paused && (
+            <UIButton
+              variant="default"
+              size="icon-sm"
+              className="px-1 shrink-0"
+              data-testid="paused-indicator"
+            >
+              <PauseIcon />
+            </UIButton>
+          )}
+          <HUDEnemyUpgrades />
+        </div>
       </HUDWrapper>
     );
   }
@@ -170,13 +168,11 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
             </div>
 
             <div className="flex flex-col gap-2">
-              {showStartWave && <HUDEnemyUpgrades />}
+              <HUDEnemyUpgrades />
               {showStartWave && (
-                <div className="flex flex-col justify-center flex-1 gap-1">
-                  <UIButton data-testid="wave-start" onClick={onStartWave} variant="outline">
-                    <Play /> {t("gameStats.startNextWave")}
-                  </UIButton>
-                </div>
+                <UIButton data-testid="wave-start" onClick={onStartWave} variant="default">
+                  <Play /> {t("gameStats.startNextWave")}
+                </UIButton>
               )}
               {gameStatus === "paused" && (
                 <UIButton

@@ -92,8 +92,15 @@ export const UIModal: FC<UIModalProps> = ({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-(--z-modal) bg-black/60" />
+        {/* The overlay and the card both block game camera control (same
+            mechanism as the game menus), so an open modal cannot be used to
+            drag the camera behind it. */}
+        <DialogPrimitive.Overlay
+          data-game-camera-block
+          className="fixed inset-0 z-(--z-modal) bg-black/60"
+        />
         <DialogPrimitive.Content
+          data-game-camera-block
           role={role}
           // Keep the Escape keydown from bubbling to window listeners (e.g.
           // the game's keyboard system), so dismissing a modal does not also

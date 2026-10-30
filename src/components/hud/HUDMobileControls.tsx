@@ -7,7 +7,12 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+} from "lucide-react";
 
 import {
   CAMERA_MOVE_BINDINGS,
@@ -181,8 +186,7 @@ export const HUDMobileControls: FC = () => {
   const showUpgradePanel = useUpgradeStore(pendingEnemyUpgradeGateSelector);
   const { shouldLockCamera } = useGameSystem();
 
-  const isVisible =
-    isMobile && controlScheme === "mobile" && !showUpgradePanel;
+  const isVisible = isMobile && controlScheme === "mobile" && !showUpgradePanel;
 
   // If the controls disappear while a D-pad button is still held (upgrade
   // panel opens, scheme switches, or a viewport change), the button's release
@@ -226,7 +230,7 @@ export const HUDMobileControls: FC = () => {
         // A tight bottom-left box (above the tower shop bar): the wrapper is a
         // camera-block area, so the surrounding field stays draggable for
         // placement and mouse camera-drag.
-        className="inset-x-auto left-3 right-auto top-auto bottom-24"
+        className="inset-x-auto left-3 right-auto top-auto bottom-24 "
       >
         <MobileRotationJoystick disabled={shouldLockCamera} />
       </HUDWrapper>

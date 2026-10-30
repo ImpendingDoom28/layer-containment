@@ -162,6 +162,7 @@ export const en = {
     slowImmune: "Slow immune",
     slowResistance: "+{{percent}}% slow resistance",
     selected: "Selected upgrades",
+    viewTitle: "Enemy upgrades",
   },
   towerInfo: {
     damage: "Damage",
@@ -177,11 +178,7 @@ export const en = {
     selling: "Selling...",
   },
   nextWavePreview: {
-    pathEntrance: "Path Entrance",
     nextWave: "Next Wave",
-    empowered: "Empowered",
-    units: "unit",
-    units_other: "units",
   },
   editor: {
     backToGame: "Back to game",

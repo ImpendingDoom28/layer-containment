@@ -1,7 +1,12 @@
-import type { FC, ReactNode } from "react";
+import { useEffect, type FC, type ReactNode } from "react";
 
 import { Dialog as DialogPrimitive } from "radix-ui";
 
+import { getCameraMovesForEvent } from "../../core/keybindings";
+import {
+  keybindingsSelector,
+  useSettingsStore,
+} from "../../core/stores/useSettingsStore";
 import { cn } from "./lib/twUtils";
 import {
   UICard,
@@ -84,6 +89,27 @@ export const UIModal: FC<UIModalProps> = ({
   footer,
   onOpenChange,
 }) => {
+  const keybindings = useSettingsStore(keybindingsSelector);
+
+  // Radix only swallows the Escape keydown; camera-control keys (WASD /
+  // arrows) would otherwise bubble to the game's window listener and move the
+  // camera while the modal is open. Block them in the capture phase, on
+  // document, the same way Radix does — the dialog content is portaled outside
+  // the React root, so a React onKeyDown on it would never fire for these.
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (getCameraMovesForEvent(keybindings, e, "down").length > 0) {
+        e.stopPropagation();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown, { capture: true });
+    return () =>
+      document.removeEventListener("keydown", handleKeyDown, { capture: true });
+  }, [open, keybindings]);
+
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) return;
     onOpenChange?.(false);
@@ -92,8 +118,15 @@ export const UIModal: FC<UIModalProps> = ({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-(--z-modal) bg-black/60" />
+        {/* The overlay and the card both block game camera control (same
+            mechanism as the game menus), so an open modal cannot be used to
+            drag the camera behind it. */}
+        <DialogPrimitive.Overlay
+          data-game-camera-block
+          className="fixed inset-0 z-(--z-modal) bg-black/60"
+        />
         <DialogPrimitive.Content
+          data-game-camera-block
           role={role}
           // Keep the Escape keydown from bubbling to window listeners (e.g.
           // the game's keyboard system), so dismissing a modal does not also

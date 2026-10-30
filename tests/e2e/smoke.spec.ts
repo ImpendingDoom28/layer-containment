@@ -270,3 +270,47 @@ test("shows Empower Next Wave after wave 1 completes and clears after pick", asy
 
   await expect(page.getByText("Empower Next Wave")).toBeHidden();
 });
+
+test("lists the picked upgrade in the game stats panel and opens its modal", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+
+  await onOpenGame(page, { waitForTowerShop: true });
+
+  await onPlaceMultipleBasicTowers(page, [100, 50]);
+
+  await page.getByRole("button", { name: "Start next wave" }).click();
+
+  await expect(page.getByText("Empower Next Wave")).toBeVisible({
+    timeout: 120_000,
+  });
+
+  const firstCard = page
+    .getByRole("button", { name: /Armored|Swift|Unstoppable|Regenerating/ })
+    .first();
+  const nameMatch = (await firstCard.innerText()).match(
+    /Armored|Swift|Unstoppable|Regenerating|Reinforcements/
+  );
+  const pickedName = nameMatch?.[0] ?? "";
+  await firstCard.click();
+
+  await expect(page.getByText("Empower Next Wave")).toBeHidden();
+
+  // The picked upgrade now lives in the game stats panel as a button.
+  const upgradesButton = page.getByTestId("upgrades-button");
+  await expect(upgradesButton).toBeVisible();
+  await expect(upgradesButton).toBeEnabled();
+
+  await upgradesButton.click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  // The UIModal title renders as a hidden Radix h2 plus the visible h4, so
+  // target the h4 directly (getByRole would match both).
+  await expect(dialog.locator("h4", { hasText: "Enemy upgrades" })).toBeVisible();
+  await expect(dialog.getByText(pickedName)).toBeVisible();
+
+  await dialog.getByRole("button", { name: "Got it" }).click();
+  await expect(dialog).toBeHidden();
+});

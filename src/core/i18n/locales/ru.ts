@@ -172,6 +172,7 @@ const ruValues = {
     slowImmune: "Иммунитет к замедлению",
     slowResistance: "+{{percent}}% сопротивления замедлению",
     selected: "Выбранные усиления",
+    viewTitle: "Усиления врагов",
   },
   towerInfo: {
     damage: "Урон",
@@ -187,11 +188,7 @@ const ruValues = {
     selling: "Продажа…",
   },
   nextWavePreview: {
-    pathEntrance: "Вход на путь",
     nextWave: "Следующая волна",
-    empowered: "Усилено",
-    units: "ед.",
-    units_other: "ед.",
   },
   editor: {
     backToGame: "Назад в игру",

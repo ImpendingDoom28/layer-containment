@@ -133,3 +133,43 @@ test("game menu opens from the mobile menu button", async ({ page }) => {
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByRole("heading", { name: "Game Menu" })).toBeHidden();
 });
+
+// A landscape phone is wider than the 768px breakpoint (812px on a modern
+// iPhone). The full-bleed PWA viewport (viewport-fit=cover) reports that
+// width in landscape, so without the landscape-touch exception in
+// `useIsMobile` the game would fall back to the desktop side-panel layout.
+// `hasTouch` emulates the coarse pointer of a phone; 812x375 is the short
+// side of an iPhone in landscape.
+test("landscape touch phone keeps the mobile HUD layout", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    viewport: { width: 812, height: 375 },
+    hasTouch: true,
+  });
+  const page = await context.newPage();
+  try {
+    await onOpenGame(page);
+
+    // The mobile HUD keeps the wide bottom shop bar and the top stats strip;
+    // the desktop layout renders the 320px left column instead.
+    const shop = page.getByTestId("tower-shop");
+    const shopBox = await expectSettledBox(page, shop, "tower shop bar");
+    expect(shopBox.width).toBeGreaterThanOrEqual(320);
+    expect(shopBox.y).toBeGreaterThan(375 * 0.7);
+    expect(shopBox.y + shopBox.height).toBeLessThanOrEqual(375);
+
+    const statsBox = await expectSettledBox(
+      page,
+      page.getByTestId("game-stats"),
+      "stats strip"
+    );
+    expect(statsBox.y).toBeLessThanOrEqual(48);
+    expect(statsBox.x + statsBox.width).toBeLessThanOrEqual(812);
+
+    // The mobile menu button replaces the desktop ESC entry point.
+    await expect(page.getByTestId("mobile-menu-button")).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});

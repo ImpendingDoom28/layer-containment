@@ -1,7 +1,12 @@
-import type { FC, ReactNode } from "react";
+import { useEffect, type FC, type ReactNode } from "react";
 
 import { Dialog as DialogPrimitive } from "radix-ui";
 
+import { getCameraMovesForEvent } from "../../core/keybindings";
+import {
+  keybindingsSelector,
+  useSettingsStore,
+} from "../../core/stores/useSettingsStore";
 import { cn } from "./lib/twUtils";
 import {
   UICard,
@@ -84,6 +89,27 @@ export const UIModal: FC<UIModalProps> = ({
   footer,
   onOpenChange,
 }) => {
+  const keybindings = useSettingsStore(keybindingsSelector);
+
+  // Radix only swallows the Escape keydown; camera-control keys (WASD /
+  // arrows) would otherwise bubble to the game's window listener and move the
+  // camera while the modal is open. Block them in the capture phase, on
+  // document, the same way Radix does — the dialog content is portaled outside
+  // the React root, so a React onKeyDown on it would never fire for these.
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (getCameraMovesForEvent(keybindings, e, "down").length > 0) {
+        e.stopPropagation();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown, { capture: true });
+    return () =>
+      document.removeEventListener("keydown", handleKeyDown, { capture: true });
+  }, [open, keybindings]);
+
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) return;
     onOpenChange?.(false);

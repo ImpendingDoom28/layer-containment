@@ -6,7 +6,7 @@ import {
   distance2D,
   findEnemiesInLine,
   getRayObstacleClipDistance,
-  hasLineOfSight,
+  segmentCrossesObstacles,
   type LineOfSightObstacle,
 } from "../../utils/mathUtils";
 import { computeChainAdditionalHits } from "../../core/chainLightning";
@@ -246,7 +246,7 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
             const dist = distance2D(tower.x, tower.z, enemy.x, enemy.z);
             if (dist > eff.range || dist <= maxDistance) continue;
             if (
-              !hasLineOfSight(
+              segmentCrossesObstacles(
                 tower.x,
                 tower.z,
                 enemy.x,
@@ -265,7 +265,7 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
             const dist = distance2D(tower.x, tower.z, enemy.x, enemy.z);
             if (dist > eff.range || dist >= minDistance) continue;
             if (
-              !hasLineOfSight(
+              segmentCrossesObstacles(
                 tower.x,
                 tower.z,
                 enemy.x,

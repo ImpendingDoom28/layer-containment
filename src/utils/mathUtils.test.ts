@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   getRayObstacleClipDistance,
-  hasLineOfSight,
   segmentCrossesObstacles,
   type LineOfSightObstacle,
 } from "./mathUtils";
@@ -52,18 +51,6 @@ describe("segmentCrossesObstacles", () => {
     expect(segmentCrossesObstacles(2, 0, 10, 0, [square])).toBe(false);
     // z = 5 is outside the z slab even though the x ranges overlap.
     expect(segmentCrossesObstacles(0, 5, 10, 5, [square])).toBe(false);
-  });
-});
-
-describe("hasLineOfSight", () => {
-  it("returns true when nothing blocks the line", () => {
-    const farSquare: LineOfSightObstacle = { x: 5, z: 5, halfWidth: 1, halfDepth: 1 };
-    expect(hasLineOfSight(0, 0, 10, 0, [farSquare])).toBe(true);
-  });
-
-  it("returns false when an obstacle sits between the points", () => {
-    const midSquare: LineOfSightObstacle = { x: 2.5, z: 0, halfWidth: 1, halfDepth: 1 };
-    expect(hasLineOfSight(0, 0, 5, 0, [midSquare])).toBe(false);
   });
 });
 

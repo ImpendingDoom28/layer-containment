@@ -206,26 +206,6 @@ export function segmentCrossesObstacles(
 }
 
 /**
- * Whether a tower at (towerX, towerZ) has an unobstructed line of sight to
- * (targetX, targetZ) — i.e. no static obstacle sits strictly between them.
- */
-export function hasLineOfSight(
-  towerX: number,
-  towerZ: number,
-  targetX: number,
-  targetZ: number,
-  obstacles: readonly LineOfSightObstacle[]
-): boolean {
-  return !segmentCrossesObstacles(
-    towerX,
-    towerZ,
-    targetX,
-    targetZ,
-    obstacles
-  );
-}
-
-/**
  * Distance along the (unit) ray from (originX, originZ) where it first
  * enters any obstacle's footprint; `Infinity` when the ray misses them all.
  */

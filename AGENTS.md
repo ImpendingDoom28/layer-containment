@@ -6,7 +6,8 @@
 - Scope (optional) is the affected area in kebab-case: `levels`, `towers`, `hud`, `ecs`, `stats`, `main-menu`, …
 - Subject in imperative mood, no trailing period; keep it under ~72 chars (the hook enforces a 100-char header limit).
 - One commit per logical change; PR titles follow the same format (squash-merge inherits it).
-- Enforced locally by the `commit-msg` hook (commitlint) and in CI — never bypass it with `--no-verify`.
+- Branch names must start with `feature/`, `bugfix/`, `ci/`, `refactor/` or `chore/` (e.g. `feature/slow-tower` — note `feature/`, not `feat/`); the mainline `master` is the only exception. Enforced by the `pre-push` hook.
+- Commit messages are enforced locally by the `commit-msg` hook (commitlint) and re-checked in CI; branch names are enforced locally by the `pre-push` hook. Never bypass these hooks with `--no-verify`.
 
 ## Workflow
 - Before planning, skim `README.md` for existing functionality and library links.

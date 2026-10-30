@@ -4,21 +4,15 @@ import {
   AdditiveBlending,
   CanvasTexture,
   DoubleSide,
-  Matrix4,
   MeshBasicMaterial,
   MeshStandardMaterial,
-  Quaternion,
-  Vector3,
   type Group,
   type Mesh,
 } from "three";
-import type { Entity } from "koota";
-
 import {
   enemyUpgradesSelector,
   useGameStore,
 } from "../../../core/stores/useGameStore";
-import { Position } from "../../../core/ecs/traits/position";
 import type {
   EnemyUpgradeId,
   EnemyUpgradeStack,
@@ -34,7 +28,6 @@ import {
 import type { EnemyAttachedEffectProps } from "./types";
 
 type UpgradeEffectProps = EnemyAttachedEffectProps & {
-  entity: Entity;
   enemySize: number;
   upgradeStacks: EnemyUpgradeStack[];
 };
@@ -109,12 +102,6 @@ const STRAP_MATERIAL = new MeshBasicMaterial({
   side: DoubleSide,
 });
 if (STRAP_FADE_TEXTURE) STRAP_MATERIAL.map = STRAP_FADE_TEXTURE;
-
-const WORLD_UP = new Vector3(0, 1, 0);
-const tmpDir = new Vector3();
-const tmpPerp = new Vector3();
-const tmpMatrix = new Matrix4();
-const tmpQuat = new Quaternion();
 
 type EffectLayout = {
   hasShield: boolean;
@@ -197,11 +184,9 @@ const buildEffectLayout = (
  *   direction (1/2/3 per tier).
  */
 export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
-  ({ entity, enemySize, upgradeStacks, getTimeScale }) => {
+  ({ enemySize, upgradeStacks, getTimeScale }) => {
     const enemyUpgrades = useGameStore(enemyUpgradesSelector);
     const timeRef = useRef(0);
-    const prevPosRef = useRef<{ x: number; y: number; z: number } | null>(null);
-    const dirRef = useRef(new Vector3(0, 0, -1));
     const dirGroupRef = useRef<Group>(null);
     const glowRef = useRef<Mesh>(null);
     const ringRef = useRef<Mesh>(null);
@@ -217,23 +202,6 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
       const scaledDelta = delta * getTimeScale();
       timeRef.current += scaledDelta;
       const time = timeRef.current;
-
-      // Smooth the travel direction from the Position trait (the movement
-      // system advances it before this frame mirrors it onto the mesh).
-      const pos = entity.get(Position);
-      if (pos) {
-        const prev = prevPosRef.current;
-        if (prev) {
-          tmpDir.set(pos.x - prev.x, pos.y - prev.y, pos.z - prev.z);
-          const len = tmpDir.length();
-          if (len > 1e-4) {
-            tmpDir.divideScalar(len);
-            const k = Math.min(1, scaledDelta * 8);
-            dirRef.current.lerp(tmpDir, k).normalize();
-          }
-        }
-        prevPosRef.current = pos;
-      }
 
       const pulse = 1 + Math.sin(time * 2.4) * 0.04;
 
@@ -259,8 +227,9 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
           // each anchored to a fixed angle on the band and drifting outward a
           // touch as it climbs, so the stream reads as emanating from the ring
           // itself.
-          const angle = i * (Math.PI * 2 / particleCount) + time * 0.25;
-          const radius = enemySize * ringScale * (REGEN_RING_RADIUS + progress * 0.1);
+          const angle = i * ((Math.PI * 2) / particleCount) + time * 0.25;
+          const radius =
+            enemySize * ringScale * (REGEN_RING_RADIUS + progress * 0.1);
           particle.position.set(
             Math.cos(angle) * radius,
             enemySize * (0.06 + progress * 1.5),
@@ -273,20 +242,10 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
       }
 
       if (layout.hasShield || layout.hasSwift) {
-        // Orient the direction group: local +x = travel direction, +y = world
-        // up. The shield sits on the +x side (in front of the enemy) and the
-        // swift straps trail on the -x side.
-        const d = dirRef.current;
-        tmpPerp.crossVectors(d, WORLD_UP);
-        if (tmpPerp.lengthSq() < 1e-6) {
-          tmpPerp.set(1, 0, 0);
-        }
-        tmpPerp.normalize();
-        tmpMatrix.makeBasis(d, WORLD_UP, tmpPerp);
-        tmpQuat.setFromRotationMatrix(tmpMatrix);
-        if (dirGroupRef.current) {
-          dirGroupRef.current.quaternion.copy(tmpQuat);
-        }
+        // The parent enemy group is already oriented along the path (local
+        // +x = travel direction, +y = surface normal), so the shield plates
+        // sit on the +x side (in front) and the swift straps trail on the -x
+        // side without any extra orientation work.
         for (let i = 0; i < layout.swiftTier; i++) {
           const strap = strapRefs.current[i];
           if (!strap) continue;

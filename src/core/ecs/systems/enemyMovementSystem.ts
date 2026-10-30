@@ -6,6 +6,7 @@ import { EnemySlow } from "../traits/slow";
 import { Position } from "../traits/position";
 import { effectActions } from "../actions/effectActions";
 import {
+  getPathDirection,
   getPathLength,
   getPositionAlongMultiplePaths,
   isAtPathEnd,
@@ -94,6 +95,15 @@ export const runEnemyMovementSystem = (
       if (pathLength > 0) {
         motion.pathProgress += (effectiveSpeed * delta) / pathLength;
       }
+
+      // Keep the facing aligned to the direction of travel so the enemy always
+      // faces down the path (refreshed here so corner turns and mid-path spawns
+      // stay correct; spawnEnemy sets the initial value too).
+      const facing = path
+        ? getPathDirection(path, motion.pathProgress)
+        : { x: 1, z: 0 };
+      motion.facingX = facing.x;
+      motion.facingZ = facing.z;
 
       if (isAtPathEnd(motion.pathProgress)) {
         // Clamp the motion to the path end. The hasReachedEnd flag (hot

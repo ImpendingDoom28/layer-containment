@@ -12,6 +12,7 @@ import { useFrame } from "@react-three/fiber";
 import { Billboard } from "@react-three/drei";
 import {
   BoxGeometry,
+  Matrix4,
   MeshStandardMaterial,
   Quaternion,
   SphereGeometry,
@@ -34,6 +35,7 @@ import {
 import { tileSizeSelector, useGameStore } from "../../core/stores/useGameStore";
 import {
   flatFieldToSphereSurface,
+  getFacingQuaternionOnSphere,
   getPlanetRadius,
   getSurfaceQuaternion,
 } from "../../utils/planetSurfaceMapping";
@@ -118,9 +120,19 @@ export const Enemy: FC<EnemyProps> = memo(
     const scratchNormal = useRef(new Vector3());
     const scratchGroupPos = useRef(new Vector3());
     const scratchQuat = useRef(new Quaternion());
+    // Allocation-free scratch for the facing quaternion (local +x along the
+    // stored facing, +y the surface normal — same basis as the path strips).
+    const scratchFacingQuat = useRef(new Quaternion());
+    const scratchFacingMatrix = useRef(new Matrix4());
 
     const applySphereFooting = useCallback(
-      (worldX: number, worldZ: number, pathY: number, halfHeight: number) => {
+      (
+        worldX: number,
+        worldZ: number,
+        pathY: number,
+        halfHeight: number,
+        motion?: { facingX: number; facingZ: number }
+      ) => {
         flatFieldToSphereSurface(
           worldX,
           worldZ,
@@ -132,9 +144,18 @@ export const Enemy: FC<EnemyProps> = memo(
           .copy(scratchSurface.current)
           .addScaledVector(scratchNormal.current, pathY + halfHeight);
         getSurfaceQuaternion(scratchNormal.current, scratchQuat.current);
+        if (motion) {
+          getFacingQuaternionOnSphere(
+            motion.facingX,
+            motion.facingZ,
+            scratchNormal.current,
+            scratchFacingMatrix.current,
+            scratchFacingQuat.current
+          );
+        }
         return {
           position: scratchGroupPos.current,
-          quaternion: scratchQuat.current,
+          quaternion: motion ? scratchFacingQuat.current : scratchQuat.current,
         };
       },
       [radius]
@@ -210,7 +231,14 @@ export const Enemy: FC<EnemyProps> = memo(
       const live = entity.get(EnemyState);
       const pos = entity.get(Position);
       if (!meshRef.current || !live || !pos || live.health <= 0) return;
-      const footing = applySphereFooting(pos.x, pos.z, pos.y, live.size / 2);
+      const motion = entity.get(EnemyMotion);
+      const footing = applySphereFooting(
+        pos.x,
+        pos.z,
+        pos.y,
+        live.size / 2,
+        motion
+      );
       meshRef.current.position.copy(footing.position);
       meshRef.current.quaternion.copy(footing.quaternion);
     }, [entity, applySphereFooting]);
@@ -220,10 +248,18 @@ export const Enemy: FC<EnemyProps> = memo(
       const pos = entity.get(Position);
       if (!live || !pos || live.health <= 0) return;
 
-      // The movement system already advanced the position; this frame just
-      // mirrors it onto the mesh (allocation-free via scratch vectors).
+      // The movement system already advanced the position and facing; this
+      // frame just mirrors both onto the mesh (allocation-free via scratch
+      // vectors). The group's local +x axis points along the path.
       if (meshRef.current) {
-        const footing = applySphereFooting(pos.x, pos.z, pos.y, live.size / 2);
+        const motion = entity.get(EnemyMotion);
+        const footing = applySphereFooting(
+          pos.x,
+          pos.z,
+          pos.y,
+          live.size / 2,
+          motion
+        );
         meshRef.current.position.copy(footing.position);
         meshRef.current.quaternion.copy(footing.quaternion);
       }
@@ -289,7 +325,6 @@ export const Enemy: FC<EnemyProps> = memo(
         {/* Upgrade indicators: one glyph per pick (1 pick = 1 glyph) */}
         {(snapshot.upgradeStacks?.length ?? 0) > 0 && (
           <UpgradeEffect
-            entity={entity}
             enemySize={size}
             upgradeStacks={snapshot.upgradeStacks!}
             getTimeScale={getTimeScale}

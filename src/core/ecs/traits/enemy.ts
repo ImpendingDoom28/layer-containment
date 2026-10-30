@@ -75,6 +75,15 @@ export const EnemyState = trait(createDefaultEnemyState);
 export const EnemyMotion = trait({
   pathProgress: 0,
   /**
+   * Unit direction (2D, x/z) the enemy currently faces — i.e. the direction
+   * along its path. Set once at spawn (the first segment's direction) and
+   * refreshed by the movement system as the enemy turns corners, so every
+   * enemy — whatever its type — always spawns and walks facing the path.
+   * The `Enemy` render component orients the mesh from it.
+   */
+  facingX: 1,
+  facingZ: 0,
+  /**
    * Simulation timestamp of the last regeneration tick. `-1` means "no
    * baseline yet": the first movement pass sets it to the current
    * simulation time without healing (a `0` baseline would credit a
@@ -89,6 +98,8 @@ export type EnemyMotionData = TraitRecord<typeof EnemyMotion>;
 
 export const createDefaultEnemyMotion = (): EnemyMotionData => ({
   pathProgress: 0,
+  facingX: 1,
+  facingZ: 0,
   lastRegenTick: -1,
   hasReachedEnd: false,
 });

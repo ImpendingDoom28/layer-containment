@@ -4,7 +4,12 @@ import { enemyActions } from "./enemyActions";
 import { statsActions, sweepStatsReceipts } from "./statsActions";
 import { worldBaseActions } from "./baseActions";
 import { getEnemySnapshots } from "../selectors/enemySnapshots";
-import { IsEnemy, requestEnemyDeath } from "../traits/enemy";
+import {
+  EnemyMotion,
+  EnemyState,
+  IsEnemy,
+  requestEnemyDeath,
+} from "../traits/enemy";
 import { isBase } from "../traits/base";
 import { damageRequest } from "../traits/damage";
 import { EnemySlow, slowRequest } from "../traits/slow";
@@ -17,6 +22,7 @@ import {
 import { testWorld } from "../world";
 import { splitRequest } from "../traits/split";
 import { useGameStore } from "../../stores/useGameStore";
+import { useLevelStore } from "../../stores/useLevelStore";
 import type { Enemy, EnemyConfig, EnemyType } from "../../types/game";
 import { runEnemyDeathSystem } from "../systems/enemyDeathSystem";
 import { runEnemySplitSystem } from "../systems/enemySplitSystem";
@@ -81,6 +87,7 @@ describe("enemyActions", () => {
     }
     sweepStatsReceipts(testWorld);
     useGameStore.setState({ gameStatus: "menu" });
+    useLevelStore.setState({ pathWaypoints: [] });
   });
 
   it("spawnEnemy adds entity readable via snapshots", () => {
@@ -88,6 +95,62 @@ describe("enemyActions", () => {
     const enemies = getEnemySnapshots(testWorld);
     expect(enemies).toHaveLength(1);
     expect(enemies[0].health).toBe(100);
+  });
+
+  it("sets the initial facing along the path at spawn", () => {
+    useLevelStore.setState({
+      pathWaypoints: [
+        [
+          { x: 0, y: 0, z: 0 },
+          { x: 10, y: 0, z: 0 },
+        ],
+      ],
+    });
+    const entity = enemyActions(testWorld).spawnEnemy(baseEnemy(1, 100));
+
+    const motion = entity.get(EnemyMotion)!;
+    expect(motion.facingX).toBeCloseTo(1);
+    expect(motion.facingZ).toBeCloseTo(0);
+  });
+
+  it("falls back to +x facing when the path is missing", () => {
+    useLevelStore.setState({ pathWaypoints: [] });
+    const entity = enemyActions(testWorld).spawnEnemy(baseEnemy(1, 100));
+
+    const motion = entity.get(EnemyMotion)!;
+    expect(motion.facingX).toBeCloseTo(1);
+    expect(motion.facingZ).toBeCloseTo(0);
+  });
+
+  it("gives split children the path direction at their spawn point", () => {
+    useLevelStore.setState({
+      pathWaypoints: [
+        [],
+        [
+          { x: 0, y: 0, z: 0 },
+          { x: 10, y: 0, z: 0 },
+        ],
+      ],
+    });
+    const actions = enemyActions(testWorld);
+    let nextChildId = 100;
+    actions.spawnEnemy(splitterEnemy(1, 100));
+    actions.damageEnemy(1, 100);
+    runEnemyDeathSystem(testWorld);
+    runEnemySplitSystem(testWorld, () => nextChildId++);
+
+    // The parent is gone; every remaining enemy is a split child, and all of
+    // them faced down their (straight +X) path at spawn.
+    const children = getEnemySnapshots(testWorld);
+    expect(children.length).toBeGreaterThan(0);
+    for (const child of children) {
+      const entity = testWorld
+        .query(EnemyState)
+        .find((e) => e.get(EnemyState)?.id === child.id)!;
+      const motion = entity.get(EnemyMotion)!;
+      expect(motion.facingX).toBeCloseTo(1);
+      expect(motion.facingZ).toBeCloseTo(0);
+    }
   });
 
   it("replaces and destroys an enemy with a colliding ID", () => {
@@ -144,9 +207,7 @@ describe("enemyActions", () => {
     const snapshot = getEnemySnapshots(testWorld);
     expect(snapshot).toHaveLength(1);
     expect(snapshot[0]?.health).toBe(0);
-    expect(
-      testWorld.queryFirst(IsEnemy, requestEnemyDeath)
-    ).toBeDefined();
+    expect(testWorld.queryFirst(IsEnemy, requestEnemyDeath)).toBeDefined();
   });
 
   it("removeEnemy with reachedEnd raises damageRequest on the base instead of calling baseActions", () => {

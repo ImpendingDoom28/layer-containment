@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Vector3 } from "three";
+import { Matrix4, Quaternion, Vector3 } from "three";
 
 import { tileToWorldCoordinate } from "./levelEditor";
 import {
@@ -7,10 +7,12 @@ import {
   GROUND_SIZE_RADIUS_FACTOR,
   flatFieldToSphereOverlayPlanePose,
   flatFieldToSphereSurface,
+  getFacingQuaternionOnSphere,
   getGridMaxTileTopWorldY,
   getPlanetRadius,
   getPlanetSphereCenter,
   getPlanetSphereMeshPositionY,
+  getQuaternionForPathStrip,
   getSurfaceQuaternion,
 } from "./planetSurfaceMapping";
 
@@ -57,7 +59,11 @@ describe("planetSurfaceMapping", () => {
       for (let gz = 0; gz < gridSize; gz++) {
         const wx = tileToWorldCoordinate(gx, gridSize, tileSize);
         const wz = tileToWorldCoordinate(gz, gridSize, tileSize);
-        const { surfacePoint, normal } = flatFieldToSphereSurface(wx, wz, radius);
+        const { surfacePoint, normal } = flatFieldToSphereSurface(
+          wx,
+          wz,
+          radius
+        );
         const topY = surfacePoint.y + normal.y * tileHeightY;
         expected = Math.max(expected, topY);
       }
@@ -101,5 +107,62 @@ describe("planetSurfaceMapping", () => {
     const r = flatFieldToSphereSurface(2, 3, radius, outP, outN);
     expect(r.surfacePoint).toBe(outP);
     expect(r.normal).toBe(outN);
+  });
+
+  it("getFacingQuaternionOnSphere points local +x along the flat direction", () => {
+    const radius = 100;
+    const wx = 4.2;
+    const wz = -3.1;
+    const { normal } = flatFieldToSphereSurface(wx, wz, radius);
+    const out = new Quaternion();
+    getFacingQuaternionOnSphere(1, 0.5, normal, new Matrix4(), out);
+
+    const forward = new Vector3(1, 0, 0).applyQuaternion(out);
+    const flatDir = new Vector3(1, 0, 0.5);
+    const expected = flatDir
+      .clone()
+      .addScaledVector(normal, -normal.dot(flatDir))
+      .normalize();
+    expect(forward.dot(expected)).toBeCloseTo(1, 5);
+
+    // Local +y is the surface normal and the basis is right-handed.
+    const up = new Vector3(0, 1, 0).applyQuaternion(out);
+    expect(up.dot(normal)).toBeCloseTo(1, 5);
+    const right = new Vector3(0, 0, 1).applyQuaternion(out);
+    expect(
+      right.dot(new Vector3().crossVectors(expected, normal).normalize())
+    ).toBeCloseTo(1, 5);
+  });
+
+  it("getFacingQuaternionOnSphere matches getQuaternionForPathStrip", () => {
+    const radius = 80;
+    const wx = 3.3;
+    const wz = -2.2;
+    const dirX = 0.6;
+    const dirZ = -0.8;
+    const { normal } = flatFieldToSphereSurface(wx, wz, radius);
+    const a = new Quaternion();
+    getFacingQuaternionOnSphere(dirX, dirZ, normal, new Matrix4(), a);
+    const b = getQuaternionForPathStrip(
+      wx,
+      wz,
+      dirX,
+      dirZ,
+      radius,
+      new Quaternion()
+    );
+    expect(a.dot(b)).toBeCloseTo(1, 5);
+  });
+
+  it("getFacingQuaternionOnSphere falls back to the +x tangent for a zero direction", () => {
+    const radius = 100;
+    const wx = 5;
+    const wz = 5;
+    const { normal } = flatFieldToSphereSurface(wx, wz, radius);
+    const out = new Quaternion();
+    getFacingQuaternionOnSphere(0, 0, normal, new Matrix4(), out);
+    const forward = new Vector3(1, 0, 0).applyQuaternion(out);
+    expect(forward.dot(normal)).toBeCloseTo(0, 5);
+    expect(forward.length()).toBeCloseTo(1, 5);
   });
 });

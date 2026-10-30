@@ -6,6 +6,7 @@ import { useGameStore } from "../../stores/useGameStore";
 import type { Enemy, TowerType } from "../../types/game";
 import { GameEvent } from "../../types/enums/events";
 import { gameEvents } from "../../../utils/eventEmitter";
+import { getPathDirection } from "../../../utils/pathUtils";
 import {
   IsStats,
   damageDealtRequest,
@@ -68,12 +69,22 @@ const enemyToState = (enemyData: Enemy): EnemyStateData => ({
   split: enemyData.split,
 });
 
-const enemyToMotion = (enemyData: Enemy): EnemyMotionData => ({
-  pathProgress: enemyData.pathProgress,
-  // Sentinel "no baseline yet" — see lastRegenTick in traits/enemy.ts.
-  lastRegenTick: -1,
-  hasReachedEnd: false,
-});
+const enemyToMotion = (enemyData: Enemy): EnemyMotionData => {
+  // Face the direction of travel at the spawn point so every enemy — whatever
+  // its type — spawns looking down the path. The level's waypoint array is
+  // read here; the movement system refreshes this as the enemy turns corners.
+  const path = useLevelStore.getState().pathWaypoints[enemyData.pathIndex];
+  const facing = getPathDirection(path, enemyData.pathProgress);
+
+  return {
+    pathProgress: enemyData.pathProgress,
+    facingX: facing.x,
+    facingZ: facing.z,
+    // Sentinel "no baseline yet" — see lastRegenTick in traits/enemy.ts.
+    lastRegenTick: -1,
+    hasReachedEnd: false,
+  };
+};
 
 const enemyToPosition = (enemyData: Enemy): PositionData => ({
   x: enemyData.x,

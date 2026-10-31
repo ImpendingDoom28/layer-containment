@@ -1,7 +1,7 @@
 import { FC, useMemo, useState } from "react";
-import { Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { Icon } from "../ui/Icon";
 import {
   enemyUpgradesSelector,
   useGameStore,
@@ -60,7 +60,7 @@ export const HUDEnemyUpgrades: FC = () => {
         variant="outline"
         size="sm"
       >
-        <Zap className="text-yellow-400 shrink-0" />
+        <Icon name="Zap" color="yellow" className="shrink-0" />
         {t("upgrade.selected")}
         {totalBonusPercentage > 0 && (
           <span className="text-green-400 font-semibold">
@@ -72,7 +72,7 @@ export const HUDEnemyUpgrades: FC = () => {
       <UIModal
         open={isOpen}
         title={t("upgrade.viewTitle")}
-        icon={<Zap className="size-4 text-yellow-400" />}
+        icon={<Icon name="Zap" color="yellow" size={16} />}
         onOpenChange={setIsOpen}
         footer={
           <UIButton variant="secondary" onClick={() => setIsOpen(false)}>

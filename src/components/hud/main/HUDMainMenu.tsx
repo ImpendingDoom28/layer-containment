@@ -1,7 +1,7 @@
 import { FC, memo, useCallback } from "react";
-import { ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { Icon } from "../../ui/Icon";
 import { UIButton, UIButtonProps } from "../../ui/buttons/UIButton";
 import { UITypography } from "../../ui/UITypography";
 import { HUDSettings } from "../HUDSettings";
@@ -176,12 +176,11 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
                     <span className="transition-transform group-hover:translate-x-1">
                       {label}
                     </span>
-                    <ArrowRight
-                      className={cn(
-                        "transition-transform size-4 group-hover:translate-x-1",
-                        !isDefault &&
-                          "text-muted-foreground group-hover:text-primary"
-                      )}
+                    <Icon
+                      name="ArrowRight"
+                      color={isDefault ? undefined : "muted"}
+                      size={16}
+                      className="transition-transform group-hover:translate-x-1"
                     />
                   </UIButton>
                 );

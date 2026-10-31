@@ -71,7 +71,7 @@ export type UIModalProps = {
  *  <UIModal
  *    open={open}
  *    title="Controls"
- *    icon={<Keyboard className="size-4" />}
+ *    icon={<Icon name="Keyboard" color="primary" size={16} />}
  *    footer={<UIButton onClick={() => setOpen(false)}>Got it</UIButton>}
  *    onOpenChange={setOpen}
  *  >

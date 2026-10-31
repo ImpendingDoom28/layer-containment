@@ -1,7 +1,6 @@
 import type { FC } from "react";
 
-import { DollarSign } from "lucide-react";
-
+import { Icon } from "./Icon";
 import { UITypography, type UITypographyProps } from "./UITypography";
 import { cn } from "./lib/twUtils";
 
@@ -25,7 +24,8 @@ export const UIMoney: FC<UIMoneyProps> = ({
       variant={variant}
       className={cn("flex items-center text-green-400", className)}
     >
-      <DollarSign size={resolvedIconSize} className="mr-1" /> {money}
+      <Icon name="DollarSign" color="green" size={resolvedIconSize} className="mr-1" />{" "}
+      {money}
     </UITypography>
   );
 };

@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Plus, Trash2 } from "lucide-react";
-
+import { Icon } from "../../ui/Icon";
 import {
   pathWidthSelector,
   tileSizeSelector,
@@ -100,7 +99,7 @@ export const LevelEditorPathSection = () => {
 
         <div className="flex gap-2">
           <UIButton size="sm" variant="outline" onClick={addPath}>
-            <Plus />
+            <Icon name="Plus" size={14} />
             {t("editor.addPath")}
           </UIButton>
           <UIButton
@@ -108,7 +107,7 @@ export const LevelEditorPathSection = () => {
             variant="destructive"
             onClick={removeSelectedPath}
           >
-            <Trash2 />
+            <Icon name="Trash2" color="destructive" size={14} />
             {t("editor.remove")}
           </UIButton>
         </div>
@@ -175,7 +174,7 @@ export const LevelEditorPathSection = () => {
               size="sm"
               onClick={removeSelectedWaypoint}
             >
-              <Trash2 />
+              <Icon name="Trash2" color="destructive" size={14} />
               {t("editor.removeWaypoint")}
             </UIButton>
           </EditorSection>

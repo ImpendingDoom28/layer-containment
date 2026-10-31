@@ -1,6 +1,6 @@
-import { Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { Icon } from "../../ui/Icon";
 import { UIAccordionContent, UIAccordionItem, UIAccordionTrigger } from "../../ui/UIAccordion";
 import { UIButton } from "../../ui/buttons/UIButton";
 import { UIInput } from "../../ui/UIInput";
@@ -105,7 +105,7 @@ export const LevelEditorBuildingSection = () => {
             </EditorField>
 
             <UIButton variant="destructive" size="sm" onClick={removeSelectedBuilding}>
-              <Trash2 />
+              <Icon name="Trash2" color="destructive" size={14} />
               {t("editor.removeBuilding")}
             </UIButton>
           </EditorSection>

@@ -1,7 +1,7 @@
 import { FC, useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { Icon } from "../ui/Icon";
 import type { GameStatus } from "../../core/types/game";
 import {
   setShowSettingsSelector,
@@ -90,7 +90,7 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
                   size="icon"
                   aria-label={t("gameMenu.resume")}
                 >
-                  <ArrowLeft />
+                  <Icon name="ArrowLeft" />
                 </UIButton>
                 <UITypography variant="h4">
                   {t("gameMenu.title")}
@@ -105,7 +105,7 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
                 <span className="transition-transform group-hover:translate-x-1">
                   {t("gameMenu.continue")}
                 </span>
-                <ArrowRight className="transition-transform size-4 group-hover:translate-x-1" />
+                <Icon name="ArrowRight" size={16} className="transition-transform group-hover:translate-x-1" />
               </UIButton>
               <UIButton
                 onClick={() => setShowRestartConfirm(true)}
@@ -115,7 +115,7 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
                 <span className="transition-transform group-hover:translate-x-1">
                   {t("gameMenu.restart")}
                 </span>
-                <ArrowRight className="transition-transform size-4 text-muted-foreground group-hover:translate-x-1 group-hover:text-primary" />
+                <Icon name="ArrowRight" color="muted" size={16} className="transition-transform group-hover:translate-x-1" />
               </UIButton>
               <UIButton
                 onClick={() => setShowSettings(true)}
@@ -125,7 +125,7 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
                 <span className="transition-transform group-hover:translate-x-1">
                   {t("gameMenu.settings")}
                 </span>
-                <ArrowRight className="transition-transform size-4 text-muted-foreground group-hover:translate-x-1 group-hover:text-primary" />
+                <Icon name="ArrowRight" color="muted" size={16} className="transition-transform group-hover:translate-x-1" />
               </UIButton>
               <UIButton
                 onClick={() => setShowExitConfirm(true)}
@@ -135,7 +135,7 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
                 <span className="transition-transform group-hover:translate-x-1">
                   {t("gameMenu.goToMainMenu")}
                 </span>
-                <ArrowRight className="transition-transform size-4 text-muted-foreground group-hover:translate-x-1 group-hover:text-primary" />
+                <Icon name="ArrowRight" color="muted" size={16} className="transition-transform group-hover:translate-x-1" />
               </UIButton>
             </UICardContent>
           </UICard>

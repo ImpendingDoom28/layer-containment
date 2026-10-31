@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
-
+import { Icon } from "../../ui/Icon";
 import { useEnemyTypeOptions } from "../../../core/hooks/useEnemyTypeOptions";
 import { useLevelEditorStore } from "../../../core/stores/useLevelEditorStore";
 import type { EnemyType } from "../../../core/types/game";
@@ -48,7 +47,7 @@ export const LevelEditorWaveSection = () => {
       <UIAccordionTrigger>{t("editor.waves")}</UIAccordionTrigger>
       <UIAccordionContent className="flex flex-col gap-3">
         <UIButton size="sm" variant="outline" onClick={addWave}>
-          <Plus />
+          <Icon name="Plus" size={14} />
           {t("editor.addWave")}
         </UIButton>
 
@@ -68,9 +67,9 @@ export const LevelEditorWaveSection = () => {
                   onClick={() => onToggleWave(waveIndex)}
                 >
                   {isCollapsed ? (
-                    <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
+                    <Icon name="ChevronDown" color="muted" size={12} className="shrink-0" />
                   ) : (
-                    <ChevronUp className="size-3 shrink-0 text-muted-foreground" />
+                    <Icon name="ChevronUp" color="muted" size={12} className="shrink-0" />
                   )}
                   <UITypography variant="medium">
                     {t("editor.wave", { index: waveIndex + 1 })}
@@ -91,7 +90,7 @@ export const LevelEditorWaveSection = () => {
                     onClick={() => addWaveEnemyGroup(waveIndex)}
                     title={t("editor.addEnemyGroup")}
                   >
-                    <Plus />
+                    <Icon name="Plus" size={12} />
                   </UIButton>
                   <UIButton
                     size="icon-xs"
@@ -99,7 +98,7 @@ export const LevelEditorWaveSection = () => {
                     onClick={() => removeWave(waveIndex)}
                     title={t("editor.removeWave")}
                   >
-                    <Trash2 />
+                    <Icon name="Trash2" color="destructive" size={12} />
                   </UIButton>
                 </div>
               </div>
@@ -124,7 +123,7 @@ export const LevelEditorWaveSection = () => {
                           variant="destructive"
                           onClick={() => removeWaveEnemyGroup(waveIndex, enemyGroupIndex)}
                         >
-                          <Trash2 />
+                          <Icon name="Trash2" color="destructive" size={12} />
                         </UIButton>
                       </div>
                       <EditorField label={t("editor.type")}>

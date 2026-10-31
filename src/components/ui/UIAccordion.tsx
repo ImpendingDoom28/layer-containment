@@ -1,8 +1,8 @@
 import * as React from "react";
 import { Accordion as AccordionPrimitive } from "radix-ui";
 
+import { Icon } from "./Icon";
 import { cn } from "./lib/twUtils";
-import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 
 function UIAccordion({
   className,
@@ -46,13 +46,19 @@ function UIAccordionTrigger({
         {...props}
       >
         {children}
-        <ChevronDownIcon
+        <Icon
+          name="ChevronDown"
+          color="muted"
+          size={16}
           data-slot="accordion-trigger-icon"
-          className="pointer-events-none shrink-0 group-aria-expanded/accordion-trigger:hidden"
+          className="pointer-events-none group-aria-expanded/accordion-trigger:hidden"
         />
-        <ChevronUpIcon
+        <Icon
+          name="ChevronUp"
+          color="muted"
+          size={16}
           data-slot="accordion-trigger-icon"
-          className="hidden pointer-events-none shrink-0 group-aria-expanded/accordion-trigger:inline"
+          className="hidden pointer-events-none group-aria-expanded/accordion-trigger:inline"
         />
       </AccordionPrimitive.Trigger>
     </AccordionPrimitive.Header>

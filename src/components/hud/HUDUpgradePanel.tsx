@@ -5,10 +5,10 @@ import {
   useState,
   type AnimationEvent,
 } from "react";
-import { Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type { EnemyUpgradeId } from "../../core/types/game";
+import { Icon } from "../ui/Icon";
 import { UIButton } from "@/components/ui/buttons/UIButton";
 import {
   UICard,
@@ -139,7 +139,7 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
       >
         <UICardHeader>
           <UICardTitle className="flex flex-row items-center gap-2">
-            <Zap className="w-5 h-5 text-yellow-400 shrink-0" />
+            <Icon name="Zap" color="yellow" size={20} className="shrink-0" />
             <UITypography variant="medium">{t("upgrade.title")}</UITypography>
           </UICardTitle>
           {bonusPercentage > 0 && (

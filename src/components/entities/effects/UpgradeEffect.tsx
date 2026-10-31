@@ -9,6 +9,7 @@ import {
   type Group,
   type Mesh,
 } from "three";
+import { useSimulationClock } from "../../../core/contexts/SimulationClockContext";
 import {
   enemyUpgradesSelector,
   useGameStore,
@@ -25,9 +26,8 @@ import {
   SHIELD_PLATE_GEOMETRY,
   STRAP_PLANE_GEOMETRY,
 } from "./primitives/UpgradeVisualGeometries";
-import type { EnemyAttachedEffectProps } from "./types";
 
-type UpgradeEffectProps = EnemyAttachedEffectProps & {
+type UpgradeEffectProps = {
   enemySize: number;
   upgradeStacks: EnemyUpgradeStack[];
 };
@@ -184,7 +184,8 @@ const buildEffectLayout = (
  *   direction (1/2/3 per tier).
  */
 export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
-  ({ enemySize, upgradeStacks, getTimeScale }) => {
+  ({ enemySize, upgradeStacks }) => {
+    const { getTimeScale } = useSimulationClock();
     const enemyUpgrades = useGameStore(enemyUpgradesSelector);
     const timeRef = useRef(0);
     const dirGroupRef = useRef<Group>(null);

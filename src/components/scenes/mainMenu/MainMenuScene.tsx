@@ -160,7 +160,6 @@ export const MainMenuScene: FC = () => {
         onSellTower={null}
         hoveredTile={null}
         selectedTower={null}
-        shouldStopMovement={false}
         onProjectileHit={onProjectileHit}
         onProjectileRemove={onProjectileRemove}
         onEnemyReachEnd={enemySystem.onEnemyReachEnd}
@@ -169,7 +168,7 @@ export const MainMenuScene: FC = () => {
       {/* Death burst on `ENEMY_KILLED`; menu kills are settled by the shared
           EnemyDeathSystem so the event fires here too. No reward float: the
           menu has no gold display. */}
-      <CombatJuice shouldStopMovement={false} showRewardText={false} />
+      <CombatJuice showRewardText={false} />
     </>
   );
 };

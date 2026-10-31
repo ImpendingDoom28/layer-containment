@@ -2,18 +2,12 @@ import { FC } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useWorld } from "koota/react";
 
+import { useSimulationClock } from "../../core/contexts/SimulationClockContext";
 import { runEnemyMovementFrame } from "../../core/ecs/systems/enemyMovementSystem";
-import type {
-  GetSimulationTime,
-  GetTimeScale,
-} from "../../core/hooks/useSimulationClock";
 import { useSettingsStore } from "../../core/stores/useSettingsStore";
 import { clampFrameDelta } from "../../utils/gameDelta";
 
 type EnemyMovementSystemProps = {
-  shouldStopMovement: boolean;
-  getSimulationTime: GetSimulationTime;
-  getTimeScale: GetTimeScale;
   onEnemyReachEnd: ((enemyId: number) => void) | null;
 };
 
@@ -26,12 +20,11 @@ type EnemyMovementSystemProps = {
  * deferred until movement is fully resumed.
  */
 export const EnemyMovementSystem: FC<EnemyMovementSystemProps> = ({
-  shouldStopMovement,
-  getSimulationTime,
-  getTimeScale,
   onEnemyReachEnd,
 }) => {
   const world = useWorld();
+  const { shouldStopMovement, getSimulationTime, getTimeScale } =
+    useSimulationClock();
 
   useFrame((state, delta) => {
     const clampedDelta = clampFrameDelta(

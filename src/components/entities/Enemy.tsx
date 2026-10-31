@@ -44,18 +44,13 @@ import { EnemyMotion, EnemyState } from "../../core/ecs/traits/enemy";
 import { FacingDirection } from "../../core/ecs/traits/facing";
 import { EnemySlow } from "../../core/ecs/traits/slow";
 import { Position } from "../../core/ecs/traits/position";
-import type {
-  GetSimulationTime,
-  GetTimeScale,
-} from "../../core/hooks/useSimulationClock";
+import { useSimulationClock } from "../../core/contexts/SimulationClockContext";
 import { MedicHealBurstEffect } from "./effects/MedicHealBurstEffect";
 import { SlowEffect } from "./effects/SlowEffect";
 import { UpgradeEffect } from "./effects/UpgradeEffect";
 
 type EnemyProps = {
   entity: Entity;
-  getSimulationTime: GetSimulationTime;
-  getTimeScale: GetTimeScale;
   debug?: boolean;
 };
 
@@ -99,7 +94,9 @@ const getHealthTier = (percent: number): HealthTier =>
   percent > 0.5 ? "high" : percent > 0.25 ? "medium" : "low";
 
 export const Enemy: FC<EnemyProps> = memo(
-  ({ entity, getSimulationTime, getTimeScale, debug = false }) => {
+  ({ entity, debug = false }) => {
+    const { getSimulationTime, getTimeScale } = useSimulationClock();
+
     // Read the cold state once at mount: every field the JSX uses
     // (size, color, upgrades, healPulse, maxHealth) is set at spawn and never
     // mutated afterwards — only health changes over the enemy's lifetime, and
@@ -366,20 +363,16 @@ export const Enemy: FC<EnemyProps> = memo(
           <UpgradeEffect
             enemySize={size}
             upgradeStacks={snapshot.upgradeStacks!}
-            getTimeScale={getTimeScale}
           />
         )}
 
         {/* Slow effect indicator */}
-        {isSlowed && (
-          <SlowEffect enemySize={size} getTimeScale={getTimeScale} />
-        )}
+        {isSlowed && <SlowEffect enemySize={size} />}
 
         {snapshot.healPulse && (
           <MedicHealBurstEffect
             entity={entity}
             healPulse={snapshot.healPulse}
-            getTimeScale={getTimeScale}
             color={snapshot.color}
           />
         )}

@@ -2,19 +2,12 @@ import { FC } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useWorld } from "koota/react";
 
+import { useSimulationClock } from "../../core/contexts/SimulationClockContext";
 import { runMedicHealPulseSystem } from "../../core/ecs/systems/medicHealPulseSystem";
-import type { GetSimulationTime } from "../../core/hooks/useSimulationClock";
 
-type MedicHealPulseSystemProps = {
-  shouldStopMovement: boolean;
-  getSimulationTime: GetSimulationTime;
-};
-
-export const MedicHealPulseSystem: FC<MedicHealPulseSystemProps> = ({
-  shouldStopMovement,
-  getSimulationTime,
-}) => {
+export const MedicHealPulseSystem: FC = () => {
   const world = useWorld();
+  const { shouldStopMovement, getSimulationTime } = useSimulationClock();
 
   useFrame((state) => {
     if (shouldStopMovement) return;

@@ -3,6 +3,7 @@ import ReactThreeTestRenderer from "@react-three/test-renderer";
 import { describe, expect, it, vi } from "vitest";
 import type { Mesh, TorusGeometry } from "three";
 
+import { SimulationClockProvider } from "../../core/contexts/SimulationClockContext";
 import { useGameStore } from "../../core/stores/useGameStore";
 import { useSettingsStore } from "../../core/stores/useSettingsStore";
 import { Portal } from "./Portal";
@@ -26,7 +27,11 @@ let sceneClock: { elapsedTime: number };
 const PortalHarness = () => {
   const clock = useThree((s) => s.clock) as unknown as { elapsedTime: number };
   sceneClock = clock;
-  return <Portal position={[0, 0.5, 0]} />;
+  return (
+    <SimulationClockProvider>
+      <Portal position={[0, 0.5, 0]} />
+    </SimulationClockProvider>
+  );
 };
 
 const getMeshes = (renderer: Renderer): Mesh[] =>

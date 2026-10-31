@@ -28,13 +28,12 @@ import {
 import { useEntityIds } from "../contexts/EntityIdContext";
 import { useInstancedEntity } from "./useInstancedEntity";
 import { clampFrameDelta } from "../../utils/gameDelta";
-import { getShouldStopMovement } from "../getShouldStopMovement";
+import { useSimulationClock } from "../contexts/SimulationClockContext";
 import { useGameStore } from "../stores/useGameStore";
 import { useSettingsStore } from "../stores/useSettingsStore";
 import { useLevelStore } from "../stores/useLevelStore";
 import { world } from "../ecs/world";
 import { refreshEnemyRegistry } from "../ecs/selectors/enemySnapshots";
-import type { GetSimulationTime, GetTimeScale } from "./useSimulationClock";
 
 const CHAIN_BOLT_RADIUS = 0.03;
 const CHAIN_BOLT_LENGTH = 0.5;
@@ -385,8 +384,6 @@ type InstancedProjectilesConfig = {
   beamEmissiveIntensity?: number;
   hitThreshold?: number;
   beamDuration?: number;
-  getSimulationTime: GetSimulationTime;
-  getTimeScale: GetTimeScale;
   onHit: (projectile: Projectile, enemy: Enemy, currentTime: number) => void;
   onRemove: (projectileId: number) => void;
 };
@@ -410,11 +407,12 @@ export const useInstancedProjectiles = (
     beamEmissiveIntensity = 1.5,
     hitThreshold = 0.3,
     beamDuration = 0.15,
-    getSimulationTime,
-    getTimeScale,
     onHit,
     onRemove,
   } = config;
+
+  const { getSimulationTime, getTimeScale, shouldStopMovement } =
+    useSimulationClock();
 
   const sphereInstancesContent = useMemo(
     () => (
@@ -667,18 +665,7 @@ export const useInstancedProjectiles = (
 
   useFrame((state, delta) => {
     enemiesByIdRef.current = refreshEnemyRegistry(world);
-    const { gameStatus, isPageVisible } = useGameStore.getState();
     const pauseWhenTabHidden = useSettingsStore.getState().pauseWhenTabHidden;
-    const shouldDisableControls =
-      gameStatus === "gameOver" ||
-      gameStatus === "won" ||
-      gameStatus === "gameMenu";
-    const shouldStopMovement = getShouldStopMovement(
-      gameStatus,
-      shouldDisableControls,
-      isPageVisible,
-      pauseWhenTabHidden
-    );
     // The frame keeps running through the pause so travelling projectiles
     // ease to a stop and ramp back with the time-dilation scale; hit
     // resolution (and beam timing) is gated by `canHit` so no damage lands

@@ -18,17 +18,20 @@ const DILATION_DURATION = 0.2;
 const smoothstep = (t: number) => t * t * (3 - 2 * t);
 
 /**
- * Exposes the pause-adjusted simulation clock and a visual time-scale.
+ * The pause-aware simulation clock engine: a `getSimulationTime` that freezes
+ * game logic (slow expiry, regen, heal-pulse scheduling, tower fire timing)
+ * the instant movement stops, and a `getTimeScale` that eases 1 → 0 over
+ * `DILATION_DURATION` seconds when movement stops and back to 1 on resume, so
+ * visible motion (enemy movement, decorative rings) slows into stillness
+ * instead of cutting. Motion/effect systems scale their per-frame `delta` by
+ * it; at 0 they simply freeze. Under `prefers-reduced-motion` the scale snaps
+ * instead of easing.
  *
- * `getSimulationTime` freezes game logic (slow expiry, regen, heal-pulse
- * scheduling, tower fire timing) the instant movement stops. `getTimeScale`
- * is a separate value that eases 1 → 0 over `DILATION_DURATION` seconds when
- * movement stops and back to 1 on resume, so visible motion (enemy movement,
- * decorative rings) slows into stillness instead of cutting. Motion/effect
- * systems scale their per-frame `delta` by it; at 0 they simply freeze.
- * Under `prefers-reduced-motion` the scale snaps instead of easing.
+ * Owns the `useFrame` subscriber that maintains the pause segments and the
+ * dilation, so it is mounted once per scene by `SimulationClockProvider`, not
+ * by each consumer.
  */
-export const useSimulationClock = (
+export const usePauseClock = (
   shouldStopMovement: boolean
 ): [GetSimulationTime, GetTimeScale] => {
   const pauseClockRef = useRef(createPauseClock());

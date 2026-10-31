@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { WorldProvider } from "koota/react";
 
 import { EntityIdProvider } from "../../../core/contexts/EntityIdContext";
+import { SimulationClockProvider } from "../../../core/contexts/SimulationClockContext";
 import { enemyActions } from "../../../core/ecs/actions/enemyActions";
 import { getEnemySnapshots } from "../../../core/ecs/selectors/enemySnapshots";
 import { testWorld } from "../../../core/ecs/world";
@@ -123,7 +124,9 @@ describe("MainMenuScene enemy cleanup wiring", () => {
     const renderer = await ReactThreeTestRenderer.create(
       <WorldProvider world={testWorld}>
         <EntityIdProvider>
-          <MainMenuScene />
+          <SimulationClockProvider>
+            <MainMenuScene />
+          </SimulationClockProvider>
         </EntityIdProvider>
       </WorldProvider>
     );

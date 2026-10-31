@@ -139,7 +139,7 @@ const ruValues = {
         furthest: "Дальнейший",
         lowest: "С мин. HP",
         highest: "С макс. HP",
-        focused: "Запертый",
+        focused: "Фокус",
       },
       slow: "Замедление",
       aoe: "Область",

@@ -52,7 +52,7 @@ type TowerInfoRow = {
 };
 
 export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
-  tower,
+  tower: selectedTower,
   onSell,
 }) => {
   const t = useTranslationInCanvas();
@@ -62,6 +62,11 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
   const towerTypes = useGameStore(towerTypesSelector);
   const towers = useLevelStore(towersSelector);
   const updateTower = useLevelStore(updateTowerSelector);
+
+  // `selectedTower` is a snapshot captured when the tower was clicked; the
+  // targeting selector mutates only the `towers` array via `updateTower`, so
+  // re-resolve the live tower by id to keep the panel in sync.
+  const tower = towers.find((item) => item.id === selectedTower.id) ?? selectedTower;
   const towerHeight = useGameStore(towerHeightSelector);
   const towerBaseRadius = useGameStore(towerBaseRadiusSelector);
   const tileSize = useGameStore(tileSizeSelector);

@@ -122,12 +122,13 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     }, [buildings, pathWaypoints]);
 
     // Tower ids are re-issued from 1 when a level (re)loads, so a reused id
-    // would otherwise carry the previous level's fire timestamp. Clear the
-    // ref when the level (re)loads; the per-frame prune below only drops ids
-    // that no longer exist, which a reused id does not.
+    // would otherwise carry the previous level's fire timestamp or focused
+    // target. Clear both refs when the level (re)loads; the per-frame prune
+    // below only drops ids that no longer exist, which a reused id does not.
     useEffect(() => {
       if (isLevelConfigLoaded) {
         fireTimesRef.current.clear();
+        lastTargetsRef.current.clear();
       }
     }, [isLevelConfigLoaded]);
 

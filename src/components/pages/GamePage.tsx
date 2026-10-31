@@ -41,7 +41,10 @@ import { useProjectileSystem } from "../../core/hooks/useProjectileSystem";
 import { useWaveSystem } from "../../core/hooks/useWaveSystem";
 import { useLevelSystem } from "../../core/hooks/useLevelSystem";
 import { useUpgradesSystem } from "../../core/hooks/useUpgradesSystem";
-import { DEFAULT_STARTING_HEALTH } from "../../core/configs/levelConfig";
+import {
+  DEFAULT_STARTING_HEALTH,
+  loadLevelConfigFile,
+} from "../../core/configs/levelConfig";
 import { useHeldClose } from "../../core/hooks/useHeldClose";
 import { useLoadingTransition } from "../../core/hooks/useLoadingTransition";
 import { useMenuParallax } from "../../core/hooks/useMenuParallax";
@@ -136,6 +139,24 @@ export const GamePage: FC<GamePageProps> = ({
     goToMainMenu();
     resetLevelState();
   }, [goToMainMenu, resetLevelState]);
+
+  // The level after the current one in the playable sequence, or nothing on
+  // the last level (no wrap-around).
+  const nextLevelId =
+    PLAYABLE_LEVEL_IDS[PLAYABLE_LEVEL_IDS.indexOf(activePlayableLevel) + 1] ??
+    null;
+
+  // Reuses the menu's start-with-level flow: it reloads the config
+  // (LevelSystem) and starts a fresh run with the level's own health. The
+  // run reset (same as onRestart) also clears the picked enemy upgrades and
+  // the wave-readiness flag so the new level starts clean.
+  const onStartNextLevel = useCallback(() => {
+    if (!nextLevelId) return;
+    resetLevelState();
+    void loadLevelConfigFile(nextLevelId).then((levelData) =>
+      onStartGameWithLevel(nextLevelId, levelData.startingHealth)
+    );
+  }, [nextLevelId, onStartGameWithLevel, resetLevelState]);
 
   const remainingEnemies = getRemainingEnemiesInWave();
   const isMenu = gameStatus === "menu";
@@ -327,6 +348,9 @@ export const GamePage: FC<GamePageProps> = ({
         stats={getRunStats(world)}
         onRestart={onRestart}
         onGoToMainMenu={onGoToMainMenu}
+        // Offered only on a win, when a next level exists (the modal hides it
+        // on a defeat or the final level).
+        onNextLevel={nextLevelId ? onStartNextLevel : undefined}
       />
 
       <HUDControlsIntroModal

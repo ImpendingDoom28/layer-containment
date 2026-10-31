@@ -51,6 +51,7 @@ type LevelStoreActions = {
   setWaveConfigs: (waveConfigs: WaveConfig[]) => void;
   setBuildings: (buildings: Building[]) => void;
   setTowers: (towers: Tower[] | ((prev: Tower[]) => Tower[])) => void;
+  updateTower: (towerId: number, updates: Partial<Tower>) => void;
   setProjectiles: (
     projectiles: Projectile[] | ((prev: Projectile[]) => Projectile[])
   ) => void;
@@ -201,6 +202,14 @@ export const useLevelStore = create<LevelStore>((set) => ({
     }));
   },
 
+  updateTower: (towerId, updates) => {
+    set((state) => ({
+      towers: state.towers.map((tower) =>
+        tower.id === towerId ? { ...tower, ...updates } : tower
+      ),
+    }));
+  },
+
   setProjectiles: (projectiles) => {
     set((state) => ({
       projectiles:
@@ -263,6 +272,7 @@ export const addMoneySelector = (state: LevelStore) => state.addMoney;
 export const incrementEnemiesKilledSelector = (state: LevelStore) =>
   state.incrementEnemiesKilled;
 export const setTowersSelector = (state: LevelStore) => state.setTowers;
+export const updateTowerSelector = (state: LevelStore) => state.updateTower;
 export const setProjectilesSelector = (state: LevelStore) =>
   state.setProjectiles;
 export const resetLevelStateSelector = (state: LevelStore) =>

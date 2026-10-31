@@ -3,18 +3,17 @@ import { useFrame } from "@react-three/fiber";
 import { useWorld } from "koota/react";
 
 import {
-  distance2D,
   findEnemiesInLine,
   getRayObstacleClipDistance,
   segmentCrossesObstacles,
   type LineOfSightObstacle,
 } from "../../utils/mathUtils";
+import { pickTowerTarget } from "../../utils/towerTargeting";
 import { computeChainAdditionalHits } from "../../core/chainLightning";
 import { getEffectiveTowerCombatStats } from "../../core/relayBuffs";
 import { gameEvents } from "../../utils/eventEmitter";
 import type {
   Tower as TowerInstance,
-  Enemy,
   Projectile as ProjectileInstance,
   TowerType,
 } from "../../core/types/game";
@@ -80,6 +79,11 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     // every shot. The towers array reference still changes on place/sell, so
     // a shot after a placement naturally reads the fresh array.
     const fireTimesRef = useRef(new Map<number, number>());
+
+    // The focused-targeting "which enemy was I shooting last" memory, kept in
+    // a ref for the same reason as fireTimesRef: recording a shot must not
+    // re-render the towers list.
+    const lastTargetsRef = useRef(new Map<number, number>());
 
     const towerTypes = useGameStore(towerTypesSelector);
     const tileSize = useGameStore(tileSizeSelector);
@@ -192,10 +196,14 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
       const currentTime = getSimulationTime(state.clock.elapsedTime);
       const enemies = getLivingEnemyList(world);
       const fireTimes = fireTimesRef.current;
+      const lastTargets = lastTargetsRef.current;
       // Prune entries for towers that no longer exist (sold / level restart)
-      // so the map stays the size of the current level.
+      // so the maps stay the size of the current level.
       for (const id of fireTimes.keys()) {
         if (!towerIds.has(id)) fireTimes.delete(id);
+      }
+      for (const id of lastTargets.keys()) {
+        if (!towerIds.has(id)) lastTargets.delete(id);
       }
 
       towers.forEach((tower) => {
@@ -218,49 +226,26 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
         // enemy behind a static building or the base is skipped so the tower
         // falls back to the next-best candidate it can actually hit. Towers
         // do not block each other's shots.
-        let target: Enemy | null = null;
+        const pickedTarget = pickTowerTarget(enemies, tower.targeting, {
+          x: tower.x,
+          z: tower.z,
+          range: eff.range,
+          lastTargetId: lastTargets.get(tower.id),
+        }, (enemy) =>
+          !segmentCrossesObstacles(
+            tower.x,
+            tower.z,
+            enemy.x,
+            enemy.z,
+            lineOfSightObstacles
+          )
+        );
 
-        if (towerConfig.targeting === "furthest") {
-          let maxDistance = -1;
-          for (const enemy of enemies) {
-            if (enemy.health <= 0) continue;
-            const dist = distance2D(tower.x, tower.z, enemy.x, enemy.z);
-            if (dist > eff.range || dist <= maxDistance) continue;
-            if (
-              segmentCrossesObstacles(
-                tower.x,
-                tower.z,
-                enemy.x,
-                enemy.z,
-                lineOfSightObstacles
-              )
-            )
-              continue;
-            maxDistance = dist;
-            target = enemy;
-          }
-        } else {
-          let minDistance = Infinity;
-          for (const enemy of enemies) {
-            if (enemy.health <= 0) continue;
-            const dist = distance2D(tower.x, tower.z, enemy.x, enemy.z);
-            if (dist > eff.range || dist >= minDistance) continue;
-            if (
-              segmentCrossesObstacles(
-                tower.x,
-                tower.z,
-                enemy.x,
-                enemy.z,
-                lineOfSightObstacles
-              )
-            )
-              continue;
-            minDistance = dist;
-            target = enemy;
-          }
-        }
+        if (!pickedTarget) return;
 
-        if (!target) return;
+        // A piercing laser re-aims at the furthest enemy in the beam, so the
+        // projectile (and the focused tower's memory) follow that re-aim.
+        let firedTarget = pickedTarget;
 
         let pierceEnemyIds: number[] | undefined;
         let chainAdditionalHits:
@@ -272,7 +257,7 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
           chainAdditionalHits = computeChainAdditionalHits(
             tower,
             enemies,
-            target,
+            pickedTarget,
             eff.damage,
             eff.range,
             maxHops,
@@ -282,8 +267,8 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
         }
 
         if (tower.type === "laser" && tower.maxPierce) {
-          const dx = target.x - tower.x;
-          const dz = target.z - tower.z;
+          const dx = pickedTarget.x - tower.x;
+          const dz = pickedTarget.z - tower.z;
           const distToTarget = Math.hypot(dx, dz);
 
           if (distToTarget > 0) {
@@ -319,7 +304,7 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
 
             if (enemiesInLine.length === 0) return;
 
-            target = enemiesInLine[enemiesInLine.length - 1];
+            firedTarget = enemiesInLine[enemiesInLine.length - 1];
             pierceEnemyIds = enemiesInLine.map((e) => e.id);
           }
         }
@@ -327,8 +312,8 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
         const planetRadius = getPlanetRadius(gridSize, tileSize);
         const targetPathPos = getPositionAlongMultiplePaths(
           pathWaypoints,
-          target.pathIndex,
-          target.pathProgress
+          firedTarget.pathIndex,
+          firedTarget.pathProgress
         );
         const emitterAlongNormal =
           tower.type === "laser" ? towerHeight * 0.5 : towerHeight * 0.7;
@@ -339,9 +324,9 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
           planetRadius
         );
         const targetWorld = flatCombatPointToWorldPosition(
-          target.x,
-          target.z,
-          targetPathPos.y + target.size,
+          firedTarget.x,
+          firedTarget.z,
+          targetPathPos.y + firedTarget.size,
           planetRadius
         );
 
@@ -363,13 +348,17 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
           targetX: targetWorld.x,
           targetY: targetWorld.y,
           targetZ: targetWorld.z,
-          targetId: target.id,
+          targetId: firedTarget.id,
           pierceEnemyIds: pierceEnemyIds,
           chainAdditionalHits,
         };
 
         const fired = fireProjectile(projectileData);
         if (fired.id <= 0) return;
+
+        // Remember the shot target so a focused tower keeps firing it next
+        // volley while it stays in range and visible.
+        lastTargets.set(tower.id, firedTarget.id);
 
         gameEvents.emit(GameEvent.TOWER_FIRE, {
           towerId: tower.id,

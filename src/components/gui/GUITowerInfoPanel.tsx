@@ -1,8 +1,11 @@
-import { FC, MouseEvent as ReactMouseEvent, useMemo } from "react";
+import { FC, MouseEvent as ReactMouseEvent, useMemo, type ReactNode } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 
 import { getEffectiveTowerCombatStats } from "../../core/relayBuffs";
-import type { Tower as TowerInstance } from "../../core/types/game";
+import type {
+  Tower as TowerInstance,
+  TowerTargeting,
+} from "../../core/types/game";
 import { useTranslationInCanvas } from "../../core/i18n/useTranslationInCanvas";
 import {
   towerBaseRadiusSelector,
@@ -15,6 +18,7 @@ import {
 import {
   gridSizeSelector,
   towersSelector,
+  updateTowerSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
 import {
@@ -22,7 +26,9 @@ import {
   getPlanetRadius,
   getSurfaceQuaternion,
 } from "../../utils/planetSurfaceMapping";
+import { TARGETING_STRATEGIES } from "../../utils/towerTargeting";
 import { UIHoldButton } from "../ui/buttons/UIHoldButton";
+import { UICarouselSelect } from "../ui/UICarouselSelect";
 import {
   UICard,
   UICardContent,
@@ -38,6 +44,13 @@ type GUITowerInfoPanelProps = {
   onSell: () => void;
 };
 
+/** A stat-table row; `plain` renders the value as-is (a component) instead of wrapping it. */
+type TowerInfoRow = {
+  label: string;
+  value: ReactNode;
+  plain?: boolean;
+};
+
 export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
   tower,
   onSell,
@@ -48,6 +61,7 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
   );
   const towerTypes = useGameStore(towerTypesSelector);
   const towers = useLevelStore(towersSelector);
+  const updateTower = useLevelStore(updateTowerSelector);
   const towerHeight = useGameStore(towerHeightSelector);
   const towerBaseRadius = useGameStore(towerBaseRadiusSelector);
   const tileSize = useGameStore(tileSizeSelector);
@@ -55,7 +69,11 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
 
   const sellPrice = Math.floor(tower.cost * towerSellPriceMultiplier);
 
-  const stats = useMemo(() => {
+  // Non-attacking towers (the relay) never pick a target, so the selector is
+  // omitted to match the almanac.
+  const showTargeting = tower.damage > 0;
+
+  const stats = useMemo<TowerInfoRow[]>(() => {
     if (tower.type === "relay") {
       const tpl = towerTypes?.relay;
       const damagePct = (tpl?.relayNeighborDamageBonusFraction ?? 0) * 100;
@@ -84,8 +102,35 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
         label: t("towerInfo.fireRate"),
         value: `${tower.fireRate.toFixed(1)}s`,
       },
+      ...(showTargeting
+        ? [
+            {
+              label: t("almanac.tower.targeting.label"),
+              value: (
+                <UICarouselSelect<TowerTargeting>
+                  options={TARGETING_STRATEGIES.map((strategy) => ({
+                    value: strategy,
+                    label: t(`almanac.tower.targeting.${strategy}`),
+                  }))}
+                  value={tower.targeting}
+                  onSelect={(targeting) => updateTower(tower.id, { targeting })}
+                  label={t("almanac.tower.targeting.label")}
+                  className="w-full"
+                />
+              ),
+              plain: true,
+            },
+          ]
+        : []),
     ];
-  }, [tower, towerTypes, towers, t]);
+  }, [
+    tower,
+    towerTypes,
+    towers,
+    t,
+    updateTower,
+    showTargeting,
+  ]);
 
   const footing = useMemo(() => {
     const { surfacePoint, normal } = flatFieldToSphereSurface(
@@ -171,6 +216,7 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
                       align="right"
                       variant="small"
                       className="font-semibold"
+                      plain={stat.plain ?? false}
                     >
                       {stat.value}
                     </UITableCell>

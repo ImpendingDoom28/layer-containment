@@ -307,3 +307,120 @@ describe("TowerSystem line of sight", () => {
     }
   });
 });
+
+describe("TowerSystem targeting strategies", () => {
+  // Enemy A is the nearest (distance 1), enemy B the furthest (distance 1.4).
+  // B also carries the most health, A the least — so "highest" picks B and
+  // "lowest" picks A, unambiguously.
+  const enemyA = (): Enemy => ({
+    ...makeEnemy(1),
+    x: 1,
+    z: 0,
+    health: 10,
+    maxHealth: 10,
+  });
+  const enemyB = (): Enemy => ({
+    ...makeEnemy(2),
+    x: 1,
+    z: 1,
+    health: 80,
+    maxHealth: 80,
+  });
+
+  const withStrategy = async (targeting: Tower["targeting"], spawn: Enemy[]) => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <WorldProvider world={testWorld}>
+        <TowerHarness />
+      </WorldProvider>
+    );
+    await ReactThreeTestRenderer.act(async () => {
+      useLevelStore.getState().setTowers([
+        { ...tower, targeting },
+      ]);
+      for (const enemy of spawn) {
+        enemyActions(testWorld).spawnEnemy(enemy);
+      }
+    });
+    await advanceFrame(renderer, 1);
+    return renderer;
+  };
+
+  it("fires at the lowest-HP enemy for the lowest strategy", async () => {
+    const renderer = await withStrategy("lowest", [enemyA(), enemyB()]);
+    try {
+      expect(fireProjectile).toHaveBeenCalledTimes(1);
+      expect(fireProjectile.mock.calls[0][0].targetId).toBe(1);
+    } finally {
+      renderer.unmount();
+    }
+  });
+
+  it("fires at the highest-HP enemy for the highest strategy", async () => {
+    const renderer = await withStrategy("highest", [enemyA(), enemyB()]);
+    try {
+      expect(fireProjectile).toHaveBeenCalledTimes(1);
+      expect(fireProjectile.mock.calls[0][0].targetId).toBe(2);
+    } finally {
+      renderer.unmount();
+    }
+  });
+
+  it("keeps firing the same enemy for the focused strategy while it is in range", async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <WorldProvider world={testWorld}>
+        <TowerHarness />
+      </WorldProvider>
+    );
+    await ReactThreeTestRenderer.act(async () => {
+      useLevelStore.getState().setTowers([{ ...tower, targeting: "focused" }]);
+      enemyActions(testWorld).spawnEnemy(enemyA());
+      enemyActions(testWorld).spawnEnemy(enemyB());
+    });
+
+    try {
+      // First volley: no prior target, so focused falls back to the nearest (A).
+      await advanceFrame(renderer, 1);
+      expect(fireProjectile).toHaveBeenCalledTimes(1);
+      expect(fireProjectile.mock.calls[0][0].targetId).toBe(1);
+
+      // Second volley: the tower remembers A and keeps firing it even though
+      // A is only as near as before and B is now also in range.
+      await advanceFrame(renderer, 2);
+      expect(fireProjectile).toHaveBeenCalledTimes(2);
+      expect(fireProjectile.mock.calls[1][0].targetId).toBe(1);
+    } finally {
+      renderer.unmount();
+    }
+  });
+
+  it("re-targets the nearest enemy for the focused strategy once its target dies", async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <WorldProvider world={testWorld}>
+        <TowerHarness />
+      </WorldProvider>
+    );
+    await ReactThreeTestRenderer.act(async () => {
+      useLevelStore.getState().setTowers([{ ...tower, targeting: "focused" }]);
+      enemyActions(testWorld).spawnEnemy(enemyA());
+      enemyActions(testWorld).spawnEnemy(enemyB());
+    });
+
+    try {
+      // Fire at A (nearest) on the first volley.
+      await advanceFrame(renderer, 1);
+      expect(fireProjectile).toHaveBeenCalledTimes(1);
+      expect(fireProjectile.mock.calls[0][0].targetId).toBe(1);
+
+      // Kill A so the focused tower must fall back to B.
+      await ReactThreeTestRenderer.act(async () => {
+        enemyActions(testWorld).updateEnemy(1, { health: 0 });
+      });
+
+      await advanceFrame(renderer, 2);
+      expect(fireProjectile).toHaveBeenCalledTimes(2);
+      expect(fireProjectile.mock.calls[1][0].targetId).toBe(2);
+    } finally {
+      renderer.unmount();
+    }
+  });
+});

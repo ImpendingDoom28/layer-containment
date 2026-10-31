@@ -1,5 +1,3 @@
 - `game.json` is loading twice at the start of the app. Add throttle on useMenuParallax then pointer moves.
 - Refactor Github icon to be an `.svg` format which is loaded through <img> tag instead of react component (Saves browser rendering performance a lot)
 - Let's add division of enemies between the portals. So in the level the enemies could be specified to get out of certain portal and therefore: 1) the preview should show what enemies will come from this portal. 2) the enemies spawn only from corresponding portal in this wave. in the next wave, they could come from another portal 3) if the enemy doesn't have provided portal, it should be distributed evenly between all portals
-- In the @GUINextWavePreview, only show the known enemies from the almanac. The unknown enemies should be displayed as `unknown` - similiar to how they displayed in the almanac itself. 
-- Add selector for the tower target selection strategy, then also add new types "lowest hp", "highest hp", "focused" (shoots the same enemy as long as he is in the range)

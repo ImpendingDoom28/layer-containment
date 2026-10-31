@@ -41,7 +41,10 @@ import { useProjectileSystem } from "../../core/hooks/useProjectileSystem";
 import { useWaveSystem } from "../../core/hooks/useWaveSystem";
 import { useLevelSystem } from "../../core/hooks/useLevelSystem";
 import { useUpgradesSystem } from "../../core/hooks/useUpgradesSystem";
-import { DEFAULT_STARTING_HEALTH } from "../../core/configs/levelConfig";
+import {
+  DEFAULT_STARTING_HEALTH,
+  loadLevelConfigFile,
+} from "../../core/configs/levelConfig";
 import { useHeldClose } from "../../core/hooks/useHeldClose";
 import { useLoadingTransition } from "../../core/hooks/useLoadingTransition";
 import { useMenuParallax } from "../../core/hooks/useMenuParallax";
@@ -52,6 +55,7 @@ import {
 import { PageWrapper } from "./PageWrapper";
 import { world } from "../../core/ecs/world";
 import { getRunStats } from "../../core/ecs/selectors/runStats";
+import { SimulationClockProvider } from "../../core/contexts/SimulationClockContext";
 
 type GamePageProps = {
   onOpenLevelEditor: () => void;
@@ -86,7 +90,6 @@ export const GamePage: FC<GamePageProps> = ({
     goToMainMenu,
     openGameMenu,
     closeGameMenu,
-    shouldStopMovement,
     shouldLockCamera,
     debug,
     isGameConfigLoaded,
@@ -136,6 +139,24 @@ export const GamePage: FC<GamePageProps> = ({
     goToMainMenu();
     resetLevelState();
   }, [goToMainMenu, resetLevelState]);
+
+  // The level after the current one in the playable sequence, or nothing on
+  // the last level (no wrap-around).
+  const nextLevelId =
+    PLAYABLE_LEVEL_IDS[PLAYABLE_LEVEL_IDS.indexOf(activePlayableLevel) + 1] ??
+    null;
+
+  // Reuses the menu's start-with-level flow: it reloads the config
+  // (LevelSystem) and starts a fresh run with the level's own health. The
+  // run reset (same as onRestart) also clears the picked enemy upgrades and
+  // the wave-readiness flag so the new level starts clean.
+  const onStartNextLevel = useCallback(() => {
+    if (!nextLevelId) return;
+    resetLevelState();
+    void loadLevelConfigFile(nextLevelId).then((levelData) =>
+      onStartGameWithLevel(nextLevelId, levelData.startingHealth)
+    );
+  }, [nextLevelId, onStartGameWithLevel, resetLevelState]);
 
   const remainingEnemies = getRemainingEnemiesInWave();
   const isMenu = gameStatus === "menu";
@@ -206,53 +227,54 @@ export const GamePage: FC<GamePageProps> = ({
         style={GAME_CANVAS_STYLE}
         gl={GAME_CANVAS_GL}
       >
-        <BackgroundGameLoopSystem />
+        <SimulationClockProvider>
+          <BackgroundGameLoopSystem />
 
-        {shaderGateKey !== null && (
-          <ShaderReadyGate
-            key={shaderGateKey}
-            compileKey={shaderGateKey}
-            onReadyChange={setAreShadersReady}
-          />
-        )}
-
-        <Suspense fallback={<HUDLoading message={loadingMessage} />}>
-          {isGameConfigLoaded && isMenu && <MainMenuScene />}
-          {isGameConfigLoaded && !isMenu && (
-            <GameScene
-              placeTower={placeTower}
-              selectedTower={selectedTower}
-              gameStatus={gameStatus}
-              waveSystem={waveSystem}
-              onEnemyReachEnd={onEnemyReachEnd}
-              onProjectileHit={onProjectileHit}
-              onProjectileRemove={onProjectileRemove}
-              onSellTower={sellTower}
-              shouldStopMovement={shouldStopMovement}
-              // The camera stays controllable while paused so the held frame
-              // can be inspected from any angle; only menu, intro, and
-              // tab-hidden states lock it.
-              shouldStopCamera={shouldLockCamera || controlsIntroOpen}
-              playableLevelId={activePlayableLevel}
+          {shaderGateKey !== null && (
+            <ShaderReadyGate
+              key={shaderGateKey}
+              compileKey={shaderGateKey}
+              onReadyChange={setAreShadersReady}
             />
           )}
 
-          {debug && (
-            <>
-              <Stats showPanel={0} className="top-[calc(100%-48px)]!" />
-              <Stats
-                showPanel={1}
-                className="top-[calc(100%-48px)]! bottom-0! left-20!"
+          <Suspense fallback={<HUDLoading message={loadingMessage} />}>
+            {isGameConfigLoaded && isMenu && <MainMenuScene />}
+            {isGameConfigLoaded && !isMenu && (
+              <GameScene
+                placeTower={placeTower}
+                selectedTower={selectedTower}
+                gameStatus={gameStatus}
+                waveSystem={waveSystem}
+                onEnemyReachEnd={onEnemyReachEnd}
+                onProjectileHit={onProjectileHit}
+                onProjectileRemove={onProjectileRemove}
+                onSellTower={sellTower}
+                // The camera stays controllable while paused so the held frame
+                // can be inspected from any angle; only menu, intro, and
+                // tab-hidden states lock it.
+                shouldStopCamera={shouldLockCamera || controlsIntroOpen}
+                playableLevelId={activePlayableLevel}
               />
-              <Stats
-                showPanel={2}
-                className="top-[calc(100%-48px)]! left-40!"
-              />
-            </>
-          )}
+            )}
 
-          <KeyboardHandlingSystem onGameMenuEscape={gameMenuClose.startClose} />
-        </Suspense>
+            {debug && (
+              <>
+                <Stats showPanel={0} className="top-[calc(100%-48px)]!" />
+                <Stats
+                  showPanel={1}
+                  className="top-[calc(100%-48px)]! bottom-0! left-20!"
+                />
+                <Stats
+                  showPanel={2}
+                  className="top-[calc(100%-48px)]! left-40!"
+                />
+              </>
+            )}
+
+            <KeyboardHandlingSystem onGameMenuEscape={gameMenuClose.startClose} />
+          </Suspense>
+        </SimulationClockProvider>
       </Canvas>
 
       {isGameReady && isMenu && (
@@ -326,6 +348,9 @@ export const GamePage: FC<GamePageProps> = ({
         stats={getRunStats(world)}
         onRestart={onRestart}
         onGoToMainMenu={onGoToMainMenu}
+        // Offered only on a win, when a next level exists (the modal hides it
+        // on a defeat or the final level).
+        onNextLevel={nextLevelId ? onStartNextLevel : undefined}
       />
 
       <HUDControlsIntroModal

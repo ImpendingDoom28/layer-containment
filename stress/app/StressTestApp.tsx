@@ -35,6 +35,7 @@ import { isBase } from "../../src/core/ecs/traits/base";
 import { HealthInfo } from "../../src/core/ecs/traits/health";
 import { enemyActions } from "../../src/core/ecs/actions/enemyActions";
 import { EntityIdProvider } from "../../src/core/contexts/EntityIdContext";
+import { SimulationClockProvider } from "../../src/core/contexts/SimulationClockContext";
 import { world } from "../../src/core/ecs/world";
 import { useEnemyActions } from "../../src/core/hooks/useEnemyActions";
 import { useGameSystem } from "../../src/core/hooks/useGameSystem";
@@ -450,19 +451,20 @@ const StressTestGame = () => {
               </div>
             }
           >
-            <GameScene
-              placeTower={onPlaceTowerNoop}
-              selectedTower={selectedTower}
-              gameStatus={gameStatus}
-              waveSystem={waveSystem}
-              onEnemyReachEnd={onEnemyReachEnd}
-              onProjectileHit={onProjectileHit}
-              onProjectileRemove={onProjectileRemove}
-              onSellTower={sellTower}
-              shouldStopMovement={shouldStopMovement}
-              shouldStopCamera={shouldStopMovement}
-              playableLevelId={STRESS_LEVEL_ID}
-            />
+            <SimulationClockProvider>
+              <GameScene
+                placeTower={onPlaceTowerNoop}
+                selectedTower={selectedTower}
+                gameStatus={gameStatus}
+                waveSystem={waveSystem}
+                onEnemyReachEnd={onEnemyReachEnd}
+                onProjectileHit={onProjectileHit}
+                onProjectileRemove={onProjectileRemove}
+                onSellTower={sellTower}
+                shouldStopCamera={shouldStopMovement}
+                playableLevelId={STRESS_LEVEL_ID}
+              />
+            </SimulationClockProvider>
             <Stats showPanel={0} className="top-[calc(100%-48px)]!" />
             <Stats
               showPanel={1}

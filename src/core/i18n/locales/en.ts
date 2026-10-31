@@ -96,6 +96,7 @@ export const en = {
     statSpent: "Spent",
     statKills: "Kills",
     playAgain: "Play Again",
+    nextLevel: "Next Level",
     goToMainMenu: "Go to Main Menu",
   },
   almanac: {

@@ -158,9 +158,7 @@ export const HUDTowerShop: FC<HUDTowerShopProps> = ({ money }) => {
         <UICard className="flex-1">
           <UICardHeader>
             <UICardTitle>
-              <UITypography variant="h4">
-                {t("towerShop.title")}
-              </UITypography>
+              <UITypography variant="h4">{t("towerShop.title")}</UITypography>
             </UICardTitle>
           </UICardHeader>
           <UICardContent className="gap-2">

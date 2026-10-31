@@ -2,18 +2,19 @@ import { useFrame } from "@react-three/fiber";
 import { FC, memo, useEffect, useRef } from "react";
 import { Mesh } from "three";
 
+import { useSimulationClock } from "../../../core/contexts/SimulationClockContext";
 import { getCssColorValue } from "../../ui/lib/cssUtils";
 
 import { EmissiveParticleSphere } from "./primitives/EmissiveParticleSphere";
 import { EmissiveTorus } from "./primitives/EmissiveTorus";
-import type { EnemyAttachedEffectProps } from "./types";
 
-type SlowEffectProps = EnemyAttachedEffectProps & {
+type SlowEffectProps = {
   enemySize: number;
 };
 
 export const SlowEffect: FC<SlowEffectProps> = memo(
-  ({ enemySize, getTimeScale }) => {
+  ({ enemySize }) => {
+    const { getTimeScale } = useSimulationClock();
     const ringRef = useRef<Mesh>(null);
     const particlesRef = useRef<(Mesh | null)[]>([]);
     const timeRef = useRef(0);

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Mesh } from "three";
 import type { Entity } from "koota";
 
+import { SimulationClockProvider } from "../../../core/contexts/SimulationClockContext";
 import { useGameStore } from "../../../core/stores/useGameStore";
 import type {
   EnemyUpgradeConfig,
@@ -79,20 +80,22 @@ describe("UpgradeEffect", () => {
   it("renders one shield plate per tier (Armored)", async () => {
     useGameStore.setState({ enemyUpgrades: upgradeConfigs });
     const tier1 = await ReactThreeTestRenderer.create(
-      <UpgradeEffect
-        entity={makeEntity()}
-        enemySize={0.4}
-        upgradeStacks={[{ id: "armored", tier: 1 }]}
-        getTimeScale={() => 1}
-      />
+      <SimulationClockProvider>
+        <UpgradeEffect
+          entity={makeEntity()}
+          enemySize={0.4}
+          upgradeStacks={[{ id: "armored", tier: 1 }]}
+        />
+      </SimulationClockProvider>
     );
     const tier3 = await ReactThreeTestRenderer.create(
-      <UpgradeEffect
-        entity={makeEntity()}
-        enemySize={0.4}
-        upgradeStacks={[{ id: "armored", tier: 3 }]}
-        getTimeScale={() => 1}
-      />
+      <SimulationClockProvider>
+        <UpgradeEffect
+          entity={makeEntity()}
+          enemySize={0.4}
+          upgradeStacks={[{ id: "armored", tier: 3 }]}
+        />
+      </SimulationClockProvider>
     );
 
     try {
@@ -108,12 +111,13 @@ describe("UpgradeEffect", () => {
   it("renders a glow shell (Unstoppable) and nothing else", async () => {
     useGameStore.setState({ enemyUpgrades: upgradeConfigs });
     const renderer = await ReactThreeTestRenderer.create(
-      <UpgradeEffect
-        entity={makeEntity()}
-        enemySize={0.4}
-        upgradeStacks={[{ id: "slowResistance", tier: 2 }]}
-        getTimeScale={() => 1}
-      />
+      <SimulationClockProvider>
+        <UpgradeEffect
+          entity={makeEntity()}
+          enemySize={0.4}
+          upgradeStacks={[{ id: "slowResistance", tier: 2 }]}
+        />
+      </SimulationClockProvider>
     );
 
     try {
@@ -130,20 +134,22 @@ describe("UpgradeEffect", () => {
   it("renders a ground ring plus rising particles, scaled by tier (Regenerating)", async () => {
     useGameStore.setState({ enemyUpgrades: upgradeConfigs });
     const tier1 = await ReactThreeTestRenderer.create(
-      <UpgradeEffect
-        entity={makeEntity()}
-        enemySize={0.4}
-        upgradeStacks={[{ id: "regenerating", tier: 1 }]}
-        getTimeScale={() => 1}
-      />
+      <SimulationClockProvider>
+        <UpgradeEffect
+          entity={makeEntity()}
+          enemySize={0.4}
+          upgradeStacks={[{ id: "regenerating", tier: 1 }]}
+        />
+      </SimulationClockProvider>
     );
     const tier3 = await ReactThreeTestRenderer.create(
-      <UpgradeEffect
-        entity={makeEntity()}
-        enemySize={0.4}
-        upgradeStacks={[{ id: "regenerating", tier: 3 }]}
-        getTimeScale={() => 1}
-      />
+      <SimulationClockProvider>
+        <UpgradeEffect
+          entity={makeEntity()}
+          enemySize={0.4}
+          upgradeStacks={[{ id: "regenerating", tier: 3 }]}
+        />
+      </SimulationClockProvider>
     );
 
     try {
@@ -162,20 +168,22 @@ describe("UpgradeEffect", () => {
   it("renders one trailing strap per tier (Swift)", async () => {
     useGameStore.setState({ enemyUpgrades: upgradeConfigs });
     const tier1 = await ReactThreeTestRenderer.create(
-      <UpgradeEffect
-        entity={makeEntity()}
-        enemySize={0.4}
-        upgradeStacks={[{ id: "swift", tier: 1 }]}
-        getTimeScale={() => 1}
-      />
+      <SimulationClockProvider>
+        <UpgradeEffect
+          entity={makeEntity()}
+          enemySize={0.4}
+          upgradeStacks={[{ id: "swift", tier: 1 }]}
+        />
+      </SimulationClockProvider>
     );
     const tier3 = await ReactThreeTestRenderer.create(
-      <UpgradeEffect
-        entity={makeEntity()}
-        enemySize={0.4}
-        upgradeStacks={[{ id: "swift", tier: 3 }]}
-        getTimeScale={() => 1}
-      />
+      <SimulationClockProvider>
+        <UpgradeEffect
+          entity={makeEntity()}
+          enemySize={0.4}
+          upgradeStacks={[{ id: "swift", tier: 3 }]}
+        />
+      </SimulationClockProvider>
     );
 
     try {
@@ -191,12 +199,13 @@ describe("UpgradeEffect", () => {
   it("renders nothing for an empty stack", async () => {
     useGameStore.setState({ enemyUpgrades: upgradeConfigs });
     const renderer = await ReactThreeTestRenderer.create(
-      <UpgradeEffect
-        entity={makeEntity()}
-        enemySize={0.4}
-        upgradeStacks={[]}
-        getTimeScale={() => 1}
-      />
+      <SimulationClockProvider>
+        <UpgradeEffect
+          entity={makeEntity()}
+          enemySize={0.4}
+          upgradeStacks={[]}
+        />
+      </SimulationClockProvider>
     );
 
     try {

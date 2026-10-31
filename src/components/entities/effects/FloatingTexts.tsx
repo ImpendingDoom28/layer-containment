@@ -9,7 +9,7 @@ import {
 import { useFrame } from "@react-three/fiber";
 import { CanvasTexture, Sprite, SpriteMaterial, Texture } from "three";
 
-import { useSimulationClock } from "../../../core/hooks/useSimulationClock";
+import { useSimulationClock } from "../../../core/contexts/SimulationClockContext";
 
 /**
  * Camera-facing text sprites that rise and fade in world space (gold rewards).
@@ -41,10 +41,6 @@ type Slot = {
 
 export type FloatingTextsHandle = {
   spawn: (text: string, position: [number, number, number], color: string) => void;
-};
-
-type FloatingTextsProps = {
-  shouldStopMovement: boolean;
 };
 
 const drawText = (
@@ -98,84 +94,82 @@ const createSlot = (): Slot => {
 };
 
 export const FloatingTexts = memo(
-  forwardRef<FloatingTextsHandle, FloatingTextsProps>(
-    ({ shouldStopMovement }, ref) => {
-      const [, getTimeScale] = useSimulationClock(shouldStopMovement);
-      const slotsRef = useRef<Slot[]>([]);
-      const [isReady, setIsReady] = useState(false);
+  forwardRef<FloatingTextsHandle>((_props, ref) => {
+    const { getTimeScale } = useSimulationClock();
+    const slotsRef = useRef<Slot[]>([]);
+    const [isReady, setIsReady] = useState(false);
 
-      useEffect(() => {
-        const slots: Slot[] = [];
-        for (let i = 0; i < POOL_SIZE; i++) {
-          slots.push(createSlot());
+    useEffect(() => {
+      const slots: Slot[] = [];
+      for (let i = 0; i < POOL_SIZE; i++) {
+        slots.push(createSlot());
+      }
+      slotsRef.current = slots;
+      setIsReady(true);
+      return () => {
+        for (const slot of slots) {
+          slot.material.dispose();
+          slot.texture.dispose();
         }
-        slotsRef.current = slots;
-        setIsReady(true);
-        return () => {
-          for (const slot of slots) {
-            slot.material.dispose();
-            slot.texture.dispose();
-          }
-          slotsRef.current = [];
-        };
-      }, []);
+        slotsRef.current = [];
+      };
+    }, []);
 
-      useImperativeHandle(ref, () => ({
-        spawn(text, position, color) {
-          const slots = slotsRef.current;
-          let slot = slots.find((s) => !s.active);
-          if (!slot && slots.length > 0) {
-            slot = slots.reduce((oldest, s) => (s.age > oldest.age ? s : oldest));
-          }
-          if (!slot) return;
-
-          drawText(slot.ctx, text, color);
-          slot.texture.needsUpdate = true;
-          slot.age = 0;
-          slot.baseX = position[0];
-          slot.baseY = position[1];
-          slot.baseZ = position[2];
-          slot.active = true;
-          slot.sprite.visible = true;
-          slot.sprite.position.set(position[0], position[1], position[2]);
-          slot.sprite.scale.set(SPRITE_HEIGHT * SPRITE_ASPECT, SPRITE_HEIGHT, 1);
-          slot.material.opacity = 1;
-        },
-      }));
-
-      useFrame((_, delta) => {
-        const scale = getTimeScale();
-        for (const slot of slotsRef.current) {
-          if (!slot.active) continue;
-          slot.age += delta * scale;
-          const progress = Math.min(slot.age / DURATION_SECONDS, 1);
-          if (progress >= 1) {
-            slot.active = false;
-            slot.sprite.visible = false;
-            slot.material.opacity = 0;
-            continue;
-          }
-          slot.sprite.position.set(
-            slot.baseX,
-            slot.baseY + progress * RISE_PER_SECOND * DURATION_SECONDS,
-            slot.baseZ
-          );
-          const fade = progress < 0.25 ? 1 : 1 - (progress - 0.25) / 0.75;
-          slot.material.opacity = fade;
+    useImperativeHandle(ref, () => ({
+      spawn(text, position, color) {
+        const slots = slotsRef.current;
+        let slot = slots.find((s) => !s.active);
+        if (!slot && slots.length > 0) {
+          slot = slots.reduce((oldest, s) => (s.age > oldest.age ? s : oldest));
         }
-      });
+        if (!slot) return;
 
-      if (!isReady) return null;
+        drawText(slot.ctx, text, color);
+        slot.texture.needsUpdate = true;
+        slot.age = 0;
+        slot.baseX = position[0];
+        slot.baseY = position[1];
+        slot.baseZ = position[2];
+        slot.active = true;
+        slot.sprite.visible = true;
+        slot.sprite.position.set(position[0], position[1], position[2]);
+        slot.sprite.scale.set(SPRITE_HEIGHT * SPRITE_ASPECT, SPRITE_HEIGHT, 1);
+        slot.material.opacity = 1;
+      },
+    }));
 
-      return (
-        <group>
-          {slotsRef.current.map((slot, index) => (
-            <primitive key={index} object={slot.sprite} />
-          ))}
-        </group>
-      );
-    }
-  )
+    useFrame((_, delta) => {
+      const scale = getTimeScale();
+      for (const slot of slotsRef.current) {
+        if (!slot.active) continue;
+        slot.age += delta * scale;
+        const progress = Math.min(slot.age / DURATION_SECONDS, 1);
+        if (progress >= 1) {
+          slot.active = false;
+          slot.sprite.visible = false;
+          slot.material.opacity = 0;
+          continue;
+        }
+        slot.sprite.position.set(
+          slot.baseX,
+          slot.baseY + progress * RISE_PER_SECOND * DURATION_SECONDS,
+          slot.baseZ
+        );
+        const fade = progress < 0.25 ? 1 : 1 - (progress - 0.25) / 0.75;
+        slot.material.opacity = fade;
+      }
+    });
+
+    if (!isReady) return null;
+
+    return (
+      <group>
+        {slotsRef.current.map((slot, index) => (
+          <primitive key={index} object={slot.sprite} />
+        ))}
+      </group>
+    );
+  })
 );
 
 FloatingTexts.displayName = "FloatingTexts";

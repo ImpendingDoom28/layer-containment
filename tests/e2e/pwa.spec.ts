@@ -17,6 +17,22 @@ test.describe("PWA", () => {
     expect(text).toContain('name="theme-color"');
   });
 
+  test("index.html enables the full-bleed PWA viewport", async ({
+    request,
+  }) => {
+    const html = await request.get("/");
+    const text = await html.text();
+
+    // Full-bleed standalone PWA: the viewport extends into the safe areas
+    // (viewport-fit=cover) instead of reserving a black status-bar band,
+    // which is what left a huge black bar at the top and clipped the bottom
+    // of the HUD on iOS landscape.
+    expect(text).toContain("viewport-fit=cover");
+    // black-translucent lets the content draw underneath the status bar.
+    expect(text).toContain('name="apple-mobile-web-app-status-bar-style"');
+    expect(text).toContain('content="black-translucent"');
+  });
+
   test("manifest lists app identity and icons", async ({ request }) => {
     const response = await request.get("/manifest.webmanifest");
     expect(response.ok()).toBe(true);

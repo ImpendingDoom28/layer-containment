@@ -3,10 +3,18 @@ import ReactThreeTestRenderer from "@react-three/test-renderer";
 import { describe, expect, it } from "vitest";
 import type { Sprite } from "three";
 
+import { SimulationClockProvider } from "../../../core/contexts/SimulationClockContext";
+import { useGameStore } from "../../../core/stores/useGameStore";
+import { useSettingsStore } from "../../../core/stores/useSettingsStore";
 import { FloatingTexts, type FloatingTextsHandle } from "./FloatingTexts";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+
+// The live clock derives `shouldStopMovement` from the stores; a visible
+// "playing" world keeps the time scale at 1 so the text keeps rising.
+useGameStore.setState({ gameStatus: "playing", isPageVisible: true });
+useSettingsStore.setState({ pauseWhenTabHidden: false });
 
 const advance = async (
   renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>,
@@ -29,7 +37,9 @@ describe("FloatingTexts", () => {
   it("spawns a Sprite that rises, fades out, and recycles", async () => {
     const ref = createRef<FloatingTextsHandle>();
     const renderer = await ReactThreeTestRenderer.create(
-      <FloatingTexts ref={ref} shouldStopMovement={false} />
+      <SimulationClockProvider>
+        <FloatingTexts ref={ref} />
+      </SimulationClockProvider>
     );
 
     try {
@@ -62,7 +72,9 @@ describe("FloatingTexts", () => {
   it("reuses a recycled slot when the pool is exhausted", async () => {
     const ref = createRef<FloatingTextsHandle>();
     const renderer = await ReactThreeTestRenderer.create(
-      <FloatingTexts ref={ref} shouldStopMovement={false} />
+      <SimulationClockProvider>
+        <FloatingTexts ref={ref} />
+      </SimulationClockProvider>
     );
 
     try {

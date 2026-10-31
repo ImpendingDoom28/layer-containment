@@ -3,20 +3,20 @@ import { useFrame } from "@react-three/fiber";
 import type { Mesh } from "three";
 import type { Entity } from "koota";
 
+import { useSimulationClock } from "../../../core/contexts/SimulationClockContext";
 import type { HealPulseConfig } from "../../../core/types/game";
 import { EnemyState } from "../../../core/ecs/traits/enemy";
 import { didHealPulseJustReschedule } from "../../../utils/enemyMedicPulse";
 import { getCssColorValue } from "../../ui/lib/cssUtils";
 
 import { EmissiveTorus } from "./primitives/EmissiveTorus";
-import type { EnemyAttachedEffectProps } from "./types";
 import {
   MEDIC_BURST_BASE_RING_MAJOR_RADIUS,
   applyDualRingBurst,
   getMedicHealBurstSpec,
 } from "./utils/dualRingBurst";
 
-type MedicHealBurstEffectProps = EnemyAttachedEffectProps & {
+type MedicHealBurstEffectProps = {
   entity: Entity;
   healPulse: HealPulseConfig;
   color: string;
@@ -25,7 +25,8 @@ type MedicHealBurstEffectProps = EnemyAttachedEffectProps & {
 const BURST_DURATION = 0.45;
 
 export const MedicHealBurstEffect: FC<MedicHealBurstEffectProps> = memo(
-  ({ entity, healPulse, getTimeScale, color }) => {
+  ({ entity, healPulse, color }) => {
+    const { getTimeScale } = useSimulationClock();
     const ring1Ref = useRef<Mesh>(null);
     const ring2Ref = useRef<Mesh>(null);
     const prevNextAtRef = useRef<number | undefined>(undefined);

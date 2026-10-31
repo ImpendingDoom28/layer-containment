@@ -106,6 +106,7 @@ const ruValues = {
     statSpent: "Потрачено",
     statKills: "Убийств",
     playAgain: "Играть снова",
+    nextLevel: "Следующий уровень",
     goToMainMenu: "В главное меню",
   },
   almanac: {

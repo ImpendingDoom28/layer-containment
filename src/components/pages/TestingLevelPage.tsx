@@ -8,6 +8,7 @@ import { TestingLevelScene } from "../scenes/testingLevel/TestingLevelScene";
 import { GAME_CANVAS_GL, GAME_CANVAS_STYLE } from "../../constants/canvas";
 import { useGameSystem } from "../../core/hooks/useGameSystem";
 import { useLoadingTransition } from "../../core/hooks/useLoadingTransition";
+import { SimulationClockProvider } from "../../core/contexts/SimulationClockContext";
 import { PageWrapper } from "./PageWrapper";
 
 type TestingLevelPageProps = {
@@ -45,9 +46,11 @@ export const TestingLevelPage = ({ onBackToMenu }: TestingLevelPageProps) => {
         style={GAME_CANVAS_STYLE}
         gl={GAME_CANVAS_GL}
       >
-        <Suspense fallback={null}>
-          {isGameConfigLoaded ? <TestingLevelScene /> : null}
-        </Suspense>
+        <SimulationClockProvider>
+          <Suspense fallback={null}>
+            {isGameConfigLoaded ? <TestingLevelScene /> : null}
+          </Suspense>
+        </SimulationClockProvider>
       </Canvas>
 
       {isGameConfigLoaded ? (

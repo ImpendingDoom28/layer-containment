@@ -24,6 +24,8 @@ type FlatFieldToSphereResult = {
 };
 
 const scratchDirection = new Vector3();
+const scratchForward = new Vector3();
+const scratchRight = new Vector3();
 
 export const flatFieldToSphereSurface = (
   worldX: number,
@@ -86,7 +88,11 @@ export const flatCombatPointToWorldPosition = (
   radius: number,
   out?: Vector3
 ): Vector3 => {
-  const { surfacePoint, normal } = flatFieldToSphereSurface(flatX, flatZ, radius);
+  const { surfacePoint, normal } = flatFieldToSphereSurface(
+    flatX,
+    flatZ,
+    radius
+  );
   const result = out ?? new Vector3();
   return result.copy(surfacePoint).addScaledVector(normal, offsetAlongNormal);
 };
@@ -147,6 +153,52 @@ export const getQuaternionForPathStrip = (
   const m = new Matrix4();
   m.makeBasis(forward, normal, right);
   return (out ?? new Quaternion()).setFromRotationMatrix(m);
+};
+
+/**
+ * Orientation for a group whose local +x axis should point along the flat
+ * direction `flatDirX`/`flatDirZ` tangent to the planet surface at `normal`,
+ * with the local +y axis as that normal. Same basis convention as
+ * `getQuaternionForPathStrip`, but built from a precomputed normal and
+ * reusing a caller-provided matrix, so it is allocation-free for per-frame
+ * use (the Enemy render component orients each enemy this way).
+ */
+export const getFacingQuaternionOnSphere = (
+  flatDirX: number,
+  flatDirZ: number,
+  normal: Vector3,
+  matrix: Matrix4,
+  out: Quaternion
+): Quaternion => {
+  const dx = Math.hypot(flatDirX, flatDirZ) < 1e-12 ? 1 : flatDirX;
+  const dz = Math.hypot(flatDirX, flatDirZ) < 1e-12 ? 0 : flatDirZ;
+
+  const forward = scratchForward.set(dx, 0, dz);
+  forward.addScaledVector(normal, -normal.dot(forward));
+  if (forward.lengthSq() < 1e-12) {
+    forward.set(1, 0, 0);
+    forward.addScaledVector(normal, -normal.dot(forward));
+  }
+  forward.normalize();
+
+  const right = scratchRight.crossVectors(forward, normal).normalize();
+
+  matrix.makeBasis(forward, normal, right);
+  return out.setFromRotationMatrix(matrix);
+};
+
+/**
+ * Local quaternion for a child (e.g. the enemy health bar) that should face
+ * the camera: childWorldQ must equal cameraWorldQ, and childWorldQ =
+ * parentWorldQ * localQ, so localQ = parentWorldQ^-1 * cameraWorldQ.
+ * Allocation-free per-frame use via caller-provided `out`.
+ */
+export const getBillboardLocalQuaternion = (
+  parentWorldQuat: Quaternion,
+  cameraWorldQuat: Quaternion,
+  out: Quaternion
+): Quaternion => {
+  return out.copy(parentWorldQuat).invert().multiply(cameraWorldQuat);
 };
 
 export const flatFieldToSphereOverlayPlanePose = (

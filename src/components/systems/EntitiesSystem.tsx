@@ -39,7 +39,6 @@ import {
   useGameStore,
 } from "../../core/stores/useGameStore";
 import { IsEnemy } from "../../core/ecs/traits/enemy";
-import { useSimulationClock } from "../../core/hooks/useSimulationClock";
 
 type EntitiesSystemProps = {
   onEnemyReachEnd: ((enemyId: number) => void) | null;
@@ -52,7 +51,6 @@ type EntitiesSystemProps = {
   onSellTower: ((towerId: number) => void) | null;
   hoveredTile: TileData | null;
   selectedTower: TowerInstance | null;
-  shouldStopMovement: boolean;
 };
 
 export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
@@ -63,7 +61,6 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
     onSellTower,
     hoveredTile,
     selectedTower,
-    shouldStopMovement,
   }) => {
     const enemyEntities = useQuery(IsEnemy);
     const selectedTowerTypeToPlace = useGameStore(
@@ -80,9 +77,6 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
     const pathWaypoints = useLevelStore(pathWaypointsSelector);
     const tileSize = useGameStore(tileSizeSelector);
     const pathWidth = useGameStore(pathWidthSelector);
-    const [getSimulationTime, getTimeScale] = useSimulationClock(
-      shouldStopMovement
-    );
 
     // Built from stable level data (not `useLevelSystem`, which subscribes to
     // towers/money and would re-render this whole subtree on every shot/kill)
@@ -108,8 +102,6 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
       maxProjectiles: 500,
       maxBeams: 50,
       projectileSize: 0.1,
-      getSimulationTime,
-      getTimeScale,
       onHit: onProjectileHit,
       onRemove: onProjectileRemove,
     });
@@ -134,10 +126,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
 
     return (
       <>
-        <ApplySlowSystem
-          shouldStopMovement={shouldStopMovement}
-          getSimulationTime={getSimulationTime}
-        />
+        <ApplySlowSystem />
 
         {/*
          * Death is settled in the shared scene system (not per scene) so that
@@ -154,17 +143,9 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
          */}
         <EnemySplitSystem />
 
-        <EnemyMovementSystem
-          shouldStopMovement={shouldStopMovement}
-          getSimulationTime={getSimulationTime}
-          getTimeScale={getTimeScale}
-          onEnemyReachEnd={onEnemyReachEnd}
-        />
+        <EnemyMovementSystem onEnemyReachEnd={onEnemyReachEnd} />
 
-        <MedicHealPulseSystem
-          shouldStopMovement={shouldStopMovement}
-          getSimulationTime={getSimulationTime}
-        />
+        <MedicHealPulseSystem />
 
         {buildings.map((building) => (
           <Building key={building.id} building={building} />
@@ -176,12 +157,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
 
         <group name="enemies">
           {enemyEntities.map((entity) => (
-            <Enemy
-              key={entity}
-              entity={entity}
-              getSimulationTime={getSimulationTime}
-              getTimeScale={getTimeScale}
-            />
+            <Enemy key={entity} entity={entity} />
           ))}
         </group>
 
@@ -195,7 +171,6 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
           selectedTower={selectedTower}
           selectedTowerType={selectedTowerTypeToPlace}
           hoveredTilePlacementState={hoveredTilePlacementState}
-          getSimulationTime={getSimulationTime}
         />
 
         <EffectSystem />

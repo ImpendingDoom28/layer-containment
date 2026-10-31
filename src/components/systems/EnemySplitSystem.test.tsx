@@ -15,6 +15,7 @@ import { getEnemySnapshots } from "../../core/ecs/selectors/enemySnapshots";
 import { splitRequest } from "../../core/ecs/traits/split";
 import { testWorld } from "../../core/ecs/world";
 import { EntityIdProvider } from "../../core/contexts/EntityIdContext";
+import { SimulationClockProvider } from "../../core/contexts/SimulationClockContext";
 import { useGameStore } from "../../core/stores/useGameStore";
 import { useLevelStore } from "../../core/stores/useLevelStore";
 import type { Enemy, EnemyConfig, EnemyType } from "../../core/types/game";
@@ -67,7 +68,6 @@ const entitiesSystemProps = {
   onSellTower: null,
   hoveredTile: null,
   selectedTower: null,
-  shouldStopMovement: false,
 };
 
 describe("EnemySplitSystem (death -> split flow)", () => {
@@ -101,7 +101,9 @@ describe("EnemySplitSystem (death -> split flow)", () => {
     ReactThreeTestRenderer.create(
       <WorldProvider world={testWorld}>
         <EntityIdProvider>
-          <EntitiesSystem {...entitiesSystemProps} />
+          <SimulationClockProvider>
+            <EntitiesSystem {...entitiesSystemProps} />
+          </SimulationClockProvider>
         </EntityIdProvider>
       </WorldProvider>
     );

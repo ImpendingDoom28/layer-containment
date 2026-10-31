@@ -6,6 +6,7 @@ import { useGameStore } from "../../stores/useGameStore";
 import type { Enemy, TowerType } from "../../types/game";
 import { GameEvent } from "../../types/enums/events";
 import { gameEvents } from "../../../utils/eventEmitter";
+import { getPathDirection } from "../../../utils/pathUtils";
 import {
   IsStats,
   damageDealtRequest,
@@ -21,6 +22,7 @@ import {
   type EnemyStateData,
 } from "../traits/enemy";
 import { Position, type PositionData } from "../traits/position";
+import { FacingDirection } from "../traits/facing";
 import { splitRequest } from "../traits/split";
 import { isBase } from "../traits/base";
 import { damageRequest } from "../traits/damage";
@@ -74,6 +76,14 @@ const enemyToMotion = (enemyData: Enemy): EnemyMotionData => ({
   lastRegenTick: -1,
   hasReachedEnd: false,
 });
+
+const enemyToFacing = (enemyData: Enemy): { x: number; z: number } => {
+  // Face the direction of travel at the spawn point so every enemy — whatever
+  // its type — spawns looking down the path. The level's waypoint array is
+  // read here; the movement system refreshes this as the enemy turns corners.
+  const path = useLevelStore.getState().pathWaypoints[enemyData.pathIndex];
+  return getPathDirection(path, enemyData.pathProgress);
+};
 
 const enemyToPosition = (enemyData: Enemy): PositionData => ({
   x: enemyData.x,
@@ -157,10 +167,17 @@ export const enemyActions = createActions((world) => ({
       existingEntity.destroy();
     }
 
-    const entity = world.spawn(IsEnemy, EnemyState, EnemyMotion, Position);
+    const entity = world.spawn(
+      IsEnemy,
+      EnemyState,
+      EnemyMotion,
+      Position,
+      FacingDirection
+    );
     entity.set(EnemyState, enemyToState(enemyData));
     entity.set(EnemyMotion, enemyToMotion(enemyData));
     entity.set(Position, enemyToPosition(enemyData));
+    entity.set(FacingDirection, enemyToFacing(enemyData));
 
     enemyEntitiesById.set(enemyData.id, entity);
 

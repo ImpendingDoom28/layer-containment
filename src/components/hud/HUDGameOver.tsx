@@ -47,6 +47,11 @@ type HUDGameOverProps = {
   stats: RunStatsSnapshot;
   onRestart: () => void;
   onGoToMainMenu: () => void;
+  /**
+   * Starts the level after the current one. Offered on a win only when the
+   * caller supplies a handler (i.e. the current level is not the last one).
+   */
+  onNextLevel?: () => void | Promise<void>;
 };
 
 export const HUDGameOver: FC<HUDGameOverProps> = ({
@@ -57,6 +62,7 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
   stats,
   onRestart,
   onGoToMainMenu,
+  onNextLevel,
 }) => {
   const { t } = useTranslation();
 
@@ -283,7 +289,19 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
           <UIButton onClick={onGoToMainMenu} variant={"ghost"}>
             {t("gameOver.goToMainMenu")}
           </UIButton>
-          <UIButton onClick={onRestart}>{t("gameOver.playAgain")}</UIButton>
+          {/* "Next Level" takes the primary slot on a win; "Play Again" steps
+              back to outline so there is a single clear call to action. */}
+          <UIButton
+            onClick={onRestart}
+            variant={isWin && onNextLevel ? "outline" : "default"}
+          >
+            {t("gameOver.playAgain")}
+          </UIButton>
+          {isWin && onNextLevel && (
+            <UIButton onClick={() => void onNextLevel()}>
+              {t("gameOver.nextLevel")}
+            </UIButton>
+          )}
         </UICardFooter>
       </UICard>
     </HUDOverlay>

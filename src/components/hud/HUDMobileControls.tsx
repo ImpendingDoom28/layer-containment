@@ -3,17 +3,10 @@ import {
   useRef,
   type FC,
   type PointerEvent,
-  type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-} from "lucide-react";
-
+import { Icon, type IconName } from "../ui/Icon";
 import {
   CAMERA_MOVE_BINDINGS,
   type CameraMove,
@@ -49,13 +42,13 @@ const DPAD_CELLS: (CameraMove | null)[] = [
   "down", // 3
 ];
 
-const ICONS: Record<CameraMove, ReactNode> = {
-  forward: <ChevronUp />,
-  backward: <ChevronDown />,
-  left: <ChevronLeft />,
-  right: <ChevronRight />,
-  up: <ChevronUp />,
-  down: <ChevronDown />,
+const ICONS: Record<CameraMove, IconName> = {
+  forward: "ChevronUp",
+  backward: "ChevronDown",
+  left: "ChevronLeft",
+  right: "ChevronRight",
+  up: "ChevronUp",
+  down: "ChevronDown",
 };
 
 // Rotation joystick geometry. The knob is clamped to a circle so the drag
@@ -265,7 +258,7 @@ export const HUDMobileControls: FC = () => {
                   "flex h-11 w-11 touch-none select-none items-center justify-center rounded-none border border-border bg-card/80 text-foreground backdrop-blur-sm active:bg-primary/20 disabled:opacity-40 focus-visible:ring-1 focus-visible:ring-ring"
                 )}
               >
-                {ICONS[move]}
+                <Icon name={ICONS[move]} size={24} />
               </button>
             )
           )}

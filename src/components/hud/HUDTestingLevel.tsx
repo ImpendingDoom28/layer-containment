@@ -1,7 +1,7 @@
 import { FC } from "react";
-import { ChevronLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { Icon } from "../ui/Icon";
 import { HUDWrapper } from "./HUDWrapper";
 import { UIButton } from "../ui/buttons/UIButton";
 import { UITypography } from "../ui/UITypography";
@@ -30,7 +30,7 @@ export const HUDTestingLevel: FC<HUDTestingLevelProps> = ({ onBackToGame }) => {
             aria-label={t("testingLevel.backToMenu")}
             className="bg-card shadow-2xl"
           >
-            <ChevronLeft />
+            <Icon name="ChevronLeft" />
           </UIButton>
 
           <div className="max-w-xs bg-card/90 p-4 shadow-2xl">

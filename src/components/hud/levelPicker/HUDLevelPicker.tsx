@@ -1,7 +1,7 @@
 import { FC, useEffect, useState } from "react";
-import { ArrowLeft, Radio } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { Icon } from "../../ui/Icon";
 import {
   PLAYABLE_LEVEL_IDS,
   type PlayableLevelId,
@@ -83,7 +83,7 @@ export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
       <UICardHeader>
         <UICardTitle>
           <UIButton onClick={onBack} variant="ghost" size="icon">
-            <ArrowLeft />
+            <Icon name="ArrowLeft" />
           </UIButton>
           <UITypography variant="h4">{t("menu.deploy")}</UITypography>
         </UICardTitle>
@@ -137,9 +137,11 @@ export const HUDLevelPicker: FC<HUDLevelPickerProps> = ({
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <UICardTitle className="flex items-center gap-2 p-0">
-                      <Radio
-                        className="size-4 shrink-0 text-primary"
-                        aria-hidden
+                      <Icon
+                        name="Radio"
+                        color="primary"
+                        size={16}
+                        className="shrink-0"
                       />
                       <UITypography
                         variant="medium"

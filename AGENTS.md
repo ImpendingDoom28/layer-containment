@@ -26,6 +26,11 @@
 - Remove unused imports after changes.
 - Do NOT run build commands or `npx tsc --noEmit` (assume the dev server is running).
 
+## Icons
+- Icons are static `.svg` assets in `src/components/ui/assets/icons`, rendered through `<img>` via `src/components/ui/Icon.tsx` — never React icon components or `lucide-react` (inline SVGs cost the browser real rendering work; `<img>` icons are pre-rasterized, inlined as data URLs, and skip React reconciliation).
+- To add or change an icon, edit the `ICONS`/`COLOR_VARIANTS` maps in `scripts/generate-icon-svgs.mjs` and run `node scripts/generate-icon-svgs.mjs` (it needs `lucide-react` installed). `<img>`-loaded SVGs cannot inherit CSS `color`, so each color is a pre-colored variant file (`Icon name="Zap" color="yellow"`) — never `currentColor`.
+- Sizes go through the `size` prop (px); inside `UIButton`, an `<img>` without an explicit `size-*` class gets the button's default icon size (the CSS targets `_img`, not `_svg`).
+
 ## React Three Fiber
 - When working on three.js/R3F features, follow `.agents/rules/react-three-fiber.md` (share geometries/materials, avoid unnecessary mounts).
 

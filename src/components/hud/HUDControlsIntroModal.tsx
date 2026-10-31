@@ -1,8 +1,7 @@
 import { memo, type FC } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Keyboard } from "lucide-react";
-
+import { Icon } from "../ui/Icon";
 import { formatKeyCode } from "../../core/keybindings";
 import {
   keybindingsSelector,
@@ -93,7 +92,7 @@ export const HUDControlsIntroModal: FC<HUDControlsIntroModalProps> = memo(
       <UIModal
         open={open}
         title={t("controlsIntro.title")}
-        icon={<Keyboard className="size-4 text-primary" />}
+        icon={<Icon name="Keyboard" color="primary" size={16} />}
         className="max-w-md"
         dismissible={false}
         footer={

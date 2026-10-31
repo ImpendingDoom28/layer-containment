@@ -1,15 +1,7 @@
 import { useRef, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  AlertCircle,
-  CheckCircle2,
-  Download,
-  FileUp,
-  Pencil,
-  Route,
-} from "lucide-react";
-
+import { Icon, type IconColor, type IconName } from "@/components/ui/Icon";
 import {
   UIAccordionContent,
   UIAccordionItem,
@@ -45,22 +37,25 @@ const getPublishState = (
 
 const PUBLISH_CONFIG: Record<
   LevelEditorPublishState,
-  { label: "editor.drafting" | "editor.needsFixes" | "editor.readyToExport"; className: string; icon: typeof Pencil }
+  { label: "editor.drafting" | "editor.needsFixes" | "editor.readyToExport"; className: string; icon: IconName; iconColor: IconColor }
 > = {
   drafting: {
     label: "editor.drafting",
     className: "text-muted-foreground",
-    icon: Pencil,
+    icon: "Pencil",
+    iconColor: "muted",
   },
   needsFixes: {
     label: "editor.needsFixes",
     className: "text-amber-400",
-    icon: AlertCircle,
+    icon: "AlertCircle",
+    iconColor: "amber",
   },
   ready: {
     label: "editor.readyToExport",
     className: "text-emerald-400",
-    icon: CheckCircle2,
+    icon: "CheckCircle2",
+    iconColor: "emerald",
   },
 };
 
@@ -84,7 +79,6 @@ export const LevelEditorPublishSection = () => {
 
   const publishState = getPublishState(validationIssues, hasUnsavedChanges);
   const config = PUBLISH_CONFIG[publishState];
-  const StatusIcon = config.icon;
 
   const visibleIssues = showAllIssues
     ? validationIssues
@@ -172,7 +166,7 @@ export const LevelEditorPublishSection = () => {
       <UIAccordionTrigger>{t("editor.publish")}</UIAccordionTrigger>
       <UIAccordionContent className="flex flex-col gap-3">
         <EditorSection className="flex items-center gap-2">
-          <StatusIcon className={`size-4 shrink-0 ${config.className}`} />
+          <Icon name={config.icon} color={config.iconColor} size={16} className="shrink-0" />
           <UITypography variant="medium" className={config.className}>
             {t(config.label)}
           </UITypography>
@@ -223,7 +217,7 @@ export const LevelEditorPublishSection = () => {
             {t("editor.validate")}
           </UIButton>
           <UIButton onClick={onDownloadJson} size="sm">
-            <Download />
+            <Icon name="Download" size={14} />
             {t("editor.exportJson")}
           </UIButton>
         </div>
@@ -233,7 +227,7 @@ export const LevelEditorPublishSection = () => {
             {t("editor.new")}
           </UIButton>
           <UIButton onClick={onLoadSample} variant="outline" size="xs">
-            <Route />
+            <Icon name="Route" size={12} />
             {t("editor.sample")}
           </UIButton>
           <UIButton
@@ -241,7 +235,7 @@ export const LevelEditorPublishSection = () => {
             variant="outline"
             size="xs"
           >
-            <FileUp />
+            <Icon name="FileUp" size={12} />
             {t("editor.import")}
           </UIButton>
           <input

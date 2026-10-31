@@ -44,12 +44,7 @@ import {
 import { getPositionAlongMultiplePaths } from "../../utils/pathUtils";
 import { GameEvent } from "../../core/types/enums/events";
 import type { TilePlacementState } from "../../utils/tilePlacement";
-import { getShouldStopMovement } from "../../core/getShouldStopMovement";
-import {
-  pauseWhenTabHiddenSelector,
-  useSettingsStore,
-} from "../../core/stores/useSettingsStore";
-import type { GetSimulationTime } from "../../core/hooks/useSimulationClock";
+import { useSimulationClock } from "../../core/contexts/SimulationClockContext";
 
 // The base (`EndBuilding`) sits on a round platform of radius 0.4, so its
 // ground footprint half-extent is 0.4.
@@ -65,7 +60,6 @@ type TowerSystemProps = {
   hoveredTile: TileData | null;
   hoveredTilePlacementState: TilePlacementState | null;
   selectedTowerType: TowerType | null;
-  getSimulationTime: GetSimulationTime;
 };
 
 export const TowerSystem: FC<TowerSystemProps> = memo(
@@ -77,8 +71,9 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     hoveredTile,
     selectedTowerType,
     hoveredTilePlacementState,
-    getSimulationTime,
   }) => {
+    const { shouldStopMovement, getSimulationTime } = useSimulationClock();
+
     // Fire timing is a pure simulation concern, so it lives in a ref instead
     // of the zustand `towers` array: updating `lastFireTime` no longer
     // re-renders the 150-tower list and the O(towers^2) combat-stats memo on
@@ -131,8 +126,6 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
         fireTimesRef.current.clear();
       }
     }, [isLevelConfigLoaded]);
-
-    const pauseWhenTabHidden = useSettingsStore(pauseWhenTabHiddenSelector);
 
     const world = useWorld();
 
@@ -188,20 +181,8 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     ]);
 
     useFrame((state) => {
-      const { gameStatus, isPageVisible } = useGameStore.getState();
-      const shouldDisableControls =
-        gameStatus === "gameOver" ||
-        gameStatus === "won" ||
-        gameStatus === "gameMenu";
-      if (
-        getShouldStopMovement(
-          gameStatus,
-          shouldDisableControls,
-          isPageVisible,
-          pauseWhenTabHidden
-        )
-      )
-        return;
+      const { gameStatus } = useGameStore.getState();
+      if (shouldStopMovement) return;
       if (gameStatus !== "playing" && gameStatus !== "menu") return;
 
       // Fire timing runs on the pause-adjusted simulation clock, so a

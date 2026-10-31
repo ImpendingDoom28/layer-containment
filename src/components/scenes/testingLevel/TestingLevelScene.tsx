@@ -31,22 +31,12 @@ import {
 } from "../../../core/stores/useGameStore";
 import { useTileOccupancyMasks } from "../../../core/hooks/utils/useTileOccupancyMasks";
 import { IsEnemy } from "../../../core/ecs/traits/enemy";
-import type {
-  GetSimulationTime,
-  GetTimeScale,
-} from "../../../core/hooks/useSimulationClock";
+import { SimulationClockProvider } from "../../../core/contexts/SimulationClockContext";
 
 // The tiles are purely visual here (no placement), so stable no-ops keep the
 // memoized `Grid` from re-rendering on unrelated store updates.
 const noopPlaceTower = () => undefined;
 const noopSetHoveredTile = () => undefined;
-
-// The showcase is a frozen snapshot: enemies and towers must not move, fire,
-// or animate, so they are fed a clock that is always at zero. This keeps the
-// Enemy component's per-frame effects (hit-flash decay, ring rotation, medic
-// pulses) static while the bodies still track their (unmoved) ECS positions.
-const getFrozenSimulationTime: GetSimulationTime = () => 0;
-const getFrozenTimeScale: GetTimeScale = () => 0;
 
 // Reinforcements showcase portals: the level's own `Path` portal always renders
 // at tier 0 (no reinforcements picked for the run), so the upgrade's visual is
@@ -126,16 +116,17 @@ export const TestingLevelScene: FC = () => {
         <Tower key={tower.id} tower={tower} />
       ))}
 
-      <group name="enemies">
-        {enemyEntities.map((entity) => (
-          <Enemy
-            key={entity}
-            entity={entity}
-            getSimulationTime={getFrozenSimulationTime}
-            getTimeScale={getFrozenTimeScale}
-          />
-        ))}
-      </group>
+      {/* The showcase is a frozen snapshot: enemies must not move, fire, or
+          animate, so they read a frozen clock — while the decorative
+          reinforcement portals outside it keep animating on the scene's live
+          clock. */}
+      <SimulationClockProvider frozen>
+        <group name="enemies">
+          {enemyEntities.map((entity) => (
+            <Enemy key={entity} entity={entity} />
+          ))}
+        </group>
+      </SimulationClockProvider>
 
       <StaticProjectiles />
 

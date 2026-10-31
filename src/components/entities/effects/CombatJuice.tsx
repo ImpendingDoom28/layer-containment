@@ -24,7 +24,6 @@ type DeathBurst = {
 };
 
 type CombatJuiceProps = {
-  shouldStopMovement: boolean;
   /**
    * Show the gold reward float on kills. Off in the main menu, which has no
    * gold display — the death burst still plays.
@@ -38,7 +37,7 @@ type CombatJuiceProps = {
  * positions are flat-field coordinates, mapped onto the planet surface here.
  */
 export const CombatJuice = memo(
-  ({ shouldStopMovement, showRewardText = true }: CombatJuiceProps) => {
+  ({ showRewardText = true }: CombatJuiceProps) => {
     const floatingTextsRef = useRef<FloatingTextsHandle>(null);
     const [bursts, setBursts] = useState<DeathBurst[]>([]);
     const { getNextId: getNextBurstId } = useNextId();
@@ -92,7 +91,7 @@ export const CombatJuice = memo(
 
     return (
       <>
-        <FloatingTexts ref={floatingTextsRef} shouldStopMovement={shouldStopMovement} />
+        <FloatingTexts ref={floatingTextsRef} />
         {bursts.map((burst) => (
           <Effect
             key={burst.id}

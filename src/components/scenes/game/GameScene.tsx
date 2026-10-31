@@ -45,7 +45,6 @@ import { Skybox } from "../shared/Skybox";
 type GameSceneProps = {
   placeTower: (gridX: number, gridZ: number, towerType: TowerType) => void;
   selectedTower: TowerInstance | null;
-  shouldStopMovement: boolean;
   shouldStopCamera: boolean;
   gameStatus: GameStatus;
   waveSystem: WaveSystem;
@@ -63,7 +62,6 @@ type GameSceneProps = {
 export const GameScene: React.FC<GameSceneProps> = ({
   placeTower,
   selectedTower,
-  shouldStopMovement,
   shouldStopCamera,
   gameStatus,
   waveSystem,
@@ -134,10 +132,9 @@ export const GameScene: React.FC<GameSceneProps> = ({
         onSellTower={onSellTower}
         hoveredTile={hoveredTile}
         selectedTower={selectedTower}
-        shouldStopMovement={shouldStopMovement}
       />
 
-      <CombatJuice shouldStopMovement={shouldStopMovement} />
+      <CombatJuice />
 
       <WaveLoopSystem waveSystem={waveSystem} />
 

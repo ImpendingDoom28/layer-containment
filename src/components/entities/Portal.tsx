@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { Color } from "three";
 import type { Group, Mesh, MeshStandardMaterial, Quaternion } from "three";
 
+import { useSimulationClock } from "../../core/contexts/SimulationClockContext";
 import { getCssColorValue } from "../ui/lib/cssUtils";
 
 // How far toward orange a fully stacked (tier 3) Reinforcements portal shifts.
@@ -32,13 +33,21 @@ export const Portal: FC<PortalProps> = memo(
     const particlesRef = useRef<(Mesh | null)[]>([]);
     const groupRef = useRef<Group>(null);
     const indicatorRefs = useRef<(Mesh | null)[]>([]);
+    const animTimeRef = useRef(0);
+
+    // The portal is decorative motion, so drive it with the shared
+    // pause-aware simulation clock: its rings, core pulse, and particles slow
+    // into stillness (and freeze) while the game is paused, matching the rest
+    // of the world.
+    const { getTimeScale } = useSimulationClock();
 
     useEffect(() => {
       particlesRef.current = Array.from({ length: 12 }, () => null);
     }, []);
 
-    useFrame((state) => {
-      const time = state.clock.elapsedTime;
+    useFrame((_, delta) => {
+      animTimeRef.current += delta * getTimeScale();
+      const time = animTimeRef.current;
 
       if (outerRingRef.current) {
         outerRingRef.current.rotation.y = time * 0.8;

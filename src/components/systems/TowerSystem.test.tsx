@@ -6,7 +6,7 @@ import { WorldProvider } from "koota/react";
 
 import { enemyActions } from "../../core/ecs/actions/enemyActions";
 import { testWorld } from "../../core/ecs/world";
-import { useSimulationClock } from "../../core/hooks/useSimulationClock";
+import { SimulationClockProvider } from "../../core/contexts/SimulationClockContext";
 import { useGameStore } from "../../core/stores/useGameStore";
 import { useLevelStore } from "../../core/stores/useLevelStore";
 import { useSettingsStore } from "../../core/stores/useSettingsStore";
@@ -38,22 +38,22 @@ const fireProjectile = vi.fn(
 const TowerHarness = () => {
   const clock = useThree((s) => s.clock) as unknown as { elapsedTime: number };
   sceneClock = clock;
-  const gameStatus = useGameStore((s) => s.gameStatus);
-  // Same derivation as GamePage → EntitiesSystem: movement (and the pause
-  // clock) stops when the game is paused.
-  const [getSimulationTime] = useSimulationClock(gameStatus === "paused");
 
+  // The provider derives `shouldStopMovement` from the game stores (the same
+  // derivation `useGameSystem` uses), so the tower's fire clock eases to stillness
+  // when the status flips to "paused" and resumes on "playing".
   return (
-    <TowerSystem
-      fireProjectile={fireProjectile}
-      selectedTower={null}
-      onTowerClick={null}
-      onSellTower={null}
-      hoveredTile={null}
-      hoveredTilePlacementState={null}
-      selectedTowerType={null}
-      getSimulationTime={getSimulationTime}
-    />
+    <SimulationClockProvider>
+      <TowerSystem
+        fireProjectile={fireProjectile}
+        selectedTower={null}
+        onTowerClick={null}
+        onSellTower={null}
+        hoveredTile={null}
+        hoveredTilePlacementState={null}
+        selectedTowerType={null}
+      />
+    </SimulationClockProvider>
   );
 };
 

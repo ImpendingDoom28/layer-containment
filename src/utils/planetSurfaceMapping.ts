@@ -187,6 +187,20 @@ export const getFacingQuaternionOnSphere = (
   return out.setFromRotationMatrix(matrix);
 };
 
+/**
+ * Local quaternion for a child (e.g. the enemy health bar) that should face
+ * the camera: childWorldQ must equal cameraWorldQ, and childWorldQ =
+ * parentWorldQ * localQ, so localQ = parentWorldQ^-1 * cameraWorldQ.
+ * Allocation-free per-frame use via caller-provided `out`.
+ */
+export const getBillboardLocalQuaternion = (
+  parentWorldQuat: Quaternion,
+  cameraWorldQuat: Quaternion,
+  out: Quaternion
+): Quaternion => {
+  return out.copy(parentWorldQuat).invert().multiply(cameraWorldQuat);
+};
+
 export const flatFieldToSphereOverlayPlanePose = (
   worldX: number,
   worldZ: number,

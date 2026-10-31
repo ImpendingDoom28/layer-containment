@@ -34,6 +34,7 @@ import {
 import { tileSizeSelector, useGameStore } from "../../core/stores/useGameStore";
 import {
   flatFieldToSphereSurface,
+  getBillboardLocalQuaternion,
   getFacingQuaternionOnSphere,
   getPlanetRadius,
   getSurfaceQuaternion,
@@ -286,15 +287,19 @@ export const Enemy: FC<EnemyProps> = memo(
         // reads the parent's world quaternion one frame stale).
         const bar = healthBarRef.current;
         if (bar) {
-          // Inner bar quaternion = cameraWorldQ * barWorldQ^-1, computed from
-          // the group's transform as it is being written this frame, so the
-          // bar is always exactly face-on (no one-frame lag).
+          // Face the bar on the camera: barWorldQ must equal cameraWorldQ, and
+          // barWorldQ = groupWorldQ * barLocalQ, so barLocalQ =
+          // groupWorldQ^-1 * cameraWorldQ. We derive it from the group's
+          // quaternion (already slerped this frame) rather than the bar's own
+          // world quaternion, which would fold the bar's previous rotation back
+          // in and never converge — that caused the per-frame jitter.
           state.camera.getWorldQuaternion(scratchCameraQuat.current);
-          bar.getWorldQuaternion(scratchBillboardQuat.current);
-          scratchBillboardQuat.current
-            .invert()
-            .premultiply(scratchCameraQuat.current);
-          bar.quaternion.copy(scratchBillboardQuat.current);
+          meshRef.current.getWorldQuaternion(scratchBillboardQuat.current);
+          getBillboardLocalQuaternion(
+            scratchBillboardQuat.current,
+            scratchCameraQuat.current,
+            bar.quaternion
+          );
         }
       }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Matrix4, Quaternion, Vector3 } from "three";
+import { Euler, Matrix4, Quaternion, Vector3 } from "three";
 
 import { tileToWorldCoordinate } from "./levelEditor";
 import {
@@ -7,6 +7,7 @@ import {
   GROUND_SIZE_RADIUS_FACTOR,
   flatFieldToSphereOverlayPlanePose,
   flatFieldToSphereSurface,
+  getBillboardLocalQuaternion,
   getFacingQuaternionOnSphere,
   getGridMaxTileTopWorldY,
   getPlanetRadius,
@@ -164,5 +165,37 @@ describe("planetSurfaceMapping", () => {
     const forward = new Vector3(1, 0, 0).applyQuaternion(out);
     expect(forward.dot(normal)).toBeCloseTo(0, 5);
     expect(forward.length()).toBeCloseTo(1, 5);
+  });
+
+  it("getBillboardLocalQuaternion orients a child face-on to the camera", () => {
+    // A parent group with an arbitrary rotation (as the enemy group gets).
+    const parent = new Quaternion().setFromEuler(new Euler(0.3, 0.7, -0.2));
+    // A camera world quaternion distinct from the parent's.
+    const camera = new Quaternion().setFromEuler(new Euler(-0.15, 0.4, 0.1));
+
+    const local = getBillboardLocalQuaternion(parent, camera, new Quaternion());
+
+    // The bar's world rotation (parent * local) must equal the camera's.
+    const barWorld = parent.clone().multiply(local);
+    expect(barWorld.dot(camera)).toBeCloseTo(1, 5);
+  });
+
+  it("getBillboardLocalQuaternion is stable across frames (no drift)", () => {
+    const parent = new Quaternion().setFromEuler(new Euler(0.3, 0.7, -0.2));
+    const camera = new Quaternion().setFromEuler(new Euler(-0.15, 0.4, 0.1));
+    const prior = new Quaternion();
+    const out = new Quaternion();
+
+    // With a fixed parent and camera, the bar's world rotation is the camera
+    // on every frame, regardless of the arbitrary rotation it held before —
+    // so it cannot accumulate per-frame error the way the old feedback-based
+    // math did. Each frame the bar "held" a different prior local rotation.
+    for (let frame = 0; frame < 5; frame++) {
+      prior.set(frame, frame * 0.1, frame * 0.2, 1).normalize();
+      out.copy(prior); // bar held `prior` from last frame
+      getBillboardLocalQuaternion(parent, camera, out);
+      const barWorld = parent.clone().multiply(out);
+      expect(barWorld.dot(camera)).toBeCloseTo(1, 5);
+    }
   });
 });

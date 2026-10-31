@@ -1,5 +1,10 @@
 import type { Enemy, Tower } from "./types/game";
-import { distance2D, findNearestEnemy } from "../utils/mathUtils";
+import {
+  distance2D,
+  findNearestEnemy,
+  segmentCrossesObstacles,
+  type LineOfSightObstacle,
+} from "../utils/mathUtils";
 
 export type ChainAdditionalHit = { enemyId: number; damage: number };
 
@@ -10,7 +15,8 @@ export const computeChainAdditionalHits = (
   baseDamage: number,
   towerRange: number,
   maxHops: number,
-  multiplierPerHop: number
+  multiplierPerHop: number,
+  obstacles: readonly LineOfSightObstacle[] = []
 ): ChainAdditionalHit[] => {
   const hitIds = new Set<number>([firstTarget.id]);
   let lastX = firstTarget.x;
@@ -22,9 +28,17 @@ export const computeChainAdditionalHits = (
     currentDamage *= multiplierPerHop;
     const candidates = enemies.filter((e) => {
       if (e.health <= 0 || hitIds.has(e.id)) return false;
-      const fromTower = distance2D(tower.x, tower.z, e.x, e.z) <= towerRange;
-      const fromLast = distance2D(lastX, lastZ, e.x, e.z) <= towerRange;
-      return fromTower || fromLast;
+      const inRange =
+        distance2D(tower.x, tower.z, e.x, e.z) <= towerRange ||
+        distance2D(lastX, lastZ, e.x, e.z) <= towerRange;
+      // The bolt travels from the previous hit to the candidate, so that is
+      // the segment that must be unobstructed (an enemy visible from the
+      // tower but hidden from the previous hit would be zapped through a
+      // building).
+      return (
+        inRange &&
+        !segmentCrossesObstacles(lastX, lastZ, e.x, e.z, obstacles)
+      );
     });
     const next = findNearestEnemy(candidates, lastX, lastZ);
     if (!next) break;

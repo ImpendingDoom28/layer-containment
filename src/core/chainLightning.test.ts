@@ -102,4 +102,68 @@ describe("computeChainAdditionalHits", () => {
     expect(hits[0].enemyId).toBe(2);
     expect(hits[0].damage).toBeCloseTo(85);
   });
+
+  it("does not chain to an enemy hidden behind a building", () => {
+    // The building at (4, 0) sits on both the tower→enemy and first→enemy
+    // segments, so the hidden enemy must not be a hop candidate.
+    const tower = mkTower();
+    const first = mkEnemy(1, 2, 0);
+    const hidden = mkEnemy(2, 6, 0);
+    const building = { x: 4, z: 0, halfWidth: 0.4, halfDepth: 0.4 };
+    const hits = computeChainAdditionalHits(
+      tower,
+      [first, hidden],
+      first,
+      100,
+      10,
+      3,
+      0.85,
+      [building]
+    );
+    expect(hits).toHaveLength(0);
+  });
+
+  it("does not chain to an enemy that is visible from the tower but blocked from the previous hit", () => {
+    // The bolt travels from the previous hit to the candidate, so the hop
+    // segment (not the tower→enemy line) must be the one that is gated:
+    // the building at (2, 2) is on the (2, 0) → (2, 4) segment but off the
+    // tower → (2, 4) segment, which runs straight up x = 2 past the
+    // building's far side (z ≥ 2.4).
+    const tower = mkTower();
+    const first = mkEnemy(1, 2, 0);
+    const hidden = mkEnemy(2, 2, 4);
+    const building = { x: 2, z: 2, halfWidth: 0.4, halfDepth: 0.4 };
+    const hits = computeChainAdditionalHits(
+      tower,
+      [first, hidden],
+      first,
+      100,
+      10,
+      3,
+      0.85,
+      [building]
+    );
+    expect(hits).toHaveLength(0);
+  });
+
+  it("still chains to visible enemies when an obstacle is off the chain line", () => {
+    // The building at (4, 5) is off every chain segment, so the chain is
+    // unaffected.
+    const tower = mkTower();
+    const first = mkEnemy(1, 2, 0);
+    const second = mkEnemy(2, 4, 0);
+    const building = { x: 4, z: 5, halfWidth: 0.4, halfDepth: 0.4 };
+    const hits = computeChainAdditionalHits(
+      tower,
+      [first, second],
+      first,
+      100,
+      10,
+      3,
+      0.85,
+      [building]
+    );
+    expect(hits).toHaveLength(1);
+    expect(hits[0].enemyId).toBe(2);
+  });
 });

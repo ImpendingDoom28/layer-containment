@@ -6,7 +6,12 @@ export type GameStatus =
 
 // Tower types
 export type TowerType = "basic" | "slow" | "aoe" | "laser" | "relay" | "chain";
-export type TowerTargeting = "nearest" | "furthest";
+export type TowerTargeting =
+  | "nearest"
+  | "furthest"
+  | "lowest"
+  | "highest"
+  | "focused";
 
 /**
  * Payload of the `UI_ACTION_DENIED` event. `elementId` names the HUD element

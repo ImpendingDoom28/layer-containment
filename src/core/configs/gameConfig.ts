@@ -8,7 +8,13 @@ import type {
 } from "../types/game";
 import { loadFile } from "../../utils/fileLoader";
 
-const towerTargetingSchema = z.enum(["nearest", "furthest"]);
+const towerTargetingSchema = z.enum([
+  "nearest",
+  "furthest",
+  "lowest",
+  "highest",
+  "focused",
+]);
 const projectileTypeSchema = z.enum(["aoe", "single", "beam", "chain"]);
 const towerTypeSchema = z.enum([
   "basic",

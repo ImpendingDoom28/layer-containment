@@ -8,6 +8,7 @@ import {
   describe,
   expect,
   it,
+  vi,
 } from "vitest";
 
 import { i18n } from "../../core/i18n/i18n";
@@ -107,7 +108,11 @@ describe("HUDGameOver", () => {
     useGameStore.setState({ towerTypes: null, enemyTypes: null });
   });
 
-  const mountOverlay = (stats: RunStatsSnapshot, status: "won" | "gameOver") => {
+  const mountOverlay = (
+    stats: RunStatsSnapshot,
+    status: "won" | "gameOver",
+    onNextLevel?: () => void
+  ) => {
     const element: ReactNode = (
       <HUDGameOver
         gameStatus={status}
@@ -117,6 +122,7 @@ describe("HUDGameOver", () => {
         stats={stats}
         onRestart={() => {}}
         onGoToMainMenu={() => {}}
+        onNextLevel={onNextLevel}
       />
     );
     act(() => {
@@ -175,5 +181,58 @@ describe("HUDGameOver", () => {
     expect(overlay).not.toBeNull();
     // The header + final money still render, but there is no table.
     expect(overlay!.querySelector("table")).toBeNull();
+  });
+
+  it("shows the Next Level button on a win when a next level is offered", () => {
+    root = createRoot(container);
+    mountOverlay(statsWithUsage(), "won", () => {});
+
+    const overlay = container.querySelector("[data-game-camera-block]")!;
+    const nextButton = [...overlay.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Next Level")
+    );
+    expect(nextButton).not.toBeUndefined();
+    // "Play Again" is still present alongside it.
+    const playAgain = [...overlay.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Play Again")
+    );
+    expect(playAgain).not.toBeUndefined();
+  });
+
+  it("hides the Next Level button when no next level is offered", () => {
+    root = createRoot(container);
+    mountOverlay(statsWithUsage(), "won");
+
+    const overlay = container.querySelector("[data-game-camera-block]")!;
+    const nextButton = [...overlay.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Next Level")
+    );
+    expect(nextButton).toBeUndefined();
+  });
+
+  it("hides the Next Level button on a defeat", () => {
+    root = createRoot(container);
+    mountOverlay(statsWithUsage(), "gameOver", () => {});
+
+    const overlay = container.querySelector("[data-game-camera-block]")!;
+    const nextButton = [...overlay.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Next Level")
+    );
+    expect(nextButton).toBeUndefined();
+  });
+
+  it("invokes onNextLevel when the Next Level button is clicked", () => {
+    root = createRoot(container);
+    const onNextLevel = vi.fn();
+    mountOverlay(statsWithUsage(), "won", onNextLevel);
+
+    const overlay = container.querySelector("[data-game-camera-block]")!;
+    const nextButton = [...overlay.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Next Level")
+    );
+    act(() => {
+      nextButton!.click();
+    });
+    expect(onNextLevel).toHaveBeenCalledTimes(1);
   });
 });

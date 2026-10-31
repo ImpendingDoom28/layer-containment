@@ -147,13 +147,16 @@ export const GamePage: FC<GamePageProps> = ({
     null;
 
   // Reuses the menu's start-with-level flow: it reloads the config
-  // (LevelSystem) and starts a fresh run with the level's own health.
+  // (LevelSystem) and starts a fresh run with the level's own health. The
+  // run reset (same as onRestart) also clears the picked enemy upgrades and
+  // the wave-readiness flag so the new level starts clean.
   const onStartNextLevel = useCallback(() => {
     if (!nextLevelId) return;
+    resetLevelState();
     void loadLevelConfigFile(nextLevelId).then((levelData) =>
       onStartGameWithLevel(nextLevelId, levelData.startingHealth)
     );
-  }, [nextLevelId, onStartGameWithLevel]);
+  }, [nextLevelId, onStartGameWithLevel, resetLevelState]);
 
   const remainingEnemies = getRemainingEnemiesInWave();
   const isMenu = gameStatus === "menu";

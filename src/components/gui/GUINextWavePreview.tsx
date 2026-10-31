@@ -19,6 +19,10 @@ import {
   levelEnemyUpgradeStackSelector,
   useUpgradeStore,
 } from "../../core/stores/useUpgradeStore";
+import {
+  discoveredEnemiesSelector,
+  useAlmanacStore,
+} from "../../core/stores/useAlmanacStore";
 import { EnemyConfig } from "../../core/types/game";
 import { useTranslationInCanvas } from "../../core/i18n/useTranslationInCanvas";
 import { applyEnemyUpgradeCounts } from "../../utils/waveEnemyCounts";
@@ -31,12 +35,14 @@ type EnemyPreviewModelProps = {
   enemyConfig: EnemyConfig;
   name: string;
   count: number;
+  isDiscovered: boolean;
 };
 
 const EnemyPreviewModel: FC<EnemyPreviewModelProps> = ({
   enemyConfig,
   name,
   count,
+  isDiscovered,
 }) => {
   return (
     <div className="grid grid-cols-[auto_1fr] items-center gap-2 border border-border/70 bg-muted/35 px-2 py-1.5">
@@ -46,10 +52,18 @@ const EnemyPreviewModel: FC<EnemyPreviewModelProps> = ({
       >
         x{count}
       </UITypography>
-      <div className="flex items-center min-w-0 gap-2">
+      <div
+        className={`flex items-center min-w-0 gap-2 ${
+          !isDiscovered ? "italic text-muted-foreground" : ""
+        }`}
+      >
         <span
-          className="h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-white/15"
-          style={{ backgroundColor: enemyConfig.color }}
+          className={`h-2.5 w-2.5 shrink-0 rounded-full ring-1 ring-white/15 ${
+            !isDiscovered ? "bg-muted" : ""
+          }`}
+          style={
+            isDiscovered ? { backgroundColor: enemyConfig.color } : undefined
+          }
         />
         <UITypography variant="small" className="font-medium truncate">
           {name}
@@ -79,6 +93,8 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
   const levelEnemyUpgradeStack = useUpgradeStore(
     levelEnemyUpgradeStackSelector
   );
+
+  const discoveredEnemies = useAlmanacStore(discoveredEnemiesSelector);
 
   const shouldShow = useMemo(() => {
     return nextWaveReady && currentWave > 0 && currentWave < totalWaves;
@@ -145,12 +161,21 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
                 const enemyConfig = enemyTypes?.[enemyGroup.type];
                 if (!enemyConfig) return null;
 
+                const isDiscovered = discoveredEnemies.includes(
+                  enemyGroup.type
+                );
+
                 return (
                   <EnemyPreviewModel
                     key={`${enemyGroup.type}-${index}`}
                     enemyConfig={enemyConfig}
-                    name={t(`enemies.${enemyGroup.type}.name`)}
+                    name={
+                      isDiscovered
+                        ? t(`enemies.${enemyGroup.type}.name`)
+                        : t("almanac.undiscoveredName")
+                    }
                     count={enemyGroup.count}
+                    isDiscovered={isDiscovered}
                   />
                 );
               })}

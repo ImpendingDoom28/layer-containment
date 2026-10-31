@@ -111,6 +111,10 @@ export const useLevelStore = create<LevelStore>((set) => ({
     const actions = enemyActions(world);
 
     actions.clearAllEnemies();
+    // The waypoints must be in the store before any enemy spawns: spawnEnemy
+    // derives each enemy's initial facing (the direction along the path) from
+    // them.
+    set({ pathWaypoints: levelData.pathWaypoints });
     for (const enemy of buildLevelConfigEnemies(levelData, enemyTypes)) {
       actions.spawnEnemy(enemy);
     }

@@ -265,3 +265,47 @@ export const getPositionAlongMultiplePaths = (
 
   return getPositionAlongPath(progress, path);
 };
+
+/**
+ * Unit direction the path travels at a given progress fraction (2D, x/z).
+ *
+ * The direction is constant along each waypoint segment, so this is what
+ * "facing along the path" means at any point — the segment the point lies on.
+ * Degenerate inputs (no path, zero-length segments) fall back to +x.
+ */
+export const getPathDirection = (
+  path: PathWaypoint[],
+  progress: number
+): { x: number; z: number } => {
+  if (!path || path.length < 2) return { x: 1, z: 0 };
+  if (progress <= 0) {
+    const dx = path[1].x - path[0].x;
+    const dz = path[1].z - path[0].z;
+    const len = Math.hypot(dx, dz);
+    return len < 1e-12 ? { x: 1, z: 0 } : { x: dx / len, z: dz / len };
+  }
+  if (progress >= 1) {
+    const last = path.length - 1;
+    const dx = path[last].x - path[last - 1].x;
+    const dz = path[last].z - path[last - 1].z;
+    const len = Math.hypot(dx, dz);
+    return len < 1e-12 ? { x: 1, z: 0 } : { x: dx / len, z: dz / len };
+  }
+
+  const totalLength = getPathLength(path);
+  if (totalLength < 1e-12) return { x: 1, z: 0 };
+
+  let targetDistance = progress * totalLength;
+  for (let i = 0; i < path.length - 1; i++) {
+    const dx = path[i + 1].x - path[i].x;
+    const dz = path[i + 1].z - path[i].z;
+    const length = Math.hypot(dx, dz);
+    if (targetDistance <= length || i === path.length - 2) {
+      return length < 1e-12
+        ? { x: 1, z: 0 }
+        : { x: dx / length, z: dz / length };
+    }
+    targetDistance -= length;
+  }
+  return { x: 1, z: 0 };
+};

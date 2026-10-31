@@ -7,6 +7,7 @@ import { getEnemySnapshots } from "../selectors/enemySnapshots";
 import { EnemyMotion, EnemyState } from "../traits/enemy";
 import { EnemySlow } from "../traits/slow";
 import { Position } from "../traits/position";
+import { FacingDirection } from "../traits/facing";
 import { spawnEffectRequest } from "../traits/effect";
 import { testWorld } from "../world";
 import type { Enemy, PathWaypoint } from "../../../core/types/game";
@@ -54,6 +55,7 @@ const defaultOptions = (): TestOptions => ({
 const stateOf = (entity: Entity) => entity.get(EnemyState)!;
 const motionOf = (entity: Entity) => entity.get(EnemyMotion)!;
 const positionOf = (entity: Entity) => entity.get(Position)!;
+const facingOf = (entity: Entity) => entity.get(FacingDirection)!;
 
 /** Counts end-of-path spawn-effect requests currently in the world. */
 const countEndRequests = () =>
@@ -64,11 +66,15 @@ const countEndRequests = () =>
 describe("enemyMovementSystem", () => {
   beforeEach(() => {
     enemyActions(testWorld).clearAllEnemies();
-    for (const entity of [...testWorld.query(spawnEffectRequest)]) entity.destroy();
+    for (const entity of [...testWorld.query(spawnEffectRequest)])
+      entity.destroy();
   });
 
-  const run = (delta: number, effectiveTime: number, options = defaultOptions()) =>
-    runEnemyMovementSystem(testWorld, delta, effectiveTime, options);
+  const run = (
+    delta: number,
+    effectiveTime: number,
+    options = defaultOptions()
+  ) => runEnemyMovementSystem(testWorld, delta, effectiveTime, options);
 
   it("advances an enemy along the path and writes hot motion", () => {
     const entity = enemyActions(testWorld).spawnEnemy(makeEnemy(1));
@@ -253,6 +259,46 @@ describe("enemyMovementSystem", () => {
     // Subsequent ticks heal normally: 30.15 -> 0.15s elapsed, heal 1.5.
     run(0.2, 30.15);
     expect(stateOf(entity).health).toBeCloseTo(51.5);
+  });
+
+  it("keeps the facing aligned to the direction of travel", () => {
+    const entity = enemyActions(testWorld).spawnEnemy(makeEnemy(1));
+
+    // The straight +X path: the facing follows the segment direction.
+    run(0.2, 0);
+    expect(facingOf(entity).x).toBeCloseTo(1);
+    expect(facingOf(entity).z).toBeCloseTo(0);
+  });
+
+  it("turns the facing when an enemy rounds a corner", () => {
+    const L = Math.hypot(4, 4); // each leg is a unit vector (4/√32 ≈ 0.707)
+    const corneredPath: PathWaypoint[][] = [
+      [
+        { x: 0, y: 0, z: 0 },
+        { x: 4, y: 0, z: 4 },
+        { x: 0, y: 0, z: 8 },
+      ],
+    ];
+    const entity = enemyActions(testWorld).spawnEnemy(makeEnemy(1));
+
+    // First segment direction is (+4, +4)/√32.
+    run(0.02, 0, {
+      ...defaultOptions(),
+      pathWaypoints: corneredPath,
+    });
+    expect(facingOf(entity).x).toBeCloseTo(4 / L);
+    expect(facingOf(entity).z).toBeCloseTo(4 / L);
+
+    // Force the enemy just past the corner (the corner sits at progress 0.5).
+    entity.set(EnemyMotion, { ...motionOf(entity), pathProgress: 0.55 });
+    run(0.02, 0.02, {
+      ...defaultOptions(),
+      pathWaypoints: corneredPath,
+    });
+
+    // Second segment direction is (-4, +4)/√32.
+    expect(facingOf(entity).x).toBeCloseTo(-4 / L);
+    expect(facingOf(entity).z).toBeCloseTo(4 / L);
   });
 
   it("keeps enemies at the path end when no removal callback is given (menu scene)", () => {

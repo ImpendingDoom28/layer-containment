@@ -5,7 +5,7 @@ import {
   WRAITH_MODEL_URL,
   WRAITH_NODE,
   WRAITH_ROTATION_Y,
-} from "../../../constants/models";
+} from "../../constants/models";
 import { ModelLoader } from "./ModelLoader";
 
 // Shared, cached scratch vectors for the one-time recenter math (enemies

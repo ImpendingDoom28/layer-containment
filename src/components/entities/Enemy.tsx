@@ -50,7 +50,7 @@ import { HitFlash } from "./effects/HitFlash";
 import { MedicHealBurstEffect } from "./effects/MedicHealBurstEffect";
 import { SlowEffect } from "./effects/SlowEffect";
 import { UpgradeEffect } from "./effects/UpgradeEffect";
-import { WraithDrone } from "./effects/WraithDrone";
+import { WraithDrone } from "./WraithDrone";
 
 type EnemyProps = {
   entity: Entity;

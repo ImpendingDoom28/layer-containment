@@ -48,6 +48,7 @@ import { useSimulationClock } from "../../core/contexts/SimulationClockContext";
 import { MedicHealBurstEffect } from "./effects/MedicHealBurstEffect";
 import { SlowEffect } from "./effects/SlowEffect";
 import { UpgradeEffect } from "./effects/UpgradeEffect";
+import { WraithDrone } from "./effects/WraithDrone";
 
 type EnemyProps = {
   entity: Entity;
@@ -377,13 +378,31 @@ export const Enemy: FC<EnemyProps> = memo(
           />
         )}
 
-        {/* Enemy body */}
-        <mesh
-          position={[0, size / 2, 0]}
-          scale={[size, size, size]}
-          geometry={sharedUnitSphere}
-          material={getEnemyBodyMaterial(snapshot.color)}
-        />
+        {/* Enemy body: a plain sphere, or the 3D Wraith drone model for fast
+            enemies. The body sphere doubles as the drone's placeholder while
+            its GLB loads, so a load race degrades to the old look instead of
+            hiding the enemy. Both center on the same height as the body. */}
+        {snapshot.type === "fast" ? (
+          <group position={[0, size / 2, 0]}>
+            <WraithDrone
+              size={size}
+              fallback={
+                <mesh
+                  scale={[size, size, size]}
+                  geometry={sharedUnitSphere}
+                  material={getEnemyBodyMaterial(snapshot.color)}
+                />
+              }
+            />
+          </group>
+        ) : (
+          <mesh
+            position={[0, size / 2, 0]}
+            scale={[size, size, size]}
+            geometry={sharedUnitSphere}
+            material={getEnemyBodyMaterial(snapshot.color)}
+          />
+        )}
 
         {/* Hit-flash overlay: transparent white shell that lights up on damage */}
         <mesh

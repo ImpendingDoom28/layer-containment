@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Checkbox as CheckboxPrimitive } from "radix-ui";
-import { Check } from "lucide-react";
 
+import { Icon } from "./Icon";
 import { cn } from "./lib/twUtils";
 
 function UICheckbox({
@@ -18,7 +18,7 @@ function UICheckbox({
       {...props}
     >
       <CheckboxPrimitive.Indicator>
-        <Check className="size-3" />
+        <Icon name="Check" size={12} />
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
   );

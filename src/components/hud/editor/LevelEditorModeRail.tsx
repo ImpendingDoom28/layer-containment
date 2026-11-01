@@ -1,6 +1,6 @@
-import { Box, Droplets, MousePointer2, Route, Eraser, ChevronLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { Icon, type IconName } from "../../ui/Icon";
 import { useLevelEditorStore } from "../../../core/stores/useLevelEditorStore";
 import type { LevelEditorMode, LevelEditorTool } from "../../../core/types/editor";
 import { UIButton } from "../../ui/buttons/UIButton";
@@ -11,21 +11,21 @@ import { EDITOR_PATH_MODE_ACCENT_BG_CLASS } from "./editorModeAccents";
 type ModeEntry = {
   mode: LevelEditorMode;
   defaultTool: LevelEditorTool;
-  icon: typeof MousePointer2;
+  icon: IconName;
   accentClass: string;
 };
 
 const MODES: ModeEntry[] = [
-  { mode: "select", defaultTool: "select", icon: MousePointer2, accentClass: "bg-zinc-600" },
+  { mode: "select", defaultTool: "select", icon: "MousePointer2", accentClass: "bg-zinc-600" },
   {
     mode: "path",
     defaultTool: "drawPath",
-    icon: Route,
+    icon: "Route",
     accentClass: EDITOR_PATH_MODE_ACCENT_BG_CLASS,
   },
-  { mode: "building", defaultTool: "placeBuilding", icon: Box, accentClass: "bg-blue-600" },
-  { mode: "water", defaultTool: "water", icon: Droplets, accentClass: "bg-cyan-600" },
-  { mode: "erase", defaultTool: "erase", icon: Eraser, accentClass: "bg-red-600" },
+  { mode: "building", defaultTool: "placeBuilding", icon: "Box", accentClass: "bg-blue-600" },
+  { mode: "water", defaultTool: "water", icon: "Droplets", accentClass: "bg-cyan-600" },
+  { mode: "erase", defaultTool: "erase", icon: "Eraser", accentClass: "bg-red-600" },
 ];
 
 const TOOL_TO_MODE: Record<LevelEditorTool, LevelEditorMode> = {
@@ -55,12 +55,12 @@ export const LevelEditorModeRail = ({ onBackToGame }: LevelEditorModeRailProps) 
         onClick={onBackToGame}
         title={t("editor.backToGame")}
       >
-        <ChevronLeft />
+        <Icon name="ChevronLeft" />
       </UIButton>
 
       <div className="my-1 h-px bg-border" />
 
-      {MODES.map(({ mode, defaultTool, icon: Icon, accentClass }) => {
+      {MODES.map(({ mode, defaultTool, icon, accentClass }) => {
         const isActive = activeMode === mode;
 
         return (
@@ -72,7 +72,7 @@ export const LevelEditorModeRail = ({ onBackToGame }: LevelEditorModeRailProps) 
             title={t(EDITOR_MODE_LABEL_KEYS[mode])}
             className={isActive ? `${accentClass} hover:opacity-90` : ""}
           >
-            <Icon />
+            <Icon name={icon} />
           </UIButton>
         );
       })}

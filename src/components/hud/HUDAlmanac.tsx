@@ -5,30 +5,12 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import {
-  ArrowLeft,
-  Crosshair,
-  DollarSign,
-  GitBranch,
-  Gauge,
-  Heart,
-  HeartPulse,
-  Radio,
-  Radar,
-  Skull,
-  Snowflake,
-  Users,
-  Waves,
-  Wind,
-  Zap,
-  type LucideIcon,
-} from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { Icon, type IconColor, type IconName } from "../ui/Icon";
 import { UIButton } from "../ui/buttons/UIButton";
 import { UITypography } from "../ui/UITypography";
 import { UIMoney } from "../ui/UIMoney";
-import { cn } from "../ui/lib/twUtils";
 import {
   UICard,
   UICardAction,
@@ -61,7 +43,7 @@ type AlmanacTab = "enemies" | "towers" | "upgrades";
 type AlmanacTabButtonProps = {
   tab: AlmanacTab;
   label: string;
-  icon: LucideIcon;
+  icon: IconName;
   active: boolean;
   tabIndex: number;
   id: string;
@@ -73,7 +55,7 @@ type AlmanacTabButtonProps = {
 const AlmanacTabButton: FC<AlmanacTabButtonProps> = ({
   tab,
   label,
-  icon: TabIcon,
+  icon: iconName,
   active,
   tabIndex,
   id,
@@ -92,7 +74,7 @@ const AlmanacTabButton: FC<AlmanacTabButtonProps> = ({
     variant={active ? "default" : "ghost"}
     className="flex-1 gap-1.5 text-xs uppercase tracking-wider"
   >
-    <TabIcon size={14} className="shrink-0" />
+    <Icon name={iconName} size={14} className="shrink-0" />
     {label}
   </UIButton>
 );
@@ -103,20 +85,20 @@ type AlmanacStatEntry = {
 };
 
 type AlmanacStatRowProps = {
-  icon: LucideIcon;
-  iconClassName?: string;
+  icon: IconName;
+  iconColor?: IconColor;
   label: string;
   value: ReactNode;
 };
 
 const AlmanacStatRow: FC<AlmanacStatRowProps> = ({
-  icon: StatIcon,
-  iconClassName,
+  icon,
+  iconColor,
   label,
   value,
 }) => (
   <div className="flex min-w-0 items-center gap-1.5">
-    <StatIcon size={12} className={cn("shrink-0", iconClassName)} />
+    <Icon name={icon} color={iconColor} size={12} className="shrink-0" />
     <UITypography
       variant="small"
       className="shrink-0 text-muted-foreground"
@@ -200,26 +182,26 @@ const AlmanacEnemyCard: FC<AlmanacEnemyCardProps> = ({
             )}
             <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-2">
               <AlmanacStatRow
-                icon={HeartPulse}
-                iconClassName="text-red-400"
+                icon="HeartPulse"
+                iconColor="red"
                 label={t("almanac.health")}
                 value={enemyConfig.health}
               />
               <AlmanacStatRow
-                icon={Gauge}
-                iconClassName="text-orange-400"
+                icon="Gauge"
+                iconColor="orange"
                 label={t("almanac.speed")}
                 value={enemyConfig.speed.toFixed(1)}
               />
               <AlmanacStatRow
-                icon={Skull}
-                iconClassName="text-red-300"
+                icon="Skull"
+                iconColor="red3"
                 label={t("almanac.baseDamage")}
                 value={enemyConfig.healthLoss}
               />
               <AlmanacStatRow
-                icon={DollarSign}
-                iconClassName="text-green-400"
+                icon="DollarSign"
+                iconColor="green"
                 label={t("almanac.reward")}
                 value={enemyConfig.reward}
               />
@@ -241,13 +223,13 @@ const AlmanacEnemyCard: FC<AlmanacEnemyCardProps> = ({
   );
 };
 
-const ALMANAC_TOWER_ICONS: Record<TowerType, LucideIcon> = {
-  basic: Crosshair,
-  slow: Snowflake,
-  aoe: Waves,
-  laser: Radar,
-  relay: Radio,
-  chain: Zap,
+const ALMANAC_TOWER_ICONS: Record<TowerType, IconName> = {
+  basic: "Crosshair",
+  slow: "Snowflake",
+  aoe: "Waves",
+  laser: "Radar",
+  relay: "Radio",
+  chain: "Zap",
 };
 
 type TowerStatBuilder = (
@@ -318,7 +300,7 @@ type AlmanacTowerCardProps = {
 
 const AlmanacTowerCard: FC<AlmanacTowerCardProps> = ({ towerConfig }) => {
   const { t } = useTranslation();
-  const TowerIcon = ALMANAC_TOWER_ICONS[towerConfig.id];
+  const towerIcon = ALMANAC_TOWER_ICONS[towerConfig.id];
   const statEntries = getTowerStatEntries(towerConfig, t);
 
   return (
@@ -332,7 +314,7 @@ const AlmanacTowerCard: FC<AlmanacTowerCardProps> = ({ towerConfig }) => {
               boxShadow: `0 0 12px ${towerConfig.color}40`,
             }}
           >
-            <TowerIcon size={16} className="shrink-0" />
+            <Icon name={towerIcon} size={16} className="shrink-0" />
           </div>
           <UITypography variant="medium">
             {t(`towers.${towerConfig.id}.name`)}
@@ -356,8 +338,8 @@ const AlmanacTowerCard: FC<AlmanacTowerCardProps> = ({ towerConfig }) => {
           {statEntries.map((entry) => (
             <AlmanacStatRow
               key={entry.label}
-              icon={TowerIcon}
-              iconClassName="text-primary/70"
+              icon={towerIcon}
+              iconColor="primary70"
               label={entry.label}
               value={entry.value}
             />
@@ -368,12 +350,12 @@ const AlmanacTowerCard: FC<AlmanacTowerCardProps> = ({ towerConfig }) => {
   );
 };
 
-const ALMANAC_UPGRADE_ICONS: Record<EnemyUpgradeId, LucideIcon> = {
-  armored: HeartPulse,
-  swift: Wind,
-  slowResistance: Zap,
-  regenerating: Heart,
-  reinforcements: Users,
+const ALMANAC_UPGRADE_ICONS: Record<EnemyUpgradeId, IconName> = {
+  armored: "HeartPulse",
+  swift: "Wind",
+  slowResistance: "Zap",
+  regenerating: "Heart",
+  reinforcements: "Users",
 };
 
 type AlmanacUpgradeCardProps = {
@@ -384,7 +366,7 @@ const AlmanacUpgradeCard: FC<AlmanacUpgradeCardProps> = ({
   upgradeConfig,
 }) => {
   const { t } = useTranslation();
-  const UpgradeIcon = ALMANAC_UPGRADE_ICONS[upgradeConfig.id];
+  const upgradeIcon = ALMANAC_UPGRADE_ICONS[upgradeConfig.id];
 
   return (
     <UICard className="relative ring-1 ring-primary/20">
@@ -397,7 +379,7 @@ const AlmanacUpgradeCard: FC<AlmanacUpgradeCardProps> = ({
               boxShadow: `0 0 12px ${upgradeConfig.indicatorColor}40`,
             }}
           >
-            <UpgradeIcon size={16} className="shrink-0" />
+            <Icon name={upgradeIcon} size={16} className="shrink-0" />
           </div>
           <UITypography variant="medium">
             {t(`enemyUpgrades.${upgradeConfig.id}.name`)}
@@ -470,11 +452,11 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
   const tabButtons: Array<{
     tab: AlmanacTab;
     label: string;
-    icon: LucideIcon;
+    icon: IconName;
   }> = [
-    { tab: "enemies", label: t("almanac.tabEnemies"), icon: Skull },
-    { tab: "towers", label: t("almanac.tabTowers"), icon: GitBranch },
-    { tab: "upgrades", label: t("almanac.tabUpgrades"), icon: Zap },
+    { tab: "enemies", label: t("almanac.tabEnemies"), icon: "Skull" },
+    { tab: "towers", label: t("almanac.tabTowers"), icon: "GitBranch" },
+    { tab: "upgrades", label: t("almanac.tabUpgrades"), icon: "Zap" },
   ];
 
   const onSelectTab = (tab: AlmanacTab) => {
@@ -607,7 +589,7 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
       <UICardHeader>
         <UICardTitle>
           <UIButton onClick={onBack} variant="ghost" size="icon">
-            <ArrowLeft />
+            <Icon name="ArrowLeft" />
           </UIButton>
           <UITypography variant="h4">{t("almanac.title")}</UITypography>
         </UICardTitle>

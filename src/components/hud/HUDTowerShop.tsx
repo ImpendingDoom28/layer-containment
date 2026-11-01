@@ -1,7 +1,7 @@
 import { FC, useMemo } from "react";
-import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { Icon } from "../ui/Icon";
 import { UIButton } from "@/components/ui/buttons/UIButton";
 import { UITypography } from "../ui/UITypography";
 import { useIsMobile } from "../../core/hooks/useIsMobile";
@@ -129,7 +129,7 @@ export const HUDTowerShop: FC<HUDTowerShopProps> = ({ money }) => {
       aria-label={t("towerShop.cancelSelection")}
       className={cn(isMobile ? "h-10 w-14 shrink-0" : undefined)}
     >
-      {isMobile ? <X /> : t("towerShop.cancelSelection")}
+      {isMobile ? <Icon name="X" color="destructive" /> : t("towerShop.cancelSelection")}
     </UIButton>
   );
 

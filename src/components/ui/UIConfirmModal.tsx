@@ -1,7 +1,6 @@
 import type { FC, ReactNode } from "react";
 
-import { AlertTriangle } from "lucide-react";
-
+import { Icon } from "./Icon";
 import { UIButton } from "./buttons/UIButton";
 import { UIModal } from "./UIModal";
 
@@ -74,7 +73,7 @@ export const UIConfirmModal: FC<UIConfirmModalProps> = ({
     <UIModal
       open={open}
       title={title}
-      icon={<AlertTriangle className="size-4 text-destructive" />}
+      icon={<Icon name="AlertTriangle" color="destructive" size={16} />}
       className={className}
       role="alertdialog"
       footer={

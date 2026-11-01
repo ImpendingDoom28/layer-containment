@@ -1,7 +1,7 @@
 import { FC } from "react";
-import { HeartPulse, Menu, Play } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { Icon, type IconColor } from "../ui/Icon";
 import { UIButton } from "@/components/ui/buttons/UIButton";
 import { useIsMobile } from "../../core/hooks/useIsMobile";
 
@@ -19,7 +19,6 @@ import {
 import { HUDWrapper } from "./HUDWrapper";
 import { HUDEnemyUpgrades } from "./HUDEnemyUpgrades";
 import { UIMoney } from "../ui/UIMoney";
-import { PauseIcon } from "../ui/assets/PauseIcon";
 
 type HUDGameStatsProps = {
   money: number;
@@ -46,7 +45,13 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
 
   const isMobile = useIsMobile();
 
-  const getHealthColor = (): string => {
+  const getHealthColor = (): IconColor => {
+    if (health > 15) return "green";
+    if (health > 8) return "yellow";
+    return "red";
+  };
+
+  const getHealthTextClass = (): string => {
     if (health > 15) return "text-green-400";
     if (health > 8) return "text-yellow-400";
     return "text-red-400";
@@ -70,8 +75,8 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
         >
           <UIMoney money={money} variant="medium" iconSize={14} />
           <div className="flex items-center gap-1.5">
-            <HeartPulse size={14} className={getHealthColor()} />
-            <UITypography variant="medium" className={getHealthColor()}>
+            <Icon name="HeartPulse" color={getHealthColor()} size={14} />
+            <UITypography variant="medium" className={getHealthTextClass()}>
               {health}
             </UITypography>
           </div>
@@ -100,7 +105,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
             aria-label={t("gameMenu.title")}
             className="shrink-0"
           >
-            <Menu />
+            <Icon name="Menu" />
           </UIButton>
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-2 px-3 pb-2">
@@ -112,7 +117,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
               size="sm"
               className="shrink-0"
             >
-              <Play size={14} /> {t("gameStats.startNextWave")}
+              <Icon name="Play" size={14} /> {t("gameStats.startNextWave")}
             </UIButton>
           )}
           {paused && (
@@ -122,7 +127,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
               className="px-1 shrink-0"
               data-testid="paused-indicator"
             >
-              <PauseIcon />
+              <Icon name="Pause" size={16} />
             </UIButton>
           )}
           <HUDEnemyUpgrades />
@@ -141,8 +146,8 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
                 <UIMoney money={money} variant="h4" iconSize={20} />
               </div>
               <div className="flex items-center gap-2">
-                <HeartPulse size={20} className={getHealthColor()} />
-                <UITypography variant="h4" className={getHealthColor()}>
+                <Icon name="HeartPulse" color={getHealthColor()} size={20} />
+                <UITypography variant="h4" className={getHealthTextClass()}>
                   {health}
                 </UITypography>
               </div>
@@ -183,7 +188,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
                   onClick={onStartWave}
                   variant="default"
                 >
-                  <Play /> {t("gameStats.startNextWave")}
+                  <Icon name="Play" /> {t("gameStats.startNextWave")}
                 </UIButton>
               )}
               {gameStatus === "paused" && (
@@ -193,7 +198,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
                   className="px-1 w-fit"
                   data-testid="paused-indicator"
                 >
-                  <PauseIcon />
+                  <Icon name="Pause" size={16} />
                 </UIButton>
               )}
             </div>

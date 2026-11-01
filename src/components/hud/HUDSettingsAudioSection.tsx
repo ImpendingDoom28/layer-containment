@@ -1,7 +1,7 @@
 import { FC } from "react";
-import { Volume2, VolumeX } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { Icon } from "../ui/Icon";
 import {
   GAME_AUDIO_CATEGORIES,
   type GameAudioCategory,
@@ -86,9 +86,9 @@ export const HUDSettingsAudioSection: FC = () => {
           aria-label={t(muted ? "settings.unmute" : "settings.mute")}
         >
           {muted ? (
-            <VolumeX className="size-4" />
+            <Icon name="VolumeX" color="destructive" size={16} />
           ) : (
-            <Volume2 className="size-4" />
+            <Icon name="Volume2" size={16} />
           )}
         </UIButton>
       </div>

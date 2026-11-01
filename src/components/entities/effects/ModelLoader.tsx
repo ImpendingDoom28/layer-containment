@@ -1,4 +1,11 @@
-import { Suspense, memo, useMemo, type FC, type ReactNode } from "react";
+import {
+  Component,
+  Suspense,
+  memo,
+  useMemo,
+  type FC,
+  type ReactNode,
+} from "react";
 import { useGLTF } from "@react-three/drei";
 import { type Object3D } from "three";
 
@@ -27,13 +34,17 @@ type ModelLoaderProps = {
  * named `node`, and optionally runs it through a `prepare` transform. Without
  * `prepare` the node is cloned, so several instances never fight over the
  * same scene-graph parent. The object is isolated in its own Suspense
- * boundary so a load race suspends only this one object, never the scene.
+ * boundary so a slow load suspends only this one object, and in a small error
+ * boundary so a failed load (network error, 404, parse error) renders the
+ * `fallback` instead of propagating the throw and unmounting the whole scene.
  */
 export const ModelLoader: FC<ModelLoaderProps> = memo(
   ({ url, node, prepare, fallback }) => (
-    <Suspense fallback={fallback}>
-      <ModelLoaderModel url={url} node={node} prepare={prepare} />
-    </Suspense>
+    <ModelLoadErrorBoundary fallback={fallback}>
+      <Suspense fallback={fallback}>
+        <ModelLoaderModel url={url} node={node} prepare={prepare} />
+      </Suspense>
+    </ModelLoadErrorBoundary>
   )
 );
 
@@ -55,3 +66,22 @@ const ModelLoaderModel: FC<{
 };
 
 ModelLoaderModel.displayName = "ModelLoaderModel";
+
+// Suspense only covers the *pending* load. If the GLB request itself fails
+// (network error, 404, parse error) useGLTF throws during render, and with no
+// error boundary that would unmount the whole scene rather than this object.
+// Catch it here and degrade to the fallback (e.g. the sphere body).
+class ModelLoadErrorBoundary extends Component<
+  { fallback: ReactNode; children: ReactNode },
+  { failed: boolean }
+> {
+  override state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  override render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}

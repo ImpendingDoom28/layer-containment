@@ -306,7 +306,7 @@ export const en = {
       description: "Standard infantry unit. Balanced stats make them reliable.",
     },
     fast: {
-      name: "Fastero",
+      name: "Wraith",
       description: "Swift scout unit that sacrifices durability for speed.",
     },
     medic: {

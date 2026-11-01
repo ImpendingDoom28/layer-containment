@@ -119,7 +119,15 @@ const WraithDroneModel = forwardRef<Group, WraithDroneModelProps>(
     const flashGroup = useMemo(() => {
       if (!drone) return null;
       const clone = drone.clone(true);
-      if (flashScale !== 1) clone.scale.multiplyScalar(flashScale);
+      if (flashScale !== 1) {
+        // Scale the whole prepared transform (recenter offset + scale) so the
+        // envelope grows around the model's center. The body is recentered via
+        // the group's position, so scaling only the group's scale would leave
+        // the offset unscaled and shift the shell off-center by
+        // (flashScale - 1) times the recenter offset.
+        clone.position.multiplyScalar(flashScale);
+        clone.scale.multiplyScalar(flashScale);
+      }
       clone.traverse((object) => {
         if (object.type === "Mesh") (object as Mesh).material = flashMaterial;
       });

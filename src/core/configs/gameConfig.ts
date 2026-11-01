@@ -120,11 +120,16 @@ export const gameConfigSchema = z.object({
 
 export type GameConfigData = z.infer<typeof gameConfigSchema>;
 
-/**
- * Loads game configuration from JSON file and initializes exports
- * Call this before starting the game to ensure config is loaded
- */
-export async function loadGameConfig() {
+// Several components mount `useGameSystem` on the same first frame (the page
+// and the main-menu scene), and the `isGameConfigLoaded` flag only flips once
+// the fetch settles — so without this each mount races the same
+// /configs/game.json fetch. A shared in-flight promise makes concurrent calls
+// share one fetch; it is kept after success so later callers get the cached
+// config instead of re-fetching, and cleared on failure so a transient error
+// can be retried.
+let pendingConfig: Promise<GameConfigData> | null = null;
+
+const fetchGameConfig = async (): Promise<GameConfigData> => {
   const data = await loadFile(`/configs/game`);
   if (!data) {
     throw new Error("Failed to load game configuration file");
@@ -138,4 +143,19 @@ export async function loadGameConfig() {
   }
 
   return result.data;
+};
+
+/**
+ * Loads game configuration from JSON file and initializes exports
+ * Call this before starting the game to ensure config is loaded
+ */
+export function loadGameConfig() {
+  if (pendingConfig === null) {
+    pendingConfig = fetchGameConfig().catch((error) => {
+      pendingConfig = null;
+      throw error;
+    });
+  }
+
+  return pendingConfig;
 }

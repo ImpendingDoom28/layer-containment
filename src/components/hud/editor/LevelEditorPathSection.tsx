@@ -77,6 +77,13 @@ export const LevelEditorPathSection = () => {
     activeTool === "setSpawn" ||
     activeTool === "setBase";
 
+  // A wave group pinned to the selected path would be silently re-pointed to
+  // whatever path slides into its index after deletion, so the path is
+  // protected while any group still targets it.
+  const selectedPathHasPinnedGroup = draftLevel.waveConfigs.some((wave) =>
+    wave.enemies.some((group) => group.pathIndex === selectedPathIndex)
+  );
+
   return (
     <UIAccordionItem value="path">
       <UIAccordionTrigger>{t("editor.pathTab")}</UIAccordionTrigger>
@@ -106,6 +113,12 @@ export const LevelEditorPathSection = () => {
             size="sm"
             variant="destructive"
             onClick={removeSelectedPath}
+            disabled={selectedPathHasPinnedGroup}
+            title={
+              selectedPathHasPinnedGroup
+                ? t("editor.removePathBlocked")
+                : t("editor.remove")
+            }
           >
             <Icon name="Trash2" color="destructive" size={14} />
             {t("editor.remove")}

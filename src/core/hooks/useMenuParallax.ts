@@ -40,11 +40,9 @@ export const useMenuParallax = () => {
       if (!next) clearVariables();
     };
 
-    const onPointerMove = (event: PointerEvent) => {
-      if (!enabled) return;
-
-      const nx = Math.min(1, Math.max(0, event.clientX / window.innerWidth));
-      const ny = Math.min(1, Math.max(0, event.clientY / window.innerHeight));
+    const applyPointer = (clientX: number, clientY: number) => {
+      const nx = Math.min(1, Math.max(0, clientX / window.innerWidth));
+      const ny = Math.min(1, Math.max(0, clientY / window.innerHeight));
       const x = PARALLAX_MAX_OFFSET_PX * (nx * 2 - 1);
       const y = PARALLAX_MAX_OFFSET_PX * (ny * 2 - 1) * 0.6;
       root.style.setProperty("--ui-menu-parallax-x", `${x}`);
@@ -54,10 +52,31 @@ export const useMenuParallax = () => {
         window.innerWidth * PANEL_EDGE_RATIO,
         PANEL_EDGE_MAX_PX
       );
-      const distance = Math.max(0, panelEdgeX - event.clientX);
+      const distance = Math.max(0, panelEdgeX - clientX);
       const proximity =
         distance >= PROXIMITY_FAR_PX ? 0 : 1 - distance / PROXIMITY_FAR_PX;
       root.style.setProperty("--ui-menu-proximity", proximity.toFixed(3));
+    };
+
+    // pointermove fires at pointer-device rate, which exceeds the display
+    // refresh; coalesce to one update per animation frame, keeping only the
+    // latest position.
+    let pendingPointer: { clientX: number; clientY: number } | null = null;
+    let frameQueued = false;
+    let frameId = 0;
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (!enabled) return;
+
+      pendingPointer = { clientX: event.clientX, clientY: event.clientY };
+      if (frameQueued) return;
+      frameQueued = true;
+      frameId = requestAnimationFrame(() => {
+        frameQueued = false;
+        if (!enabled || pendingPointer === null) return;
+        applyPointer(pendingPointer.clientX, pendingPointer.clientY);
+        pendingPointer = null;
+      });
     };
 
     root.addEventListener("pointermove", onPointerMove);
@@ -69,6 +88,9 @@ export const useMenuParallax = () => {
       root.removeEventListener("pointermove", onPointerMove);
       reducedMotion.removeEventListener("change", syncEnabled);
       unsubscribe();
+      if (frameQueued) cancelAnimationFrame(frameId);
+      frameQueued = false;
+      pendingPointer = null;
       root.classList.remove("ui-menu-parallax-on");
       clearVariables();
     };

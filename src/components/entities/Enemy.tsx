@@ -18,6 +18,7 @@ import {
   Vector3,
   type Group,
   type Mesh,
+  type Object3D,
 } from "three";
 import type { Entity } from "koota";
 import { useActions } from "koota/react";
@@ -45,6 +46,7 @@ import { FacingDirection } from "../../core/ecs/traits/facing";
 import { EnemySlow } from "../../core/ecs/traits/slow";
 import { Position } from "../../core/ecs/traits/position";
 import { useSimulationClock } from "../../core/contexts/SimulationClockContext";
+import { HitFlash } from "./effects/HitFlash";
 import { MedicHealBurstEffect } from "./effects/MedicHealBurstEffect";
 import { SlowEffect } from "./effects/SlowEffect";
 import { UpgradeEffect } from "./effects/UpgradeEffect";
@@ -169,15 +171,12 @@ export const Enemy: FC<EnemyProps> = memo(
     useFrustumCulling(meshRef);
     const healthBarRef = useRef<Group>(null);
     const fillBarRef = useRef<Mesh>(null);
-    // The hit marker is the body's own shape re-pointed at the per-enemy
-    // `flashMaterial`, so its shape always matches the model: `wraithFlashRef`
-    // is a clone of the Wraith (once the GLB loads), `fallbackFlashRef` a
-    // sphere over the body-sphere fallback (while it loads), and `flashMeshRef`
-    // a sphere for plain enemies. Only the one matching the current body is
-    // ever visible.
-    const wraithFlashRef = useRef<Group>(null);
-    const fallbackFlashRef = useRef<Mesh>(null);
-    const flashMeshRef = useRef<Mesh>(null);
+    // The hit marker: `HitFlash` wraps the body and renders a hidden clone of
+    // it re-pointed at the per-enemy `flashMaterial`, so the marker's shape
+    // always matches the body (Wraith clone, or a sphere for plain/fallback
+    // bodies). `hitMarkerRef` is the current marker node; a hit toggles its
+    // `visible` and the decay below drives the shared `flashMaterial` opacity.
+    const hitMarkerRef = useRef<Object3D | null>(null);
     const healthTierRef = useRef<HealthTier>("high");
     const hasTriggeredSpawnEffect = useRef(false);
     const [isSlowed, setIsSlowed] = useState(false);
@@ -321,28 +320,19 @@ export const Enemy: FC<EnemyProps> = memo(
       }
       prevHealthRef.current = live.health;
 
-      // All markers share flashMaterial, so the opacity is driven once; the
-      // matching marker's visibility is toggled (only one is live at a time:
-      // the sphere for plain enemies, the sphere fallback or Wraith clone for
-      // fast enemies).
+      // The marker shares flashMaterial, so the opacity is driven once and
+      // the current marker's visibility is toggled (only one marker is live at
+      // a time, whichever body HitFlash is currently rendering).
       if (hitFlashRef.current > 0.004) {
         flashMaterial.opacity = hitFlashRef.current * 0.85;
-        if (flashMeshRef.current) flashMeshRef.current.visible = true;
-        if (fallbackFlashRef.current) fallbackFlashRef.current.visible = true;
-        if (wraithFlashRef.current) wraithFlashRef.current.visible = true;
+        if (hitMarkerRef.current) hitMarkerRef.current.visible = true;
         hitFlashRef.current = Math.max(
           0,
           hitFlashRef.current - delta * getTimeScale() * 5
         );
-      } else if (
-        flashMeshRef.current?.visible ||
-        fallbackFlashRef.current?.visible ||
-        wraithFlashRef.current?.visible
-      ) {
+      } else if (hitMarkerRef.current?.visible) {
         flashMaterial.opacity = 0;
-        if (flashMeshRef.current) flashMeshRef.current.visible = false;
-        if (fallbackFlashRef.current) fallbackFlashRef.current.visible = false;
-        if (wraithFlashRef.current) wraithFlashRef.current.visible = false;
+        hitMarkerRef.current.visible = false;
       }
 
       // Imperative health bar: scale the shared unit box instead of
@@ -399,52 +389,37 @@ export const Enemy: FC<EnemyProps> = memo(
         {/* Enemy body: a plain sphere, or the 3D Wraith drone model for fast
             enemies. The body sphere doubles as the drone's placeholder while
             its GLB loads, so a load race degrades to the old look instead of
-            hiding the enemy. Both center on the same height as the body. Each
-            body carries its own hit marker — the body's own shape re-pointed
+            hiding the enemy. The body is wrapped in HitFlash, which provides
+            the hit marker — a hidden clone of the body's own shape re-pointed
             at the per-enemy flash material — so the marker is automatically
             model-shaped (a box model would get a box marker, the Wraith a
             Wraith-shaped one) with no per-model support. */}
-        {snapshot.type === "fast" ? (
-          <group position={[0, size / 2, 0]}>
-            <WraithDrone
-              ref={wraithFlashRef}
-              size={size}
-              flashMaterial={flashMaterial}
-              flashScale={1.12}
-              fallback={
-                <>
-                  <mesh
-                    scale={[size, size, size]}
-                    geometry={sharedUnitSphere}
-                    material={getEnemyBodyMaterial(snapshot.color)}
-                  />
-                  <mesh
-                    ref={fallbackFlashRef}
-                    visible={false}
-                    scale={[size * 1.12, size * 1.12, size * 1.12]}
-                    geometry={sharedUnitSphere}
-                    material={flashMaterial}
-                  />
-                </>
-              }
-            />
-          </group>
-        ) : (
-          <group position={[0, size / 2, 0]}>
-            <mesh
-              scale={[size, size, size]}
-              geometry={sharedUnitSphere}
-              material={getEnemyBodyMaterial(snapshot.color)}
-            />
-            <mesh
-              ref={flashMeshRef}
-              visible={false}
-              scale={[size * 1.12, size * 1.12, size * 1.12]}
-              geometry={sharedUnitSphere}
-              material={flashMaterial}
-            />
-          </group>
-        )}
+        <group position={[0, size / 2, 0]}>
+          <HitFlash
+            markerRef={hitMarkerRef}
+            flashMaterial={flashMaterial}
+            body={
+              snapshot.type === "fast" ? (
+                <WraithDrone
+                  size={size}
+                  fallback={
+                    <mesh
+                      scale={[size, size, size]}
+                      geometry={sharedUnitSphere}
+                      material={getEnemyBodyMaterial(snapshot.color)}
+                    />
+                  }
+                />
+              ) : (
+                <mesh
+                  scale={[size, size, size]}
+                  geometry={sharedUnitSphere}
+                  material={getEnemyBodyMaterial(snapshot.color)}
+                />
+              )
+            }
+          />
+        </group>
 
         {/* Health bar - faces the camera, billboarded by hand in useFrame so
             it never lags the group's rotation by a frame */}

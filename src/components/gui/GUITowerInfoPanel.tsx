@@ -1,4 +1,9 @@
-import { FC, MouseEvent as ReactMouseEvent, useMemo, type ReactNode } from "react";
+import {
+  FC,
+  MouseEvent as ReactMouseEvent,
+  useMemo,
+  type ReactNode,
+} from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 
 import { getEffectiveTowerCombatStats } from "../../core/relayBuffs";
@@ -66,7 +71,8 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
   // `selectedTower` is a snapshot captured when the tower was clicked; the
   // targeting selector mutates only the `towers` array via `updateTower`, so
   // re-resolve the live tower by id to keep the panel in sync.
-  const tower = towers.find((item) => item.id === selectedTower.id) ?? selectedTower;
+  const tower =
+    towers.find((item) => item.id === selectedTower.id) ?? selectedTower;
   const towerHeight = useGameStore(towerHeightSelector);
   const towerBaseRadius = useGameStore(towerBaseRadiusSelector);
   const tileSize = useGameStore(tileSizeSelector);
@@ -128,14 +134,7 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
           ]
         : []),
     ];
-  }, [
-    tower,
-    towerTypes,
-    towers,
-    t,
-    updateTower,
-    showTargeting,
-  ]);
+  }, [tower, towerTypes, towers, t, updateTower, showTargeting]);
 
   const footing = useMemo(() => {
     const { surfacePoint, normal } = flatFieldToSphereSurface(
@@ -208,19 +207,19 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
                 {stats.map((stat) => (
                   <UITableRow
                     key={stat.label}
-                    className="border-b border-border/50 last:border-b-0"
+                    className="border-border/50 last:border-b-0"
                   >
                     <UITableCell
                       align="left"
                       variant="verySmall"
-                      className="text-muted-foreground uppercase tracking-[0.1em]"
+                      className="text-muted-foreground"
                     >
                       {stat.label}
                     </UITableCell>
                     <UITableCell
                       align="right"
                       variant="small"
-                      className="font-semibold"
+                      className="font-semibold px-0"
                       plain={stat.plain ?? false}
                     >
                       {stat.value}

@@ -44,7 +44,11 @@ export const UICarouselSelect = <T extends string>({
     <div
       role="group"
       aria-label={label}
-      className={cn(formControlVariants({ control: "input" }), className)}
+      className={cn(
+        formControlVariants({ control: "input" }),
+        "items-center",
+        className
+      )}
     >
       <UIButton
         variant="ghost"
@@ -58,7 +62,7 @@ export const UICarouselSelect = <T extends string>({
       <UITypography
         variant="small"
         whiteSpace="nowrap"
-        className="min-w-0 flex-1 overflow-hidden text-center"
+        className="w-[72px] flex-1 overflow-hidden text-center"
       >
         {options[index].label}
       </UITypography>

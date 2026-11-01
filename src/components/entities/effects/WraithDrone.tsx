@@ -1,5 +1,4 @@
-import { Suspense, memo, useMemo, type FC, type ReactNode } from "react";
-import { useGLTF } from "@react-three/drei";
+import { useCallback, memo, type FC, type ReactNode } from "react";
 import { Box3, Euler, Group, Quaternion, Vector3, type Object3D } from "three";
 
 import {
@@ -7,6 +6,7 @@ import {
   WRAITH_NODE,
   WRAITH_ROTATION_Y,
 } from "../../../constants/models";
+import { ModelLoader } from "./ModelLoader";
 
 // Shared, cached scratch vectors for the one-time recenter math (enemies
 // spawn a handful at a time; the vectors are reused and are not per-frame).
@@ -55,35 +55,25 @@ type WraithDroneProps = {
 };
 
 /**
- * Renders the Wraith drone as the enemy body. It is isolated in its own
- * Suspense boundary so a GLTF load race can only hide this one enemy (falling
- * back to its placeholder); it never suspends the whole scene. `useGLTF` is
- * cached, so every drone shares a single parse of the (extracted, ~215 KB)
- * GLB.
- *
- * `size` is the enemy body radius; the drone is scaled to the body's diameter
- * so it reads the same size as the sphere it replaces.
+ * Renders the Wraith drone as the enemy body. Loading, node extraction, and
+ * Suspense isolation are all delegated to the generic `ModelLoader`; this
+ * component only supplies the Wraith-specific `prepare` transform (scale to
+ * the body's diameter, recenter, and yaw the nose into the direction of
+ * travel). `size` is the enemy body radius.
  */
-export const WraithDrone: FC<WraithDroneProps> = memo(({ size, fallback }) => (
-  <Suspense fallback={fallback}>
-    <WraithDroneModel size={size} />
-  </Suspense>
-));
+export const WraithDrone: FC<WraithDroneProps> = memo(({ size, fallback }) => {
+  const prepare = useCallback(
+    (source: Object3D) => prepareWraith(source, size * 2, WRAITH_ROTATION_Y),
+    [size]
+  );
+  return (
+    <ModelLoader
+      url={WRAITH_MODEL_URL}
+      node={WRAITH_NODE}
+      prepare={prepare}
+      fallback={fallback}
+    />
+  );
+});
 
 WraithDrone.displayName = "WraithDrone";
-
-const WraithDroneModel: FC<{ size: number }> = ({ size }) => {
-  const gltf = useGLTF(WRAITH_MODEL_URL);
-  const source = gltf.scene.getObjectByName(WRAITH_NODE);
-  const drone = useMemo(
-    // The body sphere has radius `size` (diameter `2*size`), so scale the
-    // drone's largest span to the body's diameter to preserve the enemy
-    // size.
-    () => (source ? prepareWraith(source, size * 2, WRAITH_ROTATION_Y) : null),
-    [source, size]
-  );
-  if (!drone) return null;
-  return <primitive object={drone} />;
-};
-
-WraithDroneModel.displayName = "WraithDroneModel";

@@ -72,6 +72,8 @@ const waveEnemyGroupSchema = z.object({
   type: enemyTypeSchema,
   count: z.number(),
   spawnInterval: z.number(),
+  /** Portal (path index) the group emerges from; omitted = distributed evenly. */
+  pathIndex: z.number().int().min(0).optional(),
 });
 
 const waveConfigSchema: z.ZodType<WaveConfig> = z.object({

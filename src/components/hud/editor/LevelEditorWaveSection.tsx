@@ -28,6 +28,8 @@ export const LevelEditorWaveSection = () => {
     removeWaveEnemyGroup,
   } = useLevelEditorStore();
 
+  const pathCount = draftLevel.pathWaypoints.length;
+
   const [collapsedWaves, setCollapsedWaves] = useState<Set<number>>(new Set());
 
   const onToggleWave = (waveIndex: number) => {
@@ -169,6 +171,28 @@ export const LevelEditorWaveSection = () => {
                           />
                         </EditorField>
                       </div>
+                      <EditorField label={t("editor.portal")}>
+                        <UISelect
+                          value={enemyGroup.pathIndex ?? ""}
+                          onChange={(event) =>
+                            updateWaveEnemyGroup(waveIndex, enemyGroupIndex, {
+                              pathIndex:
+                                event.target.value === ""
+                                  ? undefined
+                                  : Number(event.target.value),
+                            })
+                          }
+                        >
+                          <option value="">
+                            {t("editor.portalAll")}
+                          </option>
+                          {Array.from({ length: pathCount }, (_, pathIndex) => (
+                            <option key={pathIndex} value={pathIndex}>
+                              {t("editor.portalN", { index: pathIndex + 1 })}
+                            </option>
+                          ))}
+                        </UISelect>
+                      </EditorField>
                     </div>
                   ))}
                 </div>

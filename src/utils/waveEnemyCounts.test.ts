@@ -236,3 +236,83 @@ describe("buildWaveSpawnQueue", () => {
     expect(buildWaveSpawnQueue([])).toEqual([]);
   });
 });
+
+describe("buildWaveSpawnQueue (portal assignment)", () => {
+  // The per-portal split of an unassigned group is the k-th emitted enemy ->
+  // portal `k % pathCount`, so it is fixed per group and does not depend on
+  // the (random) draw order. These tests use a fixed draw for determinism.
+  it("omits pathIndex for single-portal levels (legacy shape)", () => {
+    const q = buildWaveSpawnQueue(
+      [{ type: "basic", count: 4, spawnInterval: 1 }],
+      () => 0
+    );
+    expect(q.every((item) => item.pathIndex === undefined)).toBe(true);
+  });
+
+  it("sends an explicit-pathIndex group only to that portal", () => {
+    const q = buildWaveSpawnQueue(
+      [
+        { type: "basic", count: 5, spawnInterval: 1, pathIndex: 1 },
+        { type: "fast", count: 3, spawnInterval: 1 },
+      ],
+      () => 0,
+      2
+    );
+    const basics = q.filter((i) => i.type === "basic");
+    expect(basics.every((i) => i.pathIndex === 1)).toBe(true);
+    // The unassigned group splits evenly: 3 across 2 portals -> 2/1.
+    const fasts = q.filter((i) => i.type === "fast");
+    expect(fasts.filter((i) => i.pathIndex === 0)).toHaveLength(2);
+    expect(fasts.filter((i) => i.pathIndex === 1)).toHaveLength(1);
+  });
+
+  it("splits an unassigned group evenly across portals (remainder to earlier ones)", () => {
+    // 10 basics, no explicit portal, 3 portals -> 4/3/3.
+    const q = buildWaveSpawnQueue(
+      [{ type: "basic", count: 10, spawnInterval: 1 }],
+      () => 0,
+      3
+    );
+    const byPortal = [0, 1, 2].map((p) =>
+      q.filter((i) => i.pathIndex === p).length
+    );
+    expect(byPortal).toEqual([4, 3, 3]);
+  });
+
+  it("splits each unassigned group evenly, independently of the others", () => {
+    // Two 5-count groups, 2 portals: each group is 3/2, so the totals are 6/4.
+    const q = buildWaveSpawnQueue(
+      [
+        { type: "basic", count: 5, spawnInterval: 1 },
+        { type: "tank", count: 5, spawnInterval: 1 },
+      ],
+      () => 0,
+      2
+    );
+    const portal0 = q.filter((i) => i.pathIndex === 0).length;
+    const portal1 = q.filter((i) => i.pathIndex === 1).length;
+    expect([portal0, portal1]).toEqual([6, 4]);
+  });
+
+  it("mixes explicit and unassigned groups per portal", () => {
+    const q = buildWaveSpawnQueue(
+      [
+        { type: "basic", count: 4, spawnInterval: 1, pathIndex: 0 },
+        { type: "tank", count: 4, spawnInterval: 1, pathIndex: 1 },
+        { type: "fast", count: 4, spawnInterval: 1 },
+      ],
+      () => 0,
+      2
+    );
+    const basic = q
+      .filter((i) => i.type === "basic")
+      .every((i) => i.pathIndex === 0);
+    const tank = q.filter((i) => i.type === "tank").every((i) => i.pathIndex === 1);
+    expect(basic).toBe(true);
+    expect(tank).toBe(true);
+    // fast splits 2/2, so portal 0 gets 4 basic + 2 fast = 6,
+    // and portal 1 gets 4 tank + 2 fast = 6.
+    expect(q.filter((i) => i.pathIndex === 0)).toHaveLength(6);
+    expect(q.filter((i) => i.pathIndex === 1)).toHaveLength(6);
+  });
+});

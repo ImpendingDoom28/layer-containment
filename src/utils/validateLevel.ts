@@ -63,6 +63,21 @@ export const validateLevel = (
     }
   });
 
+  const portalCount = level.pathWaypoints.length;
+  (level.waveConfigs ?? []).forEach((wave, waveIndex) => {
+    wave.enemies.forEach((group, groupIndex) => {
+      if (
+        group.pathIndex !== undefined &&
+        (group.pathIndex < 0 || group.pathIndex >= portalCount)
+      ) {
+        customIssues.push({
+          path: `waveConfigs.${waveIndex}.enemies.${groupIndex}.pathIndex`,
+          message: `Portal ${group.pathIndex} does not exist (the level has ${portalCount} path${portalCount === 1 ? "" : "s"}).`,
+        });
+      }
+    });
+  });
+
   const waters = level.waters ?? [];
 
   level.pathWaypoints.forEach((path, pathIndex) => {

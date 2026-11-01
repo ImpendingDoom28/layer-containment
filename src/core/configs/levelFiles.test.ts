@@ -61,6 +61,21 @@ describe("playable level files", () => {
       }
     });
 
+    it(`${id}: named spawn portals reference existing paths`, () => {
+      const level = loadLevel(id);
+      const portalCount = level.pathWaypoints.length;
+      for (const wave of level.waveConfigs) {
+        for (const group of wave.enemies) {
+          if (group.pathIndex !== undefined) {
+            expect(
+              group.pathIndex < portalCount,
+              `wave group ${group.type} names portal ${group.pathIndex}, but the level has ${portalCount} path(s)`
+            ).toBe(true);
+          }
+        }
+      }
+    });
+
     it(`${id}: buildings and water never sit on the path`, () => {
       const level = loadLevel(id);
       const gridOffset = -(level.gridSize * TILE_SIZE) / 2;

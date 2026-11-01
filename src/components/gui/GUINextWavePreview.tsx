@@ -23,7 +23,7 @@ import {
   discoveredEnemiesSelector,
   useAlmanacStore,
 } from "../../core/stores/useAlmanacStore";
-import { EnemyConfig } from "../../core/types/game";
+import { EnemyConfig, EnemyType } from "../../core/types/game";
 import { useTranslationInCanvas } from "../../core/i18n/useTranslationInCanvas";
 import { applyEnemyUpgradeCounts } from "../../utils/waveEnemyCounts";
 import {
@@ -106,17 +106,49 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
     return waveConfigs[nextWaveIndex];
   }, [shouldShow, currentWave, waveConfigs]);
 
-  // Mirrors the spawn loop: Reinforcements scales the group counts *and* the
-  // spawn cap, so the counts shown here are exactly what will spawn.
-  const reinforcedGroups = useMemo(() => {
+  // Mirrors the spawn queue: Reinforcements scales the group counts *and* the
+  // spawn cap, then each group's enemies are resolved to a portal — an
+  // explicit `pathIndex`, or an even round-robin over all portals when the
+  // group names none. Only the enemies that actually come out of this portal
+  // are listed, so what the player sees is what spawns.
+  const portalGroups = useMemo(() => {
     if (!nextWaveConfig) return [];
-    return applyEnemyUpgradeCounts(
+    const { groups } = applyEnemyUpgradeCounts(
       nextWaveConfig.enemies,
       levelEnemyUpgradeStack,
       enemyUpgrades,
       nextWaveConfig.totalEnemies
-    ).groups;
-  }, [nextWaveConfig, levelEnemyUpgradeStack, enemyUpgrades]);
+    );
+    const portalCount = pathWaypoints.length;
+    const byType = new Map<EnemyType, number>();
+    for (const group of groups) {
+      let countHere: number;
+      if (group.pathIndex !== undefined) {
+        // A named portal: the whole group is only there (or nowhere).
+        if (group.pathIndex !== pathIndex) continue;
+        countHere = group.count;
+      } else if (portalCount > 1) {
+        // Even split, mirroring the spawn queue: the k-th enemy of the group
+        // takes portal `k % portalCount`, so the first `count % portalCount`
+        // portals get one extra.
+        const base = Math.floor(group.count / portalCount);
+        const remainder = group.count % portalCount;
+        countHere = base + (pathIndex < remainder ? 1 : 0);
+      } else {
+        countHere = group.count;
+      }
+      if (countHere > 0) {
+        byType.set(group.type, (byType.get(group.type) ?? 0) + countHere);
+      }
+    }
+    return Array.from(byType, ([type, count]) => ({ type, count }));
+  }, [
+    nextWaveConfig,
+    levelEnemyUpgradeStack,
+    enemyUpgrades,
+    pathWaypoints,
+    pathIndex,
+  ]);
 
   const worldPosition = useMemo(() => {
     const path = pathWaypoints[pathIndex];
@@ -141,7 +173,7 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
     ] as [number, number, number];
   }, [pathIndex, pathWaypoints]);
 
-  if (!shouldShow || !nextWaveConfig) return null;
+  if (!shouldShow || !nextWaveConfig || portalGroups.length === 0) return null;
 
   return (
     <group position={worldPosition}>
@@ -157,24 +189,22 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
           </UICardHeader>
           <UICardContent className="gap-2">
             <div className="flex flex-col gap-1.5">
-              {reinforcedGroups.map((enemyGroup, index) => {
-                const enemyConfig = enemyTypes?.[enemyGroup.type];
+              {portalGroups.map(({ type, count }, index) => {
+                const enemyConfig = enemyTypes?.[type];
                 if (!enemyConfig) return null;
 
-                const isDiscovered = discoveredEnemies.includes(
-                  enemyGroup.type
-                );
+                const isDiscovered = discoveredEnemies.includes(type);
 
                 return (
                   <EnemyPreviewModel
-                    key={`${enemyGroup.type}-${index}`}
+                    key={`${type}-${index}`}
                     enemyConfig={enemyConfig}
                     name={
                       isDiscovered
-                        ? t(`enemies.${enemyGroup.type}.name`)
+                        ? t(`enemies.${type}.name`)
                         : t("almanac.undiscoveredName")
                     }
-                    count={enemyGroup.count}
+                    count={count}
                     isDiscovered={isDiscovered}
                   />
                 );

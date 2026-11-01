@@ -224,12 +224,17 @@ export const useLevelSystem = () => {
   const addEnemy = useCallback(
     (
       enemyType: EnemyType,
-      applyUpgrades: EnemyUpgradeId[] = []
+      applyUpgrades: EnemyUpgradeId[] = [],
+      forcedPathIndex?: number
     ): Enemy | null => {
       const enemyConfig = enemyTypes?.[enemyType];
       if (!enemyConfig) return null;
 
-      const pathIndex = calcPathIndex();
+      const pathIndex =
+        forcedPathIndex !== undefined && forcedPathIndex >= 0 &&
+        forcedPathIndex < pathWaypoints.length
+          ? forcedPathIndex
+          : calcPathIndex();
       const startPosition = getPositionAlongMultiplePaths(
         pathWaypoints,
         pathIndex,

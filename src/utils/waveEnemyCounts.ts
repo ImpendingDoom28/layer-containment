@@ -82,6 +82,8 @@ export const applyEnemyUpgradeCounts = (
 export type WaveSpawnQueueItem = {
   type: WaveEnemyGroup["type"];
   delay: number;
+  /** Portal (path index) the enemy emerges from; omitted for levels with a single path. */
+  pathIndex?: number;
 };
 
 /**
@@ -89,26 +91,43 @@ export type WaveSpawnQueueItem = {
  * enemies, each picking its group with weight = remaining count, and each
  * adding the picked group's `spawnInterval` (ms) to the previous enemy's
  * delay. The input groups are not mutated.
+ *
+ * `pathCount` is the number of portals the level has. A group that names a
+ * `pathIndex` spawns its enemies only from that portal; a group without one
+ * has its enemies distributed evenly across all portals (the remainder goes
+ * to the earlier portals, so every portal still gets its fair share). The
+ * returned items carry the resolved `pathIndex`, so the preview and the spawn
+ * loop always agree on which portal throws which enemy. With a single portal
+ * (the common case) the item carries no `pathIndex`, matching the legacy
+ * shape.
  */
 export const buildWaveSpawnQueue = (
   groups: WaveEnemyGroup[],
-  random: () => number = Math.random
+  random: () => number = Math.random,
+  pathCount = 1
 ): WaveSpawnQueueItem[] => {
   const remaining = groups.map((group) => ({ ...group }));
   const totalCount = remaining.reduce((sum, group) => sum + group.count, 0);
   let remainingCount = totalCount;
 
-  const selectWeighted = (): WaveEnemyGroup | null => {
+  // Unassigned groups are split evenly across the portals: the k-th enemy
+  // emitted from a group takes portal `k % pathCount`, so every portal gets
+  // floor/ceil(count / pathCount) of that group no matter when its enemies
+  // are drawn. This matches the next-wave preview, which computes the same
+  // per-portal shares per group.
+  const emittedPerGroup = groups.map(() => 0);
+
+  const selectWeightedIndex = (): number | null => {
     if (remainingCount === 0) return null;
     const roll = random() * remainingCount;
     let cumulativeWeight = 0;
-    for (const group of remaining) {
-      if (group.count <= 0) continue;
-      cumulativeWeight += group.count;
-      if (roll < cumulativeWeight) return group;
+    for (let i = 0; i < remaining.length; i++) {
+      if (remaining[i].count <= 0) continue;
+      cumulativeWeight += remaining[i].count;
+      if (roll < cumulativeWeight) return i;
     }
     for (let i = remaining.length - 1; i >= 0; i--) {
-      if (remaining[i].count > 0) return remaining[i];
+      if (remaining[i].count > 0) return i;
     }
     return null;
   };
@@ -116,9 +135,17 @@ export const buildWaveSpawnQueue = (
   const queue: WaveSpawnQueueItem[] = [];
   let cumulativeDelay = 0;
   for (let i = 0; i < totalCount; i++) {
-    const chosen = selectWeighted();
-    if (!chosen) break;
-    queue.push({ type: chosen.type, delay: cumulativeDelay });
+    const chosenIndex = selectWeightedIndex();
+    if (chosenIndex === null) break;
+    const chosen = remaining[chosenIndex];
+    const emitted = emittedPerGroup[chosenIndex]++;
+    const pathIndex =
+      chosen.pathIndex !== undefined
+        ? chosen.pathIndex
+        : pathCount > 1
+          ? emitted % pathCount
+          : undefined;
+    queue.push({ type: chosen.type, delay: cumulativeDelay, pathIndex });
     cumulativeDelay += chosen.spawnInterval * 1000;
     chosen.count -= 1;
     remainingCount -= 1;

@@ -36,6 +36,8 @@ type SpawnQueueItem = {
   type: EnemyType;
   delay: number;
   upgrades: EnemyUpgradeId[];
+  /** Portal (path index) the enemy emerges from; omitted for single-path levels. */
+  pathIndex?: number;
 };
 
 export const useWaveSystem = (gameState: GameState) => {
@@ -116,12 +118,14 @@ export const useWaveSystem = (gameState: GameState) => {
       waveConfig.totalEnemies
     ).groups;
     const spawnQueue: SpawnQueueItem[] = buildWaveSpawnQueue(
-      availableEnemyTypes
+      availableEnemyTypes,
+      Math.random,
+      pathWaypoints.length
     ).map((item) => ({ ...item, upgrades: waveUpgrades }));
 
     spawnQueueRef.current = spawnQueue;
     totalPauseDurationRef.current = 0;
-  }, [currentWave, totalWaves, waveConfigs]);
+  }, [currentWave, totalWaves, waveConfigs, pathWaypoints]);
 
   const startNextWave = useCallback(() => {
     const setNextWaveReady = useWaveStore.getState().setNextWaveReady;
@@ -224,7 +228,7 @@ export const useWaveSystem = (gameState: GameState) => {
         currentTime - lastSpawnTimeRef.current - totalPauseDurationRef.current;
 
       if (nextSpawn && timeSinceWaveStart >= nextSpawn.delay) {
-        addEnemy(nextSpawn.type, nextSpawn.upgrades);
+        addEnemy(nextSpawn.type, nextSpawn.upgrades, nextSpawn.pathIndex);
         spawnQueueIndexRef.current += 1;
       }
     },

@@ -4,6 +4,9 @@ export const en = {
     general: "General",
     pauseWhenTabHidden: "Pause when tab is hidden",
     pauseWhenTabHiddenHint: "Uncheck to keep the game running while you are on another tab.",
+    bloom: "Bloom (glow)",
+    bloomHint:
+      "A soft glow around bright elements — portals, projectiles, and effects. Disable on slower devices for higher performance.",
     language: "Language",
     audio: "Audio",
     mute: "Mute",

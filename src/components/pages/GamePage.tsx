@@ -27,6 +27,7 @@ import { HUDPauseOverlay } from "../hud/HUDPauseOverlay";
 import { HUDMobileControls } from "../hud/HUDMobileControls";
 import { HUDLoading } from "../hud/HUDLoading";
 import { KeyboardHandlingSystem } from "../systems/KeyboardHandlingSystem";
+import { PostFX } from "../scenes/shared/PostFX";
 import { ShaderReadyGate } from "../systems/ShaderReadyGate";
 import { BackgroundGameLoopSystem } from "../systems/BackgroundGameLoopSystem";
 import { GAME_CANVAS_GL, GAME_CANVAS_STYLE } from "../../constants/canvas";
@@ -274,6 +275,8 @@ export const GamePage: FC<GamePageProps> = ({
 
             <KeyboardHandlingSystem onGameMenuEscape={gameMenuClose.startClose} />
           </Suspense>
+
+          <PostFX />
         </SimulationClockProvider>
       </Canvas>
 

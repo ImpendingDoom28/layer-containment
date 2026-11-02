@@ -119,7 +119,6 @@ export const useWaveSystem = (gameState: GameState) => {
     ).groups;
     const spawnQueue: SpawnQueueItem[] = buildWaveSpawnQueue(
       availableEnemyTypes,
-      Math.random,
       pathWaypoints.length
     ).map((item) => ({ ...item, upgrades: waveUpgrades }));
 

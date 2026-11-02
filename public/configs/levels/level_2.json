@@ -178,9 +178,15 @@
       "enemies": [
         {
           "type": "basic",
-          "count": 10,
+          "count": 6,
           "spawnInterval": 1,
           "pathIndex": 0
+        },
+        {
+          "type": "basic",
+          "count": 4,
+          "spawnInterval": 1,
+          "pathIndex": 1
         }
       ],
       "totalEnemies": 10
@@ -189,21 +195,33 @@
       "enemies": [
         {
           "type": "basic",
-          "count": 12,
+          "count": 8,
           "spawnInterval": 0.8,
           "pathIndex": 0
         },
         {
           "type": "fast",
-          "count": 4,
+          "count": 2,
           "spawnInterval": 1.1,
-          "pathIndex": 1
+          "pathIndex": 0
         },
         {
           "type": "medic",
           "count": 1,
           "spawnInterval": 1,
           "pathIndex": 0
+        },
+        {
+          "type": "basic",
+          "count": 4,
+          "spawnInterval": 0.8,
+          "pathIndex": 1
+        },
+        {
+          "type": "fast",
+          "count": 2,
+          "spawnInterval": 1.1,
+          "pathIndex": 1
         }
       ],
       "totalEnemies": 17
@@ -212,15 +230,27 @@
       "enemies": [
         {
           "type": "basic",
-          "count": 14,
+          "count": 8,
           "spawnInterval": 0.7,
           "pathIndex": 0
         },
         {
           "type": "fast",
-          "count": 6,
+          "count": 4,
           "spawnInterval": 1,
           "pathIndex": 0
+        },
+        {
+          "type": "basic",
+          "count": 6,
+          "spawnInterval": 0.7,
+          "pathIndex": 1
+        },
+        {
+          "type": "fast",
+          "count": 2,
+          "spawnInterval": 1,
+          "pathIndex": 1
         }
       ],
       "totalEnemies": 20
@@ -229,13 +259,31 @@
       "enemies": [
         {
           "type": "basic",
-          "count": 16,
+          "count": 10,
           "spawnInterval": 0.6,
           "pathIndex": 0
         },
         {
           "type": "fast",
-          "count": 8,
+          "count": 5,
+          "spawnInterval": 0.9,
+          "pathIndex": 0
+        },
+        {
+          "type": "medic",
+          "count": 1,
+          "spawnInterval": 1,
+          "pathIndex": 0
+        },
+        {
+          "type": "basic",
+          "count": 6,
+          "spawnInterval": 0.6,
+          "pathIndex": 1
+        },
+        {
+          "type": "fast",
+          "count": 3,
           "spawnInterval": 0.9,
           "pathIndex": 1
         },
@@ -244,12 +292,6 @@
           "count": 2,
           "spawnInterval": 2,
           "pathIndex": 1
-        },
-        {
-          "type": "medic",
-          "count": 1,
-          "spawnInterval": 1,
-          "pathIndex": 0
         }
       ],
       "totalEnemies": 27
@@ -258,13 +300,31 @@
       "enemies": [
         {
           "type": "basic",
-          "count": 18,
+          "count": 12,
           "spawnInterval": 0.5,
           "pathIndex": 0
         },
         {
           "type": "fast",
-          "count": 10,
+          "count": 6,
+          "spawnInterval": 0.8,
+          "pathIndex": 0
+        },
+        {
+          "type": "splitter",
+          "count": 2,
+          "spawnInterval": 2,
+          "pathIndex": 0
+        },
+        {
+          "type": "basic",
+          "count": 6,
+          "spawnInterval": 0.5,
+          "pathIndex": 1
+        },
+        {
+          "type": "fast",
+          "count": 4,
           "spawnInterval": 0.8,
           "pathIndex": 1
         },
@@ -272,12 +332,6 @@
           "type": "tank",
           "count": 3,
           "spawnInterval": 1.5,
-          "pathIndex": 0
-        },
-        {
-          "type": "splitter",
-          "count": 2,
-          "spawnInterval": 2,
           "pathIndex": 1
         }
       ],
@@ -287,26 +341,20 @@
       "enemies": [
         {
           "type": "basic",
-          "count": 20,
+          "count": 14,
           "spawnInterval": 0.45,
           "pathIndex": 0
         },
         {
           "type": "fast",
-          "count": 12,
+          "count": 5,
           "spawnInterval": 0.7,
-          "pathIndex": 1
+          "pathIndex": 0
         },
         {
           "type": "tank",
-          "count": 4,
+          "count": 3,
           "spawnInterval": 1.3,
-          "pathIndex": 1
-        },
-        {
-          "type": "medic",
-          "count": 2,
-          "spawnInterval": 1,
           "pathIndex": 0
         },
         {
@@ -314,6 +362,30 @@
           "count": 3,
           "spawnInterval": 1.8,
           "pathIndex": 0
+        },
+        {
+          "type": "basic",
+          "count": 6,
+          "spawnInterval": 0.45,
+          "pathIndex": 1
+        },
+        {
+          "type": "fast",
+          "count": 7,
+          "spawnInterval": 0.7,
+          "pathIndex": 1
+        },
+        {
+          "type": "tank",
+          "count": 1,
+          "spawnInterval": 1.3,
+          "pathIndex": 1
+        },
+        {
+          "type": "medic",
+          "count": 2,
+          "spawnInterval": 1,
+          "pathIndex": 1
         }
       ],
       "totalEnemies": 41
@@ -322,21 +394,39 @@
       "enemies": [
         {
           "type": "basic",
-          "count": 22,
+          "count": 14,
           "spawnInterval": 0.4,
-          "pathIndex": 1
+          "pathIndex": 0
         },
         {
           "type": "fast",
-          "count": 14,
+          "count": 9,
           "spawnInterval": 0.6,
           "pathIndex": 0
         },
         {
           "type": "tank",
-          "count": 5,
-          "spawnInterval": 1.2,
+          "count": 3,
+          "spawnInterval": 1,
           "pathIndex": 0
+        },
+        {
+          "type": "basic",
+          "count": 8,
+          "spawnInterval": 0.4,
+          "pathIndex": 1
+        },
+        {
+          "type": "fast",
+          "count": 5,
+          "spawnInterval": 0.6,
+          "pathIndex": 1
+        },
+        {
+          "type": "tank",
+          "count": 2,
+          "spawnInterval": 1,
+          "pathIndex": 1
         }
       ],
       "totalEnemies": 41
@@ -345,13 +435,37 @@
       "enemies": [
         {
           "type": "basic",
-          "count": 26,
+          "count": 16,
           "spawnInterval": 0.35,
           "pathIndex": 0
         },
         {
           "type": "fast",
-          "count": 16,
+          "count": 10,
+          "spawnInterval": 0.5,
+          "pathIndex": 0
+        },
+        {
+          "type": "medic",
+          "count": 3,
+          "spawnInterval": 1,
+          "pathIndex": 0
+        },
+        {
+          "type": "splitter",
+          "count": 2,
+          "spawnInterval": 1.5,
+          "pathIndex": 0
+        },
+        {
+          "type": "basic",
+          "count": 10,
+          "spawnInterval": 0.35,
+          "pathIndex": 1
+        },
+        {
+          "type": "fast",
+          "count": 6,
           "spawnInterval": 0.5,
           "pathIndex": 1
         },
@@ -362,14 +476,8 @@
           "pathIndex": 1
         },
         {
-          "type": "medic",
-          "count": 3,
-          "spawnInterval": 1,
-          "pathIndex": 0
-        },
-        {
           "type": "splitter",
-          "count": 4,
+          "count": 2,
           "spawnInterval": 1.5,
           "pathIndex": 1
         }

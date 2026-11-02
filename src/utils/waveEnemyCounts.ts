@@ -103,8 +103,8 @@ export type WaveSpawnQueueItem = {
  */
 export const buildWaveSpawnQueue = (
   groups: WaveEnemyGroup[],
-  random: () => number = Math.random,
-  pathCount = 1
+  pathCount = 1,
+  random: () => number = Math.random
 ): WaveSpawnQueueItem[] => {
   const remaining = groups.map((group) => ({ ...group }));
   const totalCount = remaining.reduce((sum, group) => sum + group.count, 0);

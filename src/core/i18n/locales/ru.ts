@@ -224,6 +224,8 @@ const ruValues = {
     pathSubToolBase: "База",
     addPath: "Добавить путь",
     remove: "Удалить",
+    removePathBlocked:
+      "Группа врагов закреплена за этим порталом. Сначала снимите закрепление в разделе Волны, чтобы удалить путь.",
     clickTilesToWaypoint: "Кликайте по плиткам на канвасе, чтобы добавлять точки пути.",
     switchPathTool: "Переключитесь на инструмент пути выше, чтобы редактировать.",
     waypoints: "Точек пути: {{count}}",
@@ -264,6 +266,9 @@ const ruValues = {
     type: "Тип",
     count: "Количество",
     interval: "Интервал",
+    portal: "Портал",
+    portalAll: "Все порталы (равномерно)",
+    portalN: "Портал {{index}}",
     publish: "Публикация",
     drafting: "Черновик",
     needsFixes: "Требуются исправления",

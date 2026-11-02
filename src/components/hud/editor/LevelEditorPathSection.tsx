@@ -77,6 +77,13 @@ export const LevelEditorPathSection = () => {
     activeTool === "setSpawn" ||
     activeTool === "setBase";
 
+  // A wave group pinned to the selected path would be silently re-pointed to
+  // whatever path slides into its index after deletion, so the path is
+  // protected while any group still targets it.
+  const selectedPathHasPinnedGroup = draftLevel.waveConfigs.some((wave) =>
+    wave.enemies.some((group) => group.pathIndex === selectedPathIndex)
+  );
+
   return (
     <UIAccordionItem value="path">
       <UIAccordionTrigger>{t("editor.pathTab")}</UIAccordionTrigger>
@@ -97,19 +104,45 @@ export const LevelEditorPathSection = () => {
           ))}
         </div>
 
-        <div className="flex gap-2">
-          <UIButton size="sm" variant="outline" onClick={addPath}>
-            <Icon name="Plus" size={14} />
-            {t("editor.addPath")}
-          </UIButton>
-          <UIButton
-            size="sm"
-            variant="destructive"
-            onClick={removeSelectedPath}
-          >
-            <Icon name="Trash2" color="destructive" size={14} />
-            {t("editor.remove")}
-          </UIButton>
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <UIButton size="sm" variant="outline" onClick={addPath}>
+              <Icon name="Plus" size={14} />
+              {t("editor.addPath")}
+            </UIButton>
+            <UIButton
+              size="sm"
+              variant="destructive"
+              onClick={removeSelectedPath}
+              disabled={selectedPathHasPinnedGroup}
+              aria-describedby={
+                selectedPathHasPinnedGroup
+                  ? "remove-path-blocked-reason"
+                  : undefined
+              }
+              title={
+                selectedPathHasPinnedGroup
+                  ? t("editor.removePathBlocked")
+                  : t("editor.remove")
+              }
+            >
+              <Icon name="Trash2" color="destructive" size={14} />
+              {t("editor.remove")}
+            </UIButton>
+          </div>
+          {selectedPathHasPinnedGroup ? (
+            <div
+              id="remove-path-blocked-reason"
+              className="flex items-start gap-2 pl-2 border-l-2 border-amber-400/40"
+            >
+              <UITypography
+                variant="verySmall"
+                className="text-muted-foreground"
+              >
+                {t("editor.removePathBlocked")}
+              </UITypography>
+            </div>
+          ) : null}
         </div>
 
         {draftLevel.pathWaypoints.length > 0 ? (

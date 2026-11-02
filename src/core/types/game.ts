@@ -216,6 +216,12 @@ export type WaveEnemyGroup = {
   type: EnemyType;
   count: number;
   spawnInterval: Seconds;
+  /**
+   * Portal (path index) the enemies of this group emerge from. When omitted,
+   * the group's enemies are distributed evenly across all portals; when set,
+   * every enemy of the group spawns only from that portal.
+   */
+  pathIndex?: number;
 };
 
 // Wave configuration

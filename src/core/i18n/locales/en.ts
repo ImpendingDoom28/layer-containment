@@ -214,6 +214,8 @@ export const en = {
     pathSubToolBase: "Base",
     addPath: "Add Path",
     remove: "Remove",
+    removePathBlocked:
+      "An enemy group is pinned to this portal. Unpin it in Waves before removing the path.",
     clickTilesToWaypoint: "Click tiles on the canvas to add waypoints.",
     switchPathTool: "Switch to a path tool above to edit.",
     waypoints: "Waypoints: {{count}}",
@@ -248,6 +250,9 @@ export const en = {
     type: "Type",
     count: "Count",
     interval: "Interval",
+    portal: "Portal",
+    portalAll: "All portals (even split)",
+    portalN: "Portal {{index}}",
     publish: "Publish",
     drafting: "Drafting",
     needsFixes: "Needs fixes",

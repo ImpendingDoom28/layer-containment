@@ -394,22 +394,45 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
 
   removeSelectedPath: () => {
     set((state) => {
-      if (!state.draftLevel.pathWaypoints[state.selectedPathIndex]) {
+      const removedPathIndex = state.selectedPathIndex;
+      if (!state.draftLevel.pathWaypoints[removedPathIndex]) {
+        return state;
+      }
+
+      // A wave-group pinned to the removed portal would silently re-point to
+      // whatever path slides into its index, so deletion is refused while any
+      // group still targets this path. The editor UI disables the button with
+      // the same rule; this keeps the store safe for programmatic callers.
+      const hasPinnedGroup = state.draftLevel.waveConfigs.some((wave) =>
+        wave.enemies.some((group) => group.pathIndex === removedPathIndex)
+      );
+      if (hasPinnedGroup) {
         return state;
       }
 
       const nextPaths = state.draftLevel.pathWaypoints.filter(
-        (_path, pathIndex) => pathIndex !== state.selectedPathIndex
+        (_path, pathIndex) => pathIndex !== removedPathIndex
       );
 
       return {
         draftLevel: {
           ...state.draftLevel,
           pathWaypoints: nextPaths.length > 0 ? nextPaths : [[]],
+          // Re-index the pins of groups that targeted later paths, so a
+          // group pinned to "the third portal" keeps following it.
+          waveConfigs: state.draftLevel.waveConfigs.map((wave) => ({
+            ...wave,
+            enemies: wave.enemies.map((group) =>
+              group.pathIndex !== undefined &&
+              group.pathIndex > removedPathIndex
+                ? { ...group, pathIndex: group.pathIndex - 1 }
+                : group
+            ),
+          })),
         },
         selectedPathIndex: Math.max(
           0,
-          Math.min(state.selectedPathIndex, nextPaths.length - 1)
+          Math.min(removedPathIndex, nextPaths.length - 1)
         ),
         selected: null,
         hasUnsavedChanges: true,

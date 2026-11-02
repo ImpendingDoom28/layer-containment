@@ -79,12 +79,21 @@ diffuseColor.rgb *= ( 0.92 + 0.16 * waterR );`
   return mat;
 };
 
-const waterMaterialCache = new Map<string, MeshStandardMaterial>();
+// Keyed by the clock object so each canvas (game / editor / testing level)
+// gets materials bound to its own time uniform instead of reusing another
+// canvas's. A WeakMap so the per-color sub-map is dropped when a canvas's
+// clock is garbage-collected on unmount — no cache to grow or prune by hand.
+const waterMaterialCache = new WeakMap<
+  WaterTimeUniform,
+  Map<string, MeshStandardMaterial>
+>();
 
 /**
- * Returns the cached animated water material for a body color. Materials are
- * shared across every body of the same color and live for the app lifetime
- * (they reference the shared time uniform), so callers must not dispose them.
+ * Returns the cached animated water material for a body color on a given
+ * clock. Materials are shared across every body of the same color *on the
+ * same clock* and live as long as that clock (the scene's provider), so
+ * callers must not dispose them. A body of the same color on a different
+ * clock gets its own material bound to that clock's time uniform.
  */
 export const getWaterMaterial = (
   color: string,
@@ -92,11 +101,16 @@ export const getWaterMaterial = (
   glow: string
 ): MeshStandardMaterial => {
   const key = color.toLowerCase();
-  const existing = waterMaterialCache.get(key);
+  let byColor = waterMaterialCache.get(time);
+  if (!byColor) {
+    byColor = new Map();
+    waterMaterialCache.set(time, byColor);
+  }
+  const existing = byColor.get(key);
   if (existing) {
     return existing;
   }
   const material = createWaterMaterial({ color, time, glow });
-  waterMaterialCache.set(key, material);
+  byColor.set(key, material);
   return material;
 };

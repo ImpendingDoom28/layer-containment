@@ -61,6 +61,17 @@ describe("getWaterMaterial", () => {
     expect(other).not.toBe(a);
   });
 
+  it("scopes the cache by clock so a body of the same color on another clock gets its own material", () => {
+    const clockA = { value: 0 } as WaterTimeUniform;
+    const clockB = { value: 0 } as WaterTimeUniform;
+
+    const onA = getWaterMaterial(sampleParams.color, clockA, sampleParams.glow);
+    const onB = getWaterMaterial(sampleParams.color, clockB, sampleParams.glow);
+
+    // Same color, different clocks: distinct materials, each bound to its clock.
+    expect(onB).not.toBe(onA);
+  });
+
   it("injects ripple code with the expected uniforms and world-space varying", () => {
     const mat = getWaterMaterial(
       sampleParams.color,

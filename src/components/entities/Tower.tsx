@@ -14,6 +14,7 @@ import {
   useLevelStore,
 } from "../../core/stores/useLevelStore";
 import {
+  selectedTowerTypeToPlaceSelector,
   tileSizeSelector,
   towerBaseRadiusSelector,
   towerHeightSelector,
@@ -69,6 +70,10 @@ export const Tower: FC<TowerProps> = memo(
     const towerHeight = useGameStore(towerHeightSelector);
     const gridSize = useLevelStore(gridSizeSelector);
     const tileSize = useGameStore(tileSizeSelector);
+    // While the player is placing a tower, the model's overhanging parts (long
+    // barrels on basic/laser, the wide aoe base) must not swallow the click
+    // aimed at a neighbouring tile, so the tower's click handler is disabled.
+    const isPlacing = useGameStore(selectedTowerTypeToPlaceSelector) !== null;
     const towerBasePosition: Vector3D = [0, towerBaseRadius, 0];
     const towerBodyPosition: Vector3D = [
       0,
@@ -243,7 +248,7 @@ export const Tower: FC<TowerProps> = memo(
         position={footing.position}
         quaternion={footing.quaternion}
         onClick={
-          isPreview
+          isPreview || isPlacing
             ? undefined
             : (e: ThreeEvent<MouseEvent>) => {
                 e.stopPropagation();

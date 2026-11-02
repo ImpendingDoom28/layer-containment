@@ -1,5 +1,13 @@
 import { useCallback, memo, type FC, type ReactNode } from "react";
-import { Box3, Euler, Group, Quaternion, Vector3, type Object3D } from "three";
+import {
+  Box3,
+  Euler,
+  Group,
+  Mesh,
+  Quaternion,
+  Vector3,
+  type Object3D,
+} from "three";
 
 import {
   WRAITH_MODEL_URL,
@@ -45,7 +53,16 @@ const prepareWraith = (
   group.position.copy(_offset);
   group.quaternion.copy(_quat);
   group.scale.setScalar(scale);
-  group.add(source.clone());
+  const clone = source.clone();
+  // The Wraith is a physical drone, so let it drop a shadow like every other
+  // enemy body (the plain sphere fallback gets the same flags in Enemy).
+  clone.traverse((child) => {
+    if ((child as Partial<Mesh>).isMesh) {
+      (child as Mesh).castShadow = true;
+      (child as Mesh).receiveShadow = true;
+    }
+  });
+  group.add(clone);
   return group;
 };
 

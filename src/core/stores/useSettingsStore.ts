@@ -20,6 +20,7 @@ import {
 type SettingsStoreState = {
   pauseWhenTabHidden: boolean;
   bloomEnabled: boolean;
+  shadowsEnabled: boolean;
   language: LanguageId;
   controlScheme: ControlSchemeId;
   keybindings: KeybindingsConfig;
@@ -28,6 +29,7 @@ type SettingsStoreState = {
 type SettingsStoreActions = {
   setPauseWhenTabHidden: (pause: boolean) => void;
   setBloomEnabled: (enabled: boolean) => void;
+  setShadowsEnabled: (enabled: boolean) => void;
   setLanguage: (language: LanguageId) => void;
   setControlScheme: (scheme: ControlSchemeId) => void;
   setKeybinding: (key: KeybindingKey, value: string) => void;
@@ -36,9 +38,7 @@ type SettingsStoreActions = {
 
 type SettingsStore = SettingsStoreState & SettingsStoreActions;
 
-const normalizeControlScheme = (
-  scheme: unknown
-): ControlSchemeId =>
+const normalizeControlScheme = (scheme: unknown): ControlSchemeId =>
   typeof scheme === "string" &&
   (CONTROL_SCHEMES as readonly string[]).includes(scheme)
     ? (scheme as ControlSchemeId)
@@ -47,6 +47,7 @@ const normalizeControlScheme = (
 const DEFAULT_STATE: SettingsStoreState = {
   pauseWhenTabHidden: true,
   bloomEnabled: true,
+  shadowsEnabled: true,
   language: DEFAULT_LANGUAGE_ID,
   controlScheme: DEFAULT_CONTROL_SCHEME,
   keybindings: { ...CONTROL_SCHEME_PRESETS[DEFAULT_CONTROL_SCHEME] },
@@ -63,6 +64,10 @@ export const useSettingsStore = create<SettingsStore>()(
 
       setBloomEnabled: (enabled) => {
         set({ bloomEnabled: enabled });
+      },
+
+      setShadowsEnabled: (enabled) => {
+        set({ shadowsEnabled: enabled });
       },
 
       setLanguage: (language) => {
@@ -105,6 +110,10 @@ export const useSettingsStore = create<SettingsStore>()(
             typeof persistedState.bloomEnabled === "boolean"
               ? persistedState.bloomEnabled
               : DEFAULT_STATE.bloomEnabled,
+          shadowsEnabled:
+            typeof persistedState.shadowsEnabled === "boolean"
+              ? persistedState.shadowsEnabled
+              : DEFAULT_STATE.shadowsEnabled,
         };
       },
     }
@@ -117,6 +126,10 @@ export const bloomEnabledSelector = (state: SettingsStore) =>
   state.bloomEnabled;
 export const setBloomEnabledSelector = (state: SettingsStore) =>
   state.setBloomEnabled;
+export const shadowsEnabledSelector = (state: SettingsStore) =>
+  state.shadowsEnabled;
+export const setShadowsEnabledSelector = (state: SettingsStore) =>
+  state.setShadowsEnabled;
 export const setPauseWhenTabHiddenSelector = (state: SettingsStore) =>
   state.setPauseWhenTabHidden;
 export const languageSelector = (state: SettingsStore) => state.language;

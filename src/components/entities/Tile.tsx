@@ -206,6 +206,8 @@ export const Tile: FC<TileProps> = memo(
         position={planetPose.position}
         quaternion={planetPose.quaternion}
         material={material}
+        castShadow
+        receiveShadow
         onClick={onInnerClick}
         onPointerOver={onInnerPointerOver}
         onPointerOut={onInnerPointerOut}

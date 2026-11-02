@@ -110,6 +110,8 @@ const StaticProjectile: FC<StaticProjectileProps> = memo(
           position={start}
           scale={radius}
           geometry={unitSphere}
+          castShadow
+          receiveShadow
           raycast={() => null}
         >
           <meshStandardMaterial

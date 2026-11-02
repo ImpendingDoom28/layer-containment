@@ -13,6 +13,7 @@ import { UITypography } from "../ui/UITypography";
 import { HUDSettingsAudioSection } from "./HUDSettingsAudioSection";
 import { HUDSettingsControlsSection } from "./HUDSettingsControlsSection";
 import { HUDSettingsGeneralSection } from "./HUDSettingsGeneralSection";
+import { HUDSettingsQualitySection } from "./HUDSettingsQualitySection";
 import { cn } from "../ui/lib/twUtils";
 
 type HUDSettingsProps = {
@@ -44,6 +45,7 @@ export const HUDSettings: FC<HUDSettingsProps> = ({
       </UICardHeader>
       <UICardContent className="flex-1 min-h-0 gap-8 overflow-y-auto">
         <HUDSettingsGeneralSection />
+        <HUDSettingsQualitySection />
         <HUDSettingsAudioSection />
         <HUDSettingsControlsSection />
       </UICardContent>

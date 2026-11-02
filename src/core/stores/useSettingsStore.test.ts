@@ -13,6 +13,7 @@ afterEach(() => {
   useSettingsStore.setState({
     pauseWhenTabHidden: true,
     bloomEnabled: true,
+    shadowsEnabled: true,
     controlScheme: DEFAULT_CONTROL_SCHEME,
     keybindings: { ...CONTROL_SCHEME_PRESETS[DEFAULT_CONTROL_SCHEME] },
   });
@@ -28,6 +29,19 @@ describe("useSettingsStore bloom", () => {
     expect(state().bloomEnabled).toBe(false);
     state().setBloomEnabled(true);
     expect(state().bloomEnabled).toBe(true);
+  });
+});
+
+describe("useSettingsStore shadows", () => {
+  it("defaults to enabled", () => {
+    expect(state().shadowsEnabled).toBe(true);
+  });
+
+  it("toggles with setShadowsEnabled", () => {
+    state().setShadowsEnabled(false);
+    expect(state().shadowsEnabled).toBe(false);
+    state().setShadowsEnabled(true);
+    expect(state().shadowsEnabled).toBe(true);
   });
 });
 

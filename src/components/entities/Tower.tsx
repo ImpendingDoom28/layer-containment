@@ -215,10 +215,12 @@ export const Tower: FC<TowerProps> = memo(
           position={towerBasePosition}
           geometry={baseGeometry}
           material={isPreview ? basePreviewMaterial : baseMaterial}
+          castShadow
+          receiveShadow
         />
 
         {/* Tower body */}
-        <mesh position={towerBodyPosition}>
+        <mesh position={towerBodyPosition} castShadow receiveShadow>
           <cylinderGeometry
             args={[bodyRadius, bodyRadius, towerHeight * 0.7, 16]}
           />
@@ -232,7 +234,7 @@ export const Tower: FC<TowerProps> = memo(
         </mesh>
 
         {/* Tower top */}
-        <mesh position={[0, topY, 0]}>
+        <mesh position={[0, topY, 0]} castShadow receiveShadow>
           {towerTop}
           <meshStandardMaterial
             color={towerColor}

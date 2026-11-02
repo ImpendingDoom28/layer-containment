@@ -14,7 +14,7 @@ export const Water: FC<WaterProps> = memo(({ water }) => {
   return (
     <group position={[water.x, 0, water.z]}>
       {water.shape === "box" ? (
-        <mesh position={[0, yPosition, 0]}>
+        <mesh position={[0, yPosition, 0]} receiveShadow>
           <boxGeometry args={[water.width, water.height, water.depth]} />
           <meshStandardMaterial
             color={water.color}
@@ -25,7 +25,7 @@ export const Water: FC<WaterProps> = memo(({ water }) => {
           />
         </mesh>
       ) : (
-        <mesh position={[0, yPosition, 0]}>
+        <mesh position={[0, yPosition, 0]} receiveShadow>
           <cylinderGeometry
             args={[water.width / 2, water.width / 2, water.height, 16]}
           />

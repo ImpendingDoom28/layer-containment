@@ -2,11 +2,16 @@ export const en = {
   settings: {
     title: "Settings",
     general: "General",
+    quality: "Quality",
     pauseWhenTabHidden: "Pause when tab is hidden",
-    pauseWhenTabHiddenHint: "Uncheck to keep the game running while you are on another tab.",
+    pauseWhenTabHiddenHint:
+      "Uncheck to keep the game running while you are on another tab.",
     bloom: "Bloom (glow)",
     bloomHint:
       "A soft glow around bright elements — portals, projectiles, and effects. Disable on slower devices for higher performance. Automatically off on software (CPU) renderers.",
+    shadows: "Shadows",
+    shadowsHint:
+      "Real-time shadows cast by towers, enemies, and props onto the terrain. Disable on slower devices for higher performance. Automatically off on software (CPU) renderers.",
     language: "Language",
     audio: "Audio",
     mute: "Mute",
@@ -61,7 +66,8 @@ export const en = {
     settings: "Settings",
     goToMainMenu: "Go to Main Menu",
     exitGame: "Exit game",
-    exitGameMessage: "Are you sure you want to exit? All unsaved changes will be lost",
+    exitGameMessage:
+      "Are you sure you want to exit? All unsaved changes will be lost",
     restartGame: "Restart game",
     restartGameMessage: "Are you sure you want to restart?",
     proceed: "Proceed",
@@ -117,7 +123,8 @@ export const en = {
     baseDamage: "Base Dmg",
     undiscovered: "Encounter this enemy in battle to reveal its secrets...",
     discoveredCount: "{{found}} / {{total}} discovered",
-    noData: "No enemy data available. Start a game to load enemy configurations.",
+    noData:
+      "No enemy data available. Start a game to load enemy configurations.",
     noTowerData:
       "No tower data available. Start a game to load tower configurations.",
     noUpgradeData:
@@ -155,7 +162,8 @@ export const en = {
     moveCamera: "Move the camera",
     pauseResume: "Pause / Resume",
     openCloseMenu: "Open / close menu",
-    laterInSettings: 'You can watch controls later in "{{settings}}" / "{{controls}}".',
+    laterInSettings:
+      'You can watch controls later in "{{settings}}" / "{{controls}}".',
   },
   upgrade: {
     title: "Empower Next Wave",
@@ -305,7 +313,8 @@ export const en = {
     },
     chain: {
       name: "Chain Lightning",
-      description: "Chain lightning jumps to nearby enemies (-15% damage per hop, up to 3 hops).",
+      description:
+        "Chain lightning jumps to nearby enemies (-15% damage per hop, up to 3 hops).",
     },
   },
   enemies: {
@@ -319,7 +328,8 @@ export const en = {
     },
     medic: {
       name: "Medic",
-      description: "Support unit. Every few seconds restores HP to nearby allies (not itself).",
+      description:
+        "Support unit. Every few seconds restores HP to nearby allies (not itself).",
     },
     tank: {
       name: "Tankee",
@@ -327,7 +337,8 @@ export const en = {
     },
     splitter: {
       name: "Splitter",
-      description: "Unstable colony. On death it bursts into 2-4 weaker shrapnel that continue along the path and pay no gold.",
+      description:
+        "Unstable colony. On death it bursts into 2-4 weaker shrapnel that continue along the path and pay no gold.",
     },
   },
   enemyUpgrades: {

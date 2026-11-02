@@ -12,8 +12,22 @@ afterEach(() => {
   // Restore a clean, default settings state between tests.
   useSettingsStore.setState({
     pauseWhenTabHidden: true,
+    bloomEnabled: true,
     controlScheme: DEFAULT_CONTROL_SCHEME,
     keybindings: { ...CONTROL_SCHEME_PRESETS[DEFAULT_CONTROL_SCHEME] },
+  });
+});
+
+describe("useSettingsStore bloom", () => {
+  it("defaults to enabled", () => {
+    expect(state().bloomEnabled).toBe(true);
+  });
+
+  it("toggles with setBloomEnabled", () => {
+    state().setBloomEnabled(false);
+    expect(state().bloomEnabled).toBe(false);
+    state().setBloomEnabled(true);
+    expect(state().bloomEnabled).toBe(true);
   });
 });
 

@@ -10,8 +10,10 @@ import {
   type LanguageId,
 } from "../../core/i18n/languages";
 import {
+  bloomEnabledSelector,
   languageSelector,
   pauseWhenTabHiddenSelector,
+  setBloomEnabledSelector,
   setLanguageSelector,
   setPauseWhenTabHiddenSelector,
   useSettingsStore,
@@ -21,6 +23,8 @@ export const HUDSettingsGeneralSection: FC = () => {
   const { t } = useTranslation();
   const pauseWhenTabHidden = useSettingsStore(pauseWhenTabHiddenSelector);
   const setPauseWhenTabHidden = useSettingsStore(setPauseWhenTabHiddenSelector);
+  const bloomEnabled = useSettingsStore(bloomEnabledSelector);
+  const setBloomEnabled = useSettingsStore(setBloomEnabledSelector);
   const language = useSettingsStore(languageSelector);
   const setLanguage = useSettingsStore(setLanguageSelector);
 
@@ -65,6 +69,24 @@ export const HUDSettingsGeneralSection: FC = () => {
           </label>
           <UITypography variant="small" className="text-muted-foreground">
             {t("settings.pauseWhenTabHiddenHint")}
+          </UITypography>
+        </div>
+      </div>
+      <div className="flex items-start gap-2">
+        <UICheckbox
+          id="settings-bloom"
+          checked={bloomEnabled}
+          onCheckedChange={(checked) => setBloomEnabled(checked === true)}
+        />
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor="settings-bloom"
+            className="text-sm font-medium leading-none"
+          >
+            {t("settings.bloom")}
+          </label>
+          <UITypography variant="small" className="text-muted-foreground">
+            {t("settings.bloomHint")}
           </UITypography>
         </div>
       </div>

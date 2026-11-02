@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { HUDLoading } from "../hud/HUDLoading";
 import { HUDTestingLevel } from "../hud/HUDTestingLevel";
 import { TestingLevelScene } from "../scenes/testingLevel/TestingLevelScene";
+import { PostFX } from "../scenes/shared/PostFX";
 import { GAME_CANVAS_GL, GAME_CANVAS_STYLE } from "../../constants/canvas";
 import { useGameSystem } from "../../core/hooks/useGameSystem";
 import { useLoadingTransition } from "../../core/hooks/useLoadingTransition";
@@ -50,6 +51,8 @@ export const TestingLevelPage = ({ onBackToMenu }: TestingLevelPageProps) => {
           <Suspense fallback={null}>
             {isGameConfigLoaded ? <TestingLevelScene /> : null}
           </Suspense>
+
+          <PostFX />
         </SimulationClockProvider>
       </Canvas>
 

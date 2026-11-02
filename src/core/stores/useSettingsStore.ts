@@ -19,6 +19,7 @@ import {
 
 type SettingsStoreState = {
   pauseWhenTabHidden: boolean;
+  bloomEnabled: boolean;
   language: LanguageId;
   controlScheme: ControlSchemeId;
   keybindings: KeybindingsConfig;
@@ -26,6 +27,7 @@ type SettingsStoreState = {
 
 type SettingsStoreActions = {
   setPauseWhenTabHidden: (pause: boolean) => void;
+  setBloomEnabled: (enabled: boolean) => void;
   setLanguage: (language: LanguageId) => void;
   setControlScheme: (scheme: ControlSchemeId) => void;
   setKeybinding: (key: KeybindingKey, value: string) => void;
@@ -44,6 +46,7 @@ const normalizeControlScheme = (
 
 const DEFAULT_STATE: SettingsStoreState = {
   pauseWhenTabHidden: true,
+  bloomEnabled: true,
   language: DEFAULT_LANGUAGE_ID,
   controlScheme: DEFAULT_CONTROL_SCHEME,
   keybindings: { ...CONTROL_SCHEME_PRESETS[DEFAULT_CONTROL_SCHEME] },
@@ -56,6 +59,10 @@ export const useSettingsStore = create<SettingsStore>()(
 
       setPauseWhenTabHidden: (pause) => {
         set({ pauseWhenTabHidden: pause });
+      },
+
+      setBloomEnabled: (enabled) => {
+        set({ bloomEnabled: enabled });
       },
 
       setLanguage: (language) => {
@@ -94,6 +101,10 @@ export const useSettingsStore = create<SettingsStore>()(
           // Guard against stale or malformed stored values.
           language: normalizeLanguageId(persistedState.language),
           controlScheme: normalizeControlScheme(persistedState.controlScheme),
+          bloomEnabled:
+            typeof persistedState.bloomEnabled === "boolean"
+              ? persistedState.bloomEnabled
+              : DEFAULT_STATE.bloomEnabled,
         };
       },
     }
@@ -102,6 +113,10 @@ export const useSettingsStore = create<SettingsStore>()(
 
 export const pauseWhenTabHiddenSelector = (state: SettingsStore) =>
   state.pauseWhenTabHidden;
+export const bloomEnabledSelector = (state: SettingsStore) =>
+  state.bloomEnabled;
+export const setBloomEnabledSelector = (state: SettingsStore) =>
+  state.setBloomEnabled;
 export const setPauseWhenTabHiddenSelector = (state: SettingsStore) =>
   state.setPauseWhenTabHidden;
 export const languageSelector = (state: SettingsStore) => state.language;

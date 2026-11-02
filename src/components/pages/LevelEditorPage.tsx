@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { HUDLoading } from "../hud/HUDLoading";
 import { HUDLevelEditor } from "../hud/HUDLevelEditor";
 import { LevelEditorScene } from "../scenes/editor/LevelEditorScene";
+import { PostFX } from "../scenes/shared/PostFX";
 import { GAME_CANVAS_GL, GAME_CANVAS_STYLE } from "../../constants/canvas";
 import { useGameSystem } from "../../core/hooks/useGameSystem";
 import { useLoadingTransition } from "../../core/hooks/useLoadingTransition";
@@ -50,6 +51,8 @@ export const LevelEditorPage = ({ onBackToGame }: LevelEditorPageProps) => {
           <Suspense fallback={null}>
             {isGameConfigLoaded ? <LevelEditorScene /> : null}
           </Suspense>
+
+          <PostFX />
         </SimulationClockProvider>
       </Canvas>
 

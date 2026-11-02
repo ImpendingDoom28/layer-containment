@@ -186,12 +186,15 @@ export const Enemy: FC<EnemyProps> = memo(
 
     // Per-enemy material for the hit-flash overlay: the body itself shares a
     // cached material per color, so a flash must live on its own mesh to avoid
-    // lighting every same-colored enemy at once.
+    // lighting every same-colored enemy at once. Emissive is kept dim so the
+    // flash reads as a white highlight instead of a hot white blob — with the
+    // bloom pass on, a full-intensity white emissive blows out and over-glow.
     const flashMaterial = useMemo(
       () =>
         new MeshStandardMaterial({
           color: getCssColorValue("scene-white"),
           emissive: getCssColorValue("scene-white"),
+          emissiveIntensity: 0.35,
           transparent: true,
           opacity: 0,
           depthWrite: false,
@@ -324,7 +327,9 @@ export const Enemy: FC<EnemyProps> = memo(
       // the current marker's visibility is toggled (only one marker is live at
       // a time, whichever body HitFlash is currently rendering).
       if (hitFlashRef.current > 0.004) {
-        flashMaterial.opacity = hitFlashRef.current * 0.85;
+        // Peak opacity kept below full so the flash never reads as a solid
+        // white block (and, with bloom, never over-glow).
+        flashMaterial.opacity = hitFlashRef.current * 0.65;
         if (hitMarkerRef.current) hitMarkerRef.current.visible = true;
         hitFlashRef.current = Math.max(
           0,

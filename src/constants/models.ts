@@ -1,24 +1,53 @@
 import { useGLTF } from "@react-three/drei";
 
+import type { EnemyType } from "../core/types/game";
+
 // Served from `public/` at the app root (relative, matching the audio assets in
 // `core/audio/gameSoundConfig.ts`). Vite's `base: "./"` keeps this correct under
 // both the BrowserRouter (http) and HashRouter (file:// Electron) setups.
-// The Wraith extracted on its own (the full Monolith collection is not shipped).
-export const WRAITH_MODEL_URL = "assets/models/wraith.glb";
+// Each enemy is shipped as its own standalone GLB (extracted one node at a time
+// from the Tower Defense entities collection) instead of the whole collection,
+// so the app only downloads the models it renders.
+export type EnemyModelSpec = {
+  url: string;
+  /** Name of the model root node inside the GLB. */
+  node: string;
+};
 
-// The drone root node inside wraith.glb. The nose points along the model's
-// local +Z; rotating it PI/2 about Y turns the nose toward the enemy's local
-// +X (its direction of travel).
-export const WRAITH_NODE = "W02_Wraith_ROOT";
+export const ENEMY_MODELS = {
+  basic: {
+    url: "assets/models/troop.glb",
+    node: "Enemy_Basic_ROOT",
+  },
+  fast: {
+    url: "assets/models/wraith.glb",
+    node: "Enemy_Fast_ROOT",
+  },
+  medic: {
+    url: "assets/models/medic.glb",
+    node: "Enemy_Medic_ROOT",
+  },
+  splitter: {
+    url: "assets/models/splitter.glb",
+    node: "Enemy_Splitter_ROOT",
+  },
+  tank: {
+    url: "assets/models/tankee.glb",
+    node: "Enemy_Tank_ROOT",
+  },
+} as const satisfies Record<EnemyType, EnemyModelSpec>;
 
-// Yaw that aligns the Wraith's nose (model +Z) with the enemy's direction of
-// travel (the enemy group's local +X).
-export const WRAITH_ROTATION_Y = Math.PI / 2;
+// Every model faces the same way: the nose points along the model's local +Z,
+// so rotating PI/2 about Y turns it toward the enemy's local +X (its direction
+// of travel).
+export const ENEMY_MODEL_ROTATION_Y = Math.PI / 2;
 
-// Kick off the GLB download the moment the module is first evaluated (app
-// boot, outside the Canvas) so the first fast enemy never suspends the whole
-// scene into the loading screen. Guarded for the node test environment, which
-// has no network and mocks `useGLTF` instead.
+// Kick off all GLB downloads the moment the module is first evaluated (app
+// boot, outside the Canvas) so the first wave of any enemy type never
+// suspends the whole scene into the loading screen. Guarded for the node test
+// environment, which has no network and never mounts the game scene.
 if (!import.meta.env["VITEST"]) {
-  useGLTF.preload(WRAITH_MODEL_URL);
+  for (const model of Object.values(ENEMY_MODELS)) {
+    useGLTF.preload(model.url);
+  }
 }

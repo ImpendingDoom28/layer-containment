@@ -391,7 +391,9 @@ const AlmanacUpgradeCard: FC<AlmanacUpgradeCardProps> = ({
             className="mt-2 shrink-0 font-semibold text-green-400"
           >
             {t("almanac.upgrade.reward", {
-              percent: Math.round((upgradeConfig.rewardMultiplier - 1) * 100),
+              percent: Math.round(
+                ((upgradeConfig.tiers[0].rewardMultiplier ?? 1) - 1) * 100
+              ),
             })}
           </UITypography>
         </UICardAction>

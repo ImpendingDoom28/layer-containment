@@ -83,25 +83,25 @@ const enemyConfigSchema: z.ZodType<EnemyConfig> = z.object({
   split: splitConfigSchema.optional(),
 });
 
+const enemyUpgradeTierSchema = z.object({
+  rewardMultiplier: z.number().optional(),
+  healthMultiplier: z.number().optional(),
+  speedMultiplier: z.number().optional(),
+  countGrowth: z.number().optional(),
+  slowResistance: z.number().optional(),
+  regeneration: z.number().optional(),
+});
+
 const enemyUpgradeConfigSchema: z.ZodType<EnemyUpgradeConfig> = z.object({
   id: enemyUpgradeIdSchema,
   name: z.string(),
   description: z.string(),
   displayRank: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-  rewardMultiplier: z.number(),
-  healthMultiplier: z.number().optional(),
-  speedMultiplier: z.number().optional(),
-  countGrowth: z.number().optional(),
-  resistances: z
-    .object({
-      slow: z.number().optional(),
-    })
-    .optional(),
-  abilities: z
-    .object({
-      regeneration: z.number().optional(),
-    })
-    .optional(),
+  tiers: z.tuple([
+    enemyUpgradeTierSchema,
+    enemyUpgradeTierSchema,
+    enemyUpgradeTierSchema,
+  ]),
   indicatorColor: z.string(),
 });
 

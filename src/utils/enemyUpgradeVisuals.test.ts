@@ -10,7 +10,7 @@ const sampleUpgrades: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     name: "a",
     description: "",
     displayRank: 1,
-    rewardMultiplier: 1,
+    tiers: [{}, {}, {}],
     indicatorColor: "#ff0000",
   },
   swift: {
@@ -18,7 +18,7 @@ const sampleUpgrades: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     name: "s",
     description: "",
     displayRank: 1,
-    rewardMultiplier: 1,
+    tiers: [{}, {}, {}],
     indicatorColor: "#00ff00",
   },
   slowResistance: {
@@ -26,7 +26,7 @@ const sampleUpgrades: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     name: "si",
     description: "",
     displayRank: 2,
-    rewardMultiplier: 1,
+    tiers: [{}, {}, {}],
     indicatorColor: "#0000ff",
   },
   regenerating: {
@@ -34,7 +34,7 @@ const sampleUpgrades: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     name: "r",
     description: "",
     displayRank: 2,
-    rewardMultiplier: 1,
+    tiers: [{}, {}, {}],
     indicatorColor: "#ffff00",
   },
   reinforcements: {
@@ -42,7 +42,7 @@ const sampleUpgrades: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     name: "rf",
     description: "",
     displayRank: 2,
-    rewardMultiplier: 1,
+    tiers: [{}, {}, {}],
     indicatorColor: "#f97316",
   },
 };

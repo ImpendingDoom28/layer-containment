@@ -21,7 +21,11 @@ const upgradeConfigs: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     name: "a",
     description: "",
     displayRank: 1,
-    rewardMultiplier: 1.15,
+    tiers: [
+      { healthMultiplier: 1.5, rewardMultiplier: 1.15 },
+      { healthMultiplier: 1.75, rewardMultiplier: 1.15 },
+      { healthMultiplier: 2, rewardMultiplier: 1.15 },
+    ],
     indicatorColor: "#ff0000",
   },
   swift: {
@@ -29,7 +33,11 @@ const upgradeConfigs: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     name: "s",
     description: "",
     displayRank: 2,
-    rewardMultiplier: 1.35,
+    tiers: [
+      { speedMultiplier: 1.35, rewardMultiplier: 1.35 },
+      { speedMultiplier: 1.5, rewardMultiplier: 1.35 },
+      { speedMultiplier: 1.7, rewardMultiplier: 1.35 },
+    ],
     indicatorColor: "#00ff00",
   },
   slowResistance: {
@@ -37,7 +45,11 @@ const upgradeConfigs: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     name: "u",
     description: "",
     displayRank: 2,
-    rewardMultiplier: 1.25,
+    tiers: [
+      { slowResistance: 0.25, rewardMultiplier: 1.25 },
+      { slowResistance: 0.65, rewardMultiplier: 1.25 },
+      { slowResistance: 1, rewardMultiplier: 1.25 },
+    ],
     indicatorColor: "#0000ff",
   },
   regenerating: {
@@ -45,7 +57,11 @@ const upgradeConfigs: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     name: "r",
     description: "",
     displayRank: 2,
-    rewardMultiplier: 1.3,
+    tiers: [
+      { regeneration: 5, rewardMultiplier: 1.3 },
+      { regeneration: 10, rewardMultiplier: 1.3 },
+      { regeneration: 15, rewardMultiplier: 1.3 },
+    ],
     indicatorColor: "#ffff00",
   },
 };

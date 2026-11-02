@@ -17,8 +17,11 @@ const reinforcements: EnemyUpgradeConfig = {
   name: "Reinforcements",
   description: "",
   displayRank: 2,
-  rewardMultiplier: 1.3,
-  countGrowth: 0.2,
+  tiers: [
+    { countGrowth: 0.2, rewardMultiplier: 1.3 },
+    { countGrowth: 0.4, rewardMultiplier: 1.3 },
+    { countGrowth: 0.65, rewardMultiplier: 1.3 },
+  ],
   indicatorColor: "#f97316",
 };
 
@@ -28,8 +31,11 @@ const otherUpgrades: Partial<Record<EnemyUpgradeId, EnemyUpgradeConfig>> = {
     name: "Armored",
     description: "",
     displayRank: 1,
-    rewardMultiplier: 1.15,
-    healthMultiplier: 1.5,
+    tiers: [
+      { healthMultiplier: 1.5, rewardMultiplier: 1.15 },
+      { healthMultiplier: 1.75, rewardMultiplier: 1.15 },
+      { healthMultiplier: 2, rewardMultiplier: 1.15 },
+    ],
     indicatorColor: "#6b7280",
   },
 };
@@ -41,7 +47,11 @@ const allUpgrades: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     name: "Swift",
     description: "",
     displayRank: 2,
-    rewardMultiplier: 1.35,
+    tiers: [
+      { speedMultiplier: 1.35, rewardMultiplier: 1.35 },
+      { speedMultiplier: 1.5, rewardMultiplier: 1.35 },
+      { speedMultiplier: 1.7, rewardMultiplier: 1.35 },
+    ],
     indicatorColor: "#fbbf24",
   },
   slowResistance: {
@@ -49,7 +59,11 @@ const allUpgrades: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     name: "Unstoppable",
     description: "",
     displayRank: 2,
-    rewardMultiplier: 1.25,
+    tiers: [
+      { slowResistance: 0.25, rewardMultiplier: 1.25 },
+      { slowResistance: 0.65, rewardMultiplier: 1.25 },
+      { slowResistance: 1, rewardMultiplier: 1.25 },
+    ],
     indicatorColor: "#8b5cf6",
   },
   regenerating: {
@@ -57,7 +71,11 @@ const allUpgrades: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     name: "Regenerating",
     description: "",
     displayRank: 2,
-    rewardMultiplier: 1.3,
+    tiers: [
+      { regeneration: 5, rewardMultiplier: 1.3 },
+      { regeneration: 10, rewardMultiplier: 1.3 },
+      { regeneration: 15, rewardMultiplier: 1.3 },
+    ],
     indicatorColor: "#22c55e",
   },
   reinforcements,

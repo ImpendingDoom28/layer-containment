@@ -325,20 +325,20 @@ export const en = {
   enemyUpgrades: {
     armored: {
       name: "Armored",
-      description: "+50% health",
+      description: "+50% health. Tier II: +75%, tier III: +100%.",
     },
     swift: {
       name: "Swift",
-      description: "+35% movement speed",
+      description: "+35% movement speed. Tier II: +50%, tier III: +70%.",
     },
     slowResistance: {
       name: "Unstoppable",
       description:
-        "Enemies gain slow resistance, weakening slow effects from towers. Each additional pick strengthens it; at tier 3 they are immune to slow.",
+        "Enemies gain slow resistance (25%), weakening slow effects from towers. Tier II: 65%; at tier 3 they are immune to slow.",
     },
     regenerating: {
       name: "Regenerating",
-      description: "Heals 5 HP/sec",
+      description: "Heals 5 HP/sec. Tier II: 10, tier III: 15.",
     },
     reinforcements: {
       name: "Reinforcements",

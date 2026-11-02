@@ -15,13 +15,18 @@ import {
   getUniqueUpgradeIdsInStackOrder,
 } from "./enemyUpgradeTierEffects";
 
+// Configs mirror the per-tier values in public/configs/game.json: each tier
+// is an absolute effect (tier II/III replace the previous tier, no stacking).
 const armoredBase: EnemyUpgradeConfig = {
   id: "armored",
   name: "Armored",
   description: "",
   displayRank: 1,
-  healthMultiplier: 1.5,
-  rewardMultiplier: 1.4,
+  tiers: [
+    { healthMultiplier: 1.5, rewardMultiplier: 1.1 },
+    { healthMultiplier: 1.75, rewardMultiplier: 1.21 },
+    { healthMultiplier: 2, rewardMultiplier: 1.375 },
+  ],
   indicatorColor: "#6b7280",
 };
 
@@ -30,8 +35,11 @@ const swiftBase: EnemyUpgradeConfig = {
   name: "Swift",
   description: "",
   displayRank: 1,
-  speedMultiplier: 1.3,
-  rewardMultiplier: 1.3,
+  tiers: [
+    { speedMultiplier: 1.35, rewardMultiplier: 1.2 },
+    { speedMultiplier: 1.5, rewardMultiplier: 1.08 },
+    { speedMultiplier: 1.7, rewardMultiplier: 1.111 },
+  ],
   indicatorColor: "#fbbf24",
 };
 
@@ -40,79 +48,106 @@ const slowResistanceBase: EnemyUpgradeConfig = {
   name: "Unstoppable",
   description: "",
   displayRank: 2,
-  rewardMultiplier: 1.5,
-  resistances: { slow: 0.25 },
+  tiers: [
+    { slowResistance: 0.25, rewardMultiplier: 1.1 },
+    { slowResistance: 0.65, rewardMultiplier: 1.1 },
+    { slowResistance: 1, rewardMultiplier: 1.23 },
+  ],
   indicatorColor: "#8b5cf6",
+};
+
+const regeneratingBase: EnemyUpgradeConfig = {
+  id: "regenerating",
+  name: "Regenerating",
+  description: "",
+  displayRank: 2,
+  tiers: [
+    { regeneration: 5, rewardMultiplier: 1.15 },
+    { regeneration: 10, rewardMultiplier: 1.1 },
+    { regeneration: 15, rewardMultiplier: 1.145 },
+  ],
+  indicatorColor: "#22c55e",
+};
+
+const reinforcementsBase: EnemyUpgradeConfig = {
+  id: "reinforcements",
+  name: "Reinforcements",
+  description: "",
+  displayRank: 2,
+  tiers: [
+    { countGrowth: 0.2, rewardMultiplier: 1 },
+    { countGrowth: 0.4, rewardMultiplier: 1.08 },
+    { countGrowth: 0.65, rewardMultiplier: 1.18 },
+  ],
+  indicatorColor: "#f97316",
 };
 
 const allUpgrades: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
   armored: armoredBase,
   swift: swiftBase,
   slowResistance: slowResistanceBase,
-  regenerating: {
-    id: "regenerating",
-    name: "Regenerating",
-    description: "",
-    displayRank: 2,
-    rewardMultiplier: 1.6,
-    abilities: { regeneration: 3 },
-    indicatorColor: "#22c55e",
-  },
-  reinforcements: {
-    id: "reinforcements",
-    name: "Reinforcements",
-    description: "",
-    displayRank: 2,
-    rewardMultiplier: 1.3,
-    countGrowth: 0.2,
-    indicatorColor: "#f97316",
-  },
+  regenerating: regeneratingBase,
+  reinforcements: reinforcementsBase,
 };
 
 describe("getTieredUpgradeEffect", () => {
-  it("uses config base stats at tier 1 for armored", () => {
+  it("returns the tier-1 values from the config", () => {
     const e = getTieredUpgradeEffect(armoredBase, 1);
     expect(e.healthMultiplier).toBe(1.5);
-    expect(e.rewardMultiplier).toBe(1.4);
+    expect(e.rewardMultiplier).toBe(1.1);
   });
 
-  it("increases armored tier 2 and 3 relative to tier 1", () => {
+  it("replaces the previous tier's value (no cumulative stacking)", () => {
+    // Tier II is exactly +75% HP (1.75), not tier I's +50% scaled up.
     const t2 = getTieredUpgradeEffect(armoredBase, 2);
     const t3 = getTieredUpgradeEffect(armoredBase, 3);
-    expect(t2.healthMultiplier!).toBeGreaterThan(1.5);
-    expect(t3.healthMultiplier!).toBeGreaterThan(t2.healthMultiplier!);
-    expect(t2.rewardMultiplier).toBeGreaterThan(1.4);
-    expect(t3.rewardMultiplier).toBeGreaterThan(t2.rewardMultiplier);
+    expect(t2.healthMultiplier).toBe(1.75);
+    expect(t3.healthMultiplier).toBe(2);
+    expect(t2.rewardMultiplier).toBe(1.21);
+    expect(t3.rewardMultiplier).toBe(1.375);
   });
 
-  it("scales swift speed and reward by tier", () => {
-    const t1 = getTieredUpgradeEffect(swiftBase, 1);
-    const t3 = getTieredUpgradeEffect(swiftBase, 3);
-    expect(t1.speedMultiplier).toBe(1.3);
-    expect(t3.speedMultiplier!).toBeGreaterThan(1.3);
+  it("reads each tier's absolute speed from the config", () => {
+    expect(getTieredUpgradeEffect(swiftBase, 1).speedMultiplier).toBe(1.35);
+    expect(getTieredUpgradeEffect(swiftBase, 2).speedMultiplier).toBe(1.5);
+    expect(getTieredUpgradeEffect(swiftBase, 3).speedMultiplier).toBe(1.7);
   });
 
-  it("scales Unstoppable slow resistance by tier and caps at full immunity", () => {
-    const t1 = getTieredUpgradeEffect(slowResistanceBase, 1);
-    const t2 = getTieredUpgradeEffect(slowResistanceBase, 2);
-    const t3 = getTieredUpgradeEffect(slowResistanceBase, 3);
-    expect(t1.slowResistance).toBe(0.25);
-    expect(t2.slowResistance).toBeCloseTo(0.66);
-    expect(t3.slowResistance).toBe(1);
+  it("reads each tier's absolute slow resistance from the config", () => {
+    expect(getTieredUpgradeEffect(slowResistanceBase, 1).slowResistance).toBe(
+      0.25
+    );
+    expect(getTieredUpgradeEffect(slowResistanceBase, 2).slowResistance).toBe(
+      0.65
+    );
+    expect(getTieredUpgradeEffect(slowResistanceBase, 3).slowResistance).toBe(
+      1
+    );
   });
 
-  it("grants full immunity at tier 3 even for a low base resistance", () => {
-    const lowBase = { ...slowResistanceBase, resistances: { slow: 0.2 } };
-    expect(getTieredUpgradeEffect(lowBase, 1).slowResistance).toBe(0.2);
-    expect(getTieredUpgradeEffect(lowBase, 2).slowResistance).toBeCloseTo(0.528);
-    expect(getTieredUpgradeEffect(lowBase, 3).slowResistance).toBe(1);
+  it("reads each tier's absolute regeneration from the config", () => {
+    expect(getTieredUpgradeEffect(regeneratingBase, 1).regeneration).toBe(5);
+    expect(getTieredUpgradeEffect(regeneratingBase, 2).regeneration).toBe(10);
+    expect(getTieredUpgradeEffect(regeneratingBase, 3).regeneration).toBe(15);
   });
 
-  it("keeps full immunity for a base resistance of 1 at every tier", () => {
-    const fullImmune = { ...slowResistanceBase, resistances: { slow: 1 } };
-    for (const tier of [1, 2, 3] as const) {
-      expect(getTieredUpgradeEffect(fullImmune, tier).slowResistance).toBe(1);
-    }
+  it("treats a tier without a field as granting nothing of that kind", () => {
+    const sparse: EnemyUpgradeConfig = {
+      id: "armored",
+      name: "Armored",
+      description: "",
+      displayRank: 1,
+      tiers: [
+        {},
+        { healthMultiplier: 1.25 },
+        { healthMultiplier: 1.5 },
+      ],
+      indicatorColor: "#6b7280",
+    };
+    const t1 = getTieredUpgradeEffect(sparse, 1);
+    expect(t1.healthMultiplier).toBeUndefined();
+    expect(t1.rewardMultiplier).toBe(1);
+    expect(getTieredUpgradeEffect(sparse, 2).healthMultiplier).toBe(1.25);
   });
 
   it("describes Unstoppable as % slow resistance below full immunity", () => {
@@ -120,7 +155,7 @@ describe("getTieredUpgradeEffect", () => {
       "+25% slow resistance"
     );
     expect(formatTieredUpgradeSummary(slowResistanceBase, 2)).toContain(
-      "+66% slow resistance"
+      "+65% slow resistance"
     );
     expect(formatTieredUpgradeSummary(slowResistanceBase, 3)).toContain(
       "Slow immune"
@@ -135,45 +170,28 @@ describe("getTieredUpgradeEffect", () => {
     expect(formatTieredUpgradeSummary(armoredBase, 1)).toBe("+50% HP");
   });
 
-  it("scales Reinforcements enemy counts by tier (+20% / +40% / +65%)", () => {
-    const t1 = getTieredUpgradeEffect(allUpgrades.reinforcements, 1);
-    const t2 = getTieredUpgradeEffect(allUpgrades.reinforcements, 2);
-    const t3 = getTieredUpgradeEffect(allUpgrades.reinforcements, 3);
-    expect(t1.countMultiplier).toBe(1.2);
-    expect(t2.countMultiplier).toBe(1.4);
-    expect(t3.countMultiplier).toBe(1.65);
-  });
-
-  it("falls back to a 20% base growth when the config omits countGrowth", () => {
-    const noGrowth = {
-      ...allUpgrades.reinforcements,
-      countGrowth: undefined,
-    };
-    expect(getTieredUpgradeEffect(noGrowth, 1).countMultiplier).toBe(1.2);
-  });
-
-  it("describes Reinforcements as +X% enemies in the summary", () => {
-    expect(formatTieredUpgradeSummary(allUpgrades.reinforcements, 1)).toBe(
+  it("describes each reinforcement tier as the absolute +X% enemies", () => {
+    expect(formatTieredUpgradeSummary(reinforcementsBase, 1)).toBe(
       "+20% enemies"
     );
-    expect(formatTieredUpgradeSummary(allUpgrades.reinforcements, 3)).toBe(
+    expect(formatTieredUpgradeSummary(reinforcementsBase, 2)).toBe(
+      "+40% enemies"
+    );
+    expect(formatTieredUpgradeSummary(reinforcementsBase, 3)).toBe(
       "+65% enemies"
     );
   });
 
   it("keeps the stacked total effect at the top-tier count multiplier", () => {
-    const total = getTotalUpgradeEffectForStack(allUpgrades.reinforcements, 3);
+    const total = getTotalUpgradeEffectForStack(reinforcementsBase, 3);
     expect(total.countMultiplier).toBe(1.65);
-    expect(total.rewardMultiplier).toBeCloseTo(
-      1.3 * (1.3 * 1.08) * (1.3 * 1.18),
-      5
-    );
+    expect(total.rewardMultiplier).toBeCloseTo(1 * 1.08 * 1.18, 5);
   });
 
   it("reports the per-pick gold bonus percentage", () => {
-    expect(getTierRewardBonusPercent(slowResistanceBase, 1)).toBe(50);
-    expect(getTierRewardBonusPercent(armoredBase, 1)).toBe(40);
-    expect(getTierRewardBonusPercent(armoredBase, 2)).toBe(54);
+    expect(getTierRewardBonusPercent(slowResistanceBase, 1)).toBe(10);
+    expect(getTierRewardBonusPercent(armoredBase, 1)).toBe(10);
+    expect(getTierRewardBonusPercent(armoredBase, 3)).toBe(38);
   });
 });
 
@@ -204,10 +222,8 @@ describe("stack helpers", () => {
 describe("getTotalRewardMultiplierFromStack", () => {
   it("multiplies per-pick tier rewards in order", () => {
     const stack: EnemyUpgradeId[] = ["armored", "armored"];
-    const r1 = getTieredUpgradeEffect(armoredBase, 1).rewardMultiplier;
-    const r2 = getTieredUpgradeEffect(armoredBase, 2).rewardMultiplier;
     expect(getTotalRewardMultiplierFromStack(stack, allUpgrades)).toBeCloseTo(
-      r1 * r2,
+      1.1 * 1.21,
       5
     );
   });
@@ -216,22 +232,25 @@ describe("getTotalRewardMultiplierFromStack", () => {
 describe("getTotalUpgradeEffectForStack", () => {
   it("uses the top-tier stat effect and stacked gold at tier 2", () => {
     const total = getTotalUpgradeEffectForStack(armoredBase, 2);
-    expect(total.healthMultiplier).toBeCloseTo(1.575, 5);
-    expect(total.rewardMultiplier).toBeCloseTo(2.156, 5);
+    // The total HP effect is exactly tier II's absolute value (1.75), not a
+    // stack of tier I + tier II.
+    expect(total.healthMultiplier).toBe(1.75);
+    expect(total.rewardMultiplier).toBeCloseTo(1.1 * 1.21, 5);
   });
 
   it("keeps single-pick values at tier 1", () => {
     const total = getTotalUpgradeEffectForStack(armoredBase, 1);
     expect(total.healthMultiplier).toBe(1.5);
-    expect(total.rewardMultiplier).toBe(1.4);
+    expect(total.rewardMultiplier).toBe(1.1);
   });
 
-  it("caps slow resistance at full immunity by tier 3", () => {
-    expect(getTotalUpgradeEffectForStack(slowResistanceBase, 3).slowResistance).toBe(1);
-    expect(getTotalUpgradeEffectForStack(slowResistanceBase, 2).slowResistance).toBeCloseTo(
-      0.66,
-      2
-    );
+  it("keeps the top-tier slow resistance by tier 3", () => {
+    expect(
+      getTotalUpgradeEffectForStack(slowResistanceBase, 3).slowResistance
+    ).toBe(1);
+    expect(
+      getTotalUpgradeEffectForStack(slowResistanceBase, 2).slowResistance
+    ).toBe(0.65);
   });
 
   it("gets the same gold multiplier as the per-pick product", () => {
@@ -247,9 +266,9 @@ describe("getTotalUpgradeEffectForStack", () => {
 
 describe("getTotalRewardBonusPercentForStack", () => {
   it("rounds the stacked gold bonus percentage", () => {
-    expect(getTotalRewardBonusPercentForStack(armoredBase, 1)).toBe(40);
-    expect(getTotalRewardBonusPercentForStack(armoredBase, 2)).toBe(116);
-    expect(getTotalRewardBonusPercentForStack(slowResistanceBase, 3)).toBe(353);
+    expect(getTotalRewardBonusPercentForStack(armoredBase, 1)).toBe(10);
+    expect(getTotalRewardBonusPercentForStack(armoredBase, 2)).toBe(33);
+    expect(getTotalRewardBonusPercentForStack(slowResistanceBase, 3)).toBe(49);
   });
 });
 

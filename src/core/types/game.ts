@@ -63,22 +63,36 @@ export type EnemyUpgradeStack = {
   tier: EnemyUpgradeStackTier;
 };
 
+/**
+ * Absolute effect of one upgrade tier. Each tier fully describes its effect
+ * (no cumulative stacking): picking a higher tier replaces the previous
+ * tier's value, so balancing is a matter of editing the tier values in
+ * `public/configs/game.json`. All fields are optional; an absent field means
+ * the tier grants nothing of that kind. `rewardMultiplier` is the gold
+ * multiplier applied on that pick (picks still stack multiplicatively).
+ */
+export type EnemyUpgradeTier = {
+  rewardMultiplier?: number;
+  healthMultiplier?: number;
+  speedMultiplier?: number;
+  /** Reinforcements: fraction of extra enemies per wave (e.g. 0.2 = +20%). */
+  countGrowth?: number;
+  /** Slow resistance for this tier (0-1; 1 = immune). */
+  slowResistance?: number;
+  /** Flat HP/sec regeneration for this tier. */
+  regeneration?: number;
+};
+
 export type EnemyUpgradeConfig = {
   id: EnemyUpgradeId;
   name: string;
   description: string;
   displayRank: 1 | 2 | 3;
-  rewardMultiplier: number;
-  healthMultiplier?: number;
-  speedMultiplier?: number;
-  /** Reinforcements: base fraction of extra enemies per wave (e.g. 0.2 = +20%). */
-  countGrowth?: number;
-  resistances?: {
-    slow?: number;
-  };
-  abilities?: {
-    regeneration?: number;
-  };
+  /**
+   * One absolute effect per tier (index 0 = tier I, index 2 = tier III).
+   * Higher tiers replace — not add to — the previous tier's effect.
+   */
+  tiers: [EnemyUpgradeTier, EnemyUpgradeTier, EnemyUpgradeTier];
   indicatorColor: string;
 };
 

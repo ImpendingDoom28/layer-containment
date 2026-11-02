@@ -23,8 +23,11 @@ const upgradeConfigs: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     name: "Armored",
     description: "",
     displayRank: 1,
-    healthMultiplier: 1.5,
-    rewardMultiplier: 1.4,
+    tiers: [
+      { healthMultiplier: 1.5, rewardMultiplier: 1.4 },
+      { healthMultiplier: 1.75, rewardMultiplier: 1.4 },
+      { healthMultiplier: 2, rewardMultiplier: 1.4 },
+    ],
     indicatorColor: "#6b7280",
   },
   swift: {
@@ -32,8 +35,11 @@ const upgradeConfigs: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     name: "Swift",
     description: "",
     displayRank: 1,
-    speedMultiplier: 1.3,
-    rewardMultiplier: 1.3,
+    tiers: [
+      { speedMultiplier: 1.3, rewardMultiplier: 1.3 },
+      { speedMultiplier: 1.5, rewardMultiplier: 1.3 },
+      { speedMultiplier: 1.7, rewardMultiplier: 1.3 },
+    ],
     indicatorColor: "#fbbf24",
   },
   slowResistance: {
@@ -41,8 +47,11 @@ const upgradeConfigs: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     name: "Unstoppable",
     description: "",
     displayRank: 2,
-    rewardMultiplier: 1.5,
-    resistances: { slow: 0.25 },
+    tiers: [
+      { slowResistance: 0.25, rewardMultiplier: 1.5 },
+      { slowResistance: 0.65, rewardMultiplier: 1.5 },
+      { slowResistance: 1, rewardMultiplier: 1.5 },
+    ],
     indicatorColor: "#8b5cf6",
   },
   regenerating: {
@@ -50,8 +59,11 @@ const upgradeConfigs: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     name: "Regenerating",
     description: "",
     displayRank: 2,
-    rewardMultiplier: 1.6,
-    abilities: { regeneration: 3 },
+    tiers: [
+      { regeneration: 3, rewardMultiplier: 1.6 },
+      { regeneration: 6, rewardMultiplier: 1.6 },
+      { regeneration: 9, rewardMultiplier: 1.6 },
+    ],
     indicatorColor: "#22c55e",
   },
   reinforcements: {
@@ -59,8 +71,11 @@ const upgradeConfigs: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     name: "Reinforcements",
     description: "",
     displayRank: 2,
-    rewardMultiplier: 1.3,
-    countGrowth: 0.2,
+    tiers: [
+      { countGrowth: 0.2, rewardMultiplier: 1.3 },
+      { countGrowth: 0.4, rewardMultiplier: 1.3 },
+      { countGrowth: 0.65, rewardMultiplier: 1.3 },
+    ],
     indicatorColor: "#f97316",
   },
 };

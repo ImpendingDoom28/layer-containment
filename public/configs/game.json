@@ -69,31 +69,65 @@
     "armored": {
       "description": "+50% health",
       "displayRank": 1,
-      "healthMultiplier": 1.5,
       "id": "armored",
       "indicatorColor": "#6b7280",
       "name": "Armored",
-      "rewardMultiplier": 1.1
+      "tiers": [
+        {
+          "healthMultiplier": 1.5,
+          "rewardMultiplier": 1.1
+        },
+        {
+          "healthMultiplier": 1.75,
+          "rewardMultiplier": 1.21
+        },
+        {
+          "healthMultiplier": 2,
+          "rewardMultiplier": 1.375
+        }
+      ]
     },
     "regenerating": {
-      "abilities": {
-        "regeneration": 5
-      },
       "description": "Heals 5 HP/sec",
       "displayRank": 2,
       "id": "regenerating",
       "indicatorColor": "#22c55e",
       "name": "Regenerating",
-      "rewardMultiplier": 1.15
+      "tiers": [
+        {
+          "regeneration": 5,
+          "rewardMultiplier": 1.15
+        },
+        {
+          "regeneration": 10,
+          "rewardMultiplier": 1.1
+        },
+        {
+          "regeneration": 15,
+          "rewardMultiplier": 1.145
+        }
+      ]
     },
     "reinforcements": {
-      "countGrowth": 0.2,
       "description": "+20% more enemies spawn each wave. Tier 2: +40%, tier 3: +65%.",
       "displayRank": 2,
       "id": "reinforcements",
       "indicatorColor": "#f97316",
       "name": "Reinforcements",
-      "rewardMultiplier": 1
+      "tiers": [
+        {
+          "countGrowth": 0.2,
+          "rewardMultiplier": 1
+        },
+        {
+          "countGrowth": 0.4,
+          "rewardMultiplier": 1.08
+        },
+        {
+          "countGrowth": 0.65,
+          "rewardMultiplier": 1.18
+        }
+      ]
     },
     "slowResistance": {
       "description": "Enemies gain slow resistance, weakening slow effects from towers. Each additional pick strengthens it; at tier 3 they are immune to slow.",
@@ -101,10 +135,20 @@
       "id": "slowResistance",
       "indicatorColor": "#8b5cf6",
       "name": "Unstoppable",
-      "resistances": {
-        "slow": 0.25
-      },
-      "rewardMultiplier": 1.1
+      "tiers": [
+        {
+          "rewardMultiplier": 1.1,
+          "slowResistance": 0.25
+        },
+        {
+          "rewardMultiplier": 1.1,
+          "slowResistance": 0.65
+        },
+        {
+          "rewardMultiplier": 1.23,
+          "slowResistance": 1
+        }
+      ]
     },
     "swift": {
       "description": "+35% movement speed",
@@ -112,8 +156,20 @@
       "id": "swift",
       "indicatorColor": "#fbbf24",
       "name": "Swift",
-      "rewardMultiplier": 1.2,
-      "speedMultiplier": 1.35
+      "tiers": [
+        {
+          "rewardMultiplier": 1.2,
+          "speedMultiplier": 1.35
+        },
+        {
+          "rewardMultiplier": 1.08,
+          "speedMultiplier": 1.5
+        },
+        {
+          "rewardMultiplier": 1.111,
+          "speedMultiplier": 1.7
+        }
+      ]
     }
   },
   "pathWidth": 0.85,

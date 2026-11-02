@@ -46,62 +46,30 @@ export const getPickTierForUpgrade = (
   return Math.min(n + 1, 3) as EnemyUpgradeStackTier;
 };
 
+/**
+ * Reads the absolute effect of one tier straight from the config. Each tier
+ * in `public/configs/game.json` is a complete value (tier II fully replaces
+ * tier I, it never stacks on top of it), so there is no scaling to do here.
+ */
 export const getTieredUpgradeEffect = (
   config: EnemyUpgradeConfig,
   tier: EnemyUpgradeStackTier
 ): TieredUpgradeEffect => {
-  const h1 = config.healthMultiplier ?? 1;
-  const s1 = config.speedMultiplier ?? 1;
-  const r1 = config.rewardMultiplier;
-  const regen1 = config.abilities?.regeneration ?? 0;
-  const slow1 = config.resistances?.slow ?? 0;
-
-  switch (config.id) {
-    case "armored": {
-      const health =
-        tier === 1
-          ? h1
-          : tier === 2
-            ? 1 + (h1 - 1) * 1.15
-            : 1 + (h1 - 1) * 1.33;
-      const reward = tier === 1 ? r1 : tier === 2 ? r1 * 1.1 : r1 * 1.25;
-      return { healthMultiplier: health, rewardMultiplier: reward };
-    }
-    case "swift": {
-      const speed =
-        tier === 1 ? s1 : tier === 2 ? 1 + (s1 - 1) * 1.2 : 1 + (s1 - 1) * 1.45;
-      const reward = tier === 1 ? r1 : tier === 2 ? r1 * 1.08 : r1 * 1.2;
-      return { speedMultiplier: speed, rewardMultiplier: reward };
-    }
-    case "reinforcements": {
-      // Each tier adds a fraction of the base growth (t2: +2x base, t3: +3.25x
-      // base), so a 20% base becomes +40% at tier 2 and +65% at tier 3.
-      const g1 = config.countGrowth ?? 0.2;
-      const growth =
-        tier === 1 ? g1 : tier === 2 ? g1 * 2 : g1 * 3.25;
-      const reward = tier === 1 ? r1 : tier === 2 ? r1 * 1.08 : r1 * 1.18;
-      return { countMultiplier: 1 + growth, rewardMultiplier: reward };
-    }
-    case "slowResistance": {
-      // Tiers 1-2 scale the base slow resistance (capped); tier 3 grants
-      // full immunity no matter what base value the config carries.
-      const resistance =
-        tier === 3 ? 1 : tier === 2 ? Math.min(slow1 * 2.64, 1) : slow1;
-      return {
-        rewardMultiplier: tier === 1 ? r1 : tier === 2 ? r1 * 1.1 : r1 * 1.22,
-        slowResistance: resistance,
-      };
-    }
-    case "regenerating": {
-      const regen =
-        tier === 1 ? regen1 : tier === 2 ? regen1 * 1.5 : regen1 * 2.25;
-      const reward = tier === 1 ? r1 : tier === 2 ? r1 * 1.1 : r1 * 1.24;
-      return {
-        regeneration: regen,
-        rewardMultiplier: reward,
-      };
-    }
-  }
+  const t = config.tiers[tier - 1];
+  const countMultiplier =
+    t.countGrowth !== undefined ? 1 + t.countGrowth : undefined;
+  return {
+    rewardMultiplier: t.rewardMultiplier ?? 1,
+    ...(t.healthMultiplier !== undefined &&
+      t.healthMultiplier !== 1 && { healthMultiplier: t.healthMultiplier }),
+    ...(t.speedMultiplier !== undefined &&
+      t.speedMultiplier !== 1 && { speedMultiplier: t.speedMultiplier }),
+    ...(countMultiplier !== undefined && countMultiplier !== 1 && { countMultiplier }),
+    ...(t.regeneration !== undefined &&
+      t.regeneration > 0 && { regeneration: t.regeneration }),
+    ...(t.slowResistance !== undefined &&
+      t.slowResistance > 0 && { slowResistance: t.slowResistance }),
+  };
 };
 
 export const getTierRewardBonusPercent = (

@@ -141,6 +141,7 @@ export const LevelEditorTerrainTile: FC<LevelEditorTerrainTileProps> = memo(
       <mesh
         position={position}
         material={material}
+        receiveShadow
         onClick={onTileClick}
         onPointerOver={onPointerOver}
         onPointerOut={onPointerOut}

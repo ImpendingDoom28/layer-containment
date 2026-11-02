@@ -27,7 +27,7 @@ export const EndBuilding: FC<EndBuildingProps> = memo(
         {...(quaternion ? { quaternion } : {})}
       >
         {/* Main building base */}
-        <mesh position={[0, 0.4, 0]}>
+        <mesh position={[0, 0.4, 0]} castShadow receiveShadow>
           <boxGeometry args={[0.6, 0.8, 0.6]} />
           <meshStandardMaterial
             color={buildingColor}
@@ -37,7 +37,7 @@ export const EndBuilding: FC<EndBuildingProps> = memo(
         </mesh>
 
         {/* Building top section */}
-        <mesh position={[0, 0.9, 0]}>
+        <mesh position={[0, 0.9, 0]} castShadow receiveShadow>
           <boxGeometry args={[0.5, 0.3, 0.5]} />
           <meshStandardMaterial
             color={buildingAccent}
@@ -47,7 +47,7 @@ export const EndBuilding: FC<EndBuildingProps> = memo(
         </mesh>
 
         {/* Roof */}
-        <mesh position={[0, 1.15, 0]}>
+        <mesh position={[0, 1.15, 0]} castShadow receiveShadow>
           <coneGeometry args={[0.35, 0.2, 8]} />
           <meshStandardMaterial
             color={roofColor}
@@ -63,7 +63,12 @@ export const EndBuilding: FC<EndBuildingProps> = memo(
           [-0.25, 0.5, 0.25],
           [0.25, 0.5, 0.25],
         ].map(([x, y, z], index) => (
-          <mesh key={`pillar-${index}`} position={[x, y, z]}>
+          <mesh
+            key={`pillar-${index}`}
+            position={[x, y, z]}
+            castShadow
+            receiveShadow
+          >
             <cylinderGeometry args={[0.05, 0.05, 0.6, 8]} />
             <meshStandardMaterial
               color={buildingAccent}
@@ -74,7 +79,12 @@ export const EndBuilding: FC<EndBuildingProps> = memo(
         ))}
 
         {/* Base platform */}
-        <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh
+          position={[0, 0, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          castShadow
+          receiveShadow
+        >
           <cylinderGeometry args={[0.4, 0.4, 0.1, 16]} />
           <meshStandardMaterial
             color={getCssColorValue("scene-gray-700")}

@@ -409,6 +409,8 @@ export const Enemy: FC<EnemyProps> = memo(
                   size={size}
                   fallback={
                     <mesh
+                      castShadow
+                      receiveShadow
                       scale={[size, size, size]}
                       geometry={sharedUnitSphere}
                       material={getEnemyBodyMaterial(snapshot.color)}
@@ -417,6 +419,8 @@ export const Enemy: FC<EnemyProps> = memo(
                 />
               ) : (
                 <mesh
+                  castShadow
+                  receiveShadow
                   scale={[size, size, size]}
                   geometry={sharedUnitSphere}
                   material={getEnemyBodyMaterial(snapshot.color)}

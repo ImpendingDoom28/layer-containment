@@ -1,4 +1,4 @@
-import { FC } from "react";
+import { FC, useMemo } from "react";
 
 import { Bloom, EffectComposer } from "@react-three/postprocessing";
 
@@ -6,6 +6,7 @@ import {
   bloomEnabledSelector,
   useSettingsStore,
 } from "../../../core/stores/useSettingsStore";
+import { isSoftwareRenderer } from "../../../core/utils/isSoftwareRenderer";
 
 /**
  * Post-process chain for the 3D scenes: a single Bloom pass (mipmap blur) that
@@ -13,15 +14,23 @@ import {
  * hit-flash, range rings, floating text.
  *
  * The threshold keeps only hot emissives (luminance above ~0.7 in linear
- * space); the rest of the scene renders untouched. When the setting is off the
- * composer renders nothing and R3F falls back to the plain scene render, so
- * the toggle is free. Bloom runs at half resolution to keep the cost low on
- * weak GPUs.
+ * space); the rest of the scene renders untouched. Bloom runs at half
+ * resolution to keep the cost low on weak GPUs.
+ *
+ * It renders only when the setting is on *and* the WebGL context is a real
+ * GPU: on software renderers (SwiftShader / llvmpipe — headless CI, older
+ * hardware) a fullscreen bloom pass starves the main thread, so it is
+ * auto-skipped there and the plain scene render is used instead. When it
+ * doesn't render, R3F falls back to the plain scene render, so both exits are
+ * free.
  */
 export const PostFX: FC = () => {
   const bloomEnabled = useSettingsStore(bloomEnabledSelector);
 
-  if (!bloomEnabled) return null;
+  // One-shot probe (memoised): the rasterizer never changes at runtime.
+  const softwareRenderer = useMemo(() => isSoftwareRenderer(), []);
+
+  if (!bloomEnabled || softwareRenderer) return null;
 
   return (
     <EffectComposer multisampling={4}>

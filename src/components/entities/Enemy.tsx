@@ -397,9 +397,8 @@ export const Enemy: FC<EnemyProps> = memo(
             hiding the enemy. The body is wrapped in HitFlash, which provides
             the hit marker — a hidden clone of the body's own shape re-pointed
             at the per-enemy flash material — so the marker is automatically
-            model-shaped (a Wraith gets a Wraith-shaped one, a
-            Tankee a tank-shaped one) with no per-model
-            support. */}
+            model-shaped (the Wraith gets a Wraith-shaped one) with no
+            per-model support. */}
         <group position={[0, size / 2, 0]}>
           <HitFlash
             markerRef={hitMarkerRef}

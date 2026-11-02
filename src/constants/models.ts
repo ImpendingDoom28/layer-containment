@@ -20,7 +20,11 @@ export const ENEMY_MODELS = {
     node: "Enemy_Basic_ROOT",
   },
   fast: {
-    url: "assets/models/wraith.glb",
+    // Versioned query: the file replaced the previous wraith.glb in place, but
+    // the PWA service worker serves cached `assets/` URLs cache-first. A
+    // returning install would otherwise load the old file (root node
+    // `W02_Wraith_ROOT`) and, finding no `Enemy_Fast_ROOT`, render nothing.
+    url: "assets/models/wraith.glb?v=2",
     node: "Enemy_Fast_ROOT",
   },
   medic: {

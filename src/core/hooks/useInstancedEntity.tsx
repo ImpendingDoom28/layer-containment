@@ -42,6 +42,12 @@ export type UseInstancedEntityConfig = {
   defaultColor: string;
   instancesContent: ReactNode;
   frustumCulled?: boolean;
+  /**
+   * Whether the pooled `InstancedMesh` writes to the shadow map. drei
+   * spreads this onto the underlying `<instancedMesh>`, so the whole pool
+   * casts (or does not) in the shadow pass with a single draw call.
+   */
+  castShadow?: boolean;
 };
 
 export type UseInstancedEntityReturn = {
@@ -58,6 +64,7 @@ export const useInstancedEntity = (
     defaultColor,
     instancesContent,
     frustumCulled = false,
+    castShadow = false,
   } = config;
 
   const slotRefs = useRef<(InstanceSlot | null)[]>([]);
@@ -93,12 +100,16 @@ export const useInstancedEntity = (
 
   const InstancedEntity = useMemo(
     () => (
-      <Instances limit={limit} frustumCulled={frustumCulled}>
+      <Instances
+        limit={limit}
+        frustumCulled={frustumCulled}
+        castShadow={castShadow}
+      >
         {instancesContent}
         <InstanceSlots count={limit} slotRefs={slotRefs} />
       </Instances>
     ),
-    [limit, frustumCulled, instancesContent]
+    [limit, frustumCulled, castShadow, instancesContent]
   );
 
   return {

@@ -11,8 +11,8 @@ import type { WebGLProgramParametersWithUniforms } from "three";
  * dir * length / 2), and the per-instance color (vColor) tints the whole
  * streak, so each projectile keeps its tower color.
  *
- * `position` is the unit-sphere vertex attribute, so its y is in [-1, 1]:
- * fade = (y + 1) / 2 is 0 at the tail and 1 at the head.
+ * The trail geometry is a radius-0.5 sphere, so its vertex `position.y` is
+ * in [-0.5, 0.5]: fade = 0.5 + y is 0 at the tail and 1 at the head.
  */
 
 const TRAIL_FADE_VARYING = "vTrailFade";
@@ -37,7 +37,7 @@ export const patchInstancedTrailFade = (
     shader.fragmentShader.replace(
       "#include <emissivemap_fragment>",
       "#include <emissivemap_fragment>\n" +
-        "float trailFade = clamp( 0.5 + 0.5 * " +
+        "float trailFade = clamp( 0.5 + " +
         TRAIL_FADE_VARYING +
         ", 0.0, 1.0 );\n" +
         "diffuseColor.a *= trailFade;\n" +

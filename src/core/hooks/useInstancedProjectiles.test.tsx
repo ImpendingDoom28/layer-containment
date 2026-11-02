@@ -157,7 +157,7 @@ describe("patchInstancedTrailFade", () => {
     expect(shader.vertexShader).toContain("vTrailFade = position.y;");
     expect(shader.fragmentShader).toContain("varying float vTrailFade;");
     expect(shader.fragmentShader).toContain(
-      "float trailFade = clamp( 0.5 + 0.5 * vTrailFade, 0.0, 1.0 );"
+      "float trailFade = clamp( 0.5 + vTrailFade, 0.0, 1.0 );"
     );
     expect(shader.fragmentShader).toContain("diffuseColor.a *= trailFade;");
     expect(shader.fragmentShader).toContain("totalEmissiveRadiance *= trailFade;");

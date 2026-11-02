@@ -608,11 +608,14 @@ export const useInstancedProjectiles = (
     [defaultColor]
   );
 
-  // Always mounted so the conditional-branch hook counts stay stable; the
-  // pool is left empty (and therefore unrendered) while reduced motion is on.
+  // The pool is created once at its first limit, so it is always full
+  // capacity: if reduced motion is on at mount, the slots stay reserved and
+  // the `wantTrail` guard keeps them from being acquired (and the instances
+  // stay unrendered) until the preference is switched off — no remount
+  // needed.
   const { pool: trailPool, InstancedEntity: InstancedTrailInstances } =
     useInstancedEntity({
-      limit: reducedMotion ? 0 : maxProjectiles,
+      limit: maxProjectiles,
       defaultColor,
       frustumCulled: false,
       instancesContent: trailInstancesContent,

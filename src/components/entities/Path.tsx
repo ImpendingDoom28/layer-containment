@@ -284,6 +284,7 @@ export const Path: FC<PathProps> = memo(({ pathIndex }) => {
           }}
           geometry={m.geometry}
           material={m.material}
+          receiveShadow
         />
       ))}
       {portalProps && (

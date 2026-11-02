@@ -561,11 +561,15 @@ export const useInstancedProjectiles = (
     [defaultColor]
   );
 
+  // Solid projectiles cast shadows onto the ground/path below them. Beams are
+  // instant light effects (no travel to shadow) and trails are additive glow,
+  // so neither gets castShadow.
   const { pool: spherePool, InstancedEntity: InstancedSphereInstances } =
     useInstancedEntity({
       limit: maxProjectiles,
       defaultColor,
       frustumCulled: false,
+      castShadow: true,
       instancesContent: sphereInstancesContent,
     });
 
@@ -582,6 +586,7 @@ export const useInstancedProjectiles = (
       limit: maxProjectiles,
       defaultColor,
       frustumCulled: false,
+      castShadow: true,
       instancesContent: boltInstancesContent,
     });
 

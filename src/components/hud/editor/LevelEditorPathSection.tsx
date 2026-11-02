@@ -104,25 +104,45 @@ export const LevelEditorPathSection = () => {
           ))}
         </div>
 
-        <div className="flex gap-2">
-          <UIButton size="sm" variant="outline" onClick={addPath}>
-            <Icon name="Plus" size={14} />
-            {t("editor.addPath")}
-          </UIButton>
-          <UIButton
-            size="sm"
-            variant="destructive"
-            onClick={removeSelectedPath}
-            disabled={selectedPathHasPinnedGroup}
-            title={
-              selectedPathHasPinnedGroup
-                ? t("editor.removePathBlocked")
-                : t("editor.remove")
-            }
-          >
-            <Icon name="Trash2" color="destructive" size={14} />
-            {t("editor.remove")}
-          </UIButton>
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <UIButton size="sm" variant="outline" onClick={addPath}>
+              <Icon name="Plus" size={14} />
+              {t("editor.addPath")}
+            </UIButton>
+            <UIButton
+              size="sm"
+              variant="destructive"
+              onClick={removeSelectedPath}
+              disabled={selectedPathHasPinnedGroup}
+              aria-describedby={
+                selectedPathHasPinnedGroup
+                  ? "remove-path-blocked-reason"
+                  : undefined
+              }
+              title={
+                selectedPathHasPinnedGroup
+                  ? t("editor.removePathBlocked")
+                  : t("editor.remove")
+              }
+            >
+              <Icon name="Trash2" color="destructive" size={14} />
+              {t("editor.remove")}
+            </UIButton>
+          </div>
+          {selectedPathHasPinnedGroup ? (
+            <div
+              id="remove-path-blocked-reason"
+              className="flex items-start gap-2 pl-2 border-l-2 border-amber-400/40"
+            >
+              <UITypography
+                variant="verySmall"
+                className="text-muted-foreground"
+              >
+                {t("editor.removePathBlocked")}
+              </UITypography>
+            </div>
+          ) : null}
         </div>
 
         {draftLevel.pathWaypoints.length > 0 ? (

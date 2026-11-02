@@ -57,6 +57,7 @@ import { PageWrapper } from "./PageWrapper";
 import { world } from "../../core/ecs/world";
 import { getRunStats } from "../../core/ecs/selectors/runStats";
 import { SimulationClockProvider } from "../../core/contexts/SimulationClockContext";
+import { WaterClockProvider } from "../../core/contexts/WaterClockContext";
 
 type GamePageProps = {
   onOpenLevelEditor: () => void;
@@ -229,54 +230,56 @@ export const GamePage: FC<GamePageProps> = ({
         gl={GAME_CANVAS_GL}
       >
         <SimulationClockProvider>
-          <BackgroundGameLoopSystem />
+          <WaterClockProvider>
+            <BackgroundGameLoopSystem />
 
-          {shaderGateKey !== null && (
-            <ShaderReadyGate
-              key={shaderGateKey}
-              compileKey={shaderGateKey}
-              onReadyChange={setAreShadersReady}
-            />
-          )}
-
-          <Suspense fallback={<HUDLoading message={loadingMessage} />}>
-            {isGameConfigLoaded && isMenu && <MainMenuScene />}
-            {isGameConfigLoaded && !isMenu && (
-              <GameScene
-                placeTower={placeTower}
-                selectedTower={selectedTower}
-                gameStatus={gameStatus}
-                waveSystem={waveSystem}
-                onEnemyReachEnd={onEnemyReachEnd}
-                onProjectileHit={onProjectileHit}
-                onProjectileRemove={onProjectileRemove}
-                onSellTower={sellTower}
-                // The camera stays controllable while paused so the held frame
-                // can be inspected from any angle; only menu, intro, and
-                // tab-hidden states lock it.
-                shouldStopCamera={shouldLockCamera || controlsIntroOpen}
-                playableLevelId={activePlayableLevel}
+            {shaderGateKey !== null && (
+              <ShaderReadyGate
+                key={shaderGateKey}
+                compileKey={shaderGateKey}
+                onReadyChange={setAreShadersReady}
               />
             )}
 
-            {debug && (
-              <>
-                <Stats showPanel={0} className="top-[calc(100%-48px)]!" />
-                <Stats
-                  showPanel={1}
-                  className="top-[calc(100%-48px)]! bottom-0! left-20!"
+            <Suspense fallback={<HUDLoading message={loadingMessage} />}>
+              {isGameConfigLoaded && isMenu && <MainMenuScene />}
+              {isGameConfigLoaded && !isMenu && (
+                <GameScene
+                  placeTower={placeTower}
+                  selectedTower={selectedTower}
+                  gameStatus={gameStatus}
+                  waveSystem={waveSystem}
+                  onEnemyReachEnd={onEnemyReachEnd}
+                  onProjectileHit={onProjectileHit}
+                  onProjectileRemove={onProjectileRemove}
+                  onSellTower={sellTower}
+                  // The camera stays controllable while paused so the held frame
+                  // can be inspected from any angle; only menu, intro, and
+                  // tab-hidden states lock it.
+                  shouldStopCamera={shouldLockCamera || controlsIntroOpen}
+                  playableLevelId={activePlayableLevel}
                 />
-                <Stats
-                  showPanel={2}
-                  className="top-[calc(100%-48px)]! left-40!"
-                />
-              </>
-            )}
+              )}
 
-            <KeyboardHandlingSystem onGameMenuEscape={gameMenuClose.startClose} />
-          </Suspense>
+              {debug && (
+                <>
+                  <Stats showPanel={0} className="top-[calc(100%-48px)]!" />
+                  <Stats
+                    showPanel={1}
+                    className="top-[calc(100%-48px)]! bottom-0! left-20!"
+                  />
+                  <Stats
+                    showPanel={2}
+                    className="top-[calc(100%-48px)]! left-40!"
+                  />
+                </>
+              )}
 
-          <PostFX />
+              <KeyboardHandlingSystem onGameMenuEscape={gameMenuClose.startClose} />
+            </Suspense>
+
+            <PostFX />
+          </WaterClockProvider>
         </SimulationClockProvider>
       </Canvas>
 

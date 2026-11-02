@@ -15,7 +15,7 @@ const stubCanvas = (
   opts: { webgl2First?: boolean } = {}
 ) => {
   const fakeGL = {
-    getExtension: (name: string) =>
+    getExtension: () =>
       renderer === null ? null : { UNMASKED_RENDERER_WEBGL: 0x9246 },
     getParameter: () => renderer,
   };

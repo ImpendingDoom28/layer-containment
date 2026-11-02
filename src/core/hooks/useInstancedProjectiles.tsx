@@ -17,6 +17,7 @@ import {
   type InstancedPoolRef,
 } from "../../utils/InstancedPool";
 import { patchEmissiveByInstanceColor } from "../../utils/instancedEmissivePatch";
+import { patchInstancedTrailFade } from "../../utils/instancedTrailFadePatch";
 import { getCssColorValue } from "../../components/ui/lib/cssUtils";
 import type { ChainAdditionalHit } from "../chainLightning";
 import type { Projectile, Enemy } from "../types/game";
@@ -29,6 +30,7 @@ import { useEntityIds } from "../contexts/EntityIdContext";
 import { useInstancedEntity } from "./useInstancedEntity";
 import { clampFrameDelta } from "../../utils/gameDelta";
 import { useSimulationClock } from "../contexts/SimulationClockContext";
+import { useReducedMotion } from "./useReducedMotion";
 import { useGameStore } from "../stores/useGameStore";
 import { useSettingsStore } from "../stores/useSettingsStore";
 import { useLevelStore } from "../stores/useLevelStore";
@@ -39,6 +41,21 @@ const CHAIN_BOLT_RADIUS = 0.03;
 const CHAIN_BOLT_LENGTH = 0.5;
 const CHAIN_BOLT_EMISSIVE_INTENSITY = 2;
 
+/**
+ * Trails for the travelling single/AoE spheres: a short fading streak behind
+ * each in-flight projectile makes shots read faster and fills the field with
+ * motion. One pooled instanced slot per projectile (a stretched, motion-
+ * oriented sphere) carries it — the per-instance color tints the streak with
+ * the tower color and `patchInstancedTrailFade` fades it from the head to a
+ * transparent tail along the travel direction.
+ */
+const TRAIL_LENGTH_FACTOR = 0.22;
+const TRAIL_MAX_LENGTH = 0.8;
+const TRAIL_MIN_LENGTH = 0.08;
+const TRAIL_WIDTH_FACTOR = 0.4;
+const TRAIL_MIN_WIDTH = 0.05;
+const TRAIL_EMISSIVE_INTENSITY = 1.4;
+
 const tempDirection = new THREE.Vector3();
 const tempQuaternion = new THREE.Quaternion();
 const tempUpVector = new THREE.Vector3(0, 1, 0);
@@ -47,6 +64,7 @@ const tempScale = new THREE.Vector3();
 const scratchTargetWorld = new THREE.Vector3();
 const scratchStruckWorld = new THREE.Vector3();
 const scratchNextWorld = new THREE.Vector3();
+const trailScratchPosition = new THREE.Vector3();
 
 type VisualPoolKind = "sphere" | "beam" | "bolt";
 
@@ -92,6 +110,8 @@ const applyChainBoltTransform = (
 
 type PooledProjectile = Projectile & {
   instanceIndex: number;
+  /** Slot of the trail streak in the trail pool; -1 for non-sphere visuals. */
+  trailInstanceIndex: number;
   visualPool: VisualPoolKind;
   currentX: number;
   currentY: number;
@@ -203,11 +223,58 @@ const tryContinueChainBoltAfterHit = (
   return true;
 };
 
+export type TrailPose = {
+  position: THREE.Vector3;
+  quaternion: THREE.Quaternion;
+  scale: THREE.Vector3;
+  length: number;
+  width: number;
+};
+
+/**
+ * Pose for a projectile's trail streak: a capsule stretched along the travel
+ * direction whose +Y head sits at the projectile position (the -Y tail trails
+ * behind it). Returns null for standing-still projectiles, which have no
+ * streak. Reuses the module's scratch vectors, so the pose must be consumed
+ * before the next call.
+ */
+export const computeTrailPose = (
+  x: number,
+  y: number,
+  z: number,
+  velocityX: number,
+  velocityY: number,
+  velocityZ: number,
+  projectileSize: number
+): TrailPose | null => {
+  const speed = Math.hypot(velocityX, velocityY, velocityZ);
+  if (speed < 1e-6) return null;
+
+  const length = Math.min(
+    TRAIL_MAX_LENGTH,
+    Math.max(TRAIL_MIN_LENGTH, speed * TRAIL_LENGTH_FACTOR)
+  );
+  const width = Math.max(TRAIL_MIN_WIDTH, projectileSize * TRAIL_WIDTH_FACTOR);
+
+  tempDirection.set(velocityX / speed, velocityY / speed, velocityZ / speed);
+  tempQuaternion.setFromUnitVectors(tempUpVector, tempDirection);
+  trailScratchPosition.set(
+    x - tempDirection.x * (length * 0.5),
+    y - tempDirection.y * (length * 0.5),
+    z - tempDirection.z * (length * 0.5)
+  );
+  tempScale.set(width, length, width);
+
+  return { position: trailScratchPosition, quaternion: tempQuaternion, scale: tempScale, length, width };
+};
+
 type NonBeamStepContext = {
   delta: number;
   currentTime: number;
   boltPool: InstancedPoolRef | null;
   spherePool: InstancedPoolRef | null;
+  trailPool: InstancedPoolRef | null;
+  projectileSize: number;
   enemiesById: Map<number, Enemy>;
   hitThreshold: number;
   onHit: (p: Projectile, e: Enemy, t: number) => void;
@@ -228,6 +295,8 @@ const stepNonBeamProjectile = (
     currentTime,
     boltPool,
     spherePool,
+    trailPool,
+    projectileSize,
     enemiesById,
     hitThreshold,
     onHit,
@@ -285,6 +354,26 @@ const stepNonBeamProjectile = (
       projectile.currentY,
       projectile.currentZ
     );
+
+    if (projectile.trailInstanceIndex >= 0 && trailPool) {
+      const pose = computeTrailPose(
+        projectile.currentX,
+        projectile.currentY,
+        projectile.currentZ,
+        projectile.velocityX,
+        projectile.velocityY,
+        projectile.velocityZ,
+        projectileSize
+      );
+      if (pose) {
+        trailPool.setTransform(
+          projectile.trailInstanceIndex,
+          pose.position,
+          pose.quaternion,
+          pose.scale
+        );
+      }
+    }
   }
 
   const targetEnemy = enemiesById.get(projectile.targetId);
@@ -393,6 +482,8 @@ type InstancedProjectilesReturn = {
   fireProjectile: (params: FireProjectileParams) => Projectile;
   clearAllProjectiles: () => void;
   getActiveProjectiles: () => PooledProjectile[];
+  /** Pool stats of the trail streaks, or null when trails are disabled. */
+  getTrailPoolStats: () => InstancedPoolStats | null;
 };
 
 export const useInstancedProjectiles = (
@@ -413,6 +504,10 @@ export const useInstancedProjectiles = (
 
   const { getSimulationTime, getTimeScale, shouldStopMovement } =
     useSimulationClock();
+
+  // The trail is decorative motion; honor `prefers-reduced-motion` and skip
+  // it entirely (no trail pool, no per-frame streak work).
+  const reducedMotion = useReducedMotion();
 
   const sphereInstancesContent = useMemo(
     () => (
@@ -490,6 +585,42 @@ export const useInstancedProjectiles = (
       instancesContent: boltInstancesContent,
     });
 
+  const trailInstancesContent = useMemo(
+    () => (
+      <>
+        <sphereGeometry args={[0.5, 8, 8]} />
+        <meshStandardMaterial
+          color={defaultColor}
+          emissive={defaultColor}
+          emissiveIntensity={TRAIL_EMISSIVE_INTENSITY}
+          transparent
+          opacity={1}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          toneMapped={false}
+          onBeforeCompile={(shader) => {
+            patchEmissiveByInstanceColor(shader);
+            patchInstancedTrailFade(shader);
+          }}
+        />
+      </>
+    ),
+    [defaultColor]
+  );
+
+  // The pool is created once at its first limit, so it is always full
+  // capacity: if reduced motion is on at mount, the slots stay reserved and
+  // the `wantTrail` guard keeps them from being acquired (and the instances
+  // stay unrendered) until the preference is switched off — no remount
+  // needed.
+  const { pool: trailPool, InstancedEntity: InstancedTrailInstances } =
+    useInstancedEntity({
+      limit: maxProjectiles,
+      defaultColor,
+      frustumCulled: false,
+      instancesContent: trailInstancesContent,
+    });
+
   const projectilesRef = useRef<Map<number, PooledProjectile>>(new Map());
   const enemiesByIdRef = useRef<Map<number, Enemy>>(new Map());
   const toRemoveRef = useRef<number[]>([]);
@@ -510,8 +641,9 @@ export const useInstancedProjectiles = (
       beam: beamPool,
       bolt: boltPool,
       sphere: spherePool,
+      trail: trailPool,
     }),
-    [beamPool, boltPool, spherePool]
+    [beamPool, boltPool, spherePool, trailPool]
   );
 
   const removeProjectile = useCallback(
@@ -522,9 +654,11 @@ export const useInstancedProjectiles = (
       projectilesRef.current.delete(projectileId);
 
       const visualPool = pools[projectile.visualPool];
-      if (!visualPool) return;
+      if (visualPool) visualPool.release(projectile.instanceIndex);
 
-      visualPool.release(projectile.instanceIndex);
+      if (projectile.trailInstanceIndex >= 0) {
+        pools.trail?.release(projectile.trailInstanceIndex);
+      }
 
       onRemove(projectileId);
     },
@@ -540,6 +674,12 @@ export const useInstancedProjectiles = (
 
       const index = pool.acquire();
       if (index === -1) return { ...params, id: -1 };
+
+      // Sphere projectiles get a pooled trail slot; a full trail pool (or
+      // reduced motion) degrades gracefully to the plain sphere.
+      const wantTrail = visualPool === "sphere" && !reducedMotion;
+      const trailPool = wantTrail ? pools.trail : null;
+      const trailIndex = trailPool ? trailPool.acquire() : -1;
 
       const id = getNextProjectileId();
       const color = params.color ?? defaultColor;
@@ -557,6 +697,7 @@ export const useInstancedProjectiles = (
         ...params,
         id,
         instanceIndex: index,
+        trailInstanceIndex: wantTrail && trailIndex !== -1 ? trailIndex : -1,
         visualPool,
         currentX: params.startX,
         currentY: params.startY,
@@ -602,9 +743,30 @@ export const useInstancedProjectiles = (
 
       pool.setColor(index, color);
 
+      if (pooledProjectile.trailInstanceIndex >= 0 && trailPool) {
+        const pose = computeTrailPose(
+          params.startX,
+          params.startY,
+          params.startZ,
+          velocityX,
+          velocityY,
+          velocityZ,
+          projectileSize
+        );
+        if (pose) {
+          trailPool.setTransform(
+            pooledProjectile.trailInstanceIndex,
+            pose.position,
+            pose.quaternion,
+            pose.scale
+          );
+        }
+        trailPool.setColor(pooledProjectile.trailInstanceIndex, color);
+      }
+
       return pooledProjectile;
     },
-    [defaultColor, getNextProjectileId, pools]
+    [defaultColor, getNextProjectileId, pools, projectileSize, reducedMotion]
   );
 
   const updateProjectilesFrame = useCallback(
@@ -635,6 +797,8 @@ export const useInstancedProjectiles = (
             currentTime,
             boltPool,
             spherePool,
+            trailPool,
+            projectileSize,
             enemiesById: enemiesByIdRef.current,
             hitThreshold,
             onHit,
@@ -648,7 +812,16 @@ export const useInstancedProjectiles = (
         removeProjectile(id);
       }
     },
-    [beamDuration, boltPool, onHit, spherePool, hitThreshold, removeProjectile]
+    [
+      beamDuration,
+      boltPool,
+      onHit,
+      spherePool,
+      trailPool,
+      projectileSize,
+      hitThreshold,
+      removeProjectile,
+    ]
   );
 
   const clearAllProjectiles = useCallback((): void => {
@@ -662,6 +835,10 @@ export const useInstancedProjectiles = (
   const getActiveProjectiles = useCallback((): PooledProjectile[] => {
     return Array.from(projectilesRef.current.values());
   }, []);
+
+  const getTrailPoolStats = useCallback((): InstancedPoolStats | null => {
+    return trailPool ? trailPool.getStats() : null;
+  }, [trailPool]);
 
   useFrame((state, delta) => {
     enemiesByIdRef.current = refreshEnemyRegistry(world);
@@ -682,6 +859,7 @@ export const useInstancedProjectiles = (
       {InstancedSphereInstances}
       {InstancedBeamInstances}
       {InstancedBoltInstances}
+      {reducedMotion ? null : InstancedTrailInstances}
     </>
   );
 
@@ -690,6 +868,7 @@ export const useInstancedProjectiles = (
     fireProjectile,
     clearAllProjectiles,
     getActiveProjectiles,
+    getTrailPoolStats,
   };
 };
 

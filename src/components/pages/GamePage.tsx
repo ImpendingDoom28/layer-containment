@@ -54,6 +54,7 @@ import {
   markControlsIntroSeen,
 } from "../../core/hasSeenControlsIntro";
 import { PageWrapper } from "./PageWrapper";
+import { getAreModelsLoaded } from "../../constants/models";
 import { world } from "../../core/ecs/world";
 import { getRunStats } from "../../core/ecs/selectors/runStats";
 import { SimulationClockProvider } from "../../core/contexts/SimulationClockContext";
@@ -71,8 +72,23 @@ export const GamePage: FC<GamePageProps> = ({
   const [activePlayableLevel, setActivePlayableLevel] =
     useState<PlayableLevelId>(PLAYABLE_LEVEL_IDS[0]);
   const [areShadersReady, setAreShadersReady] = useState(false);
+  const [areModelsReady, setAreModelsReady] = useState(false);
 
   useMenuParallax();
+
+  // The loading screen also waits for the 3D models so the first visible frame
+  // is a fully-populated scene rather than an empty board that fills in as the
+  // models stream in. Every model is preloaded at boot (see constants/models),
+  // so this resolves exactly once for the session.
+  useEffect(() => {
+    let active = true;
+    getAreModelsLoaded().then(() => {
+      if (active) setAreModelsReady(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const gameSystem = useGameSystem();
   const levelSystem = useLevelSystem();
@@ -193,7 +209,10 @@ export const GamePage: FC<GamePageProps> = ({
   }, [activePlayableLevel, isGameConfigLoaded, isLevelConfigLoaded, isMenu]);
 
   const isGameReady =
-    isGameConfigLoaded && (isMenu || isLevelConfigLoaded) && areShadersReady;
+    isGameConfigLoaded &&
+    (isMenu || isLevelConfigLoaded) &&
+    areShadersReady &&
+    areModelsReady;
 
   // Loading stays mounted while its text slides out; only the finished
   // animation (or the reduced-motion path) unmounts it.
@@ -209,6 +228,9 @@ export const GamePage: FC<GamePageProps> = ({
     }
     if (!isMenu && !isLevelConfigLoaded) {
       return t("common.loadingLevel");
+    }
+    if (!areModelsReady) {
+      return t("common.loadingModels");
     }
     return t("common.preparingGraphics");
   })();

@@ -90,6 +90,7 @@ const ruValues = {
     loadingGame: "Загрузка игры…",
     loadingLevel: "Загрузка уровня…",
     loadingEditor: "Загрузка редактора…",
+    loadingModels: "Загрузка моделей…",
     preparingGraphics: "Инициализация графики…",
   },
   towerShop: {

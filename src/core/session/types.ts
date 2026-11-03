@@ -1,7 +1,7 @@
 import type { World } from "koota";
 import type { Object3D } from "three";
 
-import type { PlayableLevelId } from "../../constants/playableLevels";
+import type { AnyPlayableLevelId } from "../../constants/playableLevels";
 import type { LevelConfigData } from "../configs/levelConfig";
 import type { Projectile } from "../types/game";
 
@@ -12,7 +12,7 @@ export type SimulationFrame = {
 };
 
 export type GameSession = {
-  startRun: (levelId: PlayableLevelId) => Promise<void>;
+  startRun: (levelId: AnyPlayableLevelId) => Promise<void>;
   restartRun: () => Promise<void>;
   endRun: () => void;
   tick: (frame: SimulationFrame) => void;
@@ -43,5 +43,5 @@ export type GameSessionDependencies = {
   getNextEnemyId: (reset?: boolean) => number;
   ensureEnemyIdAtLeast: (minId: number) => void;
   getNextProjectileId: (reset?: boolean) => number;
-  loadLevel?: (levelId: PlayableLevelId) => Promise<LevelConfigData>;
+  loadLevel?: (levelId: AnyPlayableLevelId) => Promise<LevelConfigData>;
 };

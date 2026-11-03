@@ -22,30 +22,27 @@
  * Nothing in this folder is imported by the default `index.html` entry, so
  * the normal `vite build` never bundles the stress-test code.
  */
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Stats } from "@react-three/drei";
-import { useActions, WorldProvider } from "koota/react";
+import { useActions, useWorld, WorldProvider } from "koota/react";
 
 import { GameScene } from "../../src/components/scenes/game/GameScene";
 import { ShaderReadyGate } from "../../src/components/systems/ShaderReadyGate";
+import { GameSessionSystem } from "../../src/components/systems/GameSessionSystem";
 import { GAME_CANVAS_GL, GAME_CANVAS_STYLE } from "../../src/constants/canvas";
 import { worldBaseActions } from "../../src/core/ecs/actions/baseActions";
 import { isBase } from "../../src/core/ecs/traits/base";
 import { HealthInfo } from "../../src/core/ecs/traits/health";
 import { enemyActions } from "../../src/core/ecs/actions/enemyActions";
-import { EntityIdProvider } from "../../src/core/contexts/EntityIdContext";
+import { EntityIdProvider, useEntityIds } from "../../src/core/contexts/EntityIdContext";
 import { SimulationClockProvider } from "../../src/core/contexts/SimulationClockContext";
 import { world } from "../../src/core/ecs/world";
 import { useEnemyActions } from "../../src/core/hooks/useEnemyActions";
 import { useGameSystem } from "../../src/core/hooks/useGameSystem";
 import { useLevelSystem } from "../../src/core/hooks/useLevelSystem";
-import { useProjectileSystem } from "../../src/core/hooks/useProjectileSystem";
-import { useWaveSystem } from "../../src/core/hooks/useWaveSystem";
-import {
-  startNewRunSelector,
-  useGameStore,
-} from "../../src/core/stores/useGameStore";
+import { createGameSession } from "../../src/core/session/gameSession";
+import { useGameStore } from "../../src/core/stores/useGameStore";
 import { useLevelStore } from "../../src/core/stores/useLevelStore";
 import {
   resetLevelEnemyUpgradesSelector,
@@ -361,12 +358,15 @@ const StressTestGame = () => {
   const gameSystem = useGameSystem();
   const levelSystem = useLevelSystem();
 
-  const enemyActions = useEnemyActions();
-  const projectileSystem = useProjectileSystem(enemyActions);
-  const waveSystem = useWaveSystem(gameSystem);
+  const world = useWorld();
+  const entityIds = useEntityIds();
+  const session = useMemo(
+    () => createGameSession({ world, ...entityIds }),
+    [world, entityIds]
+  );
+  useEffect(() => session.dispose, [session]);
 
   const { spawnBase } = useActions(worldBaseActions);
-  const startNewRun = useGameStore(startNewRunSelector);
 
   // The stress level is fully pre-built and placement is disabled, so this is
   // a stable no-op. It must be referentially stable: StressTestGame re-renders
@@ -376,27 +376,25 @@ const StressTestGame = () => {
   const onPlaceTowerNoop = useCallback(() => {
     /* stress level is fully pre-built; placement is disabled */
   }, []);
-  const resetLevelEnemyUpgrades = useUpgradeStore(
-    resetLevelEnemyUpgradesSelector
-  );
 
   const { gameStatus, isGameConfigLoaded, selectedTower, shouldStopMovement } =
     gameSystem;
 
-  const {
-    sellTower,
-    resetState: resetLevelState,
-    isLevelConfigLoaded,
-  } = levelSystem;
-
-  const { onEnemyReachEnd } = enemyActions;
-  const { onProjectileHit, onProjectileRemove } = projectileSystem;
-  const { startWave } = waveSystem;
+  const { sellTower, isLevelConfigLoaded } = levelSystem;
 
   const beginRun = useCallback(() => {
-    startNewRun();
-    spawnBase(STRESS_BASE_HEALTH);
-  }, [startNewRun, spawnBase]);
+    // startRun clears the run state and spawns the base with the level's own
+    // starting health; bump it to the stress value afterwards so the run never
+    // ends from leaks.
+    void session
+      .startRun(STRESS_LEVEL_ID)
+      .then(() => {
+        spawnBase(STRESS_BASE_HEALTH);
+      })
+      .catch((error) => {
+        console.error("Failed to start the stress run.", error);
+      });
+  }, [session, spawnBase]);
 
   // Start the unattended run once the game config is loaded.
   useEffect(() => {
@@ -406,13 +404,18 @@ const StressTestGame = () => {
   }, [isGameConfigLoaded, beginRun]);
 
   const restart = useCallback(() => {
-    resetLevelEnemyUpgrades();
-    resetLevelState();
-    beginRun();
+    void session
+      .restartRun()
+      .then(() => {
+        spawnBase(STRESS_BASE_HEALTH);
+      })
+      .catch((error) => {
+        console.error("Failed to restart the stress run.", error);
+      });
     // Re-arm the 30s averaging window for the new run.
     resetMetricsWindow(statsRef.current);
     setRunCount((c) => c + 1);
-  }, [resetLevelEnemyUpgrades, resetLevelState, beginRun]);
+  }, [session, spawnBase]);
 
   const loadingMessage = !isGameConfigLoaded
     ? "Loading game config..."
@@ -452,26 +455,26 @@ const StressTestGame = () => {
             }
           >
             <SimulationClockProvider>
-              <GameScene
-                placeTower={onPlaceTowerNoop}
-                selectedTower={selectedTower}
-                gameStatus={gameStatus}
-                waveSystem={waveSystem}
-                onEnemyReachEnd={onEnemyReachEnd}
-                onProjectileHit={onProjectileHit}
-                onProjectileRemove={onProjectileRemove}
-                onSellTower={sellTower}
-                shouldStopCamera={shouldStopMovement}
-                playableLevelId={STRESS_LEVEL_ID}
-              />
+              <GameSessionSystem session={session}>
+                <GameScene
+                  placeTower={onPlaceTowerNoop}
+                  selectedTower={selectedTower}
+                  gameStatus={gameStatus}
+                  onSellTower={sellTower}
+                  shouldStopCamera={shouldStopMovement}
+                />
+              </GameSessionSystem>
             </SimulationClockProvider>
             <Stats showPanel={0} className="top-[calc(100%-48px)]!" />
-            <Stats
-              showPanel={1}
-              className="top-[calc(100%-48px)]! bottom-0! left-20!"
-            />
-            <Stats showPanel={2} className="top-[calc(100%-48px)]! left-40!" />
-            <StressAutoDriver startWave={startWave} restart={restart} />
+              <Stats
+                showPanel={1}
+                className="top-[calc(100%-48px)]! bottom-0! left-20!"
+              />
+              <Stats showPanel={2} className="top-[calc(100%-48px)]! left-40!" />
+              <StressAutoDriver
+                startWave={session.startWave}
+                restart={restart}
+              />
           </Suspense>
         )}
       </Canvas>

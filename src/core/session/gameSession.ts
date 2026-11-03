@@ -1,6 +1,6 @@
 import { gameEvents } from "../../utils/eventEmitter";
 import { getPlanetRadius } from "../../utils/planetSurfaceMapping";
-import type { PlayableLevelId } from "../../constants/playableLevels";
+import type { AnyPlayableLevelId } from "../../constants/playableLevels";
 import {
   loadLevelConfigFile,
   type LevelConfigData,
@@ -46,7 +46,7 @@ export const createGameSession = ({
   getNextProjectileId,
   loadLevel = loadLevelConfigFile,
 }: GameSessionDependencies): GameSessionController => {
-  let currentLevelId: PlayableLevelId | null = null;
+  let currentLevelId: AnyPlayableLevelId | null = null;
   let loadGeneration = 0;
   let isRunStarting = false;
   let runtime: GameSessionRuntime = {

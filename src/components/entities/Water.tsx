@@ -30,10 +30,10 @@ export const Water: FC<WaterProps> = memo(({ water }) => {
     [water.color, water.height, time, emissiveHue]
   );
 
-  // Bodies sit a bit below the water-tile surface (tiles are recessed 0.05
-  // below the land plane) so a peeking body reads as a deeper pool under the
-  // shore rather than floating above it.
-  const yPosition = water.height / 2 - 0.015;
+  // Bodies sit below the water-tile surface (tiles are recessed 0.05 below
+  // the land plane and swell ±~0.034) so a body reads as a deeper pool that
+  // peeks through the tile's troughs instead of floating above the shore.
+  const yPosition = water.height / 2 - 0.03;
 
   return (
     <group position={[water.x, 0, water.z]}>

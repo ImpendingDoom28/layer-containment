@@ -153,9 +153,12 @@ describe("getWaterMaterial", () => {
     );
     expect(shader.fragmentShader).toContain("waterRippleGradient( vWaterWorldPos.xz )");
     expect(shader.fragmentShader).toContain("( viewMatrix * vec4( waterWorldGrad, 0.0 ) ).xyz");
+    // A height-field normal tilts against the slope (minus sign), and the
+    // gradient carries the world XZ components (gz in the Z slot).
     expect(shader.fragmentShader).toContain(
-      "normal = normalize( normal + 0.4 * waterViewGrad );"
+      "normal = normalize( normal - 0.4 * waterViewGrad );"
     );
+    expect(shader.fragmentShader).toContain("vec3( gx, 0.0, gz )");
     // Depth: the vertex shader displaces the top surface along local Y,
     // sampled in world-space XZ so adjacent tiles swell as one field.
     expect(shader.vertexShader).toContain("waterElevated( waterLocal.y )");

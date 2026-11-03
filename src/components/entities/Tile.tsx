@@ -9,7 +9,7 @@ import {
 } from "react";
 
 import type { ThreeEvent } from "@react-three/fiber";
-import { Mesh, MeshStandardMaterial } from "three";
+import { Mesh, MeshStandardMaterial, Vector3 } from "three";
 
 import {
   flatFieldToSphereTilePose,
@@ -72,13 +72,18 @@ export const Tile: FC<TileProps> = memo(
     // Water tiles get a subdivided box (8×8 top-face grid) so the vertex
     // displacement has enough vertices to swell; the 4 corners of a plain box
     // could only tilt. Non-water (or hover) tiles stay a single-segment box.
-    const waterTopY = pathYOffset / 2;
     const WATER_AMPLITUDE = 0.05;
     const WATER_TOP_SEGMENTS = 8;
     // Water sits below the land plane so the tiles read as a recessed pool:
     // the land edge casts a rim on the surface, and the swell moves inside
-    // the basin instead of poking through the shoreline.
+    // the basin instead of poking through the shoreline. The offset must stay
+    // above the max swell (amplitude × max |waterHeight| ≈ 0.034) so the
+    // surface never crosses the land plane; 0.05 leaves a 0.016 margin.
     const WATER_BED_OFFSET = 0.05;
+    // The radial recess moves the mesh, not the slab's local coordinates, so
+    // the top face is still at local y = pathYOffset/2 — that is what the
+    // material's top-face mask keys off.
+    const waterTopY = pathYOffset / 2;
     const isAnimatedWater = isWater && placementHoverKey === "idle";
     const TILE_POSITION:
       | [
@@ -92,7 +97,7 @@ export const Tile: FC<TileProps> = memo(
       | undefined = isAnimatedWater
       ? [
           tileSize,
-          pathYOffset - WATER_BED_OFFSET,
+          pathYOffset,
           tileSize,
           WATER_TOP_SEGMENTS,
           1,
@@ -110,10 +115,23 @@ export const Tile: FC<TileProps> = memo(
       [gridX, gridZ, gridSize, tileSize, pathYOffset]
     );
 
+    // The slab keeps the full pathYOffset height; the recess is a radial push
+    // of the whole mesh down the tile's surface normal (its local Y), so the
+    // top face sits exactly at waterTopY and the material's mask displaces it.
+    const waterMeshPosition = useMemo(
+      () =>
+        isAnimatedWater
+          ? new Vector3(0, -WATER_BED_OFFSET, 0)
+              .applyQuaternion(planetPose.quaternion)
+              .add(planetPose.position)
+          : planetPose.position,
+      [isAnimatedWater, planetPose, WATER_BED_OFFSET]
+    );
+
     const meshRef = useRef<Mesh>(null);
     useLayoutEffect(() => {
       if (meshRef.current) freezeSubtree(meshRef.current);
-    }, [planetPose]);
+    }, [waterMeshPosition]);
 
     const material = useMemo(() => {
       if (isWater) {
@@ -240,7 +258,7 @@ export const Tile: FC<TileProps> = memo(
     return (
       <mesh
         ref={meshRef}
-        position={planetPose.position}
+        position={waterMeshPosition}
         quaternion={planetPose.quaternion}
         material={material}
         castShadow

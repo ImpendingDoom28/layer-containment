@@ -86,14 +86,15 @@ varying vec3 vWaterWorldPos;
 ${WATER_WAVE_GLSL}
 float waterRipple( vec2 p ) { return waterHeight( p ) + 0.5; }
 // Central differences of waterHeight: one exact derivative for the sines AND
-// the FBM noise (which has no closed form).
+// the FBM noise (which has no closed form). Returns the world-space XZ slope
+// (dH/dx, dH/dz) as a 3-vector, ready for the viewMatrix rotation.
 vec3 waterRippleGradient( vec2 p ) {
 	const float eps = 0.035;
 	float gx = ( waterHeight( p + vec2( eps, 0.0 ) )
 		- waterHeight( p - vec2( eps, 0.0 ) ) ) / ( 2.0 * eps );
-	float gy = ( waterHeight( p + vec2( 0.0, eps ) )
+	float gz = ( waterHeight( p + vec2( 0.0, eps ) )
 		- waterHeight( p - vec2( 0.0, eps ) ) ) / ( 2.0 * eps );
-	return vec3( gx, gy, 0.0 );
+	return vec3( gx, 0.0, gz );
 }`;
 
 /**
@@ -103,8 +104,9 @@ vec3 waterRippleGradient( vec2 p ) {
  * (not the per-mesh UVs), so adjacent water tiles/bodies share one continuous
  * wave field instead of each pooling its own phase.
  *
- * The ripple reads as motion with depth: the analytic gradient of the wave
- * field perturbs the view-space normal so specular highlights slide across the
+ * The ripple reads as motion with depth: the gradient of the wave field
+ * (central differences of the height field, exact for sines and FBM alike)
+ * perturbs the view-space normal so specular highlights slide across the
  * surface, a roughness modulation makes the highlight shimmer, and the vertex
  * displacement (top surface only, kept watertight) gives the swell real
  * parallax. One GLSL program is shared by every water tile/body
@@ -183,14 +185,17 @@ ${WATER_FRAGMENT_GLSL}`
  roughnessFactor = roughnessFactor * ( 0.6 + 0.7 * waterR );`
     );
 
-    // Normal perturbation: slide the view-space normal along the wave field's
-    // gradient so the bright specular reflection visibly travels.
+    // Normal perturbation: for a height field h(x,z) the surface normal is
+    // proportional to ( -dh/dx, 1, -dh/dz ), so the view-space normal tilts
+    // AGAINST the slope — the minus is what makes the highlight travel up the
+    // wave face. The world-space gradient is rotated into view space so the
+    // tilt is correct for every tile orientation on the planet.
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <normal_fragment_maps>",
       `#include <normal_fragment_maps>
  vec3 waterWorldGrad = waterRippleGradient( vWaterWorldPos.xz );
  vec3 waterViewGrad = ( viewMatrix * vec4( waterWorldGrad, 0.0 ) ).xyz;
- normal = normalize( normal + 0.4 * waterViewGrad );`
+ normal = normalize( normal - 0.4 * waterViewGrad );`
     );
   };
 

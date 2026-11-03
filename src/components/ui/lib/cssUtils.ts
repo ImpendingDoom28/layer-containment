@@ -23,6 +23,7 @@ const colorTokenMap = {
   "scene-regolith-highlight": "--scene-regolith-highlight",
   "scene-regolith-shadow": "--scene-regolith-shadow",
   "scene-regolith-rock": "--scene-regolith-rock",
+  "scene-dust": "--scene-dust",
 
   "editor-tool-select": "--editor-tool-select",
   "editor-tool-place-building": "--editor-tool-place-building",

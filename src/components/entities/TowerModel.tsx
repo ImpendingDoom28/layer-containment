@@ -1,8 +1,17 @@
 import { useCallback, memo, type FC, type ReactNode } from "react";
-import { Box3, Group, Vector3, type Object3D } from "three";
+import {
+  Box3,
+  Color,
+  Group,
+  Mesh,
+  Vector3,
+  type Material,
+  type Object3D,
+} from "three";
 
 import { TOWER_MODELS, type TowerModelSpec } from "../../constants/models";
 import type { TowerType } from "../../core/types/game";
+import { getCssColorValue } from "../ui/lib/cssUtils";
 import { ModelLoader } from "./ModelLoader";
 
 // Shared, cached scratch state for the one-time recenter math (towers are
@@ -73,31 +82,132 @@ export const prepareTowerModel = (source: Object3D, size: number): Group => {
   group.position.set(
     -_center.x * scale,
     -fullBox.min.y * scale,
-    -_center.z * scale
+    -_center.z * scale,
   );
-  group.add(source.clone());
+  const clone = source.clone();
+  // The tower body is physical, so let it cast and receive shadows like the
+  // enemy models and the primitive fallback (the shadow flags are not part of
+  // the GLTF and would otherwise be left at three's defaults).
+  clone.traverse((child) => {
+    if ((child as Partial<Mesh>).isMesh) {
+      (child as Mesh).castShadow = true;
+      (child as Mesh).receiveShadow = true;
+    }
+  });
+  group.add(clone);
   return group;
+};
+
+// "solid" is the placed tower (the model's own baked materials). "preview" is
+// the translucent placement ghost; "invalid" is the same ghost tinted the
+// destructive colour so an illegal drop reads at a glance.
+export type TowerModelVariant = "solid" | "preview" | "invalid";
+
+// Ghost opacity, matching the old primitive preview's previewOpacity.
+const PREVIEW_OPACITY = 0.5;
+
+type GhostMaterials = (Material | Material[])[];
+
+const makeGhostMaterial = (original: Material, invalid: boolean): Material => {
+  const mat = original.clone();
+  mat.transparent = true;
+  mat.opacity = PREVIEW_OPACITY;
+  if (invalid) {
+    mat.color.copy(new Color(getCssColorValue("destructive")));
+  }
+  return mat;
+};
+
+/**
+ * Builds a translucent ghost material for every mesh of `source` (a clone, so
+ * the shared GLTF's materials are never mutated), in the same traverse order
+ * the prepared group's meshes appear in — so the clones can be re-attached by
+ * index. `invalid` tints the ghost the destructive colour. Pure: no caching,
+ * no DOM access beyond the single `getCssColorValue` lookup for the red tint.
+ */
+export const buildGhostMaterials = (
+  source: Object3D,
+  invalid: boolean,
+): GhostMaterials => {
+  const result: GhostMaterials = [];
+  source.traverse((obj) => {
+    const mesh = obj as Mesh;
+    if (!mesh.isMesh) return;
+    if (Array.isArray(mesh.material)) {
+      result.push(mesh.material.map((m) => makeGhostMaterial(m, invalid)));
+    } else if (mesh.material) {
+      result.push(makeGhostMaterial(mesh.material, invalid));
+    }
+  });
+  return result;
+};
+
+// One ghost-material set per (type, variant), built once from the shared GLTF
+// node. The ghost geometry is shared with the placed tower, so only the
+// material is per-variant; caching means the cursor crossing tiles (which
+// toggles preview/invalid constantly while placing) reuses the existing clones
+// instead of leaking a fresh set per hover. R3F never disposes a <primitive>'s
+// children, so these stay cached for the session and are reused, not freed.
+const previewMaterialsCache = new Map<string, GhostMaterials>();
+
+const getPreviewMaterials = (
+  source: Object3D,
+  type: TowerType,
+  variant: TowerModelVariant,
+): GhostMaterials => {
+  const key = `${type}|${variant}`;
+  const cached = previewMaterialsCache.get(key);
+  if (cached) return cached;
+  const materials = buildGhostMaterials(source, variant === "invalid");
+  previewMaterialsCache.set(key, materials);
+  return materials;
 };
 
 type TowerModelProps = {
   type: TowerType;
   size: number;
+  /**
+   * Which look to render: the placed tower's own materials ("solid"), or the
+   * translucent placement ghost ("preview" / "invalid", the latter tinted the
+   * destructive colour).
+   */
+  variant?: TowerModelVariant;
   fallback: ReactNode;
 };
 
 /**
  * Renders the 3D model of a tower type as the body. Loading, node extraction,
  * and Suspense isolation are all delegated to the generic `ModelLoader`; this
- * component only supplies the shared `prepare` transform (fit the base to the
- * tile footprint, recenter the base, and ground it). `size` is the target
+ * component supplies the shared `prepare` transform (fit the base to the tile
+ * footprint, recenter the base, and ground it) and, for the placement preview,
+ * re-points the ghost clone's materials at a translucent (optionally red)
+ * variant so the real model reads as the draggable ghost. `size` is the target
  * base footprint; `type` picks the model from `TOWER_MODELS`.
  */
 export const TowerModel: FC<TowerModelProps> = memo(
-  ({ type, size, fallback }) => {
+  ({ type, size, variant = "solid", fallback }) => {
     const model: TowerModelSpec = TOWER_MODELS[type];
     const prepare = useCallback(
-      (source: Object3D) => prepareTowerModel(source, size),
-      [size]
+      (source: Object3D) => {
+        const group = prepareTowerModel(source, size);
+        if (variant !== "solid") {
+          const materials = getPreviewMaterials(source, type, variant);
+          // Re-attach by index in the same traverse order buildGhostMaterials
+          // used, skipping non-meshes and mesh-less parts exactly the way it did
+          // so the indices stay aligned.
+          let index = 0;
+          group.traverse((obj) => {
+            const mesh = obj as Mesh;
+            if (!mesh.isMesh) return;
+            if (Array.isArray(mesh.material) || mesh.material) {
+              mesh.material = materials[index];
+              index += 1;
+            }
+          });
+        }
+        return group;
+      },
+      [size, variant, type],
     );
     return (
       <ModelLoader

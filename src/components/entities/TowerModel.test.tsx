@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   Box3,
   BoxGeometry,
@@ -10,7 +10,13 @@ import {
   Vector3,
 } from "three";
 
-import { prepareTowerModel } from "./TowerModel";
+import { buildGhostMaterials, prepareTowerModel } from "./TowerModel";
+
+// The ghost's "invalid" tint reads the destructive CSS colour; in the node test
+// environment (no DOM) pin it to a known red so the tint can be asserted.
+vi.mock("../ui/lib/cssUtils", () => ({
+  getCssColorValue: vi.fn().mockReturnValue("#ff0000"),
+}));
 
 const material = () => new MeshStandardMaterial();
 
@@ -110,5 +116,87 @@ describe("prepareTowerModel", () => {
     box.getSize(size);
     expect(Math.max(size.x, size.y, size.z)).toBeCloseTo(0.9, 5);
     expect(box.min.y).toBeCloseTo(0, 5);
+  });
+
+  it("marks every mesh to cast and receive shadows", () => {
+    const group = prepareTowerModel(buildSource(), 0.9);
+    let meshCount = 0;
+    group.traverse((obj) => {
+      const mesh = obj as Mesh;
+      if (!mesh.isMesh) return;
+      meshCount += 1;
+      expect(mesh.castShadow).toBe(true);
+      expect(mesh.receiveShadow).toBe(true);
+    });
+    expect(meshCount).toBeGreaterThan(0);
+  });
+});
+
+describe("buildGhostMaterials", () => {
+  it("returns one translucent clone per mesh, in traverse order", () => {
+    const source = buildSource(); // two meshes (base + overhang)
+    const ghost = buildGhostMaterials(source, false);
+    expect(ghost.length).toBe(2);
+    for (const entry of ghost) {
+      const mat = Array.isArray(entry) ? entry[0] : entry;
+      expect(mat).toBeInstanceOf(MeshStandardMaterial);
+      expect(mat.transparent).toBe(true);
+      expect(mat.opacity).toBeCloseTo(0.5, 5);
+    }
+  });
+
+  it("does not mutate the shared source's materials", () => {
+    const source = buildSource();
+    const before: MeshStandardMaterial[] = [];
+    source.traverse((obj) => {
+      const mesh = obj as Mesh;
+      if (mesh.isMesh && !Array.isArray(mesh.material)) {
+        before.push(mesh.material as MeshStandardMaterial);
+      }
+    });
+    buildGhostMaterials(source, false);
+    // The original materials must be untouched (the ghost uses clones).
+    for (const mat of before) {
+      expect(mat.transparent).toBe(false);
+      expect(mat.opacity).toBe(1);
+    }
+  });
+
+  it("preserves the model's per-part colour for a valid preview", () => {
+    const source = new Group();
+    const red = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial({ color: "#ff0000" }));
+    source.add(red);
+    source.updateWorldMatrix(true, true);
+    const ghost = buildGhostMaterials(source, false);
+    const mat = (Array.isArray(ghost[0]) ? ghost[0][0] : ghost[0]) as MeshStandardMaterial;
+    expect(mat.color.getHex()).toBe(0xff0000);
+  });
+
+  it("tints every mesh the destructive colour when invalid", () => {
+    const source = buildSource();
+    const ghost = buildGhostMaterials(source, true);
+    for (const entry of ghost) {
+      const mat = (Array.isArray(entry) ? entry[0] : entry) as MeshStandardMaterial;
+      expect(mat.color.getHex()).toBe(0xff0000);
+    }
+  });
+
+  it("clones each material in a multi-material mesh individually", () => {
+    const source = new Group();
+    const matA = new MeshStandardMaterial({ color: "#ff0000" });
+    const matB = new MeshStandardMaterial({ color: "#00ff00" });
+    const multi = new Mesh(new BoxGeometry(1, 1, 1), [matA, matB]);
+    source.add(multi);
+    source.updateWorldMatrix(true, true);
+    const ghost = buildGhostMaterials(source, false);
+    expect(ghost.length).toBe(1);
+    const pair = ghost[0] as MeshStandardMaterial[];
+    expect(pair.length).toBe(2);
+    expect(pair[0].color.getHex()).toBe(0xff0000);
+    expect(pair[1].color.getHex()).toBe(0x00ff00);
+    for (const m of pair) {
+      expect(m.transparent).toBe(true);
+      expect(m.opacity).toBeCloseTo(0.5, 5);
+    }
   });
 });

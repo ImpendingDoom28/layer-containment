@@ -201,9 +201,10 @@ export const Tower: FC<TowerProps> = memo(
       </>
     );
 
-    // The primitive base + body + top, kept for two roles: the placement
-    // preview (the translucent, colour-coded ghost the player drags around) and
-    // the load-failure/placeholder fallback for the 3D model below.
+    // The primitive base + body + top. The placement preview is the 3D model
+    // itself (a translucent, colour-coded ghost — see TowerModel's "preview" /
+    // "invalid" variant); this primitive only survives as the load-failure
+    // fallback for the 3D model below.
     const towerBody = (
       <>
         {/* Tower base */}
@@ -256,15 +257,12 @@ export const Tower: FC<TowerProps> = memo(
               }
         }
       >
-        {isPreview ? (
-          towerBody
-        ) : (
-          <TowerModel
-            type={tower.type}
-            size={tileSize * 0.9}
-            fallback={towerBody}
-          />
-        )}
+        <TowerModel
+          type={tower.type}
+          size={tileSize * 0.9}
+          variant={isPreview ? (isInvalidPlacement ? "invalid" : "preview") : "solid"}
+          fallback={towerBody}
+        />
         {/* Selection indicator */}
         {isSelected && (effectiveRange ?? tower.range) > 0.01 && (
           <RangeRing

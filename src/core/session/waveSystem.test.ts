@@ -136,4 +136,33 @@ describe("createWaveSystem", () => {
     tick(waves, 1.4);
     expect(winGame).toHaveBeenCalledTimes(1);
   });
+
+  it("still wins when the final wave clears within 0.3s of its first spawn", () => {
+    let nextId = 1;
+    const winGame = vi.fn();
+    const waves = createWaveSystem({
+      world: testWorld,
+      getNextEnemyId: () => nextId++,
+      winGame,
+    });
+    useLevelStore.setState({
+      totalWaves: 1,
+      waveConfigs: [
+        {
+          totalEnemies: 1,
+          enemies: [{ type: "basic", count: 1, spawnInterval: 0.5 }],
+        },
+      ],
+    });
+
+    waves.startWave();
+    tick(waves, 1);
+    enemyActions(testWorld).removeEnemy(1, false);
+    // Cleared only 0.2s after the first spawn: the completion gate is deferred
+    // but must not be skipped.
+    tick(waves, 1.2);
+    expect(winGame).not.toHaveBeenCalled();
+    tick(waves, 1.5);
+    expect(winGame).toHaveBeenCalledTimes(1);
+  });
 });

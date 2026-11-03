@@ -134,11 +134,11 @@ export const createWaveSystem = ({
 
     if (spawnQueueIndex >= spawnQueue.length) {
       if (waveStarted && getRemainingEnemyCount() === 0) {
-        waveStarted = false;
         if (
           waveStartedAt !== null &&
           frame.simulationTimeSeconds - waveStartedAt > 0.3
         ) {
+          waveStarted = false;
           if (currentWave < totalWaves) {
             const enemyUpgrades = useGameStore.getState().enemyUpgrades;
             if (enemyUpgrades && Object.keys(enemyUpgrades).length > 0) {

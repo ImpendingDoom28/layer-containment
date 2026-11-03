@@ -29,6 +29,8 @@ import {
 import { hashGrid2D } from "../../core/tileGridHash";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import { createPlanetTileMaterial } from "../../utils/planetTileMaterial";
+import { createWaterMaterial } from "../../utils/waterMaterial";
+import { useWaterClock } from "../../core/contexts/WaterClockContext";
 import { freezeSubtree } from "../../utils/freezeSubtree";
 
 type PlacementHoverKey = "idle" | "canPlace" | "cannotPlace";
@@ -60,6 +62,7 @@ export const Tile: FC<TileProps> = memo(
     const tileSize = useGameStore(tileSizeSelector);
     const gridSize = useLevelStore(gridSizeSelector);
     const pathYOffset = useGameStore(pathYOffsetSelector);
+    const waterClock = useWaterClock();
 
     const TILE_POSITION:
       | [
@@ -114,12 +117,13 @@ export const Tile: FC<TileProps> = memo(
             roughness: 0.22,
           });
         }
-        return new MeshStandardMaterial({
+        // Non-hover water: the visible surface is this tile, so it carries the
+        // animated ripple (per-tile instance — disposed by the effect below, so
+        // the cached shared body material must not be used here).
+        return createWaterMaterial({
           color: base,
-          emissive: emissiveHue,
-          emissiveIntensity: 0.12,
-          metalness: 0.28,
-          roughness: 0.18,
+          time: waterClock.time,
+          glow: emissiveHue,
         });
       }
 
@@ -167,7 +171,15 @@ export const Tile: FC<TileProps> = memo(
         color: land,
         ...baseLand,
       });
-    }, [isWater, isOnPath, placementHoverKey, gridX, gridZ, pathYOffset]);
+    }, [
+      isWater,
+      isOnPath,
+      placementHoverKey,
+      gridX,
+      gridZ,
+      pathYOffset,
+      waterClock,
+    ]);
 
     useEffect(
       () => () => {

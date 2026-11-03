@@ -1,7 +1,11 @@
 import type { Shader, WebGLRenderer } from "three";
 import { describe, expect, it } from "vitest";
 
-import { getWaterMaterial, type WaterTimeUniform } from "./waterMaterial";
+import {
+  createWaterMaterial,
+  getWaterMaterial,
+  type WaterTimeUniform,
+} from "./waterMaterial";
 
 const minimalShaderForHook: Shader = {
   uniforms: {},
@@ -9,7 +13,9 @@ const minimalShaderForHook: Shader = {
  #include <project_vertex>`,
   fragmentShader: `#include <common>
 vec3 totalEmissiveRadiance = emissive;
-#include <color_fragment>`,
+#include <color_fragment>
+#include <roughnessmap_fragment>
+#include <normal_fragment_maps>`,
 };
 
 const sampleParams = {
@@ -99,5 +105,24 @@ describe("getWaterMaterial", () => {
     // The ripple is sampled in world space so adjacent bodies share one wave.
     expect(shader.fragmentShader).toContain("waterRipple( vWaterWorldPos.xz )");
     expect(shader.fragmentShader).not.toContain("vWaterLocalPos");
+    // Reflections must visibly move: roughness shimmers and the normal is
+    // perturbed along the wave field's gradient (view space via viewMatrix).
+    expect(shader.fragmentShader).toContain(
+      "roughnessFactor = roughnessFactor * ( 0.6 + 0.7 * waterR );"
+    );
+    expect(shader.fragmentShader).toContain("waterRippleGradient( vWaterWorldPos.xz )");
+    expect(shader.fragmentShader).toContain("( viewMatrix * vec4( waterWorldGrad, 0.0 ) ).xyz");
+    expect(shader.fragmentShader).toContain(
+      "normal = normalize( normal + 0.4 * waterViewGrad );"
+    );
+  });
+});
+
+describe("createWaterMaterial", () => {
+  it("builds a fresh material each call (per-tile use is disposed by the caller)", () => {
+    const a = createWaterMaterial({ ...sampleParams });
+    const b = createWaterMaterial({ ...sampleParams });
+    expect(a).not.toBe(b);
+    expect(a.customProgramCacheKey?.()).toBe("water_ripple");
   });
 });

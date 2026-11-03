@@ -14,9 +14,10 @@ export const Water: FC<WaterProps> = memo(({ water }) => {
   const emissiveHue = getCssColorValue("scene-water-emissive");
 
   // One shared material per body color+size on the scene's single water
-  // clock; the body stays a plain static mesh that only re-renders if the
-  // water body itself changes. The swell amplitude is half the body height
-  // and the top face sits at local y = height/2 (box and cylinder alike).
+  // clock; the body only re-renders if the water body itself changes. The
+  // swell amplitude is half the body height and the top face sits at local
+  // y = height/2 (box and cylinder alike), so the top face is subdivided
+  // enough for the displacement to actually swell.
   const material = useMemo(
     () =>
       getWaterMaterial(
@@ -29,18 +30,27 @@ export const Water: FC<WaterProps> = memo(({ water }) => {
     [water.color, water.height, time, emissiveHue]
   );
 
-  const yPosition = water.height / 2;
+  // Bodies sit a bit below the water-tile surface (tiles are recessed 0.05
+  // below the land plane) so a peeking body reads as a deeper pool under the
+  // shore rather than floating above it.
+  const yPosition = water.height / 2 - 0.015;
 
   return (
     <group position={[water.x, 0, water.z]}>
       {water.shape === "box" ? (
         <mesh position={[0, yPosition, 0]} material={material} receiveShadow>
-          <boxGeometry args={[water.width, water.height, water.depth]} />
+          <boxGeometry args={[water.width, water.height, water.depth, 8, 1, 8]} />
         </mesh>
       ) : (
         <mesh position={[0, yPosition, 0]} material={material} receiveShadow>
           <cylinderGeometry
-            args={[water.width / 2, water.width / 2, water.height, 16]}
+            args={[
+              water.width / 2,
+              water.width / 2,
+              water.height,
+              16,
+              3,
+            ]}
           />
         </mesh>
       )}

@@ -75,6 +75,10 @@ export const Tile: FC<TileProps> = memo(
     const waterTopY = pathYOffset / 2;
     const WATER_AMPLITUDE = 0.05;
     const WATER_TOP_SEGMENTS = 8;
+    // Water sits below the land plane so the tiles read as a recessed pool:
+    // the land edge casts a rim on the surface, and the swell moves inside
+    // the basin instead of poking through the shoreline.
+    const WATER_BED_OFFSET = 0.05;
     const isAnimatedWater = isWater && placementHoverKey === "idle";
     const TILE_POSITION:
       | [
@@ -86,7 +90,14 @@ export const Tile: FC<TileProps> = memo(
           depthSegments?: number | undefined,
         ]
       | undefined = isAnimatedWater
-      ? [tileSize, pathYOffset, tileSize, WATER_TOP_SEGMENTS, 1, WATER_TOP_SEGMENTS]
+      ? [
+          tileSize,
+          pathYOffset - WATER_BED_OFFSET,
+          tileSize,
+          WATER_TOP_SEGMENTS,
+          1,
+          WATER_TOP_SEGMENTS,
+        ]
       : [tileSize, pathYOffset, tileSize];
     const planetPose = useMemo(
       () =>

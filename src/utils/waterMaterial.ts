@@ -26,17 +26,44 @@ type CreateWaterMaterialParams = {
 
 // GLSL for the shared wave field, included verbatim in both the vertex and the
 // fragment shader so the silhouette, the lighting, and the displacement all
-// sample one field. The analytic gradient (waterRippleGradient) is the
-// derivative of waterHeight. Exported so the shader-compile gate script can
-// balance-check the injected GLSL directly.
+// sample one field. waterRippleGradient is a central difference of waterHeight,
+// so the sines and the drifting FBM noise share one exact derivative. Exported
+// so the shader-compile gate script can balance-check the injected GLSL.
 export const WATER_WAVE_GLSL = `
+float waterHash( vec2 p ) {
+	return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453123 );
+}
+float waterValueNoise( vec2 p ) {
+	vec2 i = floor( p );
+	vec2 f = fract( p );
+	vec2 u = f * f * ( 3.0 - 2.0 * f );
+	return mix(
+		mix( waterHash( i ), waterHash( i + vec2( 1.0, 0.0 ) ), u.x ),
+		mix( waterHash( i + vec2( 0.0, 1.0 ) ), waterHash( i + vec2( 1.0, 1.0 ) ), u.x ),
+		u.y
+	) - 0.5;
+}
+float waterFbm( vec2 p ) {
+	float v = 0.0;
+	float a = 0.5;
+	for ( int i = 0; i < 3; i++ ) {
+		v += a * waterValueNoise( p );
+		p = p * 2.13 + 11.7;
+		a *= 0.5;
+	}
+	return v;
+}
 float waterWave1( vec2 p ) { return sin( p.x * 2.1 + uWaterTime * 0.9 ); }
 float waterWave2( vec2 p ) { return sin( ( p.x * 0.6 + p.y * 1.7 ) * 1.8 - uWaterTime * 0.7 ); }
 float waterWave3( vec2 p ) { return sin( ( p.x * 0.9 - p.y * 1.3 ) * 1.1 + uWaterTime * 0.5 ); }
 float waterWave4( vec2 p ) { return sin( ( p.x * 4.3 + p.y * 2.9 ) * 1.4 + uWaterTime * 1.6 ); }
 float waterHeight( vec2 p ) {
-	return ( waterWave1( p ) * 0.5 + waterWave2( p ) * 0.3
+	float waves = ( waterWave1( p ) * 0.5 + waterWave2( p ) * 0.3
  		+ waterWave3( p ) * 0.2 + waterWave4( p ) * 0.15 ) * 0.5;
+	// Slow-drifting FBM makes the swell organic instead of regular sines;
+	// it stays in world space so adjacent tiles never seam.
+	float drift = uWaterTime * 0.12;
+	return waves + waterFbm( vec2( p.x + drift, p.y - drift * 0.7 ) ) * 0.55;
 }`;
 
 // Vertex-side uniforms + top-face mask. Exported for the shader gate.
@@ -58,15 +85,14 @@ uniform vec3 uWaterGlow;
 varying vec3 vWaterWorldPos;
 ${WATER_WAVE_GLSL}
 float waterRipple( vec2 p ) { return waterHeight( p ) + 0.5; }
+// Central differences of waterHeight: one exact derivative for the sines AND
+// the FBM noise (which has no closed form).
 vec3 waterRippleGradient( vec2 p ) {
-	vec4 c = vec4(
-		cos( p.x * 2.1 + uWaterTime * 0.9 ),
-		cos( ( p.x * 0.6 + p.y * 1.7 ) * 1.8 - uWaterTime * 0.7 ),
-		cos( ( p.x * 0.9 - p.y * 1.3 ) * 1.1 + uWaterTime * 0.5 ),
-		cos( ( p.x * 4.3 + p.y * 2.9 ) * 1.4 + uWaterTime * 1.6 )
-	);
-	float gx = 0.5 * ( 1.05 * c.x + 0.324 * c.y + 0.198 * c.z + 0.903 * c.w );
-	float gy = 0.5 * ( 0.918 * c.y - 0.286 * c.z + 0.609 * c.w );
+	const float eps = 0.035;
+	float gx = ( waterHeight( p + vec2( eps, 0.0 ) )
+		- waterHeight( p - vec2( eps, 0.0 ) ) ) / ( 2.0 * eps );
+	float gy = ( waterHeight( p + vec2( 0.0, eps ) )
+		- waterHeight( p - vec2( 0.0, eps ) ) ) / ( 2.0 * eps );
 	return vec3( gx, gy, 0.0 );
 }`;
 

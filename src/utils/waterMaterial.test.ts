@@ -163,6 +163,76 @@ describe("getWaterMaterial", () => {
     expect(shader.vertexShader).toContain(
       "transformed.y += uWaterAmplitude * waterHeight( waterWorldXZ ) * waterElevated( waterLocal.y );"
     );
+    // Organic motion: the field is sines plus drifting FBM noise, and the
+    // gradient is a central difference of the full field (sines + noise share
+    // one exact derivative).
+    for (const fn of ["waterHash", "waterValueNoise", "waterFbm"]) {
+      expect(shader.vertexShader).toContain(fn);
+      expect(shader.fragmentShader).toContain(fn);
+    }
+    expect(shader.fragmentShader).toContain("waterHeight( p + vec2( eps, 0.0 ) )");
+    expect(shader.fragmentShader).toContain("const float eps = 0.035");
+  });
+});
+
+// JS port of the GLSL field (t = 0) so the tests can bound it numerically:
+// the swell must stay smaller than the tile's 0.05 recess or it pokes
+// through the shoreline.
+const waterHash = (x: number, y: number) => {
+  const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
+  return s - Math.floor(s);
+};
+const waterValueNoise = (x: number, y: number) => {
+  const ix = Math.floor(x);
+  const iy = Math.floor(y);
+  const fx = x - ix;
+  const fy = y - iy;
+  const ux = fx * fx * (3 - 2 * fx);
+  const uy = fy * fy * (3 - 2 * fy);
+  const mix = (a: number, b: number, t: number) => a * (1 - t) + b * t;
+  return (
+    mix(
+      mix(waterHash(ix, iy), waterHash(ix + 1, iy), ux),
+      mix(waterHash(ix, iy + 1), waterHash(ix + 1, iy + 1), ux),
+      uy
+    ) - 0.5
+  );
+};
+const waterFbm = (x: number, y: number) => {
+  let v = 0;
+  let a = 0.5;
+  let px = x;
+  let py = y;
+  for (let i = 0; i < 3; i++) {
+    v += a * waterValueNoise(px, py);
+    px = px * 2.13 + 11.7;
+    py = py * 2.13 + 11.7;
+    a *= 0.5;
+  }
+  return v;
+};
+const waterHeightAt = (x: number, y: number) => {
+  const t = 0;
+  const waves =
+    (Math.sin(x * 2.1 + t * 0.9) * 0.5 +
+      Math.sin((x * 0.6 + y * 1.7) * 1.8 - t * 0.7) * 0.3 +
+      Math.sin((x * 0.9 - y * 1.3) * 1.1 + t * 0.5) * 0.2 +
+      Math.sin((x * 4.3 + y * 2.9) * 1.4 + t * 1.6) * 0.15) *
+    0.5;
+  return waves + waterFbm(x + t * 0.12, y - t * 0.7 * 0.12) * 0.55;
+};
+
+describe("wave field range", () => {
+  it("stays smaller than the tile's 0.05 shoreline recess at the tile amplitude", () => {
+    let maxAbs = 0;
+    for (let x = -5; x <= 5; x += 0.25) {
+      for (let y = -5; y <= 5; y += 0.25) {
+        maxAbs = Math.max(maxAbs, Math.abs(waterHeightAt(x, y)));
+      }
+    }
+    // amplitude 0.05 × field must be < 0.05 (the recess), leaving margin.
+    expect(maxAbs).toBeLessThan(0.9);
+    expect(0.05 * maxAbs).toBeLessThan(0.05);
   });
 });
 

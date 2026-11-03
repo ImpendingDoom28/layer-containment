@@ -8,21 +8,82 @@ type CreateWaterMaterialParams = {
   color: string;
   time: WaterTimeUniform;
   glow: string;
+  /**
+   * Peak vertex displacement in world units (the wave field is normalized to
+   * roughly -0.5..0.5, so the real swell is a bit smaller). `0` keeps the mesh
+   * geometrically flat (shading only). The tile passes its top-face offset
+   * and the water bodies pass a fraction of their height.
+   */
+  amplitude: number;
+  /**
+   * Local Y of the mesh's top face (half the box height / cylinder height).
+   * Only vertices at the top face — and the side top ring within 1% of it —
+   * are displaced, so the swelled edge matches the swelled face and the mesh
+   * stays watertight.
+   */
+  topY: number;
 };
 
+// GLSL for the shared wave field, included verbatim in both the vertex and the
+// fragment shader so the silhouette, the lighting, and the displacement all
+// sample one field. The analytic gradient (waterRippleGradient) is the
+// derivative of waterHeight. Exported so the shader-compile gate script can
+// balance-check the injected GLSL directly.
+export const WATER_WAVE_GLSL = `
+float waterWave1( vec2 p ) { return sin( p.x * 2.1 + uWaterTime * 0.9 ); }
+float waterWave2( vec2 p ) { return sin( ( p.x * 0.6 + p.y * 1.7 ) * 1.8 - uWaterTime * 0.7 ); }
+float waterWave3( vec2 p ) { return sin( ( p.x * 0.9 - p.y * 1.3 ) * 1.1 + uWaterTime * 0.5 ); }
+float waterWave4( vec2 p ) { return sin( ( p.x * 4.3 + p.y * 2.9 ) * 1.4 + uWaterTime * 1.6 ); }
+float waterHeight( vec2 p ) {
+	return ( waterWave1( p ) * 0.5 + waterWave2( p ) * 0.3
+ 		+ waterWave3( p ) * 0.2 + waterWave4( p ) * 0.15 ) * 0.5;
+}`;
+
+// Vertex-side uniforms + top-face mask. Exported for the shader gate.
+export const WATER_VERTEX_DISPLACE_GLSL = `
+uniform float uWaterTime;
+uniform float uWaterAmplitude;
+uniform float uWaterTopY;
+${WATER_WAVE_GLSL}
+float waterElevated( float y ) {
+	// Top face plus the side top ring (within 1% of the top Y).
+	return step( uWaterTopY - 0.01, y );
+}`;
+
+// Fragment-side uniforms, shared wave field, and analytic gradient.
+// Exported for the shader gate.
+export const WATER_FRAGMENT_GLSL = `
+uniform float uWaterTime;
+uniform vec3 uWaterGlow;
+varying vec3 vWaterWorldPos;
+${WATER_WAVE_GLSL}
+float waterRipple( vec2 p ) { return waterHeight( p ) + 0.5; }
+vec3 waterRippleGradient( vec2 p ) {
+	vec4 c = vec4(
+		cos( p.x * 2.1 + uWaterTime * 0.9 ),
+		cos( ( p.x * 0.6 + p.y * 1.7 ) * 1.8 - uWaterTime * 0.7 ),
+		cos( ( p.x * 0.9 - p.y * 1.3 ) * 1.1 + uWaterTime * 0.5 ),
+		cos( ( p.x * 4.3 + p.y * 2.9 ) * 1.4 + uWaterTime * 1.6 )
+	);
+	float gx = 0.5 * ( 1.05 * c.x + 0.324 * c.y + 0.198 * c.z + 0.903 * c.w );
+	float gy = 0.5 * ( 0.918 * c.y - 0.286 * c.z + 0.609 * c.w );
+	return vec3( gx, gy, 0.0 );
+}`;
+
 /**
- * MeshStandardMaterial with a gentle ripple baked into the emissive, surface
- * tint, roughness, and surface normal. The pattern is driven by world-space XZ
- * coordinates (not the per-mesh UVs), so adjacent water tiles/bodies share one
- * continuous wave field instead of each pooling its own phase.
+ * MeshStandardMaterial with a gentle ripple in the emissive, surface tint,
+ * roughness, surface normal, and — when `amplitude > 0` — the vertex
+ * positions themselves. The pattern is driven by world-space XZ coordinates
+ * (not the per-mesh UVs), so adjacent water tiles/bodies share one continuous
+ * wave field instead of each pooling its own phase.
  *
- * The ripple is made to read as *motion in the reflections* (not just a faint
- * emissive pulse): the analytic gradient of the wave field perturbs the
- * view-space normal, so specular highlights slide across the surface, while a
- * roughness modulation makes the highlight shimmer. One GLSL program is shared
- * by every water tile/body (`customProgramCacheKey`), and the time/glow
- * uniforms are shared objects, so the only per-color state is the standard
- * color/emissive pair.
+ * The ripple reads as motion with depth: the analytic gradient of the wave
+ * field perturbs the view-space normal so specular highlights slide across the
+ * surface, a roughness modulation makes the highlight shimmer, and the vertex
+ * displacement (top surface only, kept watertight) gives the swell real
+ * parallax. One GLSL program is shared by every water tile/body
+ * (`customProgramCacheKey`); the only per-material state is the standard
+ * color/emissive pair plus amplitude/topY, which are uniforms.
  */
 export const createWaterMaterial = (
   params: CreateWaterMaterialParams
@@ -38,11 +99,30 @@ export const createWaterMaterial = (
   mat.onBeforeCompile = (shader) => {
     shader.uniforms["uWaterTime"] = params.time;
     shader.uniforms["uWaterGlow"] = { value: new Color(params.glow) };
+    shader.uniforms["uWaterAmplitude"] = { value: params.amplitude };
+    shader.uniforms["uWaterTopY"] = { value: params.topY };
 
     shader.vertexShader = shader.vertexShader.replace(
       "#include <common>",
       `#include <common>
- varying vec3 vWaterWorldPos;`
+ varying vec3 vWaterWorldPos;
+${WATER_VERTEX_DISPLACE_GLSL}`
+    );
+
+    // `transformed` is the local position. The wave field is sampled in
+    // world-space XZ (so adjacent tiles on the sphere share one continuous
+    // swell — their local frames are rotated), and the vertex is pushed along
+    // local Y, i.e. the tile's radial surface normal, so the water rises off
+    // the planet surface. Displacing here (right after begin_vertex) feeds the
+    // projection, the world position, and the shadow position, so the swelled
+    // surface, its silhouette, and its shadows stay in phase. The multiply by
+    // uWaterAmplitude makes the whole term 0 for flat materials.
+    shader.vertexShader = shader.vertexShader.replace(
+      "#include <begin_vertex>",
+      `#include <begin_vertex>
+ vec3 waterLocal = transformed;
+ vec2 waterWorldXZ = ( modelMatrix * vec4( waterLocal, 1.0 ) ).xz;
+ transformed.y += uWaterAmplitude * waterHeight( waterWorldXZ ) * waterElevated( waterLocal.y );`
     );
 
     shader.vertexShader = shader.vertexShader.replace(
@@ -51,32 +131,10 @@ export const createWaterMaterial = (
  vWaterWorldPos = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;`
     );
 
-    // Three sines form one wave field; the analytic gradient of that field is
-    // used to perturb the normal so highlights move, not just the emissive.
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <common>",
       `#include <common>
- uniform float uWaterTime;
- uniform vec3 uWaterGlow;
- varying vec3 vWaterWorldPos;
- vec3 waterRippleCos( vec2 p ) {
- 	float a1 = p.x * 2.1 + uWaterTime * 0.9;
- 	float a2 = ( p.x * 0.6 + p.y * 1.7 ) * 1.8 - uWaterTime * 0.7;
- 	float a3 = ( p.x * 0.9 - p.y * 1.3 ) * 1.1 + uWaterTime * 0.5;
- 	return vec3( cos( a1 ), cos( a2 ), cos( a3 ) );
- }
- float waterRipple( vec2 p ) {
- 	float a1 = p.x * 2.1 + uWaterTime * 0.9;
- 	float a2 = ( p.x * 0.6 + p.y * 1.7 ) * 1.8 - uWaterTime * 0.7;
- 	float a3 = ( p.x * 0.9 - p.y * 1.3 ) * 1.1 + uWaterTime * 0.5;
- 	return ( sin( a1 ) * 0.5 + sin( a2 ) * 0.3 + sin( a3 ) * 0.2 ) * 0.5 + 0.5;
- }
- vec3 waterRippleGradient( vec2 p ) {
- 	vec3 c = waterRippleCos( p );
- 	float gx = 0.5 * ( 1.05 * c.x + 0.324 * c.y + 0.198 * c.z );
- 	float gy = 0.5 * ( 0.918 * c.y - 0.286 * c.z );
- 	return vec3( gx, gy, 0.0 );
- }`
+${WATER_FRAGMENT_GLSL}`
     );
 
     shader.fragmentShader = shader.fragmentShader.replace(
@@ -110,8 +168,9 @@ export const createWaterMaterial = (
     );
   };
 
-  // Time and glow are shared uniforms, color rides the standard `diffuse`
-  // uniform: no per-body program variants, one compile for the whole scene.
+  // Time, glow, amplitude, and topY are per-material uniforms, color rides the
+  // standard `diffuse` uniform: no per-body program variants, one compile for
+  // the whole scene.
   mat.customProgramCacheKey = () => "water_ripple";
 
   return mat;
@@ -127,18 +186,20 @@ const waterMaterialCache = new WeakMap<
 >();
 
 /**
- * Returns the cached animated water material for a body color on a given
- * clock. Materials are shared across every body of the same color *on the
- * same clock* and live as long as that clock (the scene's provider), so
- * callers must not dispose them. A body of the same color on a different
- * clock gets its own material bound to that clock's time uniform.
+ * Returns the cached animated water material for a body color, size, and
+ * clock. Materials are shared across every body of the same color *and size*
+ * on the *same clock* and live as long as that clock (the scene's provider),
+ * so callers must not dispose them. A body of the same color on a different
+ * clock, or a different height, gets its own material.
  */
 export const getWaterMaterial = (
   color: string,
   time: WaterTimeUniform,
-  glow: string
+  glow: string,
+  amplitude: number,
+  topY: number
 ): MeshStandardMaterial => {
-  const key = color.toLowerCase();
+  const key = `${color.toLowerCase()}|${amplitude}|${topY}`;
   let byColor = waterMaterialCache.get(time);
   if (!byColor) {
     byColor = new Map();
@@ -148,7 +209,7 @@ export const getWaterMaterial = (
   if (existing) {
     return existing;
   }
-  const material = createWaterMaterial({ color, time, glow });
+  const material = createWaterMaterial({ color, time, glow, amplitude, topY });
   byColor.set(key, material);
   return material;
 };

@@ -13,12 +13,20 @@ export const Water: FC<WaterProps> = memo(({ water }) => {
   const { time } = useWaterClock();
   const emissiveHue = getCssColorValue("scene-water-emissive");
 
-  // One shared material per body color, animated by the scene's single water
+  // One shared material per body color+size on the scene's single water
   // clock; the body stays a plain static mesh that only re-renders if the
-  // water body itself changes.
+  // water body itself changes. The swell amplitude is half the body height
+  // and the top face sits at local y = height/2 (box and cylinder alike).
   const material = useMemo(
-    () => getWaterMaterial(water.color, time, emissiveHue),
-    [water.color, time, emissiveHue]
+    () =>
+      getWaterMaterial(
+        water.color,
+        time,
+        emissiveHue,
+        water.height / 2,
+        water.height / 2
+      ),
+    [water.color, water.height, time, emissiveHue]
   );
 
   const yPosition = water.height / 2;

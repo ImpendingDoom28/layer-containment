@@ -10,6 +10,7 @@ import {
 const minimalShaderForHook: Shader = {
   uniforms: {},
   vertexShader: `#include <common>
+ #include <begin_vertex>
  #include <project_vertex>`,
   fragmentShader: `#include <common>
 vec3 totalEmissiveRadiance = emissive;
@@ -22,57 +23,91 @@ const sampleParams = {
   color: "#0e7490",
   glow: "#22d3ee",
   time: { value: 0 } as WaterTimeUniform,
+  amplitude: 0.05,
+  topY: 0.025,
 };
 
 describe("getWaterMaterial", () => {
-  it("exposes onBeforeCompile and a program cache key shared by every body color", () => {
+  it("exposes onBeforeCompile and a program cache key shared by every body", () => {
     const mat = getWaterMaterial(
       sampleParams.color,
       sampleParams.time,
-      sampleParams.glow
+      sampleParams.glow,
+      sampleParams.amplitude,
+      sampleParams.topY
     );
 
     expect(mat.onBeforeCompile).toBeDefined();
     expect(mat.customProgramCacheKey).toBeDefined();
     const key = mat.customProgramCacheKey?.();
     expect(key).toBeTruthy();
-    // Color rides the standard `diffuse` uniform, time is a shared uniform:
-    // one program serves the whole scene regardless of body color.
+    // Color/amplitude ride uniforms, not program variants: one program serves
+    // the whole scene regardless of body color or size.
     const otherMat = getWaterMaterial(
       "#ff0000",
       sampleParams.time,
-      sampleParams.glow
+      sampleParams.glow,
+      sampleParams.amplitude,
+      sampleParams.topY
     );
     expect(otherMat.customProgramCacheKey?.()).toBe(key);
   });
 
-  it("caches one material per body color and shares the time uniform", () => {
+  it("caches one material per color+size and shares the time uniform", () => {
     const a = getWaterMaterial(
       sampleParams.color,
       sampleParams.time,
-      sampleParams.glow
+      sampleParams.glow,
+      sampleParams.amplitude,
+      sampleParams.topY
     );
     const b = getWaterMaterial(
       sampleParams.color.toUpperCase().replace("#", "#"),
       sampleParams.time,
-      sampleParams.glow
+      sampleParams.glow,
+      sampleParams.amplitude,
+      sampleParams.topY
     );
     expect(b).toBe(a);
 
     const other = getWaterMaterial(
       "#ff0000",
       sampleParams.time,
-      sampleParams.glow
+      sampleParams.glow,
+      sampleParams.amplitude,
+      sampleParams.topY
     );
     expect(other).not.toBe(a);
+
+    // Same color, different swell: distinct materials (different uniforms).
+    const deeper = getWaterMaterial(
+      sampleParams.color,
+      sampleParams.time,
+      sampleParams.glow,
+      0.1,
+      0.025
+    );
+    expect(deeper).not.toBe(a);
   });
 
   it("scopes the cache by clock so a body of the same color on another clock gets its own material", () => {
     const clockA = { value: 0 } as WaterTimeUniform;
     const clockB = { value: 0 } as WaterTimeUniform;
 
-    const onA = getWaterMaterial(sampleParams.color, clockA, sampleParams.glow);
-    const onB = getWaterMaterial(sampleParams.color, clockB, sampleParams.glow);
+    const onA = getWaterMaterial(
+      sampleParams.color,
+      clockA,
+      sampleParams.glow,
+      sampleParams.amplitude,
+      sampleParams.topY
+    );
+    const onB = getWaterMaterial(
+      sampleParams.color,
+      clockB,
+      sampleParams.glow,
+      sampleParams.amplitude,
+      sampleParams.topY
+    );
 
     // Same color, different clocks: distinct materials, each bound to its clock.
     expect(onB).not.toBe(onA);
@@ -82,7 +117,9 @@ describe("getWaterMaterial", () => {
     const mat = getWaterMaterial(
       sampleParams.color,
       sampleParams.time,
-      sampleParams.glow
+      sampleParams.glow,
+      sampleParams.amplitude,
+      sampleParams.topY
     );
     const shader: Shader = {
       uniforms: { ...minimalShaderForHook.uniforms },
@@ -97,6 +134,10 @@ describe("getWaterMaterial", () => {
     onBeforeCompile(shader, {} as WebGLRenderer);
 
     expect(shader.uniforms["uWaterTime"]).toBe(sampleParams.time);
+    expect(shader.uniforms["uWaterAmplitude"]?.value).toBe(
+      sampleParams.amplitude
+    );
+    expect(shader.uniforms["uWaterTopY"]?.value).toBe(sampleParams.topY);
 
     expect(shader.vertexShader).toContain("vWaterWorldPos");
     expect(shader.fragmentShader).toContain("uWaterTime");
@@ -114,6 +155,13 @@ describe("getWaterMaterial", () => {
     expect(shader.fragmentShader).toContain("( viewMatrix * vec4( waterWorldGrad, 0.0 ) ).xyz");
     expect(shader.fragmentShader).toContain(
       "normal = normalize( normal + 0.4 * waterViewGrad );"
+    );
+    // Depth: the vertex shader displaces the top surface along local Y,
+    // sampled in world-space XZ so adjacent tiles swell as one field.
+    expect(shader.vertexShader).toContain("waterElevated( waterLocal.y )");
+    expect(shader.vertexShader).toContain("waterHeight( waterWorldXZ )");
+    expect(shader.vertexShader).toContain(
+      "transformed.y += uWaterAmplitude * waterHeight( waterWorldXZ ) * waterElevated( waterLocal.y );"
     );
   });
 });

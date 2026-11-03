@@ -71,11 +71,11 @@ export const createWaterMaterial = (
  	float a3 = ( p.x * 0.9 - p.y * 1.3 ) * 1.1 + uWaterTime * 0.5;
  	return ( sin( a1 ) * 0.5 + sin( a2 ) * 0.3 + sin( a3 ) * 0.2 ) * 0.5 + 0.5;
  }
- vec2 waterRippleGradient( vec2 p ) {
+ vec3 waterRippleGradient( vec2 p ) {
  	vec3 c = waterRippleCos( p );
  	float gx = 0.5 * ( 1.05 * c.x + 0.324 * c.y + 0.198 * c.z );
  	float gy = 0.5 * ( 0.918 * c.y - 0.286 * c.z );
- 	return vec2( gx, gy );
+ 	return vec3( gx, gy, 0.0 );
  }`
     );
 

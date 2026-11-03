@@ -6,6 +6,7 @@ import { CylinderGeometry, MeshStandardMaterial } from "three";
 import type { Tower as TowerInstance } from "../../core/types/game";
 import { GUIDebugInfo } from "../gui/GUIDebugInfo";
 import { RangeRing } from "./effects/RangeRing";
+import { TowerModel } from "./TowerModel";
 import { Vector3D } from "../../core/types/utils";
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import {
@@ -13,6 +14,7 @@ import {
   useLevelStore,
 } from "../../core/stores/useLevelStore";
 import {
+  selectedTowerTypeToPlaceSelector,
   tileSizeSelector,
   towerBaseRadiusSelector,
   towerHeightSelector,
@@ -68,6 +70,10 @@ export const Tower: FC<TowerProps> = memo(
     const towerHeight = useGameStore(towerHeightSelector);
     const gridSize = useLevelStore(gridSizeSelector);
     const tileSize = useGameStore(tileSizeSelector);
+    // While the player is placing a tower, the model's overhanging parts (long
+    // barrels on basic/laser, the wide aoe base) must not swallow the click
+    // aimed at a neighbouring tile, so the tower's click handler is disabled.
+    const isPlacing = useGameStore(selectedTowerTypeToPlaceSelector) !== null;
     const towerBasePosition: Vector3D = [0, towerBaseRadius, 0];
     const towerBodyPosition: Vector3D = [
       0,
@@ -195,21 +201,12 @@ export const Tower: FC<TowerProps> = memo(
       </>
     );
 
-    return (
-      <group
-        ref={groupRef}
-        userData={{ culledEntity: true }}
-        position={footing.position}
-        quaternion={footing.quaternion}
-        onClick={
-          isPreview
-            ? undefined
-            : (e: ThreeEvent<MouseEvent>) => {
-                e.stopPropagation();
-                onClick?.();
-              }
-        }
-      >
+    // The primitive base + body + top. The placement preview is the 3D model
+    // itself (a translucent, colour-coded ghost — see TowerModel's "preview" /
+    // "invalid" variant); this primitive only survives as the load-failure
+    // fallback for the 3D model below.
+    const towerBody = (
+      <>
         {/* Tower base */}
         <mesh
           position={towerBasePosition}
@@ -242,6 +239,30 @@ export const Tower: FC<TowerProps> = memo(
             opacity={previewOpacity}
           />
         </mesh>
+      </>
+    );
+
+    return (
+      <group
+        ref={groupRef}
+        userData={{ culledEntity: true }}
+        position={footing.position}
+        quaternion={footing.quaternion}
+        onClick={
+          isPreview || isPlacing
+            ? undefined
+            : (e: ThreeEvent<MouseEvent>) => {
+                e.stopPropagation();
+                onClick?.();
+              }
+        }
+      >
+        <TowerModel
+          type={tower.type}
+          size={tileSize * 0.9}
+          variant={isPreview ? (isInvalidPlacement ? "invalid" : "preview") : "solid"}
+          fallback={towerBody}
+        />
         {/* Selection indicator */}
         {isSelected && (effectiveRange ?? tower.range) > 0.01 && (
           <RangeRing

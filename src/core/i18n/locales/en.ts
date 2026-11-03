@@ -80,6 +80,7 @@ export const en = {
     loadingGame: "Loading game...",
     loadingLevel: "Loading level...",
     loadingEditor: "Loading editor...",
+    loadingModels: "Loading models...",
     preparingGraphics: "Preparing graphics...",
   },
   towerShop: {

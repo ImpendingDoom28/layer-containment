@@ -1,9 +1,7 @@
 import { useCallback } from "react";
-import { useActions } from "koota/react";
+import { useActions, useWorld } from "koota/react";
 
 import {
-  enemyTypesSelector,
-  enemyUpgradesSelector,
   pathWidthSelector,
   setSelectedTowerSelector,
   setSelectedTowerTypeToPlaceSelector,
@@ -44,14 +42,6 @@ import {
   Tower,
   TowerType,
 } from "../types/game";
-import { getPositionAlongMultiplePaths } from "../../utils/pathUtils";
-import { getUpgradeStacks } from "../../utils/upgradeStacks";
-import {
-  getStackTierForEnemy,
-  getTieredUpgradeEffect,
-  getTotalRewardMultiplierFromStack,
-  getUniqueUpgradeIdsInStackOrder,
-} from "../../utils/enemyUpgradeTierEffects";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import { getTilePlacementState as getSharedTilePlacementState } from "../../utils/tilePlacement";
 import { useEntityIds } from "../contexts/EntityIdContext";
@@ -59,8 +49,8 @@ import { gameEvents } from "../../utils/eventEmitter";
 import { GameEvent } from "../types/enums/events";
 import { getTowerPlacementDenyReason } from "../utils/towerPlacementDenyReason";
 import { towerShopRowElementId } from "../utils/towerShopRowElementId";
-import { enemyActions } from "../ecs/actions/enemyActions";
 import { statsActions } from "../ecs/actions/statsActions";
+import { spawnLevelEnemy } from "../ecs/spawnLevelEnemy";
 
 export const useLevelSystem = () => {
   const buildings = useLevelStore(buildingsSelector);
@@ -80,7 +70,6 @@ export const useLevelSystem = () => {
   const isLevelConfigLoaded = useLevelStore(isLevelConfigLoadedSelector);
 
   const towerTypes = useGameStore(towerTypesSelector);
-  const enemyTypes = useGameStore(enemyTypesSelector);
   const tileSize = useGameStore(tileSizeSelector);
   const setSelectedTower = useGameStore(setSelectedTowerSelector);
   const setSelectedTowerTypeToPlace = useGameStore(
@@ -90,21 +79,16 @@ export const useLevelSystem = () => {
     towerSellPriceMultiplierSelector
   );
   const pathWidth = useGameStore(pathWidthSelector);
-  const enemyUpgrades = useGameStore(enemyUpgradesSelector);
   const towerHeight = useGameStore(towerHeightSelector);
   const resetLevelEnemyUpgrades = useUpgradeStore(
     resetLevelEnemyUpgradesSelector
   );
 
-  const { spawnEnemy } = useActions(enemyActions);
+  const world = useWorld();
   const { recordTowerPurchase } = useActions(statsActions);
 
   const { getNextTowerId, getNextEnemyId, getNextProjectileId } =
     useEntityIds();
-
-  const calcPathIndex = useCallback(() => {
-    return Math.floor(Math.random() * pathWaypoints.length);
-  }, [pathWaypoints]);
 
   const getTilePlacementState = useCallback(
     (gridX: number, gridZ: number) => {
@@ -226,92 +210,15 @@ export const useLevelSystem = () => {
       enemyType: EnemyType,
       applyUpgrades: EnemyUpgradeId[] = [],
       forcedPathIndex?: number
-    ): Enemy | null => {
-      const enemyConfig = enemyTypes?.[enemyType];
-      if (!enemyConfig) return null;
-
-      const pathIndex =
-        forcedPathIndex !== undefined && forcedPathIndex >= 0 &&
-        forcedPathIndex < pathWaypoints.length
-          ? forcedPathIndex
-          : calcPathIndex();
-      const startPosition = getPositionAlongMultiplePaths(
-        pathWaypoints,
-        pathIndex,
-        0
-      );
-
-      let health = enemyConfig.health;
-      let speed = enemyConfig.speed;
-      let regeneration: number | undefined;
-      let slowResistance: number | undefined;
-      let dodgeChance: number | undefined;
-
-      // Gold scales with every pick taken (per-pick tier product), matching
-      // the "Stacked bonus: +X% gold" total the upgrade UI promises.
-      const reward = Math.round(
-        enemyConfig.reward *
-          getTotalRewardMultiplierFromStack(applyUpgrades, enemyUpgrades)
-      );
-
-      const uniqueUpgradeIds = getUniqueUpgradeIdsInStackOrder(applyUpgrades);
-      for (const upgradeId of uniqueUpgradeIds) {
-        const upgrade = enemyUpgrades?.[upgradeId];
-        if (!upgrade) continue;
-
-        const stackTier = getStackTierForEnemy(upgradeId, applyUpgrades);
-        const effect = getTieredUpgradeEffect(upgrade, stackTier);
-
-        if (effect.healthMultiplier) {
-          health = Math.round(health * effect.healthMultiplier);
-        }
-        if (effect.speedMultiplier) {
-          speed = speed * effect.speedMultiplier;
-        }
-
-        if (effect.regeneration) {
-          regeneration = (regeneration ?? 0) + effect.regeneration;
-        }
-        if (effect.slowResistance !== undefined) {
-          slowResistance = Math.max(slowResistance ?? 0, effect.slowResistance);
-        }
-        if (effect.dodgeChance !== undefined) {
-          dodgeChance = Math.max(dodgeChance ?? 0, effect.dodgeChance);
-        }
-      }
-
-      const upgradeStacks = getUpgradeStacks(applyUpgrades);
-
-      const enemy: Enemy = {
-        ...enemyConfig,
-        id: getNextEnemyId(),
-        type: enemyType,
-        health,
-        maxHealth: health,
-        speed,
-        reward,
-        pathProgress: 0,
-        pathIndex,
-        x: startPosition.x,
-        z: startPosition.z,
-        upgrades: uniqueUpgradeIds,
-        upgradeStacks,
-        regeneration,
-        slowResistance,
-        dodgeChance,
-      };
-
-      spawnEnemy(enemy);
-      return enemy;
-    },
-    [
-      enemyTypes,
-      enemyUpgrades,
-      calcPathIndex,
-      pathWaypoints,
-      getNextEnemyId,
-      spawnEnemy,
-    ]
+    ): Enemy | null =>
+      spawnLevelEnemy(
+        world,
+        getNextEnemyId,
+        enemyType,
+        applyUpgrades,
+        forcedPathIndex
+      ),
+    [world, getNextEnemyId]
   );
 
   const addProjectile = useCallback(

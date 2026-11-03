@@ -1,8 +1,4 @@
 import { useCallback, useEffect, useLayoutEffect } from "react";
-import { useActions } from "koota/react";
-
-import { worldBaseActions } from "../ecs/actions/baseActions";
-import { statsActions } from "../ecs/actions/statsActions";
 import {
   getShouldStopMovement,
   shouldPauseForTabHidden,
@@ -14,9 +10,7 @@ import {
   isGameConfigLoadedSelector,
   isPageVisibleSelector,
   previousStatusSelector,
-  resetGameStateSelector,
   selectedTowerSelector,
-  startNewRunSelector,
   setDebugSelector,
   setGameStatusSelector,
   setIsPageVisibleSelector,
@@ -36,9 +30,6 @@ import { gameEvents } from "../../utils/eventEmitter";
 import { GameEvent } from "../types/enums/events";
 
 export const useGameSystem = () => {
-  const { spawnBase } = useActions(worldBaseActions);
-  const { endRunStats, startRunStats, markRunEnded } = useActions(statsActions);
-
   const gameStatus = useGameStore(gameStatusSelector);
   const previousStatus = useGameStore(previousStatusSelector);
   const selectedTower = useGameStore(selectedTowerSelector);
@@ -49,8 +40,6 @@ export const useGameSystem = () => {
   const setPreviousStatus = useGameStore(setPreviousStatusSelector);
   const setSelectedTower = useGameStore(setSelectedTowerSelector);
   const setDebug = useGameStore(setDebugSelector);
-  const resetGameState = useGameStore(resetGameStateSelector);
-  const startNewRun = useGameStore(startNewRunSelector);
   const initializeGameState = useGameStore(initializeGameStateSelector);
   const setIsPageVisible = useGameStore(setIsPageVisibleSelector);
   const setShowSettings = useGameStore(setShowSettingsSelector);
@@ -96,14 +85,6 @@ export const useGameSystem = () => {
     loadConfig();
   }, [isGameConfigLoaded, initializeGameState]);
 
-  const winGame = useCallback(() => {
-    setGameStatus("won");
-    // Signal the run ended; the stats system flushes the receipts raised in
-    // this same frame so the end screen freezes a complete snapshot.
-    markRunEnded();
-    gameEvents.emit(GameEvent.GAME_WON, { gameWonType: "win" });
-  }, [setGameStatus, markRunEnded]);
-
   const canPause = getCanPause(gameStatus, nextWaveReady);
 
   const pauseGame = useCallback(() => {
@@ -119,21 +100,6 @@ export const useGameSystem = () => {
       gameEvents.emit(GameEvent.GAME_RESUMED, { gameResumedType: "resume" });
     }
   }, [setGameStatus, gameStatus, canPause]);
-
-  const startGame = useCallback(
-    async (startingHealth: number) => {
-      startNewRun();
-      startRunStats();
-      spawnBase(startingHealth);
-    },
-    [startNewRun, spawnBase, startRunStats]
-  );
-
-  const goToMainMenu = useCallback(() => {
-    endRunStats();
-    resetGameState();
-    setGameStatus("menu");
-  }, [resetGameState, setGameStatus, endRunStats]);
 
   const openGameMenu = useCallback(() => {
     setShowSettings(false);
@@ -161,10 +127,7 @@ export const useGameSystem = () => {
     isGameConfigLoaded,
 
     // Actions
-    winGame,
     pauseGame,
-    startGame,
-    goToMainMenu,
     openGameMenu,
     closeGameMenu,
     setSelectedTower,

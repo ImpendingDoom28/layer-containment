@@ -9,7 +9,6 @@
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ReactElement } from "react";
-import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
 import {
@@ -28,12 +27,10 @@ import {
 } from "../../utils/planetSurfaceMapping";
 import { useEntityIds } from "../contexts/EntityIdContext";
 import { useInstancedEntity } from "./useInstancedEntity";
-import { clampFrameDelta } from "../../utils/gameDelta";
-import { useSimulationClock } from "../contexts/SimulationClockContext";
 import { useReducedMotion } from "./useReducedMotion";
 import { useGameStore } from "../stores/useGameStore";
-import { useSettingsStore } from "../stores/useSettingsStore";
 import { useLevelStore } from "../stores/useLevelStore";
+import type { SimulationFrame } from "../session/types";
 import { world } from "../ecs/world";
 import { refreshEnemyRegistry } from "../ecs/selectors/enemySnapshots";
 
@@ -265,7 +262,13 @@ export const computeTrailPose = (
   );
   tempScale.set(width, length, width);
 
-  return { position: trailScratchPosition, quaternion: tempQuaternion, scale: tempScale, length, width };
+  return {
+    position: trailScratchPosition,
+    quaternion: tempQuaternion,
+    scale: tempScale,
+    length,
+    width,
+  };
 };
 
 type NonBeamStepContext = {
@@ -480,6 +483,7 @@ type InstancedProjectilesConfig = {
 type InstancedProjectilesReturn = {
   InstancedProjectiles: ReactElement;
   fireProjectile: (params: FireProjectileParams) => Projectile;
+  updateProjectiles: (frame: SimulationFrame) => void;
   clearAllProjectiles: () => void;
   getActiveProjectiles: () => PooledProjectile[];
   /** Pool stats of the trail streaks, or null when trails are disabled. */
@@ -501,9 +505,6 @@ export const useInstancedProjectiles = (
     onHit,
     onRemove,
   } = config;
-
-  const { getSimulationTime, getTimeScale, shouldStopMovement } =
-    useSimulationClock();
 
   // The trail is decorative motion; honor `prefers-reduced-motion` and skip
   // it entirely (no trail pool, no per-frame streak work).
@@ -845,19 +846,17 @@ export const useInstancedProjectiles = (
     return trailPool ? trailPool.getStats() : null;
   }, [trailPool]);
 
-  useFrame((state, delta) => {
-    enemiesByIdRef.current = refreshEnemyRegistry(world);
-    const pauseWhenTabHidden = useSettingsStore.getState().pauseWhenTabHidden;
-    // The frame keeps running through the pause so travelling projectiles
-    // ease to a stop and ramp back with the time-dilation scale; hit
-    // resolution (and beam timing) is gated by `canHit` so no damage lands
-    // while the world is paused.
-    updateProjectilesFrame(
-      getSimulationTime(state.clock.elapsedTime),
-      clampFrameDelta(delta, pauseWhenTabHidden) * getTimeScale(),
-      !shouldStopMovement
-    );
-  });
+  const updateProjectiles = useCallback(
+    (frame: SimulationFrame) => {
+      enemiesByIdRef.current = refreshEnemyRegistry(world);
+      updateProjectilesFrame(
+        frame.simulationTimeSeconds,
+        frame.deltaSeconds,
+        frame.canResolveGameplay
+      );
+    },
+    [updateProjectilesFrame]
+  );
 
   const InstancedProjectiles = (
     <>
@@ -871,6 +870,7 @@ export const useInstancedProjectiles = (
   return {
     InstancedProjectiles,
     fireProjectile,
+    updateProjectiles,
     clearAllProjectiles,
     getActiveProjectiles,
     getTrailPoolStats,

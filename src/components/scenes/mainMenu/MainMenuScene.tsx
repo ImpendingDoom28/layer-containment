@@ -12,8 +12,6 @@ import {
 } from "../../../core/stores/useLevelStore";
 import { useLevelSystem } from "../../../core/hooks/useLevelSystem";
 import { EntitiesSystem } from "../../systems/EntitiesSystem";
-import { useProjectileSystem } from "../../../core/hooks/useProjectileSystem";
-import { useEnemyActions } from "../../../core/hooks/useEnemyActions";
 import { useGameSystem } from "../../../core/hooks/useGameSystem";
 import {
   enemyTypesSelector,
@@ -70,9 +68,6 @@ export const MainMenuScene: FC = () => {
   // level to initialize.
   useGameSystem();
   const levelSystem = useLevelSystem();
-  const enemySystem = useEnemyActions();
-  const { onProjectileHit, onProjectileRemove } =
-    useProjectileSystem(enemySystem);
 
   const enemyTypes = useGameStore(enemyTypesSelector);
   const tileSize = useGameStore(tileSizeSelector);
@@ -160,9 +155,6 @@ export const MainMenuScene: FC = () => {
         onSellTower={null}
         hoveredTile={null}
         selectedTower={null}
-        onProjectileHit={onProjectileHit}
-        onProjectileRemove={onProjectileRemove}
-        onEnemyReachEnd={enemySystem.onEnemyReachEnd}
       />
 
       {/* Death burst on `ENEMY_KILLED`; menu kills are settled by the shared

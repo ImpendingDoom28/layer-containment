@@ -25,6 +25,7 @@ import { enemyActions } from "../../../core/ecs/actions/enemyActions";
 import { Path } from "../../entities/Path";
 import { Grid } from "../../entities/Grid";
 import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
+import { AmbientDust } from "../../entities/effects/AmbientDust";
 import { CombatJuice } from "../../entities/effects/CombatJuice";
 import { MainMenuCamera } from "./MainMenuCamera";
 import { MAIN_MENU_ENEMY_SPAWN_CONFIG } from "./constants";
@@ -155,6 +156,10 @@ export const MainMenuScene: FC = () => {
       />
 
       <PlanetTileDecorations occupancy={occupancy} />
+
+      {/* Ambient dust: the menu's board is the game's most "idle" moment, so
+          the drifting specks carry the "the world has air in it" read. */}
+      <AmbientDust />
 
       <EntitiesSystem
         onSellTower={null}

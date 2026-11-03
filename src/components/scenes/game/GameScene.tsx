@@ -15,6 +15,7 @@ import type {
   GameStatus,
   TowerType,
 } from "../../../core/types/game";
+import { AmbientDust } from "../../entities/effects/AmbientDust";
 import { WaveLoopSystem } from "../../systems/WaveLoopSystem";
 import { GameProcessSystem } from "../../systems/GameProcessSystem";
 import { ApplyDamageSystem } from "../../systems/ApplyDamageSystem";
@@ -95,6 +96,10 @@ export const GameScene: React.FC<GameSceneProps> = ({
       <Skybox />
       <Light />
       <Ground />
+
+      {/* Ambient dust: the drifting specks that keep the world alive between
+          waves and during the build phase. */}
+      <AmbientDust />
 
       <GameCamera
         movementSpeed={10}

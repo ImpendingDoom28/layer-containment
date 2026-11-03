@@ -187,6 +187,67 @@ describe("AmbientDust", () => {
     }
   });
 
+  it("only wraps points at the field edges (no mid-field teleports)", async () => {
+    const renderer = await createDust();
+
+    try {
+      const points = getPoints(renderer);
+      const arr = points.geometry.attributes.position.array as Float32Array;
+      const count = (points.geometry.attributes.position as {
+        count: number;
+      }).count;
+
+      // A point only moves ~speed*step (<0.01 units) per frame. A large
+      // per-frame displacement means the point teleported. Under the fix a
+      // teleport is always a field-edge wrap (a point crossing a boundary
+      // and re-entering the opposite edge), so one of its coordinates is at
+      // the field edge (~half = 10). The pre-fix bug (mod on the drift
+      // distance) teleported diagonal points back to their *start position
+      // mid-field*, with no coordinate near an edge — this test catches that.
+      //
+      // The s-reset fires once per point within ~17-33s (field width /
+      // speed), so run ~40s to be sure every point hits its reset.
+      const STEP = 0.016;
+      const edgeTol = 8.5; // a coordinate this close to the field edge counts as "at an edge"
+      const teleportThreshold = 1.0; // well above the ~0.01/frame drift
+      const framesNeeded = 2500; // ~40s
+
+      let prev = Array.from(arr.slice(0, count * 3));
+      for (let f = 0; f < framesNeeded; f += 1) {
+        await ReactThreeTestRenderer.act(async () => {
+          await renderer.advanceFrames(1, STEP);
+        });
+        for (let i = 0; i < count; i += 1) {
+          const bx = prev[i * 3];
+          const by = prev[i * 3 + 1];
+          const bz = prev[i * 3 + 2];
+          const ax = arr[i * 3];
+          const ay = arr[i * 3 + 1];
+          const az = arr[i * 3 + 2];
+          const d = Math.hypot(ax - bx, ay - by, az - bz);
+          if (d > teleportThreshold) {
+            const atEdge =
+              Math.abs(ax) > edgeTol ||
+              Math.abs(az) > edgeTol ||
+              Math.abs(bx) > edgeTol ||
+              Math.abs(bz) > edgeTol;
+            expect(
+              atEdge,
+              `point ${i} teleported mid-field (d=${d.toFixed(2)}) at t=${(
+                (f + 1) * STEP
+              ).toFixed(2)}s from (${bx.toFixed(1)},${by.toFixed(1)},${bz.toFixed(
+                1
+              )}) to (${ax.toFixed(1)},${ay.toFixed(1)},${az.toFixed(1)})`
+            ).toBe(true);
+          }
+        }
+        prev = Array.from(arr.slice(0, count * 3));
+      }
+    } finally {
+      await renderer.unmount();
+    }
+  });
+
   it("renders nothing under prefers-reduced-motion", async () => {
     vi.mocked(useReducedMotion).mockReturnValue(true);
 

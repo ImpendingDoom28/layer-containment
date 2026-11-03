@@ -126,14 +126,17 @@ export const AmbientDust: FC = memo(() => {
       phase[i] = Math.random() * Math.PI * 2;
     }
 
-    // Seed the attribute so the first frame already shows a distributed cloud
-    // instead of a momentary clump at the origin.
+    // Seed the attribute with the t=0 state (drift distance 0, sway at its
+    // initial phase) so the first frame shows a distributed cloud and the
+    // per-frame motion stays continuous from the start.
     const positions = new Float32Array(DUST_COUNT * 3);
     for (let i = 0; i < DUST_COUNT; i += 1) {
       const i3 = i * 3;
-      positions[i3] = base[i3] + lift[i3] * baseLift[i];
-      positions[i3 + 1] = base[i3 + 1] + lift[i3 + 1] * baseLift[i];
-      positions[i3 + 2] = base[i3 + 2] + lift[i3 + 2] * baseLift[i];
+      const liftHeight =
+        baseLift[i] + Math.sin(phase[i]) * swayAmp[i];
+      positions[i3] = base[i3] + lift[i3] * liftHeight;
+      positions[i3 + 1] = base[i3 + 1] + lift[i3 + 1] * liftHeight;
+      positions[i3 + 2] = base[i3 + 2] + lift[i3 + 2] * liftHeight;
     }
 
     const geometry = new BufferGeometry();
@@ -195,7 +198,10 @@ export const AmbientDust: FC = memo(() => {
 
     for (let i = 0; i < DUST_COUNT; i += 1) {
       const i3 = i * 3;
-      const s = (cloud.speed[i] * t) % twoHalf;
+      // No modulo here: the raw drift distance keeps diagonal motion
+      // continuous across wraps — each axis wraps at the field edge below,
+      // which is the only place a point may re-enter.
+      const s = cloud.speed[i] * t;
       let x = cloud.base[i3] + cloud.drift[i * 2] * s;
       let z = cloud.base[i3 + 2] + cloud.drift[i * 2 + 1] * s;
       // Loop the point back to the near edge once it drifts past the far

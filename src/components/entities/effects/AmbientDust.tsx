@@ -30,8 +30,8 @@ const DUST_MIN_LIFT = 0.2;
 const DUST_MAX_LIFT = 3.6;
 const DUST_MIN_SPEED = 0.25;
 const DUST_MAX_SPEED = 0.6;
-const DUST_SIZE = 0.09;
-const DUST_OPACITY = 0.45;
+const DUST_SIZE = 0.05;
+const DUST_OPACITY = 0.3;
 const DUST_MAX_SWAY = 0.15;
 
 type DustCloud = {
@@ -143,7 +143,7 @@ export const AmbientDust: FC = memo(() => {
     geometry.setAttribute("position", new BufferAttribute(positions, 3));
 
     const material = new PointsMaterial({
-      color: getCssColorValue("scene-portal-glow"),
+      color: getCssColorValue("scene-dust"),
       size: DUST_SIZE,
       sizeAttenuation: true,
       transparent: true,

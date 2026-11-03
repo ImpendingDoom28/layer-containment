@@ -65,6 +65,7 @@
   --scene-regolith-highlight: #6b7280; /* gray-500 — mineral flecks */
   --scene-regolith-shadow: #1f2937; /* gray-800 — crater / grit */
   --scene-regolith-rock: #525a63; /* cool gray rock props */
+  --scene-dust: #a68a64; /* warm sand — ambient dust specks */
 
   /* Editor palette */
   --editor-tool-select: #374151; /* gray-700 */

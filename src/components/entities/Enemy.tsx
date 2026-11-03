@@ -50,7 +50,7 @@ import { HitFlash } from "./effects/HitFlash";
 import { MedicHealBurstEffect } from "./effects/MedicHealBurstEffect";
 import { SlowEffect } from "./effects/SlowEffect";
 import { UpgradeEffect } from "./effects/UpgradeEffect";
-import { WraithDrone } from "./WraithDrone";
+import { EnemyModel } from "./EnemyModel";
 
 type EnemyProps = {
   entity: Entity;
@@ -173,8 +173,8 @@ export const Enemy: FC<EnemyProps> = memo(
     const fillBarRef = useRef<Mesh>(null);
     // The hit marker: `HitFlash` wraps the body and renders a hidden clone of
     // it re-pointed at the per-enemy `flashMaterial`, so the marker's shape
-    // always matches the body (Wraith clone, or a sphere for plain/fallback
-    // bodies). `hitMarkerRef` is the current marker node; a hit toggles its
+    // always matches the body (the model clone, or a sphere for a fallback
+    // body). `hitMarkerRef` is the current marker node; a hit toggles its
     // `visible` and the decay below drives the shared `flashMaterial` opacity.
     const hitMarkerRef = useRef<Object3D | null>(null);
     const healthTierRef = useRef<HealthTier>("high");
@@ -391,41 +391,32 @@ export const Enemy: FC<EnemyProps> = memo(
           />
         )}
 
-        {/* Enemy body: a plain sphere, or the 3D Wraith drone model for fast
-            enemies. The body sphere doubles as the drone's placeholder while
+        {/* Enemy body: the 3D model of the enemy's type (every enemy type has
+            one). The colored sphere doubles as the model's placeholder while
             its GLB loads, so a load race degrades to the old look instead of
             hiding the enemy. The body is wrapped in HitFlash, which provides
             the hit marker — a hidden clone of the body's own shape re-pointed
             at the per-enemy flash material — so the marker is automatically
-            model-shaped (a box model would get a box marker, the Wraith a
-            Wraith-shaped one) with no per-model support. */}
+            model-shaped (the Wraith gets a Wraith-shaped one) with no
+            per-model support. */}
         <group position={[0, size / 2, 0]}>
           <HitFlash
             markerRef={hitMarkerRef}
             flashMaterial={flashMaterial}
             body={
-              snapshot.type === "fast" ? (
-                <WraithDrone
-                  size={size}
-                  fallback={
-                    <mesh
-                      castShadow
-                      receiveShadow
-                      scale={[size, size, size]}
-                      geometry={sharedUnitSphere}
-                      material={getEnemyBodyMaterial(snapshot.color)}
-                    />
-                  }
-                />
-              ) : (
-                <mesh
-                  castShadow
-                  receiveShadow
-                  scale={[size, size, size]}
-                  geometry={sharedUnitSphere}
-                  material={getEnemyBodyMaterial(snapshot.color)}
-                />
-              )
+              <EnemyModel
+                type={snapshot.type}
+                size={size}
+                fallback={
+                  <mesh
+                    castShadow
+                    receiveShadow
+                    scale={[size, size, size]}
+                    geometry={sharedUnitSphere}
+                    material={getEnemyBodyMaterial(snapshot.color)}
+                  />
+                }
+              />
             }
           />
         </group>

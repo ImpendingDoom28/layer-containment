@@ -57,10 +57,10 @@ const groundFootprint = (source: Object3D): Box3 => {
  * pull their bases off the tile center. The turret overhang is intentional
  * design and is preserved as-is.
  *
- * Unlike enemies the model is not yawed: a tower has no direction of travel,
- * and its "Azimuth" turret is static in the game (the projectile beam, not the
- * mesh, aims at the target). The source node is cloned, so the cached GLTF
- * (shared by every tower of a type) is never mutated; the clone only
+ * The model is loaded at its baked rest orientation: the turret ("Azimuth")
+ * faces the model's local +Z and the runtime yaw (see `TowerSystem`) rotates
+ * the turret node toward the target. The source node is cloned, so the cached
+ * GLTF (shared by every tower of a type) is never mutated; the clone only
  * *references* the shared geometry/material, so it needs no dispose on unmount.
  */
 export const prepareTowerModel = (source: Object3D, size: number): Group => {
@@ -173,6 +173,12 @@ type TowerModelProps = {
    */
   variant?: TowerModelVariant;
   fallback: ReactNode;
+  /**
+   * Called with the prepared model group once it is ready (and with `null`
+   * on unmount), so the parent can look up the rotating turret node by name.
+   * Pass a stable reference.
+   */
+  onModelReady?: (object: Object3D | null) => void;
 };
 
 /**
@@ -185,7 +191,7 @@ type TowerModelProps = {
  * base footprint; `type` picks the model from `TOWER_MODELS`.
  */
 export const TowerModel: FC<TowerModelProps> = memo(
-  ({ type, size, variant = "solid", fallback }) => {
+  ({ type, size, variant = "solid", fallback, onModelReady }) => {
     const model: TowerModelSpec = TOWER_MODELS[type];
     const prepare = useCallback(
       (source: Object3D) => {
@@ -215,6 +221,7 @@ export const TowerModel: FC<TowerModelProps> = memo(
         node={model.node}
         prepare={prepare}
         fallback={fallback}
+        onObjectReady={onModelReady}
       />
     );
   }

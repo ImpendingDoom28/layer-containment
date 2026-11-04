@@ -2,6 +2,7 @@ import {
   Component,
   Suspense,
   memo,
+  useEffect,
   useMemo,
   type FC,
   type ReactNode,
@@ -26,6 +27,13 @@ type ModelLoaderProps = {
   prepare?: (source: Object3D) => Object3D;
   /** Rendered while the GLB loads (and as a permanent stand-in if it fails). */
   fallback: ReactNode;
+  /**
+   * Called once with the prepared object when it becomes available and again
+   * with `null` on unmount (or when the object is replaced). Pass a stable
+   * reference; consumers use it to reach into the scene graph (e.g. to find a
+   * named sub-node) without polling.
+   */
+  onObjectReady?: (object: Object3D | null) => void;
 };
 
 /**
@@ -39,10 +47,15 @@ type ModelLoaderProps = {
  * `fallback` instead of propagating the throw and unmounting the whole scene.
  */
 export const ModelLoader: FC<ModelLoaderProps> = memo(
-  ({ url, node, prepare, fallback }) => (
+  ({ url, node, prepare, fallback, onObjectReady }) => (
     <ModelLoadErrorBoundary fallback={fallback}>
       <Suspense fallback={fallback}>
-        <ModelLoaderModel url={url} node={node} prepare={prepare} />
+        <ModelLoaderModel
+          url={url}
+          node={node}
+          prepare={prepare}
+          onObjectReady={onObjectReady}
+        />
       </Suspense>
     </ModelLoadErrorBoundary>
   )
@@ -54,13 +67,24 @@ const ModelLoaderModel: FC<{
   url: string;
   node: string;
   prepare?: (source: Object3D) => Object3D;
-}> = ({ url, node, prepare }) => {
+  onObjectReady?: (object: Object3D | null) => void;
+}> = ({ url, node, prepare, onObjectReady }) => {
   const gltf = useGLTF(url);
   const source = gltf.scene.getObjectByName(node);
   const object = useMemo(
     () => (source ? (prepare ? prepare(source) : source.clone(true)) : null),
     [source, prepare]
   );
+
+  // Report the object to the consumer when it appears (or changes) and notify
+  // them of the unmount with `null`, so the consumer can release its handle.
+  useEffect(() => {
+    if (!onObjectReady) return;
+    if (!object) return;
+    onObjectReady(object);
+    return () => onObjectReady(null);
+  }, [object, onObjectReady]);
+
   if (!object) return null;
   return <primitive object={object} />;
 };

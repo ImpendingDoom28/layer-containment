@@ -1,6 +1,7 @@
 import { useThree } from "@react-three/fiber";
 import ReactThreeTestRenderer from "@react-three/test-renderer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Object3D } from "three";
 
 import { WorldProvider } from "koota/react";
 
@@ -10,6 +11,8 @@ import { SimulationClockProvider } from "../../core/contexts/SimulationClockCont
 import { useGameStore } from "../../core/stores/useGameStore";
 import { useLevelStore } from "../../core/stores/useLevelStore";
 import { useSettingsStore } from "../../core/stores/useSettingsStore";
+import { gameEvents } from "../../utils/eventEmitter";
+import { GameEvent } from "../../core/types/enums/events";
 import type {
   Building,
   Enemy,
@@ -17,10 +20,30 @@ import type {
   Tower,
   TowerConfig,
 } from "../../core/types/game";
-import { TowerSystem } from "./TowerSystem";
+import {
+  TowerSystem,
+  normalizeAngleDelta,
+  yawToward,
+} from "./TowerSystem";
+import { TOWER_MUZZLES, TOWER_TURN_LAMBDA } from "../../constants/towerMuzzle";
+import {
+  flatCombatPointToWorldPosition,
+  getPlanetRadius,
+} from "../../utils/planetSurfaceMapping";
 
-// The tower mesh is purely visual and not under test.
-vi.mock("../entities/Tower", () => ({ Tower: () => null }));
+// The tower mesh is purely visual and not under test, but the mock captures
+// the `onTurretNode` callback so a test can register a turret node (to exercise
+// the node-mirrored aim and the muzzle-tip spawn) without loading a model.
+const towerTurret = vi.hoisted(() => ({
+  onTurretNode: null as null | ((id: number, node: unknown) => void),
+}));
+
+vi.mock("../entities/Tower", () => ({
+  Tower: (props: { onTurretNode?: (id: number, node: unknown) => void }) => {
+    if (props.onTurretNode) towerTurret.onTurretNode = props.onTurretNode;
+    return null;
+  },
+}));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
@@ -111,14 +134,44 @@ const advanceFrame = async (
   });
 };
 
+// Drives a frame with an explicit per-frame delta (the second `advanceFrames`
+// argument), so the turret's eased turn step can be exercised at a real
+// per-frame rate instead of the fully-converging delta of 1.
+const advanceFrameWithDelta = async (
+  renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>,
+  rawTime: number,
+  delta: number
+) => {
+  await ReactThreeTestRenderer.act(async () => {
+    sceneClock.elapsedTime = rawTime;
+    await renderer.advanceFrames(1, delta);
+  });
+};
+
 const setPaused = async (paused: boolean) => {
   await ReactThreeTestRenderer.act(async () => {
     useGameStore.getState().setGameStatus(paused ? "paused" : "playing");
   });
 };
 
+// Registers a bare turret node (at the given world position, identity rotation)
+// the same way the model would once it loads, by invoking the `onTurretNode`
+// callback the mocked `Tower` captured. Returns the node so a test can read
+// its eased `rotation.y`.
+const registerTurretNode = (
+  position: [number, number, number] = [0, 0, 0]
+): Object3D => {
+  const node = new Object3D();
+  node.position.set(position[0], position[1], position[2]);
+  const callback = towerTurret.onTurretNode;
+  expect(callback).not.toBeNull();
+  callback!(tower.id, node);
+  return node;
+};
+
 beforeEach(() => {
   fireProjectile.mockClear();
+  towerTurret.onTurretNode = null;
   enemyActions(testWorld).clearAllEnemies();
   useLevelStore.getState().resetLevelState();
   useLevelStore.setState({
@@ -419,6 +472,166 @@ describe("TowerSystem targeting strategies", () => {
       await advanceFrame(renderer, 2);
       expect(fireProjectile).toHaveBeenCalledTimes(2);
       expect(fireProjectile.mock.calls[1][0].targetId).toBe(2);
+    } finally {
+      renderer.unmount();
+    }
+  });
+});
+
+describe("TowerSystem turret aim", () => {
+  const createScene = async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <WorldProvider world={testWorld}>
+        <TowerHarness />
+      </WorldProvider>
+    );
+    return renderer;
+  };
+
+  it("holds its aim instead of swinging back to rest when the target leaves", async () => {
+    const renderer = await createScene();
+    try {
+      const node = registerTurretNode();
+      enemyActions(testWorld).spawnEnemy(makeEnemy(1)); // (0.5, 0): 90 deg from rest
+
+      // Fire once: the barrel swings to the enemy and stays there.
+      await advanceFrame(renderer, 1);
+      expect(node.rotation.y).toBeCloseTo(Math.PI / 2, 2);
+
+      // The enemy dies; with nothing in range the turret holds its last aim
+      // (it does not swing back to the rest muzzle).
+      await ReactThreeTestRenderer.act(async () => {
+        enemyActions(testWorld).removeEnemy(1);
+      });
+      await advanceFrame(renderer, 2);
+      expect(node.rotation.y).toBeCloseTo(Math.PI / 2, 2);
+    } finally {
+      renderer.unmount();
+    }
+  });
+
+  it("eases the turret toward the target across frames", async () => {
+    const renderer = await createScene();
+    try {
+      const node = registerTurretNode();
+      enemyActions(testWorld).spawnEnemy(makeEnemy(1)); // (0.5, 0): 90 deg from rest
+
+      // Five small frames: the swing is the geometric ease 1 - exp(-8 * t).
+      for (let i = 1; i <= 5; i += 1) {
+        await advanceFrameWithDelta(renderer, i * 0.016, 0.016);
+      }
+      const expectedYaw =
+        (Math.PI / 2) * (1 - Math.exp(-TOWER_TURN_LAMBDA * 5 * 0.016));
+      expect(node.rotation.y).toBeCloseTo(expectedYaw, 6);
+    } finally {
+      renderer.unmount();
+    }
+  });
+
+  it("converges to the target direction in a single full-delta frame", async () => {
+    const renderer = await createScene();
+    try {
+      const node = registerTurretNode();
+      enemyActions(testWorld).spawnEnemy(makeEnemy(1)); // (0.5, 0): 90 deg from rest
+
+      await advanceFrame(renderer, 1);
+      // 1 - exp(-8) of the 90 deg arc is within ~0.06 deg of a full turn.
+      expect(node.rotation.y).toBeCloseTo(Math.PI / 2, 2);
+    } finally {
+      renderer.unmount();
+    }
+  });
+
+  it("does not fire until the barrel is aimed at the target", async () => {
+    // A fast fire rate (0.01) keeps the cooldown from binding, so the only
+    // thing delaying the first shot is the aim tolerance — the barrel must
+    // actually swing onto the 90-deg-away enemy before a projectile leaves.
+    const renderer = await createScene();
+    try {
+      await ReactThreeTestRenderer.act(async () => {
+        useLevelStore.getState().setTowers([{ ...tower, fireRate: 0.01 }]);
+      });
+      enemyActions(testWorld).spawnEnemy(makeEnemy(1)); // (0.5, 0): 90 deg from rest
+
+      // Ten small frames: the swing is still well outside the 15 deg tolerance,
+      // so the tower is in range and off cooldown but must not fire.
+      for (let i = 1; i <= 10; i += 1) {
+        await advanceFrameWithDelta(renderer, i * 0.016, 0.016);
+      }
+      expect(fireProjectile).not.toHaveBeenCalled();
+
+      // Six more frames: the barrel has swung within the tolerance and the
+      // first shot goes out at the enemy.
+      for (let i = 11; i <= 16; i += 1) {
+        await advanceFrameWithDelta(renderer, i * 0.016, 0.016);
+      }
+      expect(fireProjectile).toHaveBeenCalled();
+      expect(fireProjectile.mock.calls[0][0].targetId).toBe(1);
+    } finally {
+      renderer.unmount();
+    }
+  });
+
+  it("spawns the projectile at the barrel tip once the turret node is registered", async () => {
+    const renderer = await createScene();
+    try {
+      const node = registerTurretNode(); // identity, at the origin
+      // Target straight ahead on the rest muzzle axis (+Z), so the barrel does
+      // not swing and the node stays at identity — the tip is the rest muzzle.
+      enemyActions(testWorld).spawnEnemy({ ...makeEnemy(1), x: 0, z: 0.5 });
+
+      let fireWorld: { x: number; y: number; z: number } | null = null;
+      const off = gameEvents.on(GameEvent.TOWER_FIRE, (data) => {
+        fireWorld = (data as { worldPosition: { x: number; y: number; z: number } })
+          .worldPosition;
+      });
+
+      try {
+        await advanceFrame(renderer, 1);
+        expect(fireProjectile).toHaveBeenCalledTimes(1);
+
+        const muzzle = TOWER_MUZZLES.basic.muzzle!;
+        const shot = fireProjectile.mock.calls[0][0];
+        // The node is at the origin with identity orientation, so the world
+        // barrel tip is the local rest muzzle.
+        expect(shot.startX).toBeCloseTo(muzzle.x, 5);
+        expect(shot.startY).toBeCloseTo(muzzle.y, 5);
+        expect(shot.startZ).toBeCloseTo(muzzle.z, 5);
+        // The fire sound uses the same world position as the projectile.
+        expect(fireWorld).not.toBeNull();
+        expect(fireWorld!.x).toBeCloseTo(muzzle.x, 5);
+        expect(fireWorld!.y).toBeCloseTo(muzzle.y, 5);
+        expect(fireWorld!.z).toBeCloseTo(muzzle.z, 5);
+        // The node mirrors the logical aim (here the rest direction, yaw 0).
+        expect(node.rotation.y).toBeCloseTo(0, 5);
+      } finally {
+        off();
+      }
+    } finally {
+      renderer.unmount();
+    }
+  });
+
+  it("falls back to the tower-centre emitter while the turret node is missing", async () => {
+    const renderer = await createScene();
+    try {
+      // No `registerTurretNode` call: the model is still "loading", so the shot
+      // leaves the old centre emitter (surface + 0.7 * normal), not the barrel.
+      enemyActions(testWorld).spawnEnemy(makeEnemy(1)); // (0.5, 0)
+
+      await advanceFrame(renderer, 1);
+      expect(fireProjectile).toHaveBeenCalledTimes(1);
+
+      const shot = fireProjectile.mock.calls[0][0];
+      const expected = flatCombatPointToWorldPosition(
+        tower.x,
+        tower.z,
+        0.7, // towerHeight (1) * 0.7
+        getPlanetRadius(8, 1)
+      );
+      expect(shot.startX).toBeCloseTo(expected.x, 5);
+      expect(shot.startY).toBeCloseTo(expected.y, 5);
+      expect(shot.startZ).toBeCloseTo(expected.z, 5);
     } finally {
       renderer.unmount();
     }

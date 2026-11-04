@@ -1,9 +1,10 @@
-import { FC, useRef, useMemo, memo } from "react";
+import { FC, useRef, useMemo, useCallback, memo } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
-import type { Group } from "three";
+import type { Group, Object3D } from "three";
 import { CylinderGeometry, MeshStandardMaterial } from "three";
 
 import type { Tower as TowerInstance } from "../../core/types/game";
+import { TOWER_MUZZLES } from "../../constants/towerMuzzle";
 import { GUIDebugInfo } from "../gui/GUIDebugInfo";
 import { RangeRing } from "./effects/RangeRing";
 import { TowerModel } from "./TowerModel";
@@ -54,6 +55,12 @@ type TowerProps = {
   isInvalidPlacement?: boolean;
   /** Range ring and combat (when set, includes relay adjacency buffs). */
   effectiveRange?: number;
+  /**
+   * Reports the rotating turret node (the model's "Azimuth" part) so the
+   * system can swing it toward the target; `null` on unmount or when the model
+   * has no turret (relay / load-failure fallback).
+   */
+  onTurretNode?: (towerId: number, node: Object3D | null) => void;
 };
 
 export const Tower: FC<TowerProps> = memo(
@@ -64,6 +71,7 @@ export const Tower: FC<TowerProps> = memo(
     isPreview = false,
     isInvalidPlacement = false,
     effectiveRange,
+    onTurretNode,
   }) => {
     syncSharedMaterials();
     const towerBaseRadius = useGameStore(towerBaseRadiusSelector);
@@ -85,6 +93,26 @@ export const Tower: FC<TowerProps> = memo(
     // The preview tower follows the cursor and is always inside the view, so a
     // zero margin (no grace band) is safe and keeps it from being culled.
     useFrustumCulling(groupRef, isPreview ? 0 : FRUSTUM_CULLING_MARGIN);
+
+    // Report the model's rotating turret node to the system (it swings it
+    // toward the target in its per-frame update). The preview tower is
+    // decorative and never fires, so it does not register a node.
+    const onModelReady = useCallback(
+      (object: Object3D | null) => {
+        if (isPreview || !tower || !onTurretNode) return;
+        if (!object) {
+          onTurretNode(tower.id, null);
+          return;
+        }
+        const spec = TOWER_MUZZLES[tower.type];
+        const turret =
+          spec.turretNode != null
+            ? object.getObjectByName(spec.turretNode)
+            : undefined;
+        onTurretNode(tower.id, turret ?? null);
+      },
+      [isPreview, tower, onTurretNode]
+    );
 
     // Memoize base geometry to avoid recreation on each render
     const baseGeometry = useMemo(
@@ -262,6 +290,7 @@ export const Tower: FC<TowerProps> = memo(
           size={tileSize * 0.9}
           variant={isPreview ? (isInvalidPlacement ? "invalid" : "preview") : "solid"}
           fallback={towerBody}
+          onModelReady={onModelReady}
         />
         {/* Selection indicator */}
         {isSelected && (effectiveRange ?? tower.range) > 0.01 && (

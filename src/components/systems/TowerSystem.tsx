@@ -103,6 +103,13 @@ const stepYaw = (from: number, to: number, dt: number): number =>
 const _muzzleLocal = new Vector3();
 const _muzzleWorld = new Vector3();
 
+// Scratch membership set of the living enemy objects for the current frame
+// (the pooled registry hands out one stable object per live entity, so a
+// reference check tells whether a cached target still exists — an enemy
+// removed at the base keeps its health, so health alone cannot prove it is
+// gone). Re-filled each frame; reused across frames, no per-frame allocation.
+const _livingEnemies = new Set<Enemy>();
+
 type TowerSystemProps = {
   fireProjectile: (
     projectile: Omit<ProjectileInstance, "id">
@@ -291,6 +298,13 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
       // eases to stillness on pause, like the enemy facing does.
       const turnStep = delta * getTimeScale();
       const enemies = getLivingEnemyList(world);
+      // Rebuild the living-enemy object set so the cached-target reuse below
+      // can tell whether a target still exists (an enemy removed at the base
+      // keeps its health, so health alone cannot prove it is gone).
+      _livingEnemies.clear();
+      for (const enemy of enemies) {
+        _livingEnemies.add(enemy);
+      }
       const fireTimes = fireTimesRef.current;
       const lastTargets = lastTargetsRef.current;
       const turretYaws = turretYawsRef.current;
@@ -352,21 +366,28 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
         // over every enemy runs at most once per TOWER_TARGET_REPICK_INTERVAL
         // (on the pause-adjusted simulation clock, so a slow-motion stretch
         // does not burn the budget faster), or immediately when the cached
-        // target dies, leaves the range, or loses line of sight. In between,
-        // the aim pass below reuses the cached enemy, so the turret keeps
-        // swinging every frame while the scan cost drops from per-frame to
-        // per-interval.
+        // target is no longer usable — dead, removed at the base (the entity
+        // is destroyed without zeroing its health, so the object must be
+        // checked against this frame's living list), out of range, or behind
+        // an obstacle. In between, the aim pass below reuses the cached
+        // enemy, so the turret keeps swinging every frame while the scan cost
+        // drops from per-frame to per-interval.
         const lastRepick = repickTimes.get(tower.id);
         const shouldRepick =
           lastRepick === undefined ||
           currentTime - lastRepick >= TOWER_TARGET_REPICK_INTERVAL;
-        let pickedTarget: Enemy | null = shouldRepick
-          ? null
-          : (cachedTargets.get(tower.id) ?? null);
+        let pickedTarget: Enemy | null = cachedTargets.get(tower.id) ?? null;
         if (
           shouldRepick ||
           (pickedTarget &&
-            isTargetStale(pickedTarget, tower.x, tower.z, eff.range, isVisible))
+            (!_livingEnemies.has(pickedTarget) ||
+              isTargetStale(
+                pickedTarget,
+                tower.x,
+                tower.z,
+                eff.range,
+                isVisible
+              )))
         ) {
           pickedTarget = towerConfig
             ? pickTowerTarget(

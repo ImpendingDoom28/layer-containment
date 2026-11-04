@@ -1,6 +1,8 @@
-import { FC, memo, useEffect, useMemo, useRef } from "react";
+import { FC, memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { useWorld } from "koota/react";
+import { Vector3 } from "three";
+import type { Object3D } from "three";
 
 import {
   findEnemiesInLine,
@@ -49,6 +51,41 @@ import { useSimulationClock } from "../../core/contexts/SimulationClockContext";
 // ground footprint half-extent is 0.4.
 const BASE_FOOTPRINT_HALF = 0.4;
 
+// A tower only fires once its barrel is within this angle (the shortest arc)
+// of the target, so a projectile never arcs sideways off a tower still
+// swinging around. 15 degrees.
+export const TOWER_AIM_TOLERANCE = Math.PI / 12;
+
+// Per-frame eased swing rate for the turret turning toward its target (the same
+// exponential ease the enemies use to turn their facing): `1 - exp(-lambda*dt)`
+// of the remaining arc per frame, so the swing decelerates as it converges.
+export const TOWER_TURN_LAMBDA = 8;
+
+// Wrap a yaw difference to the shortest arc in (-PI, PI], so comparing
+// e.g. -170 deg against +170 deg reads as a 20 deg turn, not 340.
+export const normalizeAngleDelta = (delta: number): number => {
+  let d = delta % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return d;
+};
+
+// Yaw (about Y) pointing the turret's rest muzzle (local +Z) at a flat
+// (x, z) direction from the tower: yaw = atan2(dx, dz).
+export const yawToward = (towerX: number, towerZ: number, x: number, z: number): number =>
+  Math.atan2(x - towerX, z - towerZ);
+
+// Eased turn of `from` toward `to` with rate TOWER_TURN_LAMBDA (the same ease
+// the enemies use for their facing): `1 - exp(-8 * dt)` of the remaining arc
+// per frame, so the swing decelerates as it converges.
+const stepYaw = (from: number, to: number, dt: number): number =>
+  from + normalizeAngleDelta(to - from) * (1 - Math.exp(-TOWER_TURN_LAMBDA * dt));
+
+// Scratch state for the per-frame turret aim pass (towers are a handful at a
+// time; the vectors are reused and are not per-frame allocations).
+const _muzzleLocal = new Vector3();
+const _muzzleWorld = new Vector3();
+
 type TowerSystemProps = {
   fireProjectile: (
     projectile: Omit<ProjectileInstance, "id">
@@ -71,7 +108,8 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     selectedTowerType,
     hoveredTilePlacementState,
   }) => {
-    const { shouldStopMovement, getSimulationTime } = useSimulationClock();
+    const { shouldStopMovement, getSimulationTime, getTimeScale } =
+      useSimulationClock();
 
     // Fire timing is a pure simulation concern, so it lives in a ref instead
     // of the zustand `towers` array: updating `lastFireTime` no longer
@@ -84,6 +122,24 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     // a ref for the same reason as fireTimesRef: recording a shot must not
     // re-render the towers list.
     const lastTargetsRef = useRef(new Map<number, number>());
+
+    // Per-turret aiming state, also kept in refs (never re-renders): the
+    // logical yaw every turret has eased toward so far (so a shot is only
+    // allowed once the barrel is actually on target), and the live model
+    // node each turret swings (registered by `Tower`; missing while a model
+    // loads or on the primitive fallback, where the logical yaw still gates
+    // firing).
+    const turretYawsRef = useRef(new Map<number, number>());
+    const turretNodesRef = useRef(new Map<number, Object3D>());
+
+    const onTurretNode = useCallback((towerId: number, node: Object3D | null) => {
+      const nodes = turretNodesRef.current;
+      if (node) {
+        nodes.set(towerId, node);
+      } else {
+        nodes.delete(towerId);
+      }
+    }, []);
 
     const towerTypes = useGameStore(towerTypesSelector);
     const tileSize = useGameStore(tileSizeSelector);
@@ -122,13 +178,19 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     }, [buildings, pathWaypoints]);
 
     // Tower ids are re-issued from 1 when a level (re)loads, so a reused id
-    // would otherwise carry the previous level's fire timestamp or focused
-    // target. Clear both refs when the level (re)loads; the per-frame prune
-    // below only drops ids that no longer exist, which a reused id does not.
+    // would otherwise carry the previous level's fire timestamp, focused
+    // target, or aim yaw. Clear the refs when the level (re)loads; the
+    // per-frame prune below only drops ids that no longer exist, which a
+    // reused id does not. The node map is deliberately not cleared here:
+    // the `Tower`s of the new level register theirs in this same commit
+    // (child effects run before this one), so a clear would drop freshly
+    // registered nodes; a tower leaving the level unregisters its node via
+    // the `null` callback on unmount instead.
     useEffect(() => {
       if (isLevelConfigLoaded) {
         fireTimesRef.current.clear();
         lastTargetsRef.current.clear();
+        turretYawsRef.current.clear();
       }
     }, [isLevelConfigLoaded]);
 
@@ -185,7 +247,7 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
       tileSize,
     ]);
 
-    useFrame((state) => {
+    useFrame((state, delta) => {
       const { gameStatus } = useGameStore.getState();
       if (shouldStopMovement) return;
       if (gameStatus !== "playing" && gameStatus !== "menu") return;
@@ -195,9 +257,14 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
       // paused (the raw clock keeps advancing, which let towers fire the
       // instant the pause was lifted).
       const currentTime = getSimulationTime(state.clock.elapsedTime);
+      // The per-frame turn step is scaled by the time dilation so a swing
+      // eases to stillness on pause, like the enemy facing does.
+      const turnStep = delta * getTimeScale();
       const enemies = getLivingEnemyList(world);
       const fireTimes = fireTimesRef.current;
       const lastTargets = lastTargetsRef.current;
+      const turretYaws = turretYawsRef.current;
+      const turretNodes = turretNodesRef.current;
       // Prune entries for towers that no longer exist (sold / level restart)
       // so the maps stay the size of the current level.
       for (const id of fireTimes.keys()) {
@@ -206,43 +273,83 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
       for (const id of lastTargets.keys()) {
         if (!towerIds.has(id)) lastTargets.delete(id);
       }
+      for (const id of turretYaws.keys()) {
+        if (!towerIds.has(id)) turretYaws.delete(id);
+      }
 
       towers.forEach((tower) => {
         if (tower.type === "relay") return;
+
+        // Turret aim: every firing tower swings at the enemy it would shoot
+        // (picked on the same rules as the shot, before the cooldown, so the
+        // barrel keeps tracking a target it is on cooldown from). With no
+        // target in range the turret holds its last aim instead of swinging
+        // back to rest. The logical yaw in the map is the source of truth for
+        // the fire gate below; when the model has registered its turret node
+        // the yaw is mirrored onto it so the mesh matches the gate.
+        const towerConfig = towerTypes?.[tower.type];
+        // Reuse the render-time combat stats (relay adjacency buffs). It is
+        // memoized on the tower list, so reading it here is a cheap map lookup
+        // even though we now pick a target every frame (the turret has to
+        // track its target while on cooldown).
+        const eff = combatStatsByTowerId.get(tower.id) ?? {
+          damage: tower.damage,
+          range: tower.range,
+        };
+
+        // A tower can only shoot at enemies it has line of sight on: an
+        // enemy behind a static building or the base is skipped so the tower
+        // falls back to the next-best candidate it can actually hit. Towers
+        // do not block each other's shots. The pick happens before the
+        // cooldown gate so the turret keeps tracking its target while on
+        // cooldown.
+        const pickedTarget =
+          towerConfig &&
+          pickTowerTarget(enemies, tower.targeting, {
+            x: tower.x,
+            z: tower.z,
+            range: eff.range,
+            lastTargetId: lastTargets.get(tower.id),
+          }, (enemy) =>
+            !segmentCrossesObstacles(
+              tower.x,
+              tower.z,
+              enemy.x,
+              enemy.z,
+              lineOfSightObstacles
+            )
+          );
+
+        const currentYaw = turretYaws.get(tower.id) ?? 0;
+        let desiredYaw = currentYaw;
+        let steppedYaw = currentYaw;
+        if (pickedTarget) {
+          desiredYaw = yawToward(tower.x, tower.z, pickedTarget.x, pickedTarget.z);
+          steppedYaw = stepYaw(currentYaw, desiredYaw, turnStep);
+          turretYaws.set(tower.id, steppedYaw);
+          const node = turretNodes.get(tower.id);
+          if (node) {
+            node.rotation.y = steppedYaw;
+          }
+        }
+
+        // A shot only leaves the barrel once it actually points at the enemy:
+        // while the turret is still swinging (outside the tolerance arc) the
+        // tower waits, so a projectile never arcs sideways off a tower that
+        // has not finished turning.
+        if (
+          pickedTarget &&
+          Math.abs(normalizeAngleDelta(desiredYaw - steppedYaw)) >
+            TOWER_AIM_TOLERANCE
+        ) {
+          return;
+        }
 
         const lastFireTime = fireTimes.get(tower.id) ?? 0;
         const timeSinceLastFire = currentTime - lastFireTime;
         if (timeSinceLastFire < tower.fireRate) return;
 
-        const towerConfig = towerTypes?.[tower.type];
-        if (!towerConfig) return;
-
-        const eff = getEffectiveTowerCombatStats(
-          tower,
-          towers,
-          towerTypes ?? {}
-        );
-
-        // A tower can only shoot at enemies it has line of sight on: an
-        // enemy behind a static building or the base is skipped so the tower
-        // falls back to the next-best candidate it can actually hit. Towers
-        // do not block each other's shots.
-        const pickedTarget = pickTowerTarget(enemies, tower.targeting, {
-          x: tower.x,
-          z: tower.z,
-          range: eff.range,
-          lastTargetId: lastTargets.get(tower.id),
-        }, (enemy) =>
-          !segmentCrossesObstacles(
-            tower.x,
-            tower.z,
-            enemy.x,
-            enemy.z,
-            lineOfSightObstacles
-          )
-        );
-
-        if (!pickedTarget) return;
+        if (!towerConfig || !pickedTarget) return;
 
         // A piercing laser re-aims at the furthest enemy in the beam, so the
         // projectile (and the focused tower's memory) follow that re-aim.
@@ -316,14 +423,36 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
           firedTarget.pathIndex,
           firedTarget.pathProgress
         );
-        const emitterAlongNormal =
-          tower.type === "laser" ? towerHeight * 0.5 : towerHeight * 0.7;
-        const startWorld = flatCombatPointToWorldPosition(
-          tower.x,
-          tower.z,
-          emitterAlongNormal,
-          planetRadius
-        );
+
+        // The shot (and the laser beam, and the fire sound) leave the barrel
+        // tip, not the tower centre, so the muzzle is transformed from the
+        // turret node's rest position by the node's live world matrix — which
+        // already carries the model fit scale, base recentering, planet
+        // curvature, and the turret's current aim. Without a registered node
+        // (model still loading / primitive fallback) fall back to the old
+        // centre emitter. The result is a module scratch vector, read into the
+        // projectile and the fire event before the next tower reuses it.
+        const startWorld = _muzzleWorld;
+        const muzzleSpec = tower.muzzle?.muzzle;
+        const muzzleNode = turretNodes.get(tower.id);
+        if (muzzleSpec && muzzleNode) {
+          // `localToWorld` refreshes the node's world matrix from its current
+          // rotation (set by the aim pass this frame) plus its parents', so the
+          // muzzle reads this frame's aim, not last frame's.
+          _muzzleLocal.set(muzzleSpec.x, muzzleSpec.y, muzzleSpec.z);
+          muzzleNode.localToWorld(_muzzleLocal);
+          startWorld.copy(_muzzleLocal);
+        } else {
+          const emitterAlongNormal =
+            tower.type === "laser" ? towerHeight * 0.5 : towerHeight * 0.7;
+          flatCombatPointToWorldPosition(
+            tower.x,
+            tower.z,
+            emitterAlongNormal,
+            planetRadius,
+            startWorld
+          );
+        }
         const targetWorld = flatCombatPointToWorldPosition(
           firedTarget.x,
           firedTarget.z,
@@ -390,6 +519,7 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
                 effectiveRange={eff.range}
                 isSelected={selectedTower?.id === tower.id}
                 onClick={() => onTowerClick?.(tower)}
+                onTurretNode={onTurretNode}
               />
             );
           })}

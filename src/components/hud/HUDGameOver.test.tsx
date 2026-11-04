@@ -41,6 +41,8 @@ const makeTowerConfig = (id: TowerType, name: string): TowerConfig =>
     projectileSpeed: 10,
     color: "#fff",
     description: "",
+    model: { url: "assets/models/tower_basic.glb", node: "Tower_Basic_ROOT" },
+    muzzle: { turretNode: "Azimuth", muzzle: { x: 0, y: 0.3731, z: 1.071 } },
   }) as TowerConfig;
 
 const makeEnemyConfig = (id: EnemyType, name: string): EnemyConfig =>

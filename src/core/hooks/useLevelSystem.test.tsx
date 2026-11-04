@@ -30,6 +30,8 @@ const makeTowerConfig = (id: TowerType, cost: number): TowerConfig => ({
   projectileSpeed: 5,
   color: "#fff",
   description: "",
+  model: { url: "assets/models/tower_basic.glb", node: "Tower_Basic_ROOT" },
+  muzzle: { turretNode: "Azimuth", muzzle: { x: 0, y: 0.3731, z: 1.071 } },
 });
 
 const makeTower = (id: number, gridX: number, gridZ: number): Tower => ({
@@ -45,6 +47,8 @@ const makeTower = (id: number, gridX: number, gridZ: number): Tower => ({
   projectileSpeed: 5,
   color: "#fff",
   description: "",
+  model: { url: "assets/models/tower_basic.glb", node: "Tower_Basic_ROOT" },
+  muzzle: { turretNode: "Azimuth", muzzle: { x: 0, y: 0.3731, z: 1.071 } },
   lastFireTime: 0,
   gridX,
   gridZ,

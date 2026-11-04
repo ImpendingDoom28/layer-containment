@@ -111,6 +111,25 @@ export type PathWaypoint = {
   z: number;
 };
 
+// The 3D model a tower type renders, referenced from the game config
+// (`public/configs/game.json`).
+export type TowerModelSpec = {
+  /** Relative GLB URL, served from `public/` at the app root. */
+  url: string;
+  /** Name of the model root node inside the GLB. */
+  node: string;
+};
+
+// The rotating part of a tower model and where its barrel tip sits at rest
+// (the muzzle the shot, beam, and fire sound leave). `turretNode` is the node
+// rotated toward the target at runtime; `muzzle` is the barrel tip in the
+// turret node's local frame at rest, or `null` for a tower that never fires
+// (the relay, whose "Azimuth003" is an empty pivot).
+export type TowerMuzzleSpec = {
+  turretNode?: string;
+  muzzle: { x: number; y: number; z: number } | null;
+};
+
 // Tower configuration
 export type TowerConfig = {
   id: TowerType;
@@ -131,6 +150,12 @@ export type TowerConfig = {
 
   color: string;
   description: string;
+
+  /** The 3D model body this tower type renders. */
+  model: TowerModelSpec;
+  /** The rotating turret node and its rest muzzle (the shot origin). */
+  muzzle: TowerMuzzleSpec;
+
   topShape?: "cone" | "sphere" | "cylinder" | "flat" | "coil";
   bodyWidthScale?: number;
   topScale?: number;

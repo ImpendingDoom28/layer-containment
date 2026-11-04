@@ -15,6 +15,8 @@ const relayTemplate: TowerConfig = {
   projectileSpeed: 0,
   color: "#fff",
   description: "",
+  model: { url: "assets/models/tower_relay.glb", node: "Tower_Relay_ROOT" },
+  muzzle: { muzzle: null },
   relayNeighborDamageBonusFraction: 0.15,
   relayNeighborRangeBonusFraction: 0.08,
   relayDiminishingFactor: 0.5,
@@ -32,6 +34,8 @@ const basicTemplate: TowerConfig = {
   projectileSpeed: 10,
   color: "#fff",
   description: "",
+  model: { url: "assets/models/tower_basic.glb", node: "Tower_Basic_ROOT" },
+  muzzle: { turretNode: "Azimuth", muzzle: { x: 0, y: 0.3731, z: 1.071 } },
 };
 
 const towerTypes: Record<string, TowerConfig> = {

@@ -210,6 +210,18 @@
       "description": "Area damage tower",
       "fireRate": 3,
       "id": "aoe",
+      "model": {
+        "node": "Tower_AOE_ROOT",
+        "url": "assets/models/tower_aoe.glb"
+      },
+      "muzzle": {
+        "muzzle": {
+          "x": -0.194,
+          "y": 0.386,
+          "z": 0.4025
+        },
+        "turretNode": "Azimuth001"
+      },
       "name": "AOE Tower",
       "projectileSpeed": 10,
       "projectileType": "aoe",
@@ -226,6 +238,18 @@
       "description": "Fast firing single-target tower",
       "fireRate": 1,
       "id": "basic",
+      "model": {
+        "node": "Tower_Basic_ROOT",
+        "url": "assets/models/tower_basic.glb"
+      },
+      "muzzle": {
+        "muzzle": {
+          "x": 0,
+          "y": 0.3731,
+          "z": 1.071
+        },
+        "turretNode": "Azimuth"
+      },
       "name": "Basic Tower",
       "projectileSpeed": 15,
       "projectileType": "single",
@@ -244,6 +268,18 @@
       "fireRate": 1,
       "id": "chain",
       "maxChainHops": 3,
+      "model": {
+        "node": "Tower_Chain_ROOT",
+        "url": "assets/models/tower_chain.glb"
+      },
+      "muzzle": {
+        "muzzle": {
+          "x": -0.0092,
+          "y": 0.764,
+          "z": 1.0387
+        },
+        "turretNode": "Field_Array"
+      },
       "name": "Chain Lightning",
       "projectileSpeed": 14,
       "projectileType": "chain",
@@ -261,6 +297,18 @@
       "fireRate": 2,
       "id": "laser",
       "maxPierce": 5,
+      "model": {
+        "node": "Tower_Laser_ROOT",
+        "url": "assets/models/tower_laser.glb"
+      },
+      "muzzle": {
+        "muzzle": {
+          "x": 0,
+          "y": 0.3761,
+          "z": 1.1725
+        },
+        "turretNode": "Azimuth002"
+      },
       "name": "Laser Tower",
       "projectileSpeed": 0,
       "projectileType": "beam",
@@ -277,6 +325,13 @@
       "description": "Buffs adjacent combat towers: +damage and +range (extra relays stack with diminishing returns). Does not attack.",
       "fireRate": 1,
       "id": "relay",
+      "model": {
+        "node": "Tower_Relay_ROOT",
+        "url": "assets/models/tower_relay.glb"
+      },
+      "muzzle": {
+        "muzzle": null
+      },
       "name": "Relay Tower",
       "projectileSpeed": 0,
       "projectileType": "single",
@@ -296,6 +351,18 @@
       "description": "Slows enemies on hit",
       "fireRate": 0.8,
       "id": "slow",
+      "model": {
+        "node": "Tower_Slow_ROOT",
+        "url": "assets/models/tower_slow.glb"
+      },
+      "muzzle": {
+        "muzzle": {
+          "x": 0,
+          "y": 0.5511,
+          "z": 0.6325
+        },
+        "turretNode": "Azimuth004"
+      },
       "name": "Slow Tower",
       "projectileSpeed": 10,
       "projectileType": "single",

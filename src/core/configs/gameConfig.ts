@@ -44,6 +44,20 @@ const enemyUpgradeIdSchema = z.enum([
   "missingOut",
 ]);
 
+const towerModelSchema = z.object({
+  url: z.string(),
+  node: z.string(),
+});
+const muzzlePointSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+  z: z.number(),
+});
+const towerMuzzleSchema = z.object({
+  turretNode: z.string().optional(),
+  muzzle: muzzlePointSchema.nullable(),
+});
+
 const towerConfigSchema: z.ZodType<TowerConfig> = z.object({
   id: towerTypeSchema,
   name: z.string(),
@@ -60,6 +74,8 @@ const towerConfigSchema: z.ZodType<TowerConfig> = z.object({
   projectileSpeed: z.number(),
   color: z.string(),
   description: z.string(),
+  model: towerModelSchema,
+  muzzle: towerMuzzleSchema,
   topShape: z.enum(["cone", "sphere", "cylinder", "flat", "coil"]).optional(),
   bodyWidthScale: z.number().optional(),
   topScale: z.number().optional(),

@@ -42,7 +42,8 @@ export const pickTowerTarget = (
   const candidates: Enemy[] = [];
   for (const enemy of enemies) {
     if (enemy.health <= 0) continue;
-    if (distance2D(params.x, params.z, enemy.x, enemy.z) > params.range) continue;
+    if (distance2D(params.x, params.z, enemy.x, enemy.z) > params.range)
+      continue;
     if (!isVisible(enemy)) continue;
     candidates.push(enemy);
   }
@@ -104,3 +105,21 @@ const pickNearestEnemy = (
   }
   return best;
 };
+
+/**
+ * Whether a previously picked (cached) target is no longer shootable: dead,
+ * out of range, or behind an obstacle. Towers re-pick only when this flips
+ * (or the re-pick interval elapses), so the per-frame aim pass can reuse the
+ * cached target instead of re-scanning every enemy.
+ */
+export const isTargetStale = (
+  target: Enemy | null,
+  x: number,
+  z: number,
+  range: number,
+  isVisible: (enemy: Enemy) => boolean
+): boolean =>
+  target === null ||
+  target.health <= 0 ||
+  distance2D(x, z, target.x, target.z) > range ||
+  !isVisible(target);

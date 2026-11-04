@@ -1,7 +1,7 @@
 import { useThree } from "@react-three/fiber";
 import ReactThreeTestRenderer from "@react-three/test-renderer";
 import { beforeEach, describe, expect, it } from "vitest";
-import { Object3D, Sprite } from "three";
+import { Object3D, Sprite, Vector3 } from "three";
 
 import { SimulationClockProvider } from "../../../core/contexts/SimulationClockContext";
 import { useGameStore } from "../../../core/stores/useGameStore";
@@ -21,13 +21,23 @@ import { TowerFireFX } from "./TowerFireFX";
 let sceneClock: { elapsedTime: number };
 
 const TOWER_ID = 42;
+const MUZZLE = { x: 0, y: 0.37, z: 1.07 };
 const tower: TowerInstance = {
   id: TOWER_ID,
   type: "basic",
   color: "#3b82f6",
-  muzzle: { muzzle: { x: 0, y: 0.37, z: 1.07 } },
+  muzzle: { muzzle: MUZZLE },
   fireRate: 1,
 } as TowerInstance;
+
+// The unit direction the barrel should kick toward (the −muzzle direction,
+// i.e. from the tip toward the base) and the muzzle distance.
+const KICK_DIRECTION = new Vector3(-MUZZLE.x, -MUZZLE.y, -MUZZLE.z).normalize();
+const MUZZLE_LENGTH = new Vector3(MUZZLE.x, MUZZLE.y, MUZZLE.z).length();
+// The recoil constants (fraction of the muzzle distance, bottom scale) are
+// mirrored here so the assertions stay exact.
+const PULLBACK_FRACTION = 0.15;
+const MIN_SCALE = 0.95;
 
 // Captures the scene clock so a test can drive raw elapsed time by writing to
 // it directly (the test renderer never advances the clock on its own).
@@ -60,7 +70,7 @@ const createHarness = async () => {
       />
     </SimulationClockProvider>
   );
-  return { renderer, turret, barrel, barrelRef };
+  return { renderer, turret, barrel };
 };
 
 const getSprite = (turret: Object3D): Sprite => {
@@ -110,30 +120,39 @@ describe("TowerFireFX", () => {
     }
   });
 
-  it("recoils only the barrel (dip + 0.95×) on a shot and springs back", async () => {
+  it("recoils only the barrel: it kicks back toward the base and shrinks on the shot, then springs back", async () => {
     const { renderer, turret, barrel } = await createHarness();
     try {
       await advanceFrame(renderer, 0);
-      expect(barrel.rotation.x).toBe(0);
+      expect(barrel.position.length()).toBeCloseTo(0, 5);
       expect(barrel.scale.x).toBeCloseTo(1, 5);
+      expect(turret.position.length()).toBeCloseTo(0, 5);
       expect(turret.rotation.x).toBe(0);
       expect(turret.scale.x).toBeCloseTo(1, 5);
 
       await ReactThreeTestRenderer.act(async () => {
         emitFire(TOWER_ID);
       });
-      // On the shot's frame the barrel dips (rotates down) and scales to
-      // 0.95×…
+      // On the shot's frame the barrel has kicked back a fraction of the
+      // muzzle distance along the tip → base axis and shrunk to 0.95×…
       await advanceFrame(renderer, 1);
-      expect(barrel.rotation.x).toBeGreaterThan(0);
-      expect(barrel.scale.x).toBeCloseTo(0.95, 5);
+      const displacement = new Vector3().copy(barrel.position);
+      expect(displacement.length()).toBeCloseTo(
+        MUZZLE_LENGTH * PULLBACK_FRACTION,
+        2
+      );
+      expect(displacement.normalize().dot(KICK_DIRECTION)).toBeGreaterThan(
+        0.999
+      );
+      expect(barrel.scale.x).toBeCloseTo(MIN_SCALE, 5);
       // …and the rest of the turret is left untouched.
+      expect(turret.position.length()).toBeCloseTo(0, 5);
       expect(turret.rotation.x).toBe(0);
       expect(turret.scale.x).toBeCloseTo(1, 5);
 
       // By the end of the recoil the barrel is back at rest.
       await advanceFrame(renderer, 1.3);
-      expect(barrel.rotation.x).toBe(0);
+      expect(barrel.position.length()).toBeCloseTo(0, 5);
       expect(barrel.scale.x).toBeCloseTo(1, 5);
     } finally {
       renderer.unmount();
@@ -144,20 +163,36 @@ describe("TowerFireFX", () => {
     const { renderer, barrel } = await createHarness();
     try {
       // Give the barrel a non-identity rest pose (as a fitted model might
-      // carry) so the punch has to be relative to it.
-      barrel.rotation.x = 0.2;
+      // carry) so the kick has to be relative to it.
+      const rest = { x: 0.05, y: -0.1, z: 0 };
+      barrel.position.set(rest.x, rest.y, rest.z);
       barrel.scale.setScalar(2);
       await advanceFrame(renderer, 0);
 
       await ReactThreeTestRenderer.act(async () => {
         emitFire(TOWER_ID);
       });
+      // The kick is relative to the rest position (a fraction of the muzzle
+      // distance scaled by the rest scale) and the shrink scales the rest
+      // scale.
       await advanceFrame(renderer, 1);
-      expect(barrel.rotation.x).toBeCloseTo(0.3, 5);
-      expect(barrel.scale.x).toBeCloseTo(1.9, 5);
+      const displacement = new Vector3()
+        .copy(barrel.position)
+        .sub(new Vector3(rest.x, rest.y, rest.z));
+      expect(displacement.length()).toBeCloseTo(
+        MUZZLE_LENGTH * PULLBACK_FRACTION * 2,
+        2
+      );
+      expect(displacement.normalize().dot(KICK_DIRECTION)).toBeGreaterThan(
+        0.999
+      );
+      expect(barrel.scale.x).toBeCloseTo(MIN_SCALE * 2, 5);
 
+      // Back at exactly the (non-identity) rest pose when done.
       await advanceFrame(renderer, 1.3);
-      expect(barrel.rotation.x).toBeCloseTo(0.2, 5);
+      expect(barrel.position.x).toBeCloseTo(rest.x, 5);
+      expect(barrel.position.y).toBeCloseTo(rest.y, 5);
+      expect(barrel.position.z).toBeCloseTo(rest.z, 5);
       expect(barrel.scale.x).toBeCloseTo(2, 5);
     } finally {
       renderer.unmount();
@@ -175,7 +210,7 @@ describe("TowerFireFX", () => {
       });
       await advanceFrame(renderer, 1);
       expect(sprite.visible).toBe(false);
-      expect(barrel.rotation.x).toBe(0);
+      expect(barrel.position.length()).toBeCloseTo(0, 5);
       expect(barrel.scale.x).toBeCloseTo(1, 5);
     } finally {
       renderer.unmount();

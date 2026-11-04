@@ -6,6 +6,7 @@ import {
   Color,
   Sprite,
   SpriteMaterial,
+  Vector3,
   type Object3D,
 } from "three";
 
@@ -22,13 +23,15 @@ const FLASH_DURATION = 0.07;
 const FLASH_OPACITY = 0.9;
 const FLASH_SIZE = 0.22;
 
-// The recoil punch: only the barrel (the turret's barrel node) dips and scales
-// down on the shot, then springs back to rest over RECOIL_DURATION on an
-// ease-out curve (fast recovery, soft settle, exactly at rest when done).
-// The rest of the turret stays put, so the tower does not lurch as a whole.
-// The scale bottom is the 0.95× of the spec.
+// The recoil punch: only the barrel (the turret's barrel node) kicks back
+// toward its base along the muzzle axis and shrinks on the shot, then springs
+// back over RECOIL_DURATION on an ease-out curve (fast recovery, soft settle,
+// exactly at rest when done). The rest of the turret stays put, so the tower
+// does not lurch as a whole. The pullback is a fraction of the barrel length
+// (the muzzle distance) so short and long barrels both read as the same kick,
+// and the shrink bottoms out at RECOIL_MIN_SCALE × the rest scale.
 const RECOIL_DURATION = 0.18;
-const RECOIL_DIP = 0.1;
+const RECOIL_PULLBACK_FRACTION = 0.15;
 const RECOIL_MIN_SCALE = 0.95;
 
 // One radial-gradient texture shared by every tower's flash sprite (a canvas
@@ -69,8 +72,8 @@ type TowerFireFXProps = {
 /**
  * Per-tower firing feedback, driven by the `TOWER_FIRE` game event: a brief
  * additive muzzle-flash sprite at the barrel tip and a one-shot recoil punch
- * (the barrel dips and scales to 0.95×, then springs back; the rest of the
- * turret stays put).
+ * (the barrel kicks back toward its base along the muzzle axis and shrinks,
+ * then springs back; the rest of the turret stays put).
  *
  * Everything animates in `useFrame` by mutation (no per-shot React state):
  * the event only flips a flag the frame loop consumes, so a shot costs one
@@ -97,11 +100,18 @@ export const TowerFireFX: FC<TowerFireFXProps> = ({
   // This FX's own scene group: the flash sprite's fallback anchor while the
   // model is still loading (no turret node to parent to yet).
   const fxGroupRef = useRef<Object3D>(null);
-  // The barrel's rest transform, captured the first frame the barrel exists
-  // so the recoil springs back to exactly the model's rest pose.
-  const barrelRestRef = useRef<{ rotationX: number; scale: number } | null>(
-    null
-  );
+  // The barrel's rest transform (position + scale), captured the first frame
+  // the barrel exists so the recoil springs back to exactly the model's rest
+  // pose (a fitted model's barrel may carry a non-identity rest transform).
+  const barrelRestRef = useRef<{
+    position: Vector3;
+    scale: number;
+  } | null>(null);
+  // The per-tower recoil offset (a unit axis toward the base plus a length
+  // in the barrel's rest scale), derived from the muzzle point on the first
+  // shot. The muzzle point is in the turret node's local frame, and the
+  // barrel's rest scale is 1, so it is also valid in the barrel's frame.
+  const recoilVecRef = useRef<{ axis: Vector3; length: number } | null>(null);
 
   // Per-tower muzzle-flash sprite: the radial texture is shared, the material
   // is per-tower (each tower's flash decays on its own shot).
@@ -181,31 +191,56 @@ export const TowerFireFX: FC<TowerFireFXProps> = ({
       }
     }
 
-    // Recoil punch on the barrel only: dip + 0.95× scale on the shot,
-    // springing back on an ease-out cubic (fast recovery, soft settle,
-    // exactly at rest when done). The rest of the turret is untouched.
+    // Recoil punch on the barrel only: it kicks back toward its base along
+    // the muzzle axis and shrinks on the shot, then springs back on an
+    // ease-out cubic (fast recovery, soft settle, exactly at rest when done).
+    // The rest of the turret is untouched.
     const recoilActive =
       !reducedMotion && barrel !== null && ft < RECOIL_DURATION;
     if (recoilActive) {
       if (barrelRestRef.current === null) {
-        barrelRestRef.current = {
-          rotationX: barrel.rotation.x,
+        const muzzle = tower.muzzle?.muzzle;
+        const rest = {
+          position: barrel.position.clone(),
           scale: barrel.scale.x,
         };
+        barrelRestRef.current = rest;
+        if (muzzle) {
+          const axis = new Vector3(-muzzle.x, -muzzle.y, -muzzle.z);
+          const length = axis.length() * RECOIL_PULLBACK_FRACTION * rest.scale;
+          if (length > 0) axis.normalize();
+          recoilVecRef.current = { axis, length };
+        }
       }
       const rest = barrelRestRef.current;
+      const recoil = recoilVecRef.current;
       const p = ft / RECOIL_DURATION;
       const ease = 1 - (1 - p) ** 3;
-      barrel.rotation.x = rest.rotationX + RECOIL_DIP * (1 - ease);
+      if (recoil) {
+        // axis points from the tip toward the base (−muzzle), so adding the
+        // offset pulls the tip back; (1 − ease) is 1 on the shot and → 0 as
+        // it springs to rest.
+        const kick = recoil.length * (1 - ease);
+        barrel.position.set(
+          rest.position.x + recoil.axis.x * kick,
+          rest.position.y + recoil.axis.y * kick,
+          rest.position.z + recoil.axis.z * kick
+        );
+      }
       barrel.scale.setScalar(
         rest.scale * (RECOIL_MIN_SCALE + (1 - RECOIL_MIN_SCALE) * ease)
       );
     } else if (barrel && barrelRestRef.current) {
-      if (barrel.rotation.x !== barrelRestRef.current.rotationX) {
-        barrel.rotation.x = barrelRestRef.current.rotationX;
+      const rest = barrelRestRef.current;
+      if (
+        barrel.position.x !== rest.position.x ||
+        barrel.position.y !== rest.position.y ||
+        barrel.position.z !== rest.position.z
+      ) {
+        barrel.position.copy(rest.position);
       }
-      if (barrel.scale.x !== barrelRestRef.current.scale) {
-        barrel.scale.setScalar(barrelRestRef.current.scale);
+      if (barrel.scale.x !== rest.scale) {
+        barrel.scale.setScalar(rest.scale);
       }
     }
 

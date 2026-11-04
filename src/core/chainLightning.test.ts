@@ -16,6 +16,11 @@ const mkTower = (): Tower => ({
   projectileSpeed: 10,
   color: "#fff",
   description: "",
+  model: { url: "assets/models/tower_chain.glb", node: "Tower_Chain_ROOT" },
+  muzzle: {
+    turretNode: "Field_Array",
+    muzzle: { x: -0.0092, y: 0.764, z: 1.0387 },
+  },
   gridX: 0,
   gridZ: 0,
   x: 0,

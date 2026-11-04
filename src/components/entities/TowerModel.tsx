@@ -9,8 +9,7 @@ import {
   type Object3D,
 } from "three";
 
-import { TOWER_MODELS, type TowerModelSpec } from "../../constants/models";
-import type { TowerType } from "../../core/types/game";
+import type { TowerModelSpec, TowerType } from "../../core/types/game";
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import { ModelLoader } from "./ModelLoader";
 
@@ -165,6 +164,8 @@ const getPreviewMaterials = (
 
 type TowerModelProps = {
   type: TowerType;
+  /** The 3D model this tower type renders, from the game config. */
+  model: TowerModelSpec;
   size: number;
   /**
    * Which look to render: the placed tower's own materials ("solid"), or the
@@ -188,11 +189,11 @@ type TowerModelProps = {
  * footprint, recenter the base, and ground it) and, for the placement preview,
  * re-points the ghost clone's materials at a translucent (optionally red)
  * variant so the real model reads as the draggable ghost. `size` is the target
- * base footprint; `type` picks the model from `TOWER_MODELS`.
+ * base footprint; `model` is the model to render (from the game config), and
+ * `type` keys the per-(type, variant) ghost-material cache.
  */
 export const TowerModel: FC<TowerModelProps> = memo(
-  ({ type, size, variant = "solid", fallback, onModelReady }) => {
-    const model: TowerModelSpec = TOWER_MODELS[type];
+  ({ type, model, size, variant = "solid", fallback, onModelReady }) => {
     const prepare = useCallback(
       (source: Object3D) => {
         const group = prepareTowerModel(source, size);

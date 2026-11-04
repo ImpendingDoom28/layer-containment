@@ -58,6 +58,10 @@ import { getAreModelsLoaded } from "../../constants/models";
 import { world } from "../../core/ecs/world";
 import { getRunStats } from "../../core/ecs/selectors/runStats";
 import { SimulationClockProvider } from "../../core/contexts/SimulationClockContext";
+import {
+  towerTypesSelector,
+  useGameStore,
+} from "../../core/stores/useGameStore";
 
 type GamePageProps = {
   onOpenLevelEditor: () => void;
@@ -76,19 +80,28 @@ export const GamePage: FC<GamePageProps> = ({
 
   useMenuParallax();
 
-  // The loading screen also waits for the 3D models so the first visible frame
-  // is a fully-populated scene rather than an empty board that fills in as the
-  // models stream in. Every model is preloaded at boot (see constants/models),
-  // so this resolves exactly once for the session.
+  // The tower model URLs live in the game config (`towerTypes.<type>.model`),
+  // which loads asynchronously, so they are only known once the config has
+  // loaded. The loading screen waits for the models (the first visible frame
+  // must be a fully-populated scene, not an empty board that fills in as the
+  // models stream in): once `towerTypes` is available, kick off and await the
+  // loads. The enemy models are already preloaded at boot (see
+  // constants/models); the tower loads start here. `getAreModelsLoaded`
+  // is a session singleton, so this resolves exactly once.
+  const towerTypes = useGameStore(towerTypesSelector);
   useEffect(() => {
+    if (!towerTypes) return;
     let active = true;
-    getAreModelsLoaded().then(() => {
+    const towerModelUrls = Object.values(towerTypes).map(
+      (tower) => tower.model.url
+    );
+    getAreModelsLoaded(towerModelUrls).then(() => {
       if (active) setAreModelsReady(true);
     });
     return () => {
       active = false;
     };
-  }, []);
+  }, [towerTypes]);
 
   const gameSystem = useGameSystem();
   const levelSystem = useLevelSystem();

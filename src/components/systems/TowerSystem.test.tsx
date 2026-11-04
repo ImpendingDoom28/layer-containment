@@ -20,8 +20,7 @@ import type {
   Tower,
   TowerConfig,
 } from "../../core/types/game";
-import { TowerSystem } from "./TowerSystem";
-import { TOWER_MUZZLES, TOWER_TURN_LAMBDA } from "../../constants/towerMuzzle";
+import { TowerSystem, TOWER_TURN_LAMBDA } from "./TowerSystem";
 import {
   flatCombatPointToWorldPosition,
   getPlanetRadius,
@@ -88,6 +87,8 @@ const basicConfig: TowerConfig = {
   projectileSpeed: 5,
   color: "#fff",
   description: "",
+  model: { url: "assets/models/tower_basic.glb", node: "Tower_Basic_ROOT" },
+  muzzle: { turretNode: "Azimuth", muzzle: { x: 0, y: 0.3731, z: 1.071 } },
 };
 
 const tower: Tower = {
@@ -586,7 +587,7 @@ describe("TowerSystem turret aim", () => {
         await advanceFrame(renderer, 1);
         expect(fireProjectile).toHaveBeenCalledTimes(1);
 
-        const muzzle = TOWER_MUZZLES.basic.muzzle!;
+        const muzzle = tower.muzzle!.muzzle!;
         const shot = fireProjectile.mock.calls[0][0];
         // The node is at the origin with identity orientation, so the world
         // barrel tip is the local rest muzzle.

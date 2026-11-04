@@ -4,7 +4,6 @@ import type { Group, Object3D } from "three";
 import { CylinderGeometry, MeshStandardMaterial } from "three";
 
 import type { Tower as TowerInstance } from "../../core/types/game";
-import { TOWER_MUZZLES } from "../../constants/towerMuzzle";
 import { GUIDebugInfo } from "../gui/GUIDebugInfo";
 import { RangeRing } from "./effects/RangeRing";
 import { TowerModel } from "./TowerModel";
@@ -104,10 +103,10 @@ export const Tower: FC<TowerProps> = memo(
           onTurretNode(tower.id, null);
           return;
         }
-        const spec = TOWER_MUZZLES[tower.type];
+        const turretNodeName = tower.muzzle?.turretNode;
         const turret =
-          spec.turretNode != null
-            ? object.getObjectByName(spec.turretNode)
+          turretNodeName != null
+            ? object.getObjectByName(turretNodeName)
             : undefined;
         onTurretNode(tower.id, turret ?? null);
       },
@@ -287,6 +286,7 @@ export const Tower: FC<TowerProps> = memo(
       >
         <TowerModel
           type={tower.type}
+          model={tower.model}
           size={tileSize * 0.9}
           variant={isPreview ? (isInvalidPlacement ? "invalid" : "preview") : "solid"}
           fallback={towerBody}

@@ -42,11 +42,6 @@ import {
   flatCombatPointToWorldPosition,
   getPlanetRadius,
 } from "../../utils/planetSurfaceMapping";
-import {
-  TOWER_AIM_TOLERANCE,
-  TOWER_MUZZLES,
-  TOWER_TURN_LAMBDA,
-} from "../../constants/towerMuzzle";
 import { getPositionAlongMultiplePaths } from "../../utils/pathUtils";
 import { GameEvent } from "../../core/types/enums/events";
 import type { TilePlacementState } from "../../utils/tilePlacement";
@@ -55,6 +50,16 @@ import { useSimulationClock } from "../../core/contexts/SimulationClockContext";
 // The base (`EndBuilding`) sits on a round platform of radius 0.4, so its
 // ground footprint half-extent is 0.4.
 const BASE_FOOTPRINT_HALF = 0.4;
+
+// A tower only fires once its barrel is within this angle (the shortest arc)
+// of the target, so a projectile never arcs sideways off a tower still
+// swinging around. 15 degrees.
+export const TOWER_AIM_TOLERANCE = Math.PI / 12;
+
+// Per-frame eased swing rate for the turret turning toward its target (the same
+// exponential ease the enemies use to turn their facing): `1 - exp(-lambda*dt)`
+// of the remaining arc per frame, so the swing decelerates as it converges.
+export const TOWER_TURN_LAMBDA = 8;
 
 // Wrap a yaw difference to the shortest arc in (-PI, PI], so comparing
 // e.g. -170 deg against +170 deg reads as a 20 deg turn, not 340.
@@ -428,7 +433,7 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
         // centre emitter. The result is a module scratch vector, read into the
         // projectile and the fire event before the next tower reuses it.
         const startWorld = _muzzleWorld;
-        const muzzleSpec = TOWER_MUZZLES[tower.type].muzzle;
+        const muzzleSpec = tower.muzzle?.muzzle;
         const muzzleNode = turretNodes.get(tower.id);
         if (muzzleSpec && muzzleNode) {
           // `localToWorld` refreshes the node's world matrix from its current

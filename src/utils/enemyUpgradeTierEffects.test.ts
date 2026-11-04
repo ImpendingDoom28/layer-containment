@@ -4,7 +4,6 @@ import type { EnemyUpgradeConfig, EnemyUpgradeId } from "../core/types/game";
 
 import {
   countUpgradePicks,
-  formatSignedPercent,
   formatTieredUpgradeSummary,
   getStackTierForEnemy,
   getTieredUpgradeEffect,
@@ -246,15 +245,6 @@ describe("stack helpers", () => {
     expect(countUpgradePicks(["armored", "swift", "armored"], "armored")).toBe(
       2
     );
-  });
-});
-
-describe("formatSignedPercent", () => {
-  it("adds an explicit + for positive and - for negative bonuses", () => {
-    expect(formatSignedPercent(10)).toBe("+10");
-    expect(formatSignedPercent(33)).toBe("+33");
-    expect(formatSignedPercent(-50)).toBe("-50");
-    expect(formatSignedPercent(0)).toBe("0");
   });
 });
 

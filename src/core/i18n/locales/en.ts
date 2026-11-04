@@ -168,9 +168,9 @@ export const en = {
   },
   upgrade: {
     title: "Empower Next Wave",
-    stackedBonus: "Stacked bonus: {{percent}}% gold",
-    goldThisPick: "{{percent}}% gold this pick",
-    bonusGold: "{{percent}}% gold",
+    stackedBonus: "Stacked bonus: +{{percent}}% gold",
+    goldThisPick: "+{{percent}}% gold this pick",
+    bonusGold: "+{{percent}}% gold",
     hp: "+{{percent}}% HP",
     speed: "+{{percent}}% speed",
     count: "+{{percent}}% enemies",

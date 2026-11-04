@@ -177,9 +177,9 @@ const ruValues = {
   },
   upgrade: {
     title: "Усиление следующей волны",
-    stackedBonus: "Накопленный бонус: {{percent}}% золота",
-    goldThisPick: "{{percent}}% золота за выбор",
-    bonusGold: "{{percent}}% золота",
+    stackedBonus: "Накопленный бонус: +{{percent}}% золота",
+    goldThisPick: "+{{percent}}% золота за выбор",
+    bonusGold: "+{{percent}}% золота",
     hp: "+{{percent}}% здоровья",
     speed: "+{{percent}}% скорости",
     count: "+{{percent}}% врагов",

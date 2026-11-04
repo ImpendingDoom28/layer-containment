@@ -6,7 +6,6 @@ import type {
   EnemyUpgradeStackTier,
 } from "../../core/types/game";
 import {
-  formatSignedPercent,
   getTierRoman,
   getTotalRewardBonusPercentForStack,
 } from "../../utils/enemyUpgradeTierEffects";
@@ -54,9 +53,7 @@ export const EnemyUpgradeRow: FC<EnemyUpgradeRowProps> = ({
       </UITypography>
       <UITypography variant="verySmall" className="text-muted-foreground">
         {t("upgrade.bonusGold", {
-          percent: formatSignedPercent(
-            getTotalRewardBonusPercentForStack(upgrade, stackTier)
-          ),
+          percent: getTotalRewardBonusPercentForStack(upgrade, stackTier),
         })}
       </UITypography>
     </div>

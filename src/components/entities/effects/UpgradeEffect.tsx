@@ -69,11 +69,37 @@ const STRAP_FADE_TEXTURE = createStrapFadeTexture();
 // One material per (color, opacity, intensity): every enemy sharing an
 // upgrade picks the same compiled program; per-enemy animation lives on the
 // meshes (scale/position/quaternion), never on the shared material. The
-// missing-out phantom is the single exception: its opacity pulses in sync
-// across all phantom enemies, so the pulse is a per-frame write on that one
-// shared material (its color is unique to the upgrade, so no other effect
-// shares it).
+// missing-out phantom is the exception: its opacity pulses each frame, so the
+// pulse is a per-frame write on its material. That write differs by tier, so
+// the phantom uses one material per tier (getGhostMaterial) rather than the
+// shared (color, opacity) cache.
 const materialCache = new Map<string, MeshStandardMaterial>();
+// The missing-out phantom animates opacity per frame, and each tier writes a
+// different value (tier widens + brightens the shell). Because the base
+// (color, opacity, intensity) is identical across tiers, a shared cache would
+// hand every tier the same material and the last frame write would win for all
+// of them — so each tier gets its own material instance instead.
+const GHOST_MATERIAL_BASE_OPACITY = 0.14;
+const GHOST_MATERIAL_EMISSIVE_INTENSITY = 1;
+const getGhostMaterial = (
+  color: string,
+  tier: number
+): MeshStandardMaterial => {
+  const key = `ghost|${color}|${tier}`;
+  let material = materialCache.get(key);
+  if (!material) {
+    material = new MeshStandardMaterial({
+      color,
+      emissive: color,
+      emissiveIntensity: GHOST_MATERIAL_EMISSIVE_INTENSITY,
+      transparent: true,
+      opacity: GHOST_MATERIAL_BASE_OPACITY,
+      depthWrite: false,
+    });
+    materialCache.set(key, material);
+  }
+  return material;
+};
 const getEmissiveMaterial = (
   color: string,
   opacity: number,
@@ -388,7 +414,10 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
             position={[0, enemySize * 0.5, 0]}
             scale={enemySize * 1.18}
             geometry={GLOW_SHELL_GEOMETRY}
-            material={getEmissiveMaterial(layout.missingOutColor, 0.14, 1)}
+            material={getGhostMaterial(
+              layout.missingOutColor,
+              layout.missingOutTier
+            )}
           />
         )}
 

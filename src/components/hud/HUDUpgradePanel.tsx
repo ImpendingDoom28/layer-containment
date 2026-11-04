@@ -28,6 +28,7 @@ import {
   useUpgradeStore,
 } from "../../core/stores/useUpgradeStore";
 import {
+  formatSignedPercent,
   formatTieredUpgradeSummary,
   getPickTierForUpgrade,
   getStackTierForEnemy,
@@ -147,7 +148,9 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
               variant="small"
               className="text-green-400 font-semibold"
             >
-              {t("upgrade.stackedBonus", { percent: bonusPercentage })}
+              {t("upgrade.stackedBonus", {
+                percent: formatSignedPercent(bonusPercentage),
+              })}
             </UITypography>
           )}
         </UICardHeader>
@@ -211,7 +214,9 @@ export const HUDUpgradePanel: FC<HUDUpgradePanelProps> = ({
                     style={{ color: upgrade.indicatorColor }}
                     variant="small"
                   >
-                    {t("upgrade.goldThisPick", { percent: rewardBonus })}
+                    {t("upgrade.goldThisPick", {
+                      percent: formatSignedPercent(rewardBonus),
+                    })}
                   </UITypography>
                 </UIButton>
               );

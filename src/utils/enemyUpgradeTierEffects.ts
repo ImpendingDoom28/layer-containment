@@ -84,6 +84,14 @@ export const getTierRewardBonusPercent = (
   );
 };
 
+/**
+ * Formats a reward-bonus percentage with an explicit sign: "+10" for a
+ * positive bonus and "-50" for a negative one (the i18n strings carry no
+ * literal "+", now that several upgrades pay negative gold).
+ */
+export const formatSignedPercent = (value: number): string =>
+  value > 0 ? `+${value}` : `${value}`;
+
 export const formatTieredUpgradeSummary = (
   config: EnemyUpgradeConfig,
   tier: EnemyUpgradeStackTier

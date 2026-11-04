@@ -52,6 +52,7 @@ import {
   getTotalRewardMultiplierFromStack,
   getUniqueUpgradeIdsInStackOrder,
 } from "../../utils/enemyUpgradeTierEffects";
+import { computeSpawnedReward } from "../../utils/enemyReward";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import { getTilePlacementState as getSharedTilePlacementState } from "../../utils/tilePlacement";
 import { useEntityIds } from "../contexts/EntityIdContext";
@@ -249,9 +250,9 @@ export const useLevelSystem = () => {
 
       // Gold scales with every pick taken (per-pick tier product), matching
       // the "Stacked bonus: +X% gold" total the upgrade UI promises.
-      const reward = Math.round(
-        enemyConfig.reward *
-          getTotalRewardMultiplierFromStack(applyUpgrades, enemyUpgrades)
+      const reward = computeSpawnedReward(
+        enemyConfig.reward,
+        getTotalRewardMultiplierFromStack(applyUpgrades, enemyUpgrades)
       );
 
       const uniqueUpgradeIds = getUniqueUpgradeIdsInStackOrder(applyUpgrades);

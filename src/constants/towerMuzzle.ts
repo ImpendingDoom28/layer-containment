@@ -18,7 +18,7 @@ export type TowerMuzzleSpec = {
   muzzle: { x: number; y: number; z: number } | null;
 };
 
-export const TOWER_MUZZLES = {
+export const TOWER_MUZZLES: Record<TowerType, TowerMuzzleSpec> = {
   basic: {
     turretNode: "Azimuth",
     muzzle: { x: 0, y: 0.3731, z: 1.071 },
@@ -43,7 +43,7 @@ export const TOWER_MUZZLES = {
     turretNode: "Field_Array",
     muzzle: { x: -0.0092, y: 0.764, z: 1.0387 },
   },
-} as const satisfies Record<TowerType, TowerMuzzleSpec>;
+};
 
 /**
  * A tower only fires once its turret is within this many degrees of the

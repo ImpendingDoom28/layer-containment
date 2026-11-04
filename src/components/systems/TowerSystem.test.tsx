@@ -20,11 +20,7 @@ import type {
   Tower,
   TowerConfig,
 } from "../../core/types/game";
-import {
-  TowerSystem,
-  normalizeAngleDelta,
-  yawToward,
-} from "./TowerSystem";
+import { TowerSystem } from "./TowerSystem";
 import { TOWER_MUZZLES, TOWER_TURN_LAMBDA } from "../../constants/towerMuzzle";
 import {
   flatCombatPointToWorldPosition,

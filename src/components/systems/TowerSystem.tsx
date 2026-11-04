@@ -176,13 +176,16 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     // would otherwise carry the previous level's fire timestamp, focused
     // target, or aim yaw. Clear the refs when the level (re)loads; the
     // per-frame prune below only drops ids that no longer exist, which a
-    // reused id does not.
+    // reused id does not. The node map is deliberately not cleared here:
+    // the `Tower`s of the new level register theirs in this same commit
+    // (child effects run before this one), so a clear would drop freshly
+    // registered nodes; a tower leaving the level unregisters its node via
+    // the `null` callback on unmount instead.
     useEffect(() => {
       if (isLevelConfigLoaded) {
         fireTimesRef.current.clear();
         lastTargetsRef.current.clear();
         turretYawsRef.current.clear();
-        turretNodesRef.current.clear();
       }
     }, [isLevelConfigLoaded]);
 

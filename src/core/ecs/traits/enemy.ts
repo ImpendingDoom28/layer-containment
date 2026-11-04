@@ -38,6 +38,7 @@ export type EnemyStateData = {
   upgradeStacks?: EnemyUpgradeStack[];
   regeneration?: number;
   slowResistance?: number;
+  dodgeChance?: number;
   nextHealPulseAt?: number;
   healPulse?: HealPulseConfig;
   /** Present on the Splitter: death spawns 2-4 weaker zero-reward children. */
@@ -118,6 +119,7 @@ export const toEnemySnapshot = (
   upgradeStacks: state.upgradeStacks,
   regeneration: state.regeneration,
   slowResistance: state.slowResistance,
+  dodgeChance: state.dodgeChance,
   nextHealPulseAt: state.nextHealPulseAt,
   healPulse: state.healPulse,
   split: state.split,

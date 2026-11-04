@@ -68,7 +68,11 @@ const STRAP_FADE_TEXTURE = createStrapFadeTexture();
 
 // One material per (color, opacity, intensity): every enemy sharing an
 // upgrade picks the same compiled program; per-enemy animation lives on the
-// meshes (scale/position/quaternion), never on the shared material.
+// meshes (scale/position/quaternion), never on the shared material. The
+// missing-out phantom is the single exception: its opacity pulses in sync
+// across all phantom enemies, so the pulse is a per-frame write on that one
+// shared material (its color is unique to the upgrade, so no other effect
+// shares it).
 const materialCache = new Map<string, MeshStandardMaterial>();
 const getEmissiveMaterial = (
   color: string,
@@ -117,6 +121,9 @@ type EffectLayout = {
   regenColor: string;
   hasSwift: boolean;
   swiftTier: number;
+  hasMissingOut: boolean;
+  missingOutTier: number;
+  missingOutColor: string;
 };
 
 const buildEffectLayout = (
@@ -140,6 +147,9 @@ const buildEffectLayout = (
     regenColor: FALLBACK_COLOR,
     hasSwift: false,
     swiftTier: 0,
+    hasMissingOut: false,
+    missingOutTier: 0,
+    missingOutColor: FALLBACK_COLOR,
   };
   for (const stack of upgradeStacks) {
     switch (stack.id) {
@@ -164,6 +174,11 @@ const buildEffectLayout = (
         layout.hasSwift = true;
         layout.swiftTier = stack.tier;
         break;
+      case "missingOut":
+        layout.hasMissingOut = true;
+        layout.missingOutTier = stack.tier;
+        layout.missingOutColor = colorOf(stack.id);
+        break;
       default:
         break;
     }
@@ -182,6 +197,9 @@ const buildEffectLayout = (
  *   particles that rise and fade out.
  * - Swift: white speed straps trailing behind the enemy along its travel
  *   direction (1/2/3 per tier).
+ * - Missing Out: a pale blue "phantom" shell hugging the body that pulses in
+ *   opacity (breathing between faint and visible) — the enemy keeps slipping
+ *   out of the line of fire.
  */
 export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
   ({ enemySize, upgradeStacks }) => {
@@ -190,6 +208,7 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
     const timeRef = useRef(0);
     const dirGroupRef = useRef<Group>(null);
     const glowRef = useRef<Mesh>(null);
+    const ghostRef = useRef<Mesh>(null);
     const ringRef = useRef<Mesh>(null);
     const strapRefs = useRef<(Mesh | null)[]>([]);
     const particleRefs = useRef<(Mesh | null)[]>([]);
@@ -208,6 +227,18 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
 
       if (layout.hasGlow && glowRef.current) {
         glowRef.current.scale.setScalar(enemySize * layout.glowScale * pulse);
+      }
+
+      if (layout.hasMissingOut && ghostRef.current) {
+        // The phantom "phases": opacity breathes on its own slower cycle and
+        // the shell swells with the same breath; tier widens the shell.
+        const ghostBreath = (1 + Math.sin(time * 3.2)) / 2;
+        ghostRef.current.scale.setScalar(
+          enemySize *
+            (1.18 + (layout.missingOutTier - 1) * 0.05 + ghostBreath * 0.04)
+        );
+        (ghostRef.current.material as MeshStandardMaterial).opacity =
+          0.08 + 0.12 * ghostBreath + (layout.missingOutTier - 1) * 0.03;
       }
 
       if (layout.hasRegen) {
@@ -348,6 +379,16 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
               layout.glowOpacity,
               1.2
             )}
+          />
+        )}
+
+        {layout.hasMissingOut && (
+          <mesh
+            ref={ghostRef}
+            position={[0, enemySize * 0.5, 0]}
+            scale={enemySize * 1.18}
+            geometry={GLOW_SHELL_GEOMETRY}
+            material={getEmissiveMaterial(layout.missingOutColor, 0.14, 1)}
           />
         )}
 

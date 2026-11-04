@@ -41,6 +41,7 @@ const copyEnemyFromRow = (
   enemy.upgradeStacks = state.upgradeStacks;
   enemy.regeneration = state.regeneration;
   enemy.slowResistance = state.slowResistance;
+  enemy.dodgeChance = state.dodgeChance;
   enemy.nextHealPulseAt = state.nextHealPulseAt;
   enemy.healPulse = state.healPulse;
   enemy.split = state.split;

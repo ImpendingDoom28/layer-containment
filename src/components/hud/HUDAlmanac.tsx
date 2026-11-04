@@ -356,6 +356,7 @@ const ALMANAC_UPGRADE_ICONS: Record<EnemyUpgradeId, IconName> = {
   slowResistance: "Zap",
   regenerating: "Heart",
   reinforcements: "Users",
+  missingOut: "Ghost",
 };
 
 type AlmanacUpgradeCardProps = {

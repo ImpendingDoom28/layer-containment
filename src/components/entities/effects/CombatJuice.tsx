@@ -16,6 +16,8 @@ import { FloatingTexts, type FloatingTextsHandle } from "./FloatingTexts";
 const MAX_ACTIVE_BURSTS = 8;
 const BURST_DURATION = 0.5;
 const REWARD_TEXT_HEIGHT = 0.45;
+// Matches the missing-out upgrade indicator color (public/configs/game.json).
+const DODGE_TEXT_COLOR = "#38bdf8";
 
 type DeathBurst = {
   id: number;
@@ -79,9 +81,27 @@ export const CombatJuice = memo(
         ]);
       };
 
+      const onEnemyDodged = (data: {
+        worldPosition: { x: number; y: number; z: number };
+      }) => {
+        const position = flatCombatPointToWorldPosition(
+          data.worldPosition.x,
+          data.worldPosition.z,
+          0.15,
+          planetRadius
+        );
+        floatingTextsRef.current?.spawn(
+          t("upgrade.dodgeMissed"),
+          [position.x, position.y + REWARD_TEXT_HEIGHT, position.z],
+          DODGE_TEXT_COLOR
+        );
+      };
+
       gameEvents.on(GameEvent.ENEMY_KILLED, onEnemyKilled);
+      gameEvents.on(GameEvent.ENEMY_DODGED, onEnemyDodged);
       return () => {
         gameEvents.off(GameEvent.ENEMY_KILLED, onEnemyKilled);
+        gameEvents.off(GameEvent.ENEMY_DODGED, onEnemyDodged);
       };
     }, [planetRadius, t, showRewardText]);
 

@@ -177,15 +177,17 @@ const ruValues = {
   },
   upgrade: {
     title: "Усиление следующей волны",
-    stackedBonus: "Накопленный бонус: +{{percent}}% золота",
-    goldThisPick: "+{{percent}}% золота за выбор",
-    bonusGold: "+{{percent}}% золота",
+    stackedBonus: "Накопленный бонус: {{percent}}% золота",
+    goldThisPick: "{{percent}}% золота за выбор",
+    bonusGold: "{{percent}}% золота",
     hp: "+{{percent}}% здоровья",
     speed: "+{{percent}}% скорости",
     count: "+{{percent}}% врагов",
     regen: "Регенерация: {{amount}} ХП/с",
     slowImmune: "Иммунитет к замедлению",
     slowResistance: "+{{percent}}% сопротивления замедлению",
+    dodge: "{{percent}}% шанс уклониться от урона башен",
+    dodgeMissed: "МИМО",
     selected: "Выбранные усиления",
     viewTitle: "Усиления врагов",
   },
@@ -382,6 +384,11 @@ const ruValues = {
       name: "Подкрепления",
       description:
         "Каждая волна поставляет на 20% больше врагов. Уровень 2: +40%, уровень 3: +65%.",
+    },
+    missingOut: {
+      name: "Уклончивость",
+      description:
+        "Враги с шансом 5% уклоняются от входящего урона башен. Ур. II: 10%, ур. III: 15%.",
     },
   },
   testingLevel: {

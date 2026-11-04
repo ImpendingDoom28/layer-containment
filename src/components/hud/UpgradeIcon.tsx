@@ -9,6 +9,7 @@ const UPGRADE_ICON_NAMES: Record<EnemyUpgradeId, IconName> = {
   slowResistance: "Zap",
   regenerating: "Heart",
   reinforcements: "Users",
+  missingOut: "Ghost",
 };
 
 type UpgradeIconProps = {

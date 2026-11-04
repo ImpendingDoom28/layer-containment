@@ -90,13 +90,13 @@ export const Tower: FC<TowerProps> = memo(
     ];
 
     const groupRef = useRef<Group>(null);
-    // The body (model or fallback) sits in this group so the firing feedback
-    // can clone it (body pulse) without reaching into the model internals.
-    const bodyContainerRef = useRef<Group>(null);
     // The model's rotating turret node, kept locally for the firing feedback
-    // (recoil punch + muzzle-flash parent); the same node is reported to the
-    // system, which owns its aim rotation.
+    // (muzzle-flash parent); the same node is reported to the system, which
+    // owns its aim rotation.
     const turretNodeRef = useRef<Object3D | null>(null);
+    // The barrel node inside the turret, kept locally for the firing feedback's
+    // recoil punch (the barrel dips; the rest of the turret stays put).
+    const barrelNodeRef = useRef<Object3D | null>(null);
     // The preview tower follows the cursor and is always inside the view, so a
     // zero margin (no grace band) is safe and keeps it from being culled.
     useFrustumCulling(groupRef, isPreview ? 0 : FRUSTUM_CULLING_MARGIN);
@@ -113,6 +113,10 @@ export const Tower: FC<TowerProps> = memo(
             : undefined;
         const node = turret ?? null;
         turretNodeRef.current = node;
+        barrelNodeRef.current =
+          node != null && tower.muzzle?.barrelNode != null
+            ? node.getObjectByName(tower.muzzle.barrelNode) ?? null
+            : null;
         onTurretNode?.(tower.id, node);
       },
       [isPreview, tower, onTurretNode]
@@ -289,24 +293,22 @@ export const Tower: FC<TowerProps> = memo(
               }
         }
       >
-        <group ref={bodyContainerRef}>
-          <TowerModel
-            type={tower.type}
-            model={tower.model}
-            size={tileSize * 0.9}
-            variant={isPreview ? (isInvalidPlacement ? "invalid" : "preview") : "solid"}
-            fallback={towerBody}
-            onModelReady={onModelReady}
-          />
-        </group>
-        {/* Firing feedback (muzzle flash, recoil, body pulse) is only for
-            placed towers: the placement preview never fires. */}
+        <TowerModel
+          type={tower.type}
+          model={tower.model}
+          size={tileSize * 0.9}
+          variant={isPreview ? (isInvalidPlacement ? "invalid" : "preview") : "solid"}
+          fallback={towerBody}
+          onModelReady={onModelReady}
+        />
+        {/* Firing feedback (muzzle flash + barrel recoil) is only for placed
+            towers: the placement preview never fires. */}
         {!isPreview && (
           <TowerFireFX
             tower={tower}
             color={tower.color}
-            bodyContainerRef={bodyContainerRef}
             turretNodeRef={turretNodeRef}
+            barrelNodeRef={barrelNodeRef}
             towerHeight={towerHeight}
           />
         )}

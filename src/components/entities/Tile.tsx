@@ -9,7 +9,7 @@ import {
 } from "react";
 
 import type { ThreeEvent } from "@react-three/fiber";
-import { Mesh, MeshStandardMaterial } from "three";
+import { Mesh, MeshStandardMaterial, Vector3 } from "three";
 
 import {
   flatFieldToSphereTilePose,
@@ -29,6 +29,8 @@ import {
 import { hashGrid2D } from "../../core/tileGridHash";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import { createPlanetTileMaterial } from "../../utils/planetTileMaterial";
+import { createWaterMaterial } from "../../utils/waterMaterial";
+import { useWaterClock } from "../../core/contexts/WaterClockContext";
 import { freezeSubtree } from "../../utils/freezeSubtree";
 
 type PlacementHoverKey = "idle" | "canPlace" | "cannotPlace";
@@ -60,7 +62,29 @@ export const Tile: FC<TileProps> = memo(
     const tileSize = useGameStore(tileSizeSelector);
     const gridSize = useLevelStore(gridSizeSelector);
     const pathYOffset = useGameStore(pathYOffsetSelector);
+    const waterClock = useWaterClock();
 
+    const placementHoverKey = useMemo<PlacementHoverKey>(() => {
+      if (!isHovered) return "idle";
+      return canPlace ? "canPlace" : "cannotPlace";
+    }, [isHovered, canPlace]);
+
+    // Water tiles get a subdivided box (8×8 top-face grid) so the vertex
+    // displacement has enough vertices to swell; the 4 corners of a plain box
+    // could only tilt. Non-water (or hover) tiles stay a single-segment box.
+    const WATER_AMPLITUDE = 0.05;
+    const WATER_TOP_SEGMENTS = 8;
+    // Water sits below the land plane so the tiles read as a recessed pool:
+    // the land edge casts a rim on the surface, and the swell moves inside
+    // the basin instead of poking through the shoreline. The offset must stay
+    // above the max swell (amplitude × max |waterHeight| ≈ 0.034) so the
+    // surface never crosses the land plane; 0.05 leaves a 0.016 margin.
+    const WATER_BED_OFFSET = 0.05;
+    // The radial recess moves the mesh, not the slab's local coordinates, so
+    // the top face is still at local y = pathYOffset/2 — that is what the
+    // material's top-face mask keys off.
+    const waterTopY = pathYOffset / 2;
+    const isAnimatedWater = isWater && placementHoverKey === "idle";
     const TILE_POSITION:
       | [
           width?: number | undefined,
@@ -70,7 +94,16 @@ export const Tile: FC<TileProps> = memo(
           heightSegments?: number | undefined,
           depthSegments?: number | undefined,
         ]
-      | undefined = [tileSize, pathYOffset, tileSize];
+      | undefined = isAnimatedWater
+      ? [
+          tileSize,
+          pathYOffset,
+          tileSize,
+          WATER_TOP_SEGMENTS,
+          1,
+          WATER_TOP_SEGMENTS,
+        ]
+      : [tileSize, pathYOffset, tileSize];
     const planetPose = useMemo(
       () =>
         flatFieldToSphereTilePose(
@@ -82,15 +115,23 @@ export const Tile: FC<TileProps> = memo(
       [gridX, gridZ, gridSize, tileSize, pathYOffset]
     );
 
+    // The slab keeps the full pathYOffset height; the recess is a radial push
+    // of the whole mesh down the tile's surface normal (its local Y), so the
+    // top face sits exactly at waterTopY and the material's mask displaces it.
+    const waterMeshPosition = useMemo(
+      () =>
+        isAnimatedWater
+          ? new Vector3(0, -WATER_BED_OFFSET, 0)
+              .applyQuaternion(planetPose.quaternion)
+              .add(planetPose.position)
+          : planetPose.position,
+      [isAnimatedWater, planetPose, WATER_BED_OFFSET]
+    );
+
     const meshRef = useRef<Mesh>(null);
     useLayoutEffect(() => {
       if (meshRef.current) freezeSubtree(meshRef.current);
-    }, [planetPose]);
-
-    const placementHoverKey = useMemo<PlacementHoverKey>(() => {
-      if (!isHovered) return "idle";
-      return canPlace ? "canPlace" : "cannotPlace";
-    }, [isHovered, canPlace]);
+    }, [waterMeshPosition]);
 
     const material = useMemo(() => {
       if (isWater) {
@@ -114,12 +155,17 @@ export const Tile: FC<TileProps> = memo(
             roughness: 0.22,
           });
         }
-        return new MeshStandardMaterial({
+        // Non-hover water: the visible surface is this tile, so it carries the
+        // animated ripple (per-tile instance — disposed by the effect below, so
+        // the cached shared body material must not be used here). The top face
+        // sits at local y = pathYOffset/2; the swell amplitude is a small fixed
+        // world offset.
+        return createWaterMaterial({
           color: base,
-          emissive: emissiveHue,
-          emissiveIntensity: 0.12,
-          metalness: 0.28,
-          roughness: 0.18,
+          time: waterClock.time,
+          glow: emissiveHue,
+          amplitude: WATER_AMPLITUDE,
+          topY: waterTopY,
         });
       }
 
@@ -167,7 +213,16 @@ export const Tile: FC<TileProps> = memo(
         color: land,
         ...baseLand,
       });
-    }, [isWater, isOnPath, placementHoverKey, gridX, gridZ, pathYOffset]);
+    }, [
+      isWater,
+      isOnPath,
+      placementHoverKey,
+      gridX,
+      gridZ,
+      pathYOffset,
+      waterTopY,
+      waterClock,
+    ]);
 
     useEffect(
       () => () => {
@@ -203,7 +258,7 @@ export const Tile: FC<TileProps> = memo(
     return (
       <mesh
         ref={meshRef}
-        position={planetPose.position}
+        position={waterMeshPosition}
         quaternion={planetPose.quaternion}
         material={material}
         castShadow

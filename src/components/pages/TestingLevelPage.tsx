@@ -10,6 +10,7 @@ import { GAME_CANVAS_GL, GAME_CANVAS_STYLE } from "../../constants/canvas";
 import { useGameSystem } from "../../core/hooks/useGameSystem";
 import { useLoadingTransition } from "../../core/hooks/useLoadingTransition";
 import { SimulationClockProvider } from "../../core/contexts/SimulationClockContext";
+import { WaterClockProvider } from "../../core/contexts/WaterClockContext";
 import { PageWrapper } from "./PageWrapper";
 
 type TestingLevelPageProps = {
@@ -48,11 +49,13 @@ export const TestingLevelPage = ({ onBackToMenu }: TestingLevelPageProps) => {
         gl={GAME_CANVAS_GL}
       >
         <SimulationClockProvider>
-          <Suspense fallback={null}>
-            {isGameConfigLoaded ? <TestingLevelScene /> : null}
-          </Suspense>
+          <WaterClockProvider>
+            <Suspense fallback={null}>
+              {isGameConfigLoaded ? <TestingLevelScene /> : null}
+            </Suspense>
 
-          <PostFX />
+            <PostFX />
+          </WaterClockProvider>
         </SimulationClockProvider>
       </Canvas>
 

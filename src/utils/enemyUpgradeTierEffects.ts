@@ -12,6 +12,7 @@ export type TieredUpgradeEffect = {
   countMultiplier?: number;
   regeneration?: number;
   slowResistance?: number;
+  dodgeChance?: number;
 };
 
 export const countUpgradePicks = (
@@ -69,6 +70,8 @@ export const getTieredUpgradeEffect = (
       t.regeneration > 0 && { regeneration: t.regeneration }),
     ...(t.slowResistance !== undefined &&
       t.slowResistance > 0 && { slowResistance: t.slowResistance }),
+    ...(t.dodgeChance !== undefined &&
+      t.dodgeChance > 0 && { dodgeChance: t.dodgeChance }),
   };
 };
 
@@ -118,6 +121,11 @@ export const formatTieredUpgradeSummary = (
       })
     );
   }
+  if (e.dodgeChance !== undefined && e.dodgeChance > 0) {
+    parts.push(
+      i18n.t("upgrade.dodge", { percent: Math.round(e.dodgeChance * 100) })
+    );
+  }
   return parts.join(" · ");
 };
 
@@ -128,6 +136,7 @@ export type UpgradeTotalEffect = {
   countMultiplier?: number;
   regeneration?: number;
   slowResistance?: number;
+  dodgeChance?: number;
 };
 
 export const getTotalUpgradeEffectForStack = (
@@ -153,6 +162,8 @@ export const getTotalUpgradeEffectForStack = (
       top.regeneration > 0 && { regeneration: top.regeneration }),
     ...(top.slowResistance !== undefined &&
       top.slowResistance > 0 && { slowResistance: top.slowResistance }),
+    ...(top.dodgeChance !== undefined &&
+      top.dodgeChance > 0 && { dodgeChance: top.dodgeChance }),
   };
 };
 

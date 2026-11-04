@@ -109,6 +109,7 @@ const enemyUpgradeIdSchema = z.enum([
   "slowResistance",
   "regenerating",
   "reinforcements",
+  "missingOut",
 ]);
 
 const enemyUpgradeStackSchema: z.ZodType<EnemyUpgradeStack> = z.object({
@@ -135,6 +136,7 @@ const enemySchema: z.ZodType<Enemy> = z.object({
   upgradeStacks: z.array(enemyUpgradeStackSchema).optional(),
   regeneration: z.number().optional(),
   slowResistance: z.number().optional(),
+  dodgeChance: z.number().optional(),
   healPulse: healPulseConfigSchema.optional(),
   nextHealPulseAt: z.number().optional(),
   split: splitConfigSchema.optional(),

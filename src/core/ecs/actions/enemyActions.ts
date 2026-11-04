@@ -65,6 +65,7 @@ const enemyToState = (enemyData: Enemy): EnemyStateData => ({
     : undefined,
   regeneration: enemyData.regeneration,
   slowResistance: enemyData.slowResistance,
+  dodgeChance: enemyData.dodgeChance,
   nextHealPulseAt: enemyData.nextHealPulseAt,
   healPulse: enemyData.healPulse,
   split: enemyData.split,
@@ -300,6 +301,10 @@ export const enemyActions = createActions((world) => ({
    * Settles one damage hit. With a `source`, also raises a per-hit stats
    * receipt (effective damage clamped at 0; `killed` on the final hit).
    * The optional source keeps the existing two-argument calls intact.
+   *
+   * Missing-out enemies roll their dodge chance first: a successful roll
+   * cancels the whole hit (no health change, no stats receipt, no kill) and
+   * raises ENEMY_DODGED so the view layer can show the dodge.
    */
   damageEnemy: (
     enemyId: number,
@@ -311,6 +316,26 @@ export const enemyActions = createActions((world) => ({
 
     const enemy = entity.get(EnemyState);
     if (!enemy) return false;
+
+    if (
+      enemy.health > 0 &&
+      enemy.dodgeChance &&
+      Math.random() < enemy.dodgeChance
+    ) {
+      const position = entity.get(Position);
+      if (position) {
+        gameEvents.emit(GameEvent.ENEMY_DODGED, {
+          enemyId,
+          enemyType: enemy.type,
+          worldPosition: {
+            x: position.x,
+            y: enemy.size / 2,
+            z: position.z,
+          },
+        });
+      }
+      return false;
+    }
 
     const newHealth = enemy.health - damage;
 

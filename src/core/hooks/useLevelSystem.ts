@@ -245,6 +245,7 @@ export const useLevelSystem = () => {
       let speed = enemyConfig.speed;
       let regeneration: number | undefined;
       let slowResistance: number | undefined;
+      let dodgeChance: number | undefined;
 
       // Gold scales with every pick taken (per-pick tier product), matching
       // the "Stacked bonus: +X% gold" total the upgrade UI promises.
@@ -274,6 +275,9 @@ export const useLevelSystem = () => {
         if (effect.slowResistance !== undefined) {
           slowResistance = Math.max(slowResistance ?? 0, effect.slowResistance);
         }
+        if (effect.dodgeChance !== undefined) {
+          dodgeChance = Math.max(dodgeChance ?? 0, effect.dodgeChance);
+        }
       }
 
       const upgradeStacks = getUpgradeStacks(applyUpgrades);
@@ -294,6 +298,7 @@ export const useLevelSystem = () => {
         upgradeStacks,
         regeneration,
         slowResistance,
+        dodgeChance,
       };
 
       spawnEnemy(enemy);

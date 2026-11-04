@@ -67,6 +67,7 @@ const ICON_NAMES = {
   FileUp: 1,
   Gauge: 1,
   GitBranch: 1,
+  Ghost: 1,
   Heart: 1,
   HeartPulse: 1,
   Keyboard: 1,

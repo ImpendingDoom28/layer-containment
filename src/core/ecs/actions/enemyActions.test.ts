@@ -82,6 +82,7 @@ describe("enemyActions", () => {
       entity.destroy();
     }
     sweepStatsReceipts(testWorld);
+    vi.restoreAllMocks();
     useGameStore.setState({ gameStatus: "menu" });
     useLevelStore.setState({ pathWaypoints: [] });
   });
@@ -325,6 +326,50 @@ describe("enemyActions", () => {
     enemyActions(testWorld).damageEnemy(1, 10);
 
     expect(testWorld.query(damageDealtRequest)).toHaveLength(0);
+  });
+
+  it("a missing-out enemy dodges a hit: no damage, no receipt, ENEMY_DODGED raised", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.01); // below the 5% dodge chance
+    statsActions(testWorld).startRunStats();
+    const killedSpy = vi.fn();
+    const dodgedSpy = vi.fn();
+    gameEvents.on(GameEvent.ENEMY_KILLED, killedSpy);
+    gameEvents.on(GameEvent.ENEMY_DODGED, dodgedSpy);
+    enemyActions(testWorld).spawnEnemy({
+      ...baseEnemy(1, 100),
+      dodgeChance: 0.05,
+    });
+
+    const dodged = enemyActions(testWorld).damageEnemy(1, 10, {
+      towerType: "basic",
+    });
+
+    expect(dodged).toBe(false);
+    expect(testWorld.query(EnemyState).at(0)?.get(EnemyState)!.health).toBe(
+      100
+    );
+    expect(testWorld.query(damageDealtRequest)).toHaveLength(0);
+    expect(dodgedSpy).toHaveBeenCalledTimes(1);
+    expect(killedSpy).not.toHaveBeenCalled();
+    gameEvents.off(GameEvent.ENEMY_KILLED, killedSpy);
+    gameEvents.off(GameEvent.ENEMY_DODGED, dodgedSpy);
+  });
+
+  it("a missing-out enemy still takes damage when the dodge roll misses", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.9); // above the 5% dodge chance
+    statsActions(testWorld).startRunStats();
+    enemyActions(testWorld).spawnEnemy({
+      ...baseEnemy(1, 100),
+      dodgeChance: 0.05,
+    });
+
+    const killed = enemyActions(testWorld).damageEnemy(1, 30, {
+      towerType: "basic",
+    });
+
+    expect(killed).toBe(false);
+    expect(testWorld.query(EnemyState).at(0)?.get(EnemyState)!.health).toBe(70);
+    expect(testWorld.query(damageDealtRequest)).toHaveLength(1);
   });
 
   it("handleEnemyDeath raises a moneyEarnedRequest for the reward (non-menu)", () => {

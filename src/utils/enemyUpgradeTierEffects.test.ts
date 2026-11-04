@@ -82,12 +82,26 @@ const reinforcementsBase: EnemyUpgradeConfig = {
   indicatorColor: "#f97316",
 };
 
+const missingOutBase: EnemyUpgradeConfig = {
+  id: "missingOut",
+  name: "Missing Out",
+  description: "",
+  displayRank: 2,
+  tiers: [
+    { dodgeChance: 0.05, rewardMultiplier: 1.1 },
+    { dodgeChance: 0.1, rewardMultiplier: 1.1 },
+    { dodgeChance: 0.15, rewardMultiplier: 1.1 },
+  ],
+  indicatorColor: "#38bdf8",
+};
+
 const allUpgrades: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
   armored: armoredBase,
   swift: swiftBase,
   slowResistance: slowResistanceBase,
   regenerating: regeneratingBase,
   reinforcements: reinforcementsBase,
+  missingOut: missingOutBase,
 };
 
 describe("getTieredUpgradeEffect", () => {
@@ -192,6 +206,21 @@ describe("getTieredUpgradeEffect", () => {
     expect(getTierRewardBonusPercent(slowResistanceBase, 1)).toBe(10);
     expect(getTierRewardBonusPercent(armoredBase, 1)).toBe(10);
     expect(getTierRewardBonusPercent(armoredBase, 3)).toBe(38);
+  });
+
+  it("reads each tier's absolute dodge chance from the config", () => {
+    expect(getTieredUpgradeEffect(missingOutBase, 1).dodgeChance).toBe(0.05);
+    expect(getTieredUpgradeEffect(missingOutBase, 2).dodgeChance).toBe(0.1);
+    expect(getTieredUpgradeEffect(missingOutBase, 3).dodgeChance).toBe(0.15);
+  });
+
+  it("describes Missing Out as a % chance to dodge tower hits", () => {
+    expect(formatTieredUpgradeSummary(missingOutBase, 1)).toBe(
+      "5% chance to dodge tower hits"
+    );
+    expect(formatTieredUpgradeSummary(missingOutBase, 3)).toBe(
+      "15% chance to dodge tower hits"
+    );
   });
 });
 

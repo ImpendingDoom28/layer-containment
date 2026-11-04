@@ -78,6 +78,18 @@ const upgradeConfigs: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     ],
     indicatorColor: "#f97316",
   },
+  missingOut: {
+    id: "missingOut",
+    name: "Missing Out",
+    description: "",
+    displayRank: 2,
+    tiers: [
+      { dodgeChance: 0.05, rewardMultiplier: 1.1 },
+      { dodgeChance: 0.1, rewardMultiplier: 1.1 },
+      { dodgeChance: 0.15, rewardMultiplier: 1.1 },
+    ],
+    indicatorColor: "#38bdf8",
+  },
 };
 
 const flushEffects = () => act(() => {});

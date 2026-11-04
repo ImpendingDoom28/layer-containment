@@ -49,7 +49,8 @@ export type EnemyUpgradeId =
   | "swift"
   | "slowResistance"
   | "regenerating"
-  | "reinforcements";
+  | "reinforcements"
+  | "missingOut";
 
 export type EnemyUpgradeStackTier = 1 | 2 | 3;
 
@@ -81,6 +82,11 @@ export type EnemyUpgradeTier = {
   slowResistance?: number;
   /** Flat HP/sec regeneration for this tier. */
   regeneration?: number;
+  /**
+   * Missing out: chance (0-1) to dodge an incoming tower damage hit at this
+   * tier. Each hit rolls independently.
+   */
+  dodgeChance?: number;
 };
 
 export type EnemyUpgradeConfig = {
@@ -182,6 +188,8 @@ export type Enemy = Omit<EnemyConfig, "id"> & {
   upgradeStacks?: EnemyUpgradeStack[];
   regeneration?: number;
   slowResistance?: number;
+  /** Missing-out: chance (0-1) to dodge an incoming tower damage hit. */
+  dodgeChance?: number;
   nextHealPulseAt?: number;
 };
 

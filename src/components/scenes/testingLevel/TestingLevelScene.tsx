@@ -52,8 +52,9 @@ const REINFORCEMENT_PORTALS: { tier: number; position: [number, number, number] 
  * Static 3D asset showcase. Loads `level_testing` — every enemy, tower and
  * its projectile, plus buildings, water, the path (spawn portal + end
  * building), and every enemy upgrade across all its tiers (armored, swift,
- * slow-resistance, regenerating on `basic` enemies) plus the reinforcements
- * portal tiers — spaced by one tile so the whole roster is visible at once.
+ * slow-resistance, regenerating, missing-out on `basic` enemies) plus the
+ * reinforcements portal tiers — spaced by one tile so the whole roster is
+ * visible at once.
  *
  * It deliberately does NOT mount `EntitiesSystem`, so none of the
  * movement / tower-fire / projectile / death / split systems run. Enemies and

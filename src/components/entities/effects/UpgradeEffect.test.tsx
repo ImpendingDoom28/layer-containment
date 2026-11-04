@@ -64,6 +64,18 @@ const upgradeConfigs: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     ],
     indicatorColor: "#ffff00",
   },
+  missingOut: {
+    id: "missingOut",
+    name: "mo",
+    description: "",
+    displayRank: 2,
+    tiers: [
+      { dodgeChance: 0.05, rewardMultiplier: 1.1 },
+      { dodgeChance: 0.1, rewardMultiplier: 1.1 },
+      { dodgeChance: 0.15, rewardMultiplier: 1.1 },
+    ],
+    indicatorColor: "#38bdf8",
+  },
 };
 
 // Minimal koota entity: the only trait UpgradeEffect reads per frame is

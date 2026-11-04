@@ -45,6 +45,14 @@ const sampleUpgrades: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     tiers: [{}, {}, {}],
     indicatorColor: "#f97316",
   },
+  missingOut: {
+    id: "missingOut",
+    name: "mo",
+    description: "",
+    displayRank: 2,
+    tiers: [{}, {}, {}],
+    indicatorColor: "#38bdf8",
+  },
 };
 
 describe("getUpgradeIndicatorColors", () => {

@@ -177,6 +177,8 @@ export const en = {
     regen: "{{amount}} HP/s regen",
     slowImmune: "Slow immune",
     slowResistance: "+{{percent}}% slow resistance",
+    dodge: "{{percent}}% chance to dodge tower hits",
+    dodgeMissed: "MISS",
     selected: "Selected upgrades",
     viewTitle: "Enemy upgrades",
   },
@@ -365,11 +367,16 @@ export const en = {
       description:
         "+20% more enemies spawn each wave. Tier 2: +40%, tier 3: +65%.",
     },
+    missingOut: {
+      name: "Missing Out",
+      description:
+        "Enemies dodge any incoming tower damage with a 5% chance. Tier II: 10%, tier III: 15%.",
+    },
   },
   testingLevel: {
     title: "3D Asset Showcase",
     description:
-      "Every enemy, tower and projectile, plus buildings, water, the path, the spawn portal and the end building — and every enemy upgrade at all its tiers (armored, swift, slow-resistance, regenerating) plus the reinforcements spawn portals — laid out one tile apart so the whole roster is visible at once. Drag to orbit, scroll to zoom.",
+      "Every enemy, tower and projectile, plus buildings, water, the path, the spawn portal and the end building — and every enemy upgrade at all its tiers (armored, swift, slow-resistance, regenerating, missing-out) plus the reinforcements spawn portals — laid out one tile apart so the whole roster is visible at once. Drag to orbit, scroll to zoom.",
     backToMenu: "Back to menu",
   },
   rewardText: "+${{amount}}",

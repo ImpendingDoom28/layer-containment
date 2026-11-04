@@ -6,6 +6,8 @@ export const GameEvent = {
   TOWER_SOLD: "tower_sold",
   TOWER_FIRE: "tower_fire",
   ENEMY_KILLED: "enemy_killed",
+  /** A tower hit was dodged (missing-out upgrade); no damage was dealt. */
+  ENEMY_DODGED: "enemy_dodged",
   ENEMY_REACHED_END: "enemy_reached_end",
   PROJECTILE_HIT: "projectile_hit",
   WAVE_STARTED: "wave_started",

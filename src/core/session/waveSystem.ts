@@ -98,6 +98,10 @@ export const createWaveSystem = ({
     const { currentWave, totalWaves, pathWaypoints } = useLevelStore.getState();
     if (currentWave >= totalWaves) return;
     if (currentWave > 0) {
+      // A wave that has started but not yet finished its completion delay must
+      // not be replaced: doing so would reset `waveStarted` and skip the
+      // upgrade gate / win that runs when the delay elapses.
+      if (waveStarted) return;
       if (spawnQueueIndex < spawnQueue.length) return;
       if (getRemainingEnemyCount() > 0) return;
     }
@@ -122,8 +126,14 @@ export const createWaveSystem = ({
 
     const currentWave = syncWave();
     const { totalWaves } = useLevelStore.getState();
+    // A cleared wave is only "ready" for the next one once its completion
+    // delay has run (i.e. `waveStarted` has been cleared). While the delay is
+    // pending, the player must not be offered the next wave — starting it
+    // would skip the upgrade gate / win above.
     const waveCleared =
-      spawnQueueIndex >= spawnQueue.length && getRemainingEnemyCount() === 0;
+      spawnQueueIndex >= spawnQueue.length &&
+      getRemainingEnemyCount() === 0 &&
+      !waveStarted;
     const nextWaveReady =
       currentWave === 0 || (currentWave < totalWaves && waveCleared);
     if (useWaveStore.getState().nextWaveReady !== nextWaveReady) {

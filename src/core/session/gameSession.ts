@@ -85,7 +85,7 @@ export const createGameSession = ({
     }
   };
 
-  const startRun = async (levelId: PlayableLevelId): Promise<void> => {
+  const startRun = async (levelId: AnyPlayableLevelId): Promise<void> => {
     const generation = ++loadGeneration;
     const loadStarted = loadLevel(levelId);
 

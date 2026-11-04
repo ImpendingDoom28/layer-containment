@@ -165,4 +165,48 @@ describe("createWaveSystem", () => {
     tick(waves, 1.5);
     expect(winGame).toHaveBeenCalledTimes(1);
   });
+
+  it("does not offer or start the next wave during the completion delay", () => {
+    let nextId = 1;
+    const winGame = vi.fn();
+    const waves = createWaveSystem({
+      world: testWorld,
+      getNextEnemyId: () => nextId++,
+      winGame,
+    });
+    // A single-enemy first wave so it can fully spawn and clear quickly.
+    useLevelStore.setState({
+      totalWaves: 2,
+      waveConfigs: [
+        {
+          totalEnemies: 1,
+          enemies: [{ type: "basic", count: 1, spawnInterval: 0.5 }],
+        },
+        {
+          totalEnemies: 1,
+          enemies: [{ type: "basic", count: 1, spawnInterval: 0.5 }],
+        },
+      ],
+    });
+
+    waves.startWave(); // wave 1
+    tick(waves, 1); // the single enemy spawns
+    enemyActions(testWorld).removeEnemy(1, false); // wave 1 clears at t=1
+
+    // 0.2s after the clear, the 0.3s completion delay is still pending. The
+    // next wave must not be offered, and starting it must be a no-op — doing
+    // so would reset `waveStarted` and skip the completion step.
+    tick(waves, 1.2);
+    expect(useWaveStore.getState().nextWaveReady).toBe(false);
+    waves.startWave();
+    expect(useLevelStore.getState().currentWave).toBe(1);
+
+    // Once the delay elapses the wave is finished; readiness updates on the
+    // following frame and the next wave can start.
+    tick(waves, 1.5);
+    tick(waves, 1.6);
+    expect(useWaveStore.getState().nextWaveReady).toBe(true);
+    waves.startWave();
+    expect(useLevelStore.getState().currentWave).toBe(2);
+  });
 });

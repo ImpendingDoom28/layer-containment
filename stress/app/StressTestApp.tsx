@@ -407,6 +407,10 @@ const StressTestGame = () => {
     void session
       .restartRun()
       .then(() => {
+        // `restartRun` resolves without starting a run when `currentLevelId`
+        // is null (e.g. after a failed initial start); only restore the 1M HP
+        // base once a run is actually active.
+        if (!useLevelStore.getState().isLevelConfigLoaded) return;
         spawnBase(STRESS_BASE_HEALTH);
       })
       .catch((error) => {

@@ -220,6 +220,7 @@
           "y": 0.386,
           "z": 0.4025
         },
+        "barrelNode": "Elevation001",
         "turretNode": "Azimuth001"
       },
       "name": "AOE Tower",
@@ -248,6 +249,7 @@
           "y": 0.3731,
           "z": 1.071
         },
+        "barrelNode": "Elevation",
         "turretNode": "Azimuth"
       },
       "name": "Basic Tower",
@@ -278,6 +280,7 @@
           "y": 0.764,
           "z": 1.0387
         },
+        "barrelNode": "Field_Array_Geometry",
         "turretNode": "Field_Array"
       },
       "name": "Chain Lightning",
@@ -307,6 +310,7 @@
           "y": 0.3761,
           "z": 1.1725
         },
+        "barrelNode": "Elevation002",
         "turretNode": "Azimuth002"
       },
       "name": "Laser Tower",
@@ -361,6 +365,7 @@
           "y": 0.5511,
           "z": 0.6325
         },
+        "barrelNode": "Elevation003",
         "turretNode": "Azimuth004"
       },
       "name": "Slow Tower",

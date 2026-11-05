@@ -7,7 +7,7 @@ import { getLivingEnemyList } from "../ecs/selectors/enemySnapshots";
 import { getEffectiveTowerCombatStats } from "../relayBuffs";
 import { useGameStore } from "../stores/useGameStore";
 import { useLevelStore } from "../stores/useLevelStore";
-import type { Projectile, Tower } from "../types/game";
+import type { Enemy, Projectile, Tower } from "../types/game";
 import { GameEvent } from "../types/enums/events";
 import { gameEvents } from "../../utils/eventEmitter";
 import {
@@ -21,7 +21,7 @@ import {
   flatCombatPointToWorldPosition,
   getPlanetRadius,
 } from "../../utils/planetSurfaceMapping";
-import { pickTowerTarget } from "../../utils/towerTargeting";
+import { isTargetStale, pickTowerTarget } from "../../utils/towerTargeting";
 import type { SimulationFrame } from "./types";
 
 const BASE_FOOTPRINT_HALF = 0.4;
@@ -35,6 +35,24 @@ export const TOWER_AIM_TOLERANCE = Math.PI / 12;
 // exponential ease the enemies use to turn their facing): `1 - exp(-lambda*dt)`
 // of the remaining arc per frame, so the swing decelerates as it converges.
 export const TOWER_TURN_LAMBDA = 8;
+
+// A tower re-runs its full target selection (the range + line-of-sight scan
+// over every enemy) at most once per this interval, and immediately whenever
+// the cached target dies, leaves the range, or loses line of sight. The
+// per-frame pass reuses the cached target in between, so the turret keeps
+// swinging at the same enemy while the scan budget is spent once per tower
+// instead of once per frame. 0.15s: ~7x cheaper than every frame, yet a
+// target can traverse at most speed * 0.15 ≈ 0.37 world units between re-picks
+// — well inside the aim tolerance and the enemy size, so a cached pick is
+// never visibly wrong.
+export const TOWER_TARGET_REPICK_INTERVAL = 0.15;
+
+// Scratch membership set of the living enemy objects for the current frame
+// (the pooled registry hands out one stable object per live entity, so a
+// reference check tells whether a cached target still exists — an enemy
+// removed at the base keeps its health, so health alone cannot prove it is
+// gone). Re-filled each frame; reused across frames, no per-frame allocation.
+const _livingEnemies = new Set<Enemy>();
 
 // Wrap a yaw difference to the shortest arc in (-PI, PI], so comparing
 // e.g. -170 deg against +170 deg reads as a 20 deg turn, not 340.
@@ -76,6 +94,12 @@ export const createTowerCombatSystem = (
   const lastTargets = new Map<number, number>();
   const turretYaws = new Map<number, number>();
   const turretNodes = new Map<number, Object3D>();
+  // Throttled target selection: the enemy each tower last picked, plus the
+  // simulation time of that pick. The per-frame pass reuses the cached enemy
+  // between re-picks and only runs the full scan on the re-pick interval or
+  // when the cached target dies, leaves range, or loses line of sight.
+  const cachedTargets = new Map<number, Enemy | null>();
+  const repickTimes = new Map<number, number>();
   const _muzzleLocal = new Vector3();
   const _muzzleWorld = new Vector3();
   let cachedTowers: Tower[] | null = null;
@@ -91,6 +115,8 @@ export const createTowerCombatSystem = (
     lastTargets.clear();
     turretYaws.clear();
     turretNodes.clear();
+    cachedTargets.clear();
+    repickTimes.clear();
     cachedTowers = null;
     cachedBuildings = null;
     cachedPaths = null;
@@ -130,6 +156,12 @@ export const createTowerCombatSystem = (
     for (const id of turretYaws.keys()) {
       if (!towerIds.has(id)) turretYaws.delete(id);
     }
+    for (const id of cachedTargets.keys()) {
+      if (!towerIds.has(id)) cachedTargets.delete(id);
+    }
+    for (const id of repickTimes.keys()) {
+      if (!towerIds.has(id)) repickTimes.delete(id);
+    }
 
     if (cachedBuildings !== buildings || cachedPaths !== pathWaypoints) {
       cachedBuildings = buildings;
@@ -154,6 +186,13 @@ export const createTowerCombatSystem = (
 
     const enemies = getLivingEnemyList(world);
     const currentTime = frame.simulationTimeSeconds;
+    // Rebuild the living-enemy object set so the cached-target reuse below
+    // can tell whether a target still exists (an enemy removed at the base
+    // keeps its health, so health alone cannot prove it is gone).
+    _livingEnemies.clear();
+    for (const enemy of enemies) {
+      _livingEnemies.add(enemy);
+    }
 
     towers.forEach((tower) => {
       if (tower.type === "relay") return;
@@ -167,6 +206,61 @@ export const createTowerCombatSystem = (
         towerTypes ?? {}
       );
 
+      // A tower can only shoot at enemies it has line of sight on: an
+      // enemy behind a static building or the base is skipped so the tower
+      // falls back to the next-best candidate it can actually hit. Towers
+      // do not block each other's shots.
+      const isVisible = (enemy: Enemy) =>
+        !segmentCrossesObstacles(
+          tower.x,
+          tower.z,
+          enemy.x,
+          enemy.z,
+          lineOfSightObstacles
+        );
+
+      // Target selection is throttled: the full range + line-of-sight scan
+      // over every enemy runs at most once per TOWER_TARGET_REPICK_INTERVAL
+      // (on the pause-adjusted simulation clock, so a slow-motion stretch
+      // does not burn the budget faster), or immediately when the cached
+      // target is no longer usable — dead, removed at the base (the entity
+      // is destroyed without zeroing its health, so the object must be
+      // checked against this frame's living list), out of range, or behind
+      // an obstacle. In between, the aim pass below reuses the cached
+      // enemy, so the turret keeps swinging every frame while the scan cost
+      // drops from per-frame to per-interval.
+      const lastRepick = repickTimes.get(tower.id);
+      const shouldRepick =
+        lastRepick === undefined ||
+        currentTime - lastRepick >= TOWER_TARGET_REPICK_INTERVAL;
+      let pickedTarget: Enemy | null = cachedTargets.get(tower.id) ?? null;
+      if (
+        shouldRepick ||
+        (pickedTarget &&
+          (!_livingEnemies.has(pickedTarget) ||
+            isTargetStale(
+              pickedTarget,
+              tower.x,
+              tower.z,
+              effectiveStats.range,
+              isVisible
+            )))
+      ) {
+        pickedTarget = pickTowerTarget(
+          enemies,
+          tower.targeting,
+          {
+            x: tower.x,
+            z: tower.z,
+            range: effectiveStats.range,
+            lastTargetId: lastTargets.get(tower.id),
+          },
+          isVisible
+        );
+        cachedTargets.set(tower.id, pickedTarget);
+        repickTimes.set(tower.id, currentTime);
+      }
+
       // Turret aim: every firing tower swings at the enemy it would shoot
       // (picked on the same rules as the shot, before the cooldown, so the
       // barrel keeps tracking a target it is on cooldown from). With no
@@ -174,24 +268,6 @@ export const createTowerCombatSystem = (
       // back to rest. The logical yaw in the map is the source of truth for
       // the fire gate below; when the render layer has registered the turret
       // node, the same yaw is mirrored onto it so the mesh matches the gate.
-      const pickedTarget = pickTowerTarget(
-        enemies,
-        tower.targeting,
-        {
-          x: tower.x,
-          z: tower.z,
-          range: effectiveStats.range,
-          lastTargetId: lastTargets.get(tower.id),
-        },
-        (enemy) =>
-          !segmentCrossesObstacles(
-            tower.x,
-            tower.z,
-            enemy.x,
-            enemy.z,
-            lineOfSightObstacles
-          )
-      );
 
       const currentYaw = turretYaws.get(tower.id) ?? 0;
       let desiredYaw = currentYaw;

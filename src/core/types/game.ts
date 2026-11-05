@@ -124,9 +124,12 @@ export type TowerModelSpec = {
 // (the muzzle the shot, beam, and fire sound leave). `turretNode` is the node
 // rotated toward the target at runtime; `muzzle` is the barrel tip in the
 // turret node's local frame at rest, or `null` for a tower that never fires
-// (the relay, whose "Azimuth003" is an empty pivot).
+// (the relay, whose "Azimuth003" is an empty pivot). `barrelNode` is the
+// turret's barrel subtree (a node name relative to the turret node) that the
+// firing feedback's recoil punch animates.
 export type TowerMuzzleSpec = {
   turretNode?: string;
+  barrelNode?: string;
   muzzle: { x: number; y: number; z: number } | null;
 };
 

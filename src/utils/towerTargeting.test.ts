@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import type { Enemy, TowerTargeting } from "../core/types/game";
 
-import { pickTowerTarget, TARGETING_STRATEGIES } from "./towerTargeting";
+import {
+  isTargetStale,
+  pickTowerTarget,
+  TARGETING_STRATEGIES,
+} from "./towerTargeting";
 
 const makeEnemy = (
   id: number,
@@ -46,24 +50,24 @@ describe("pickTowerTarget", () => {
 
   it("ignores dead enemies", () => {
     const enemies = [makeEnemy(1, 1, 0, 0), makeEnemy(2, 2, 0, 50)];
-    expect(
-      pickTowerTarget(enemies, "nearest", params(5), alwaysVisible)
-    ).toBe(enemies[1]);
+    expect(pickTowerTarget(enemies, "nearest", params(5), alwaysVisible)).toBe(
+      enemies[1]
+    );
   });
 
   it("ignores enemies without line of sight", () => {
     const enemies = [makeEnemy(1, 1, 0), makeEnemy(2, 2, 0)];
     const hidden = (enemy: Enemy) => enemy.id !== 1;
-    expect(
-      pickTowerTarget(enemies, "nearest", params(5), hidden)
-    ).toBe(enemies[1]);
+    expect(pickTowerTarget(enemies, "nearest", params(5), hidden)).toBe(
+      enemies[1]
+    );
   });
 
   it('picks the nearest enemy for "nearest"', () => {
     const enemies = [makeEnemy(1, 2, 0), makeEnemy(2, 1, 0)];
-    expect(
-      pickTowerTarget(enemies, "nearest", params(5), alwaysVisible)
-    ).toBe(enemies[1]);
+    expect(pickTowerTarget(enemies, "nearest", params(5), alwaysVisible)).toBe(
+      enemies[1]
+    );
   });
 
   it('picks the furthest enemy in range for "furthest"', () => {
@@ -72,9 +76,9 @@ describe("pickTowerTarget", () => {
       makeEnemy(2, 4, 0),
       makeEnemy(3, 8, 0), // out of range
     ];
-    expect(
-      pickTowerTarget(enemies, "furthest", params(5), alwaysVisible)
-    ).toBe(enemies[1]);
+    expect(pickTowerTarget(enemies, "furthest", params(5), alwaysVisible)).toBe(
+      enemies[1]
+    );
   });
 
   it('picks the lowest-health enemy in range for "lowest"', () => {
@@ -83,9 +87,9 @@ describe("pickTowerTarget", () => {
       makeEnemy(2, 2, 0, 10),
       makeEnemy(3, 3, 0, 50),
     ];
-    expect(
-      pickTowerTarget(enemies, "lowest", params(5), alwaysVisible)
-    ).toBe(enemies[1]);
+    expect(pickTowerTarget(enemies, "lowest", params(5), alwaysVisible)).toBe(
+      enemies[1]
+    );
   });
 
   it('picks the highest-health enemy in range for "highest"', () => {
@@ -94,9 +98,9 @@ describe("pickTowerTarget", () => {
       makeEnemy(2, 2, 0, 10),
       makeEnemy(3, 3, 0, 50),
     ];
-    expect(
-      pickTowerTarget(enemies, "highest", params(5), alwaysVisible)
-    ).toBe(enemies[0]);
+    expect(pickTowerTarget(enemies, "highest", params(5), alwaysVisible)).toBe(
+      enemies[0]
+    );
   });
 
   it('keeps the last target for "focused" while it is alive, in range and visible', () => {
@@ -130,9 +134,9 @@ describe("pickTowerTarget", () => {
 
   it('falls back to the nearest for "focused" with no previous target', () => {
     const enemies = [makeEnemy(1, 2, 0), makeEnemy(2, 1, 0)];
-    expect(
-      pickTowerTarget(enemies, "focused", params(5), alwaysVisible)
-    ).toBe(enemies[1]);
+    expect(pickTowerTarget(enemies, "focused", params(5), alwaysVisible)).toBe(
+      enemies[1]
+    );
   });
 
   it("exposes the full strategy list in selector order", () => {
@@ -149,9 +153,44 @@ describe("pickTowerTarget", () => {
     "returns null for %s when all candidates are out of range",
     (strategy: TowerTargeting) => {
       const enemies = [makeEnemy(1, 9, 0)];
-      expect(
-        pickTowerTarget(enemies, strategy, params(2), alwaysVisible)
-      ).toBe(null);
+      expect(pickTowerTarget(enemies, strategy, params(2), alwaysVisible)).toBe(
+        null
+      );
     }
   );
+});
+
+describe("isTargetStale", () => {
+  const inRange = makeEnemy(1, 3, 0);
+
+  it("treats a missing target as stale", () => {
+    expect(isTargetStale(null, 0, 0, 5, alwaysVisible)).toBe(true);
+  });
+
+  it("treats a dead target as stale", () => {
+    expect(isTargetStale(makeEnemy(1, 3, 0, 0), 0, 0, 5, alwaysVisible)).toBe(
+      true
+    );
+  });
+
+  it("treats an out-of-range target as stale", () => {
+    expect(isTargetStale(makeEnemy(1, 9, 0), 0, 0, 5, alwaysVisible)).toBe(
+      true
+    );
+  });
+
+  it("treats a target behind an obstacle as stale", () => {
+    const hidden = (enemy: Enemy) => enemy.id !== 1;
+    expect(isTargetStale(inRange, 0, 0, 5, hidden)).toBe(true);
+  });
+
+  it("keeps a live, in-range, visible target fresh", () => {
+    expect(isTargetStale(inRange, 0, 0, 5, alwaysVisible)).toBe(false);
+  });
+
+  it("is symmetric in the range check (boundary is not stale)", () => {
+    expect(isTargetStale(makeEnemy(1, 5, 0), 0, 0, 5, alwaysVisible)).toBe(
+      false
+    );
+  });
 });

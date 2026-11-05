@@ -6,6 +6,7 @@ import { CylinderGeometry, MeshStandardMaterial } from "three";
 import type { Tower as TowerInstance } from "../../core/types/game";
 import { GUIDebugInfo } from "../gui/GUIDebugInfo";
 import { RangeRing } from "./effects/RangeRing";
+import { TowerFireFX } from "./effects/TowerFireFX";
 import { TowerModel } from "./TowerModel";
 import { Vector3D } from "../../core/types/utils";
 import { getCssColorValue } from "../ui/lib/cssUtils";
@@ -89,6 +90,13 @@ export const Tower: FC<TowerProps> = memo(
     ];
 
     const groupRef = useRef<Group>(null);
+    // The model's rotating turret node, kept locally for the firing feedback
+    // (muzzle-flash parent); the same node is reported to the system, which
+    // owns its aim rotation.
+    const turretNodeRef = useRef<Object3D | null>(null);
+    // The barrel node inside the turret, kept locally for the firing feedback's
+    // recoil punch (the barrel dips; the rest of the turret stays put).
+    const barrelNodeRef = useRef<Object3D | null>(null);
     // The preview tower follows the cursor and is always inside the view, so a
     // zero margin (no grace band) is safe and keeps it from being culled.
     useFrustumCulling(groupRef, isPreview ? 0 : FRUSTUM_CULLING_MARGIN);
@@ -98,17 +106,18 @@ export const Tower: FC<TowerProps> = memo(
     // decorative and never fires, so it does not register a node.
     const onModelReady = useCallback(
       (object: Object3D | null) => {
-        if (isPreview || !tower || !onTurretNode) return;
-        if (!object) {
-          onTurretNode(tower.id, null);
-          return;
-        }
-        const turretNodeName = tower.muzzle?.turretNode;
+        if (isPreview || !tower) return;
         const turret =
-          turretNodeName != null
-            ? object.getObjectByName(turretNodeName)
+          object != null && tower.muzzle?.turretNode != null
+            ? object.getObjectByName(tower.muzzle.turretNode)
             : undefined;
-        onTurretNode(tower.id, turret ?? null);
+        const node = turret ?? null;
+        turretNodeRef.current = node;
+        barrelNodeRef.current =
+          node != null && tower.muzzle?.barrelNode != null
+            ? node.getObjectByName(tower.muzzle.barrelNode) ?? null
+            : null;
+        onTurretNode?.(tower.id, node);
       },
       [isPreview, tower, onTurretNode]
     );
@@ -292,6 +301,17 @@ export const Tower: FC<TowerProps> = memo(
           fallback={towerBody}
           onModelReady={onModelReady}
         />
+        {/* Firing feedback (muzzle flash + barrel recoil) is only for placed
+            towers: the placement preview never fires. */}
+        {!isPreview && (
+          <TowerFireFX
+            tower={tower}
+            color={tower.color}
+            turretNodeRef={turretNodeRef}
+            barrelNodeRef={barrelNodeRef}
+            towerHeight={towerHeight}
+          />
+        )}
         {/* Selection indicator */}
         {isSelected && (effectiveRange ?? tower.range) > 0.01 && (
           <RangeRing

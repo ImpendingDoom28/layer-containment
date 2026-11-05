@@ -9,15 +9,26 @@ import { ModelLoader } from "./ModelLoader";
 type EndBuildingProps = {
   position: [number, number, number];
   quaternion?: Quaternion;
+  /**
+   * Flat (editor) scene only: yaw (about Y) pointing the base's entrance at
+   * the path. Ignored when `quaternion` is set (the game scene already bakes
+   * the yaw into the surface quaternion).
+   */
+  pathYaw?: number;
 };
 
-// The base's rest transform is already the transform the scene wants:
-// `Player_Base_ROOT` is grounded at y = 0 and centered on x/z (its baked box
-// spans x ∈ [-0.9, 0.9], z ∈ [-0.8, 0.8], y ∈ [0, 1.75]), so no fit math is
-// needed. The clone only gets shadow flags (they are not part of the GLTF and
-// would otherwise stay at three's defaults).
+// The base is scaled to this fraction of its baked size (1.8 × 1.6 × 1.75 at
+// rest) so it reads as a structure on the tile without dwarfing the towers and
+// paths around it. Uniform, applied at the root — the clone is grounded at
+// y = 0 and centered on x/z, so the scale shrinks it in place.
+const BASE_MODEL_SCALE = 0.75;
+
+// `Player_Base_ROOT` is grounded at y = 0 and centered on x/z, so no fit math
+// is needed — the clone only gets the display scale and shadow flags (they are
+// not part of the GLTF and would otherwise stay at three's defaults).
 const prepareBaseModel = (source: Object3D): Object3D => {
   const clone = source.clone();
+  clone.scale.setScalar(BASE_MODEL_SCALE);
   clone.traverse((child) => {
     if ((child as Partial<Mesh>).isMesh) {
       (child as Mesh).castShadow = true;
@@ -120,11 +131,15 @@ const PrimitiveBuilding: FC = () => {
 /**
  * The player base at the end of every path, rendered as the `Player_Base` 3D
  * model (shared cached parse, one clone per base; geometry/materials shared).
- * While the GLB loads — and permanently if it fails — the old primitive house
- * stands in, so the path end is never empty.
+ * The model is scaled to `BASE_MODEL_SCALE` so it reads as a structure rather
+ * than a landmark, and its entrance (local +Z, the gate/front-buttress side)
+ * is yawed toward the path's approach — either baked into `quaternion` (game
+ * scene) or via `pathYaw` (flat editor). While the GLB loads — and permanently
+ * if it fails — the old primitive house stands in, so the path end is never
+ * empty.
  */
 export const EndBuilding: FC<EndBuildingProps> = memo(
-  ({ position, quaternion }) => {
+  ({ position, quaternion, pathYaw = 0 }) => {
     const groupRef = useRef<Group>(null);
     const freezeGroup = useCallback(() => {
       if (groupRef.current) freezeSubtree(groupRef.current);
@@ -137,7 +152,7 @@ export const EndBuilding: FC<EndBuildingProps> = memo(
     // world matrices.
     useLayoutEffect(() => {
       freezeGroup();
-    }, [position, quaternion, freezeGroup]);
+    }, [position, quaternion, pathYaw, freezeGroup]);
 
     // The Suspense swap (fallback → model) happens after mount without a
     // position/quaternion change, so re-bake once the model lands too.
@@ -148,11 +163,19 @@ export const EndBuilding: FC<EndBuildingProps> = memo(
       [freezeGroup],
     );
 
+    // The game scene passes a `quaternion` (the yaw is baked in); the flat
+    // editor passes `pathYaw`. The latter is applied about local Y so the
+    // model's local +Z (the entrance) faces the path.
+    const rotation: [number, number, number] | undefined = quaternion
+      ? undefined
+      : [0, pathYaw, 0];
+
     return (
       <group
         ref={groupRef}
         position={position}
         {...(quaternion ? { quaternion } : {})}
+        {...(rotation ? { rotation } : {})}
       >
         <ModelLoader
           url={BASE_MODEL.url}
@@ -169,7 +192,8 @@ export const EndBuilding: FC<EndBuildingProps> = memo(
       prevProps.position[0] === nextProps.position[0] &&
       prevProps.position[1] === nextProps.position[1] &&
       prevProps.position[2] === nextProps.position[2] &&
-      prevProps.quaternion === nextProps.quaternion
+      prevProps.quaternion === nextProps.quaternion &&
+      (prevProps.pathYaw ?? 0) === (nextProps.pathYaw ?? 0)
     );
   }
 );

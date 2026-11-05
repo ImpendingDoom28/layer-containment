@@ -38,7 +38,7 @@ import {
   getQuaternionForPathStrip,
   getSurfaceQuaternion,
 } from "../../utils/planetSurfaceMapping";
-import { getPathRenderSegments } from "../../utils/pathUtils";
+import { getEndBuildingYaw, getPathRenderSegments } from "../../utils/pathUtils";
 import { Portal } from "./Portal";
 import { EndBuilding } from "./EndBuilding";
 
@@ -158,19 +158,34 @@ export const Path: FC<PathProps> = memo(({ pathIndex }) => {
   const endBuildingProps = useMemo(() => {
     if (!path || path.length === 0) return null;
     const last = path[path.length - 1];
+    const previous = path[path.length - 2];
     const { surfacePoint, normal } = flatFieldToSphereSurface(
       last.x,
       last.z,
       radius
     );
     const position = surfacePoint.clone().addScaledVector(normal, last.y);
+    const baseQuaternion = getSurfaceQuaternion(normal);
+    // Yaw the base so its entrance (local +Z, the gate side) faces the path's
+    // approach (last → previous waypoint). Applied about local Y, then
+    // composed with the surface tilt: `base * yaw` keeps +Z pointing down the
+    // path while the surface quaternion orients the whole base onto the
+    // planet. A single-waypoint path has no approach, so it keeps its rest
+    // orientation.
+    const yaw =
+      previous !== undefined
+        ? getEndBuildingYaw(previous.x - last.x, previous.z - last.z)
+        : 0;
+    const quaternion = baseQuaternion.multiply(
+      new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), yaw)
+    );
     return {
       position: [position.x, position.y, position.z] as [
         number,
         number,
         number,
       ],
-      quaternion: getSurfaceQuaternion(normal),
+      quaternion,
     };
   }, [path, radius]);
 

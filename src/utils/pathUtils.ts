@@ -23,6 +23,15 @@ export const getPathSegmentYaw = (dx: number, dz: number) => {
   return Math.atan2(-dz, dx);
 };
 
+// Yaw (about Y) that points the player base's entrance (the model's local +Z,
+// where the gate and front buttresses sit) at the path's approach: `dx`/`dz`
+// are the direction from the base (the path's last waypoint) toward the
+// previous waypoint — the side enemies enter from. A yaw of `theta` turns
+// local +Z to (sin θ, 0, cos θ), so `atan2(dx, dz)` lands it on the approach.
+export const getEndBuildingYaw = (dx: number, dz: number): number => {
+  return Math.atan2(dx, dz);
+};
+
 export const getPathRenderSegments = (
   pathWaypoints: PathWaypoint[]
 ): RenderPathSegment[] => {

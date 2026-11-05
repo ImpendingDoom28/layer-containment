@@ -15,6 +15,7 @@ import {
 } from "../../../core/stores/useGameStore";
 import { useLevelEditorStore } from "../../../core/stores/useLevelEditorStore";
 import {
+  getEndBuildingYaw,
   getPathRenderSegments,
   getPathSegmentYaw,
 } from "../../../utils/pathUtils";
@@ -277,6 +278,10 @@ export const LevelEditorScene = () => {
                     path[path.length - 1].y,
                     path[path.length - 1].z,
                   ]}
+                  pathYaw={getEndBuildingYaw(
+                    path[path.length - 2].x - path[path.length - 1].x,
+                    path[path.length - 2].z - path[path.length - 1].z
+                  )}
                 />
               ) : null}
             </group>

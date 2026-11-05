@@ -107,10 +107,9 @@ export const TowerFireFX: FC<TowerFireFXProps> = ({
     position: Vector3;
     scale: number;
   } | null>(null);
-  // The per-tower recoil offset (a unit axis toward the base plus a length
-  // in the barrel's rest scale), derived from the muzzle point on the first
-  // shot. The muzzle point is in the turret node's local frame, and the
-  // barrel's rest scale is 1, so it is also valid in the barrel's frame.
+  // The per-tower recoil offset (a unit axis from the barrel tip toward its
+  // base plus a length in the barrel's rest scale), derived from the muzzle
+  // point and the barrel's rest position on the first shot.
   const recoilVecRef = useRef<{ axis: Vector3; length: number } | null>(null);
 
   // Per-tower muzzle-flash sprite: the radial texture is shared, the material
@@ -179,8 +178,11 @@ export const TowerFireFX: FC<TowerFireFXProps> = ({
         node.add(sprite);
         sprite.position.set(muzzle.x, muzzle.y, muzzle.z);
       }
-    } else if (sprite.parent) {
-      sprite.parent.remove(sprite);
+    } else if (sprite.parent !== fxGroupRef.current) {
+      // Also runs while the sprite is still unparented (a shot fired before
+      // the model loaded, or after a load failure): it must be attached to
+      // the fallback anchor, not skipped.
+      if (sprite.parent) sprite.parent.remove(sprite);
       if (fxGroupRef.current) {
         fxGroupRef.current.add(sprite);
         sprite.position.set(
@@ -206,9 +208,20 @@ export const TowerFireFX: FC<TowerFireFXProps> = ({
         };
         barrelRestRef.current = rest;
         if (muzzle) {
-          const axis = new Vector3(-muzzle.x, -muzzle.y, -muzzle.z);
-          const length = axis.length() * RECOIL_PULLBACK_FRACTION * rest.scale;
-          if (length > 0) axis.normalize();
+          // Recoil pulls the barrel tip back toward its own pivot (base), not
+          // the turret origin: the muzzle point is in the turret node's frame
+          // (same as the barrel's rest position), so the tip → base direction
+          // is `rest.position − muzzle`.
+          const toTip = new Vector3(
+            muzzle.x - rest.position.x,
+            muzzle.y - rest.position.y,
+            muzzle.z - rest.position.z
+          );
+          const length = toTip.length() * RECOIL_PULLBACK_FRACTION * rest.scale;
+          const axis =
+            toTip.length() > 0
+              ? toTip.clone().multiplyScalar(-1).normalize()
+              : new Vector3();
           recoilVecRef.current = { axis, length };
         }
       }
@@ -217,9 +230,9 @@ export const TowerFireFX: FC<TowerFireFXProps> = ({
       const p = ft / RECOIL_DURATION;
       const ease = 1 - (1 - p) ** 3;
       if (recoil) {
-        // axis points from the tip toward the base (−muzzle), so adding the
-        // offset pulls the tip back; (1 − ease) is 1 on the shot and → 0 as
-        // it springs to rest.
+        // axis points from the tip toward the base, so adding the offset
+        // pulls the tip back; (1 − ease) is 1 on the shot and → 0 as it
+        // springs to rest.
         const kick = recoil.length * (1 - ease);
         barrel.position.set(
           rest.position.x + recoil.axis.x * kick,

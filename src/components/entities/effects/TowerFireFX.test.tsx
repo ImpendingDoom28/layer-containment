@@ -72,8 +72,9 @@ const createHarness = async () => {
   const turret = new Object3D();
   const barrel = new Object3D();
   turret.add(barrel);
-  const turretRef = { current: turret };
-  const barrelRef = { current: barrel };
+  // Nullable so a test can detach the nodes (the fallback-attach case).
+  const turretRef: { current: Object3D | null } = { current: turret };
+  const barrelRef: { current: Object3D | null } = { current: barrel };
   const renderer = await ReactThreeTestRenderer.create(
     <SimulationClockProvider>
       <ClockCapture />

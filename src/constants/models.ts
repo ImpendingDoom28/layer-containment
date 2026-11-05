@@ -46,21 +46,37 @@ export const ENEMY_MODELS = {
 // (its direction of travel).
 export const ENEMY_MODEL_ROTATION_Y = Math.PI / 2;
 
+// The player base (the end building at the end of every path), extracted from
+// the Tower Defense entities collection as its own standalone GLB. Its rest
+// transform is already the one the scene wants (grounded at y = 0, centered
+// on x/z), so `EndBuilding` renders it as-is (see `prepareBaseModel`).
+export const BASE_MODEL: EnemyModelSpec = {
+  url: "assets/models/player_base.glb",
+  node: "Player_Base_ROOT",
+};
+
 // Tower model URLs live in the game config (`public/configs/game.json`,
 // `towerTypes.<type>.model`), so they are not known at module load: the enemy
-// models are preloaded at boot (below), and the tower models are preloaded once
-// the config has loaded — `GamePage` awaits them via `getAreModelsLoaded`,
-// which receives their URLs at that point.
+// and base models are preloaded at boot (below), and the tower models are
+// preloaded once the config has loaded — `GamePage` awaits them via
+// `getAreModelsLoaded`, which receives their URLs at that point.
 
-// Enemy model URLs only: these are the only ones known at module load.
-const ENEMY_MODEL_URLS = Object.values(ENEMY_MODELS).map((model) => model.url);
+// The models known at module load: every enemy plus the player base (the
+// base is static — no config lookup — so it preloads with the enemies, which
+// also keeps the level editor, which has no loading gate, from ever showing
+// the base's primitive fallback for long).
+const BOOT_MODEL_URLS = [
+  ...Object.values(ENEMY_MODELS).map((model) => model.url),
+  BASE_MODEL.url,
+];
 
-// Kick off the enemy GLB downloads the moment the module is first evaluated
-// (app boot, outside the Canvas) so the first wave of any enemy type never
-// suspends the whole scene into the loading screen. Guarded for the node test
-// environment, which has no network and never mounts the game scene.
+// Kick off the enemy and base GLB downloads the moment the module is first
+// evaluated (app boot, outside the Canvas) so the first wave of any enemy type
+// and the base at every path end never suspend the whole scene into the
+// loading screen. Guarded for the node test environment, which has no network
+// and never mounts the game scene.
 if (!import.meta.env["VITEST"]) {
-  for (const url of ENEMY_MODEL_URLS) {
+  for (const url of BOOT_MODEL_URLS) {
     useGLTF.preload(url);
   }
 }
@@ -119,7 +135,8 @@ export const settleModelLoads = (
  *
  * `towerModelUrls` are the tower model URLs from the game config, which are
  * only known once the config has loaded — so this is called with them at that
- * point (see `GamePage`), while the enemy models are already preloaded at boot.
+ * point (see `GamePage`), while the enemy and base models are already
+ * preloaded at boot.
  * `useGLTF` is fire-and-forget for preloading, so readiness is tracked here
  * instead, via the same `useGLTF` call the scene will make: outside React it
  * returns the cached parse or throws the in-flight load's promise, which
@@ -135,7 +152,7 @@ export const getAreModelsLoaded = (towerModelUrls: string[]): Promise<void> => {
     return modelLoad;
   }
 
-  const allModelUrls = [...ENEMY_MODEL_URLS, ...towerModelUrls];
+  const allModelUrls = [...BOOT_MODEL_URLS, ...towerModelUrls];
   modelLoad = settleModelLoads(
     allModelUrls.map((url) => () => useGLTF(url)),
     MODEL_LOAD_TIMEOUT_MS,

@@ -55,6 +55,7 @@ const muzzlePointSchema = z.object({
 });
 const towerMuzzleSchema = z.object({
   turretNode: z.string().optional(),
+  barrelNode: z.string().optional(),
   muzzle: muzzlePointSchema.nullable(),
 });
 

@@ -46,6 +46,25 @@ export const ENEMY_MODELS = {
 // (its direction of travel).
 export const ENEMY_MODEL_ROTATION_Y = Math.PI / 2;
 
+// Terrain decoration props (concrete rubble fragments), each shipped as its
+// own standalone GLB like the enemy models. The rest transform is the scene's:
+// grounded at y = 0 and centered on x/z, so `PlanetTileDecorations` renders
+// them as-is (the randomizer only adds per-instance scale/rotation/offset).
+export type RubbleModelSpec = {
+  url: string;
+  /** Name of the model root node inside the GLB. */
+  node: string;
+};
+
+export const RUBBLE_MODELS: readonly RubbleModelSpec[] = [
+  { url: "assets/models/rubble_1.glb", node: "Rubble_01_ROOT" },
+  { url: "assets/models/rubble_2.glb", node: "Rubble_02_ROOT" },
+  { url: "assets/models/rubble_3.glb", node: "Rubble_03_ROOT" },
+  { url: "assets/models/rubble_4.glb", node: "Rubble_04_ROOT" },
+  { url: "assets/models/rubble_5.glb", node: "Rubble_05_ROOT" },
+  { url: "assets/models/rubble_6.glb", node: "Rubble_06_ROOT" },
+] as const;
+
 // The player base (the end building at the end of every path), extracted from
 // the Tower Defense entities collection as its own standalone GLB. Its rest
 // transform is already the one the scene wants (grounded at y = 0, centered
@@ -61,13 +80,15 @@ export const BASE_MODEL: EnemyModelSpec = {
 // preloaded once the config has loaded — `GamePage` awaits them via
 // `getAreModelsLoaded`, which receives their URLs at that point.
 
-// The models known at module load: every enemy plus the player base (the
-// base is static — no config lookup — so it preloads with the enemies, which
-// also keeps the level editor, which has no loading gate, from ever showing
-// the base's primitive fallback for long).
+// The models known at module load: every enemy, the player base, and the
+// rubble props (all static — no config lookup — so they preload with the
+// enemies, which also keeps the level editor, which has no loading gate, from
+// ever showing the base's primitive fallback or the props' box fallback for
+// long).
 const BOOT_MODEL_URLS = [
   ...Object.values(ENEMY_MODELS).map((model) => model.url),
   BASE_MODEL.url,
+  ...RUBBLE_MODELS.map((model) => model.url),
 ];
 
 // Kick off the enemy and base GLB downloads the moment the module is first

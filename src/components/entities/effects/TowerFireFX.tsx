@@ -96,6 +96,16 @@ export const TowerFireFX: FC<TowerFireFXProps> = ({
   // simulation clock and correct across the frame-callback ordering.
   const pendingFireRef = useRef(false);
   const lastFireSimTimeRef = useRef(-Infinity);
+  // The muzzle point the most recent shot left, in the turret node's local
+  // frame. For multi-tube towers (the BRL) the fire event carries the specific
+  // tube the shot left, so the flash lands on that tube; for single-muzzle
+  // towers it equals the rest muzzle. Null until the first shot (or a shot
+  // that fell back to the centre emitter).
+  const lastFiredMuzzleRef = useRef<{
+    x: number;
+    y: number;
+    z: number;
+  } | null>(null);
 
   // This FX's own scene group: the flash sprite's fallback anchor while the
   // model is still loading (no turret node to parent to yet).
@@ -144,8 +154,14 @@ export const TowerFireFX: FC<TowerFireFXProps> = ({
   // `useFrame` keeps the effect on the simulation clock).
   useEffect(() => {
     const towerId = tower.id;
-    const onFire = (data: { towerId?: number }) => {
-      if (data && data.towerId === towerId) pendingFireRef.current = true;
+    const onFire = (data: {
+      towerId?: number;
+      muzzleLocal?: { x: number; y: number; z: number } | null;
+    }) => {
+      if (data && data.towerId === towerId) {
+        pendingFireRef.current = true;
+        lastFiredMuzzleRef.current = data.muzzleLocal ?? null;
+      }
     };
     gameEvents.on(GameEvent.TOWER_FIRE, onFire);
     return () => {
@@ -165,18 +181,26 @@ export const TowerFireFX: FC<TowerFireFXProps> = ({
     const barrel = barrelNodeRef.current;
     const sprite = flashSprite;
 
-    // Keep the flash sprite at the barrel tip: parented to the turret node,
-    // which carries the aim rotation (the muzzle point is in the turret node's
-    // local frame — the same source of truth as the projectile spawn, which
-    // transforms it by the turret's live world matrix). While the model is
-    // still loading there is no node, so it falls back to the centre emitter
-    // (the same height the projectile falls back to).
-    const muzzle = tower.muzzle?.muzzle;
-    if (node && muzzle) {
+    // Keep the flash sprite at the muzzle that fired: parented to the turret
+    // node, which carries the aim rotation (the muzzle point is in the turret
+    // node's local frame — the same source of truth as the projectile spawn,
+    // which transforms it by the turret's live world matrix). For multi-tube
+    // towers the event carries the specific tube the shot left, so the flash
+    // moves with the round-robin tube. While the model is still loading (no
+    // node) or before the first shot (no muzzle yet), it falls back to the
+    // centre emitter (the same height the projectile falls back to).
+    const firedMuzzle = lastFiredMuzzleRef.current ?? tower.muzzle?.muzzle;
+    if (node && firedMuzzle) {
       if (sprite.parent !== node) {
         if (sprite.parent) sprite.parent.remove(sprite);
         node.add(sprite);
-        sprite.position.set(muzzle.x, muzzle.y, muzzle.z);
+      }
+      if (
+        sprite.position.x !== firedMuzzle.x ||
+        sprite.position.y !== firedMuzzle.y ||
+        sprite.position.z !== firedMuzzle.z
+      ) {
+        sprite.position.set(firedMuzzle.x, firedMuzzle.y, firedMuzzle.z);
       }
     } else if (sprite.parent !== fxGroupRef.current) {
       // Also runs while the sprite is still unparented (a shot fired before

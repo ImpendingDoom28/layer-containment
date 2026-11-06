@@ -201,32 +201,33 @@
   "towerHeight": 1.2,
   "towerSellPriceMultiplier": 0.75,
   "towerTypes": {
-    "aoe": {
-      "aoeRadius": 1.3,
+    "brl": {
+      "aoeRadius": 1.5,
       "bodyWidthScale": 1.2,
       "color": "#ef4444",
       "cost": 125,
       "damage": 50,
-      "description": "Area damage tower",
+      "description": "Ballistic rocket launcher",
       "fireRate": 3,
-      "id": "aoe",
+      "id": "brl",
       "model": {
         "node": "Tower_AOE_ROOT",
         "url": "assets/models/tower_aoe.glb"
       },
       "muzzle": {
-        "muzzle": {
-          "x": -0.194,
-          "y": 0.386,
-          "z": 0.4025
-        },
-        "barrelNode": "Elevation001",
+        "muzzle": null,
+        "muzzleOffsets": [
+          { "x": -0.22, "y": 0.78, "z": -0.16 },
+          { "x": 0.22, "y": 0.78, "z": -0.16 },
+          { "x": -0.22, "y": 0.78, "z": 0.19 },
+          { "x": 0.22, "y": 0.78, "z": 0.19 }
+        ],
         "turretNode": "Azimuth001"
       },
-      "name": "AOE Tower",
+      "name": "BRL",
       "projectileSpeed": 10,
-      "projectileType": "aoe",
-      "range": 3,
+      "projectileType": "rocket",
+      "range": 4,
       "targeting": "nearest",
       "topScale": 1,
       "topShape": "flat"

@@ -15,11 +15,17 @@ const towerTargetingSchema = z.enum([
   "highest",
   "focused",
 ]);
-const projectileTypeSchema = z.enum(["aoe", "single", "beam", "chain"]);
+const projectileTypeSchema = z.enum([
+  "aoe",
+  "single",
+  "beam",
+  "chain",
+  "rocket",
+]);
 const towerTypeSchema = z.enum([
   "basic",
   "slow",
-  "aoe",
+  "brl",
   "laser",
   "relay",
   "chain",
@@ -57,6 +63,7 @@ const towerMuzzleSchema = z.object({
   turretNode: z.string().optional(),
   barrelNode: z.string().optional(),
   muzzle: muzzlePointSchema.nullable(),
+  muzzleOffsets: z.array(muzzlePointSchema).optional(),
 });
 
 const towerConfigSchema: z.ZodType<TowerConfig> = z.object({

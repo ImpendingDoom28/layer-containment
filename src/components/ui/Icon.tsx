@@ -79,6 +79,7 @@ const ICON_NAMES = {
   Plus: 1,
   Radar: 1,
   Radio: 1,
+  Rocket: 1,
   Route: 1,
   Shield: 1,
   Skull: 1,

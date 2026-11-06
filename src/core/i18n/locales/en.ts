@@ -301,9 +301,10 @@ export const en = {
       name: "Slow Tower",
       description: "Slows enemies on hit",
     },
-    aoe: {
-      name: "AOE Tower",
-      description: "Area damage tower",
+    brl: {
+      name: "BRL",
+      description:
+        "Ballistic rocket launcher: loops a rocket in an arc from one of its four launcher tubes (the tube changes with every shot) and detonates it on impact for area damage.",
     },
     laser: {
       name: "Laser Tower",

@@ -94,6 +94,9 @@ export const createTowerCombatSystem = (
   const lastTargets = new Map<number, number>();
   const turretYaws = new Map<number, number>();
   const turretNodes = new Map<number, Object3D>();
+  // Which launcher tube a multi-muzzle tower (the BRL) fired from last: the
+  // round-robin index so each shot leaves a different hole.
+  const muzzleOffsetsCursor = new Map<number, number>();
   // Throttled target selection: the enemy each tower last picked, plus the
   // simulation time of that pick. The per-frame pass reuses the cached enemy
   // between re-picks and only runs the full scan on the re-pick interval or
@@ -115,6 +118,7 @@ export const createTowerCombatSystem = (
     lastTargets.clear();
     turretYaws.clear();
     turretNodes.clear();
+    muzzleOffsetsCursor.clear();
     cachedTargets.clear();
     repickTimes.clear();
     cachedTowers = null;
@@ -155,6 +159,9 @@ export const createTowerCombatSystem = (
     }
     for (const id of turretYaws.keys()) {
       if (!towerIds.has(id)) turretYaws.delete(id);
+    }
+    for (const id of muzzleOffsetsCursor.keys()) {
+      if (!towerIds.has(id)) muzzleOffsetsCursor.delete(id);
     }
     for (const id of cachedTargets.keys()) {
       if (!towerIds.has(id)) cachedTargets.delete(id);
@@ -372,8 +379,23 @@ export const createTowerCombatSystem = (
       // (model still loading / primitive fallback) fall back to the old
       // centre emitter. The result is a scratch vector, read into the
       // projectile and the fire event before the next tower reuses it.
+      // Towers with several muzzle holes (the BRL's four launcher tubes)
+      // fire from a different hole every shot: the cursor cycles through the
+      // offsets so the flash — and the rocket — leave the tubes in turn.
+      const muzzleOffsets = tower.muzzle?.muzzleOffsets;
+      const muzzleSpec =
+        muzzleOffsets?.length
+          ? muzzleOffsets[
+              (muzzleOffsetsCursor.get(tower.id) ?? 0) % muzzleOffsets.length
+            ]
+          : tower.muzzle?.muzzle;
+      if (muzzleOffsets?.length) {
+        muzzleOffsetsCursor.set(
+          tower.id,
+          ((muzzleOffsetsCursor.get(tower.id) ?? 0) + 1) % muzzleOffsets.length
+        );
+      }
       const startWorld = _muzzleWorld;
-      const muzzleSpec = tower.muzzle?.muzzle;
       const muzzleNode = turretNodes.get(tower.id);
       if (muzzleSpec && muzzleNode) {
         // `localToWorld` refreshes the node's world matrix from its current
@@ -434,6 +456,13 @@ export const createTowerCombatSystem = (
           y: startWorld.y,
           z: startWorld.z,
         },
+        // The muzzle point that fired this shot, in the turret node's local
+        // frame (for multi-tube towers like the BRL this is the specific tube
+        // the shot left, so the muzzle flash lands on it — the FX parents the
+        // flash to the turret node and reads this offset).
+        muzzleLocal: muzzleSpec
+          ? { x: muzzleSpec.x, y: muzzleSpec.y, z: muzzleSpec.z }
+          : null,
       });
     });
   };

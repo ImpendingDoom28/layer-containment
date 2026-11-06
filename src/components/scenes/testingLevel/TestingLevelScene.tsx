@@ -6,7 +6,6 @@ import { Grid } from "../../entities/Grid";
 import { Path } from "../../entities/Path";
 import { Portal } from "../../entities/Portal";
 import { Building } from "../../entities/Building";
-import { Water } from "../../entities/Water";
 import { Tower } from "../../entities/Tower";
 import { Enemy } from "../../entities/Enemy";
 import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
@@ -107,10 +106,6 @@ export const TestingLevelScene: FC = () => {
 
       {buildings.map((building) => (
         <Building key={building.id} building={building} />
-      ))}
-
-      {waters.map((water) => (
-        <Water key={water.id} water={water} />
       ))}
 
       {towers.map((tower) => (

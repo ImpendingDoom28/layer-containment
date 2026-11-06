@@ -3,7 +3,6 @@ import { useQuery } from "koota/react";
 
 import { TowerSystem } from "./TowerSystem";
 import { Building } from "../entities/Building";
-import { Water } from "../entities/Water";
 import { Enemy } from "../entities/Enemy";
 import {
   buildingsSelector,
@@ -149,10 +148,6 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
 
         {buildings.map((building) => (
           <Building key={building.id} building={building} />
-        ))}
-
-        {waters.map((water) => (
-          <Water key={water.id} water={water} />
         ))}
 
         <group name="enemies">

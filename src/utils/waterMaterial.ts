@@ -27,15 +27,16 @@ type CreateWaterMaterialParams = {
 /**
  * Peak vertex displacement (world units) of the animated water surface.
  *
- * Water tiles and the water bodies that sit in the same cells share one
- * world-space wave field, so they MUST swell with the same amplitude: with
- * equal amplitudes the two co-located top faces move in lockstep and their
- * vertical gap stays constant, so they never cross. Different amplitudes make
- * the gap oscillate with the wave field and the surfaces intersect on a
- * moving boundary — the flicker. Exported so tiles and bodies share one
- * value instead of each hard-coding their own.
+ * The water surface is the planet-mapped tile: its top face is recessed
+ * below the land plane, and its trough must not dig through the ground
+ * sphere while its crest must not poke through the shore. With the surface
+ * centered in the tile's 0.05 basin the clearance to both is pathYOffset/2,
+ * so the swell must stay below that. The wave field's real peak is ~0.78
+ * (not the 0.5 a rough bound assumes), so 0.025 keeps the swell at ±~0.020
+ * with margin in both directions. Exported so every water surface shares one
+ * value instead of each hard-coding its own.
  */
-export const WATER_AMPLITUDE = 0.05;
+export const WATER_AMPLITUDE = 0.025;
 
 // GLSL for the shared wave field, included verbatim in both the vertex and the
 // fragment shader so the silhouette, the lighting, and the displacement all
@@ -97,7 +98,11 @@ uniform float uWaterTime;
 uniform vec3 uWaterGlow;
 varying vec3 vWaterWorldPos;
 ${WATER_WAVE_GLSL}
-float waterRipple( vec2 p ) { return waterHeight( p ) + 0.5; }
+// waterHeight's real peak is ~0.78 (measured, not the 0.5 a naive
+// "+ 0.5" assumes), so fold that into a ~[0, 1] ripple: at troughs the
+// old value went to -0.28 and the emissive/roughness terms below dropped
+// toward zero, painting a big dark patch that drifts with the field.
+float waterRipple( vec2 p ) { return ( waterHeight( p ) * 0.6 + 0.5 ) * 0.9; }
 // Central differences of waterHeight: one exact derivative for the sines AND
 // the FBM noise (which has no closed form). Returns the world-space XZ slope
 // (dH/dx, dH/dz) as a 3-vector, ready for the viewMatrix rotation.
@@ -181,13 +186,13 @@ ${WATER_FRAGMENT_GLSL}`
     shader.fragmentShader = shader.fragmentShader.replace(
       "vec3 totalEmissiveRadiance = emissive;",
       `float waterR = waterRipple( vWaterWorldPos.xz );
- vec3 totalEmissiveRadiance = emissive * ( 0.55 + 0.9 * waterR ) + uWaterGlow * waterR * 0.3;`
+ vec3 totalEmissiveRadiance = emissive * ( 0.6 + 0.7 * waterR ) + uWaterGlow * waterR * 0.25;`
     );
 
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <color_fragment>",
       `#include <color_fragment>
- diffuseColor.rgb *= ( 0.92 + 0.16 * waterR );`
+ diffuseColor.rgb *= ( 0.94 + 0.12 * waterR );`
     );
 
     // Roughness modulation: the highlight tightens/loosens with the wave so
@@ -195,7 +200,7 @@ ${WATER_FRAGMENT_GLSL}`
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <roughnessmap_fragment>",
       `#include <roughnessmap_fragment>
- roughnessFactor = roughnessFactor * ( 0.6 + 0.7 * waterR );`
+ roughnessFactor = roughnessFactor * ( 0.7 + 0.6 * waterR );`
     );
 
     // Normal perturbation: for a height field h(x,z) the surface normal is
@@ -208,7 +213,7 @@ ${WATER_FRAGMENT_GLSL}`
       `#include <normal_fragment_maps>
  vec3 waterWorldGrad = waterRippleGradient( vWaterWorldPos.xz );
  vec3 waterViewGrad = ( viewMatrix * vec4( waterWorldGrad, 0.0 ) ).xyz;
- normal = normalize( normal - 0.4 * waterViewGrad );`
+ normal = normalize( normal - 0.12 * waterViewGrad );`
     );
   };
 

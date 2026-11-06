@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   createWaterMaterial,
   getWaterMaterial,
+  WATER_AMPLITUDE,
   type WaterTimeUniform,
 } from "./waterMaterial";
 
@@ -23,7 +24,7 @@ const sampleParams = {
   color: "#0e7490",
   glow: "#22d3ee",
   time: { value: 0 } as WaterTimeUniform,
-  amplitude: 0.05,
+  amplitude: WATER_AMPLITUDE,
   topY: 0.025,
 };
 
@@ -149,14 +150,14 @@ describe("getWaterMaterial", () => {
     // Reflections must visibly move: roughness shimmers and the normal is
     // perturbed along the wave field's gradient (view space via viewMatrix).
     expect(shader.fragmentShader).toContain(
-      "roughnessFactor = roughnessFactor * ( 0.6 + 0.7 * waterR );"
+      "roughnessFactor = roughnessFactor * ( 0.7 + 0.6 * waterR );"
     );
     expect(shader.fragmentShader).toContain("waterRippleGradient( vWaterWorldPos.xz )");
     expect(shader.fragmentShader).toContain("( viewMatrix * vec4( waterWorldGrad, 0.0 ) ).xyz");
     // A height-field normal tilts against the slope (minus sign), and the
     // gradient carries the world XZ components (gz in the Z slot).
     expect(shader.fragmentShader).toContain(
-      "normal = normalize( normal - 0.4 * waterViewGrad );"
+      "normal = normalize( normal - 0.12 * waterViewGrad );"
     );
     expect(shader.fragmentShader).toContain("vec3( gx, 0.0, gz )");
     // Depth: the vertex shader displaces the top surface along local Y,
@@ -214,8 +215,7 @@ const waterFbm = (x: number, y: number) => {
   }
   return v;
 };
-const waterHeightAt = (x: number, y: number) => {
-  const t = 0;
+const waterHeightAt = (x: number, y: number, t: number) => {
   const waves =
     (Math.sin(x * 2.1 + t * 0.9) * 0.5 +
       Math.sin((x * 0.6 + y * 1.7) * 1.8 - t * 0.7) * 0.3 +
@@ -226,16 +226,21 @@ const waterHeightAt = (x: number, y: number) => {
 };
 
 describe("wave field range", () => {
-  it("stays smaller than the tile's 0.05 shoreline recess at the tile amplitude", () => {
+  it("keeps the swell inside the tile's 0.05 basin at the tile amplitude", () => {
+    // The water top face sits mid-basin (0.025 above the ground sphere,
+    // 0.025 below the shore), so the swell must stay under 0.025 both ways.
     let maxAbs = 0;
-    for (let x = -5; x <= 5; x += 0.25) {
-      for (let y = -5; y <= 5; y += 0.25) {
-        maxAbs = Math.max(maxAbs, Math.abs(waterHeightAt(x, y)));
+    for (let t = 0; t < 30; t += 0.5) {
+      for (let x = -5; x <= 5; x += 0.25) {
+        for (let y = -5; y <= 5; y += 0.25) {
+          maxAbs = Math.max(maxAbs, Math.abs(waterHeightAt(x, y, t)));
+        }
       }
     }
-    // amplitude 0.05 × field must be < 0.05 (the recess), leaving margin.
+    // The field's real peak is ~0.78; cap it so the clearance below keeps
+    // margin, and assert the swell (amplitude × field) fits the basin.
     expect(maxAbs).toBeLessThan(0.9);
-    expect(0.05 * maxAbs).toBeLessThan(0.05);
+    expect(WATER_AMPLITUDE * maxAbs).toBeLessThan(0.025);
   });
 });
 

@@ -1,15 +1,35 @@
 # Performance Stress Test
 
 A dedicated, unattended stress-test entry saturates the renderer and simulation
-on a generated `64x64` level: 4096 shader-compiled grid tiles, a 64-waypoint
-serpentine path (~2,080 strip segments baked into two merged meshes), 150
-pre-placed towers of all six types, and 20 waves totalling ~2,330 enemies. The
-run loops forever with a very high base health so it never ends, and a live
-overlay shows FPS, frame time, draw calls, triangles, JS heap, and wave/entity
-counts. After 30 seconds of steady rendering it freezes a **30-second average**
-block (FPS, frame, draw calls, triangles, programs) for baseline measurement —
-no thresholds are enforced yet, the numbers are reported so limits can be set
-later.
+on a generated `64x64` level: 4096 shader-compiled grid tiles, **four portals**
+(one serpentine path per 32x32 quadrant, each with its own end building, so
+enemies spawn and flow from four directions), 150 pre-placed towers of all six
+types, **500 one-tile animated water bodies** (two shades; each tile carries a
+live vertex-displaced wave material that animates via `WaterClockProvider`), and
+20 waves totalling ~4,260 enemies across **all five enemy types** (incl.
+splitter). The run loops forever with a very high base health so it never ends,
+and a live overlay shows FPS, frame time, draw calls, triangles, JS heap, and
+wave/entity counts. After 30 seconds of steady rendering it freezes a
+**30-second average** block (FPS, frame, draw calls, triangles, programs) for
+baseline measurement — no thresholds are enforced yet, the numbers are reported
+so limits can be set later.
+
+To maximize the stress, two things differ from a normal game session:
+
+- **The camera is pinned at the far end of the map** (a locked vantage past the
+  board's +z end looking back at the center, ~89 units out, inside the skybox),
+  so the **entire 64x64 board renders in a single frame** — no frustum culling
+  hides anything. This is the maximum rendering load for the level.
+- **The scene only mounts once every 3D model has *settled*** (all five enemy
+  models, the base, and all six tower models from the game config). `GamePage`
+  uses the same `getAreModelsLoaded` singleton, but it settles on a 15s cap and
+  keeps rendering placeholder primitives for models still streaming — so the
+  stress harness additionally polls the shared `useGLTF` cache until every
+  model is either loaded or failed (a run is not a valid baseline while it is
+  on placeholders). In practice all models load, so no primitive fallback is
+  ever shown; the e2e suite stubs a delayed and a failed model download to
+  cover both fallback paths (`MODELS` on the overlay reports
+  `loading` → `valid` / `invalid` accordingly).
 
 Everything stress-test related — the app, the entry HTML, the Vite and
 Playwright configs, the e2e spec, and the profiling scripts — lives under

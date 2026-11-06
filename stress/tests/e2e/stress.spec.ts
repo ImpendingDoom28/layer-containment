@@ -162,20 +162,22 @@ test("reports MODELS loading until a delayed model settles, then valid", async (
 }) => {
   // The scene is held back (MODELS loading, metrics window closed) while a
   // model is still streaming; it reports valid only once every model has
-  // actually settled. Delay one enemy model by 20s (past the 15s cap on the
-  // shared load promise) so the run is provably "loading" while it is pending.
+  // actually settled. Hold one enemy model's response until the test has
+  // *observed* "loading" (well past the 15s cap on the shared load promise,
+  // so the app must still read "loading" at that point), then release it so
+  // the "valid" check runs after the model settles — no race between startup
+  // timing and the delay.
   const troopGlb = await readFile(TROOP_GLB_PATH);
-  await page.route(
-    /assets\/models\/troop\.glb/,
-    async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 20_000));
-      await route.fulfill({
-        status: 200,
-        contentType: "model/gltf-binary",
-        body: troopGlb,
-      });
-    },
-  );
+  let releaseHold: () => void;
+  const hold = new Promise<void>((resolve) => (releaseHold = resolve));
+  await page.route(/assets\/models\/troop\.glb/, async (route) => {
+    await hold;
+    await route.fulfill({
+      status: 200,
+      contentType: "model/gltf-binary",
+      body: troopGlb,
+    });
+  });
 
   test.setTimeout(180_000);
 
@@ -188,7 +190,8 @@ test("reports MODELS loading until a delayed model settles, then valid", async (
     .poll(async () => await readStat(page, "MODELS"), { timeout: 90_000 })
     .toBe("loading");
 
-  // Once the model settles the run is fully loaded again.
+  // Release the held response: the model settles and the run becomes valid.
+  releaseHold();
   await expect
     .poll(async () => await readStat(page, "MODELS"), { timeout: 120_000 })
     .toBe("valid");

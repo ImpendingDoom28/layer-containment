@@ -495,8 +495,7 @@ const StressTestGame = () => {
     /* stress level is fully pre-built; placement is disabled */
   }, []);
 
-  const { gameStatus, isGameConfigLoaded, selectedTower, shouldStopMovement } =
-    gameSystem;
+  const { gameStatus, isGameConfigLoaded, selectedTower } = gameSystem;
 
   const { sellTower, isLevelConfigLoaded } = levelSystem;
 
@@ -600,7 +599,13 @@ const StressTestGame = () => {
                       selectedTower={selectedTower}
                       gameStatus={gameStatus}
                       onSellTower={sellTower}
-                      shouldStopCamera={shouldStopMovement}
+                      // Hard-lock the camera for the whole baseline run: while
+                      // the game is "playing", `shouldStopMovement` is false,
+                      // so passing it through would let GameCamera's frame
+                      // clamp the height to 20 and pull the rig's (0, 40, 80)
+                      // vantage back inside the field, breaking the documented
+                      // end-of-map view and the baseline numbers.
+                      shouldStopCamera
                     />
                   </GameSessionSystem>
                 </SimulationClockProvider>

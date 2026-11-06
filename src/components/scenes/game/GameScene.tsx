@@ -1,7 +1,6 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { AudioListenerSync } from "@webgamedevkit/audio-engine/r3f";
 
-import type { AnyPlayableLevelId } from "../../../constants/playableLevels";
 import { Grid } from "../../entities/Grid";
 import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
 import { PlacementHighlightOverlay } from "../../entities/PlacementHighlightOverlay";
@@ -10,21 +9,12 @@ import { Path } from "../../entities/Path";
 import { GameCamera } from "./GameCamera";
 import type {
   Tower as TowerInstance,
-  Enemy as EnemyInstance,
-  Projectile as ProjectileInstance,
   GameStatus,
   TowerType,
 } from "../../../core/types/game";
-import { WaveLoopSystem } from "../../systems/WaveLoopSystem";
-import { GameProcessSystem } from "../../systems/GameProcessSystem";
-import { ApplyDamageSystem } from "../../systems/ApplyDamageSystem";
-import { ApplyBaseDefeatSystem } from "../../systems/ApplyBaseDefeatSystem";
-import { ApplyStatsSystem } from "../../systems/ApplyStatsSystem";
-import { WaveSystem } from "../../../core/hooks/useWaveSystem";
 import { TileData } from "../../../core/types/utils";
 import { EntitiesSystem } from "../../systems/EntitiesSystem";
 import { CombatJuice } from "../../entities/effects/CombatJuice";
-import { LevelSystem } from "../../systems/LevelSystem";
 import {
   gridOffsetSelector,
   gridSizeSelector,
@@ -47,16 +37,7 @@ type GameSceneProps = {
   selectedTower: TowerInstance | null;
   shouldStopCamera: boolean;
   gameStatus: GameStatus;
-  waveSystem: WaveSystem;
-  onEnemyReachEnd: (enemyId: number) => void;
-  onProjectileHit: (
-    projectile: ProjectileInstance,
-    targetEnemy: EnemyInstance,
-    currentTime: number
-  ) => void;
-  onProjectileRemove: (projectileId: number) => void;
   onSellTower: (towerId: number) => void;
-  playableLevelId: AnyPlayableLevelId;
 };
 
 export const GameScene: React.FC<GameSceneProps> = ({
@@ -64,12 +45,7 @@ export const GameScene: React.FC<GameSceneProps> = ({
   selectedTower,
   shouldStopCamera,
   gameStatus,
-  waveSystem,
-  onEnemyReachEnd,
-  onProjectileHit,
-  onProjectileRemove,
   onSellTower,
-  playableLevelId,
 }) => {
   const pathWaypoints = useLevelStore(pathWaypointsSelector);
   const gridSize = useLevelStore(gridSizeSelector);
@@ -90,8 +66,6 @@ export const GameScene: React.FC<GameSceneProps> = ({
 
   return (
     <>
-      <LevelSystem levelName={playableLevelId} />
-
       <Skybox />
       <Light />
       <Ground />
@@ -126,22 +100,12 @@ export const GameScene: React.FC<GameSceneProps> = ({
       />
 
       <EntitiesSystem
-        onEnemyReachEnd={onEnemyReachEnd}
-        onProjectileHit={onProjectileHit}
-        onProjectileRemove={onProjectileRemove}
         onSellTower={onSellTower}
         hoveredTile={hoveredTile}
         selectedTower={selectedTower}
       />
 
       <CombatJuice />
-
-      <WaveLoopSystem waveSystem={waveSystem} />
-
-      <GameProcessSystem />
-      <ApplyDamageSystem />
-      <ApplyBaseDefeatSystem />
-      <ApplyStatsSystem />
     </>
   );
 };

@@ -10,10 +10,12 @@ import { enemyActions } from "../ecs/actions/enemyActions";
 import { world } from "../ecs/world";
 import { useGameStore } from "../stores/useGameStore";
 import { useLevelStore } from "../stores/useLevelStore";
-import { useSettingsStore } from "../stores/useSettingsStore";
 import type { Enemy, Projectile } from "../types/game";
 import { patchInstancedTrailFade } from "../../utils/instancedTrailFadePatch";
-import { computeTrailPose, useInstancedProjectiles } from "./useInstancedProjectiles";
+import {
+  computeTrailPose,
+  useInstancedProjectiles,
+} from "./useInstancedProjectiles";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
@@ -85,12 +87,15 @@ const fireAtEnemy = (
     ...overrides,
   });
 
-const advance = async (
-  renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>,
-  frames = 1
-) => {
+const advance = async (frames = 1) => {
   await ReactThreeTestRenderer.act(async () => {
-    await renderer.advanceFrames(frames, 1);
+    for (let index = 0; index < frames; index += 1) {
+      api!.updateProjectiles({
+        deltaSeconds: 1,
+        simulationTimeSeconds: index + 1,
+        canResolveGameplay: true,
+      });
+    }
   });
 };
 
@@ -98,9 +103,6 @@ beforeEach(() => {
   onHit.mockClear();
   useLevelStore.getState().resetLevelState();
   useGameStore.getState().setGameStatus("playing");
-  // The default setting caps the per-frame delta to one background-ticker
-  // tick (0.05s); the tests advance in 1s steps, so the cap is lifted.
-  useSettingsStore.getState().setPauseWhenTabHidden(false);
   enemyActions(world).clearAllEnemies();
 });
 
@@ -160,7 +162,9 @@ describe("patchInstancedTrailFade", () => {
       "float trailFade = clamp( 0.5 + vTrailFade, 0.0, 1.0 );"
     );
     expect(shader.fragmentShader).toContain("diffuseColor.a *= trailFade;");
-    expect(shader.fragmentShader).toContain("totalEmissiveRadiance *= trailFade;");
+    expect(shader.fragmentShader).toContain(
+      "totalEmissiveRadiance *= trailFade;"
+    );
   });
 
   it("is idempotent", () => {
@@ -200,7 +204,7 @@ describe("useInstancedProjectiles trails", () => {
 
       // Six 1-second frames at speed 15 bring the projectile from x=100 to
       // x=10, within the 20-wide hit radius of the enemy at x=0.
-      await advance(renderer, 6);
+      await advance(6);
       expect(onHit).toHaveBeenCalledTimes(1);
       expect(api!.getActiveProjectiles()).toHaveLength(0);
       expect(api!.getTrailPoolStats()!.inUse).toBe(0);
@@ -218,7 +222,7 @@ describe("useInstancedProjectiles trails", () => {
       fireAtEnemy({ projectileType: "chain" });
       expect(api!.getTrailPoolStats()!.inUse).toBe(0);
 
-      await advance(renderer, 3);
+      await advance(3);
       expect(api!.getTrailPoolStats()!.inUse).toBe(0);
     } finally {
       await renderer.unmount();

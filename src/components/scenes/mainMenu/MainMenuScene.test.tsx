@@ -6,8 +6,6 @@ import { WorldProvider } from "koota/react";
 
 import { EntityIdProvider } from "../../../core/contexts/EntityIdContext";
 import { SimulationClockProvider } from "../../../core/contexts/SimulationClockContext";
-import { enemyActions } from "../../../core/ecs/actions/enemyActions";
-import { getEnemySnapshots } from "../../../core/ecs/selectors/enemySnapshots";
 import { testWorld } from "../../../core/ecs/world";
 import { useLevelStore } from "../../../core/stores/useLevelStore";
 import { useGameStore } from "../../../core/stores/useGameStore";
@@ -54,30 +52,7 @@ const advance = async (
   });
 };
 
-const baseEnemy = (id: number, health: number) => ({
-  id,
-  type: "basic" as const,
-  name: "E",
-  health,
-  maxHealth: 100,
-  speed: 1,
-  reward: 3,
-  color: "#fff",
-  size: 0.4,
-  healthLoss: 1,
-  pathProgress: 0,
-  pathIndex: 0,
-  x: 0,
-  z: 0,
-  upgrades: [],
-});
-
-const levelProps = (): Record<string, unknown> =>
-  entitiesSystemProps.mock.calls[
-    entitiesSystemProps.mock.calls.length - 1
-  ][0] as Record<string, unknown>;
-
-describe("MainMenuScene enemy cleanup wiring", () => {
+describe("MainMenuScene shared scene wiring", () => {
   beforeAll(() => {
     Object.defineProperty(globalThis, "document", {
       value: {
@@ -116,10 +91,8 @@ describe("MainMenuScene enemy cleanup wiring", () => {
     vi.unstubAllGlobals();
   });
 
-  it("passes a working onEnemyReachEnd that removes the enemy", async () => {
+  it("loads the menu level and mounts shared entity presentation", async () => {
     useGameStore.getState().setGameStatus("menu");
-    const actions = enemyActions(testWorld);
-    actions.clearAllEnemies();
 
     const renderer = await ReactThreeTestRenderer.create(
       <WorldProvider world={testWorld}>
@@ -141,23 +114,10 @@ describe("MainMenuScene enemy cleanup wiring", () => {
       }
       expect(useLevelStore.getState().isLevelConfigLoaded).toBe(true);
 
-      // Death juice is mounted so menu kills (settled by EnemyDeathSystem)
-      // animate with the burst + reward float.
       expect(combatJuiceRendered).toHaveBeenCalled();
-
-      // The movement system calls this when an enemy reaches the path end;
-      // an undefined handler (the old bug) leaves the enemy there forever.
-      const onEnemyReachEnd = levelProps().onEnemyReachEnd;
-      expect(typeof onEnemyReachEnd).toBe("function");
-
-      actions.spawnEnemy(baseEnemy(1, 100));
-      expect(getEnemySnapshots(testWorld).some((e) => e.id === 1)).toBe(true);
-
-      (onEnemyReachEnd as (id: number) => void)(1);
-      expect(getEnemySnapshots(testWorld).some((e) => e.id === 1)).toBe(false);
+      expect(entitiesSystemProps).toHaveBeenCalled();
     } finally {
       renderer.unmount();
-      actions.clearAllEnemies();
     }
   });
 });

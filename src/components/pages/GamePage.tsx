@@ -1,17 +1,10 @@
-import {
-  FC,
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { FC, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "../ui/lib/twUtils";
 import { Canvas } from "@react-three/fiber";
 import { Stats } from "@react-three/drei";
+import { useWorld } from "koota/react";
 
 import { GameScene } from "../scenes/game/GameScene";
 import { MainMenuScene } from "../scenes/mainMenu/MainMenuScene";
@@ -37,15 +30,8 @@ import {
 } from "../../constants/playableLevels";
 import { useGameSystem } from "../../core/hooks/useGameSystem";
 import { useBaseHealth } from "../../core/hooks/useBaseHealth";
-import { useEnemyActions } from "../../core/hooks/useEnemyActions";
-import { useProjectileSystem } from "../../core/hooks/useProjectileSystem";
-import { useWaveSystem } from "../../core/hooks/useWaveSystem";
 import { useLevelSystem } from "../../core/hooks/useLevelSystem";
 import { useUpgradesSystem } from "../../core/hooks/useUpgradesSystem";
-import {
-  DEFAULT_STARTING_HEALTH,
-  loadLevelConfigFile,
-} from "../../core/configs/levelConfig";
 import { useHeldClose } from "../../core/hooks/useHeldClose";
 import { useLoadingTransition } from "../../core/hooks/useLoadingTransition";
 import { useMenuParallax } from "../../core/hooks/useMenuParallax";
@@ -55,7 +41,7 @@ import {
 } from "../../core/hasSeenControlsIntro";
 import { PageWrapper } from "./PageWrapper";
 import { getAreModelsLoaded } from "../../constants/models";
-import { world } from "../../core/ecs/world";
+
 import { getRunStats } from "../../core/ecs/selectors/runStats";
 import { SimulationClockProvider } from "../../core/contexts/SimulationClockContext";
 import {
@@ -63,6 +49,9 @@ import {
   useGameStore,
 } from "../../core/stores/useGameStore";
 import { WaterClockProvider } from "../../core/contexts/WaterClockContext";
+import { useEntityIds } from "../../core/contexts/EntityIdContext";
+import { createGameSession } from "../../core/session/gameSession";
+import { GameSessionSystem } from "../systems/GameSessionSystem";
 
 type GamePageProps = {
   onOpenLevelEditor: () => void;
@@ -107,18 +96,23 @@ export const GamePage: FC<GamePageProps> = ({
   const gameSystem = useGameSystem();
   const levelSystem = useLevelSystem();
   const baseHealth = useBaseHealth();
-
-  const enemyActions = useEnemyActions();
-  const projectileSystem = useProjectileSystem(enemyActions);
-  const waveSystem = useWaveSystem(gameSystem);
   const upgradesSystem = useUpgradesSystem();
+  const world = useWorld();
+  const entityIds = useEntityIds();
+  const session = useMemo(
+    () => createGameSession({ world, ...entityIds }),
+    [world, entityIds]
+  );
+
+  // A start in flight when the page unmounts would otherwise resolve late and
+  // mutate the shared world/stores from another route; invalidating it here
+  // drops the stale load instead.
+  useEffect(() => session.dispose, [session]);
 
   const {
     shouldDisableControls,
     gameStatus,
     selectedTower,
-    startGame,
-    goToMainMenu,
     openGameMenu,
     closeGameMenu,
     shouldLockCamera,
@@ -132,62 +126,45 @@ export const GamePage: FC<GamePageProps> = ({
     placeTower,
     sellTower,
     currentWave,
-    resetState: resetLevelState,
     isLevelConfigLoaded,
   } = levelSystem;
-
-  const { onEnemyReachEnd } = enemyActions;
-
-  const { onProjectileHit, onProjectileRemove } = projectileSystem;
 
   const { showUpgradePanel, onEnemyUpgradePick } = upgradesSystem;
   const gameMenuClose = useHeldClose();
 
-  const { getRemainingEnemiesInWave, startWave } = waveSystem;
-
-  // The base is spawned in startGame, so its health comes from the level
-  // config. The picker already holds each level's parsed config and passes
-  // it in here; cache it per run so a restart (same level) does not need a
-  // fresh config load, while a level reselected from the picker always reads
-  // the value the picker loaded.
-  const levelStartingHealthRef = useRef<number>(DEFAULT_STARTING_HEALTH);
+  const { getRemainingEnemiesInWave, startWave } = session;
 
   const onStartGameWithLevel = useCallback(
-    async (level: PlayableLevelId, startingHealth: number) => {
-      levelStartingHealthRef.current = startingHealth;
-      setActivePlayableLevel(level);
-      await startGame(startingHealth);
+    async (level: PlayableLevelId) => {
+      // Commit the active level only once the run has actually started; a
+      // failed load must not desync the picker from the session's level.
+      try {
+        await session.startRun(level);
+        setActivePlayableLevel(level);
+      } catch (error) {
+        console.error(`Failed to start level "${level}".`, error);
+      }
     },
-    [startGame]
+    [session]
   );
 
   const onRestart = useCallback(() => {
-    void startGame(levelStartingHealthRef.current);
-    resetLevelState();
-  }, [startGame, resetLevelState]);
+    session.restartRun().catch((error) => {
+      console.error("Failed to restart the run.", error);
+    });
+  }, [session]);
 
   const onGoToMainMenu = useCallback(() => {
-    goToMainMenu();
-    resetLevelState();
-  }, [goToMainMenu, resetLevelState]);
+    session.endRun();
+  }, [session]);
 
-  // The level after the current one in the playable sequence, or nothing on
-  // the last level (no wrap-around).
   const nextLevelId =
     PLAYABLE_LEVEL_IDS[PLAYABLE_LEVEL_IDS.indexOf(activePlayableLevel) + 1] ??
     null;
 
-  // Reuses the menu's start-with-level flow: it reloads the config
-  // (LevelSystem) and starts a fresh run with the level's own health. The
-  // run reset (same as onRestart) also clears the picked enemy upgrades and
-  // the wave-readiness flag so the new level starts clean.
   const onStartNextLevel = useCallback(() => {
-    if (!nextLevelId) return;
-    resetLevelState();
-    void loadLevelConfigFile(nextLevelId).then((levelData) =>
-      onStartGameWithLevel(nextLevelId, levelData.startingHealth)
-    );
-  }, [nextLevelId, onStartGameWithLevel, resetLevelState]);
+    if (nextLevelId) void onStartGameWithLevel(nextLevelId);
+  }, [nextLevelId, onStartGameWithLevel]);
 
   const remainingEnemies = getRemainingEnemiesInWave();
   const isMenu = gameStatus === "menu";
@@ -223,6 +200,7 @@ export const GamePage: FC<GamePageProps> = ({
   }, [activePlayableLevel, isGameConfigLoaded, isLevelConfigLoaded, isMenu]);
 
   const isGameReady =
+    !session.isRunStarting &&
     isGameConfigLoaded &&
     (isMenu || isLevelConfigLoaded) &&
     areShadersReady &&
@@ -276,42 +254,39 @@ export const GamePage: FC<GamePageProps> = ({
               />
             )}
 
-            <Suspense fallback={<HUDLoading message={loadingMessage} />}>
-              {isGameConfigLoaded && isMenu && <MainMenuScene />}
-              {isGameConfigLoaded && !isMenu && (
-                <GameScene
-                  placeTower={placeTower}
-                  selectedTower={selectedTower}
-                  gameStatus={gameStatus}
-                  waveSystem={waveSystem}
-                  onEnemyReachEnd={onEnemyReachEnd}
-                  onProjectileHit={onProjectileHit}
-                  onProjectileRemove={onProjectileRemove}
-                  onSellTower={sellTower}
-                  // The camera stays controllable while paused so the held frame
-                  // can be inspected from any angle; only menu, intro, and
-                  // tab-hidden states lock it.
-                  shouldStopCamera={shouldLockCamera || controlsIntroOpen}
-                  playableLevelId={activePlayableLevel}
-                />
-              )}
-
-              {debug && (
-                <>
-                  <Stats showPanel={0} className="top-[calc(100%-48px)]!" />
-                  <Stats
-                    showPanel={1}
-                    className="top-[calc(100%-48px)]! bottom-0! left-20!"
+            <GameSessionSystem session={session}>
+              <Suspense fallback={<HUDLoading message={loadingMessage} />}>
+                {isGameConfigLoaded && isMenu && <MainMenuScene />}
+                {isGameConfigLoaded && !isMenu && (
+                  <GameScene
+                    placeTower={placeTower}
+                    selectedTower={selectedTower}
+                    gameStatus={gameStatus}
+                    onSellTower={sellTower}
+                    // The camera stays controllable while paused so the held frame
+                    // can be inspected from any angle; only menu, intro, and
+                    // tab-hidden states lock it.
+                    shouldStopCamera={shouldLockCamera || controlsIntroOpen}
                   />
-                  <Stats
-                    showPanel={2}
-                    className="top-[calc(100%-48px)]! left-40!"
-                  />
-                </>
-              )}
+                )}
 
-              <KeyboardHandlingSystem onGameMenuEscape={gameMenuClose.startClose} />
-            </Suspense>
+                {debug && (
+                  <>
+                    <Stats showPanel={0} className="top-[calc(100%-48px)]!" />
+                    <Stats
+                      showPanel={1}
+                      className="top-[calc(100%-48px)]! bottom-0! left-20!"
+                    />
+                    <Stats
+                      showPanel={2}
+                      className="top-[calc(100%-48px)]! left-40!"
+                    />
+                  </>
+                )}
+
+                <KeyboardHandlingSystem onGameMenuEscape={gameMenuClose.startClose} />
+              </Suspense>
+            </GameSessionSystem>
 
             <PostFX />
           </WaterClockProvider>

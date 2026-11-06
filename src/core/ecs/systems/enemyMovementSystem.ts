@@ -12,13 +12,8 @@ import {
   getPositionAlongMultiplePaths,
   isAtPathEnd,
 } from "../../../utils/pathUtils";
-import {
-  flatFieldToSphereSurface,
-  getPlanetRadius,
-} from "../../../utils/planetSurfaceMapping";
+import { flatFieldToSphereSurface } from "../../../utils/planetSurfaceMapping";
 import type { PathWaypoint } from "../../types/game";
-import { useLevelStore } from "../../stores/useLevelStore";
-import { useGameStore } from "../../stores/useGameStore";
 
 /**
  * Regeneration is applied as discrete ticks (<= 10 per second) instead of
@@ -181,32 +176,4 @@ export const runEnemyMovementSystem = (
   for (const id of reachedEndIds) {
     onEnemyReachEnd?.(id);
   }
-};
-
-/**
- * Frame-loop wrapper: reads level geometry from the stores once per frame
- * and runs the batched movement pass.
- */
-export const runEnemyMovementFrame = (
-  world: World,
-  state: { clock: { elapsedTime: number } },
-  delta: number,
-  getSimulationTime: (rawNow: number) => number,
-  callbacks: Pick<EnemyMovementSystemOptions, "onEnemyReachEnd" | "canFinish">
-): void => {
-  const { pathWaypoints, gridSize } = useLevelStore.getState();
-  const { tileSize } = useGameStore.getState();
-  const radius = getPlanetRadius(gridSize, tileSize);
-
-  runEnemyMovementSystem(
-    world,
-    delta,
-    getSimulationTime(state.clock.elapsedTime),
-    {
-      pathWaypoints,
-      radius,
-      onEnemyReachEnd: callbacks.onEnemyReachEnd,
-      canFinish: callbacks.canFinish,
-    }
-  );
 };

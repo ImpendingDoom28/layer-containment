@@ -7,29 +7,17 @@ import { Water } from "../entities/Water";
 import { Enemy } from "../entities/Enemy";
 import {
   buildingsSelector,
-  gridSizeSelector,
   gridOffsetSelector,
   pathWaypointsSelector,
   towersSelector,
   useLevelStore,
   watersSelector,
 } from "../../core/stores/useLevelStore";
-import type {
-  Tower as TowerInstance,
-  Projectile as ProjectileInstance,
-  Tower,
-} from "../../core/types/game";
+import type { Tower as TowerInstance, Tower } from "../../core/types/game";
 import type { TileData } from "../../core/types/utils";
 import type { TilePlacementState } from "../../utils/tilePlacement";
 import { getTilePlacementState as getSharedTilePlacementState } from "../../utils/tilePlacement";
 import { EffectSystem } from "./EffectSystem";
-import { useInstancedProjectiles } from "../../core/hooks/useInstancedProjectiles";
-import { MedicHealPulseSystem } from "./MedicHealPulseSystem";
-import { ApplySlowSystem } from "./ApplySlowSystem";
-import { ApplyEffectSystem } from "./ApplyEffectSystem";
-import { EnemyMovementSystem } from "./EnemyMovementSystem";
-import { EnemyDeathSystem } from "./EnemyDeathSystem";
-import { EnemySplitSystem } from "./EnemySplitSystem";
 import {
   pathWidthSelector,
   selectedTowerTypeToPlaceSelector,
@@ -39,30 +27,18 @@ import {
   useGameStore,
 } from "../../core/stores/useGameStore";
 import { IsEnemy } from "../../core/ecs/traits/enemy";
+import { useGameSessionRuntime } from "./GameSessionSystem";
 
 type EntitiesSystemProps = {
-  onEnemyReachEnd: ((enemyId: number) => void) | null;
-  onProjectileHit: (
-    projectile: ProjectileInstance,
-    targetEnemy: import("../../core/types/game").Enemy,
-    currentTime: number
-  ) => void;
-  onProjectileRemove: (projectileId: number) => void;
   onSellTower: ((towerId: number) => void) | null;
   hoveredTile: TileData | null;
   selectedTower: TowerInstance | null;
 };
 
 export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
-  ({
-    onEnemyReachEnd,
-    onProjectileHit,
-    onProjectileRemove,
-    onSellTower,
-    hoveredTile,
-    selectedTower,
-  }) => {
+  ({ onSellTower, hoveredTile, selectedTower }) => {
     const enemyEntities = useQuery(IsEnemy);
+    const { InstancedProjectiles } = useGameSessionRuntime();
     const selectedTowerTypeToPlace = useGameStore(
       selectedTowerTypeToPlaceSelector
     );
@@ -78,12 +54,9 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
     const tileSize = useGameStore(tileSizeSelector);
     const pathWidth = useGameStore(pathWidthSelector);
 
-    // Built from stable level data (not `useLevelSystem`, which subscribes to
-    // towers/money and would re-render this whole subtree on every shot/kill)
-    // so it stays referentially stable while the level is unchanged.
     const getTilePlacementState = useCallback(
-      (gridX: number, gridZ: number) => {
-        return getSharedTilePlacementState({
+      (gridX: number, gridZ: number) =>
+        getSharedTilePlacementState({
           gridX,
           gridZ,
           towers,
@@ -93,22 +66,20 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
           tileSize,
           pathWaypoints,
           pathWidth,
-        });
-      },
-      [towers, buildings, waters, gridOffset, tileSize, pathWaypoints, pathWidth]
+        }),
+      [
+        towers,
+        buildings,
+        waters,
+        gridOffset,
+        tileSize,
+        pathWaypoints,
+        pathWidth,
+      ]
     );
-
-    const { InstancedProjectiles, fireProjectile } = useInstancedProjectiles({
-      maxProjectiles: 500,
-      maxBeams: 50,
-      projectileSize: 0.1,
-      onHit: onProjectileHit,
-      onRemove: onProjectileRemove,
-    });
 
     const hoveredTilePlacementState = useMemo<TilePlacementState | null>(() => {
       if (!hoveredTile) return null;
-
       return getTilePlacementState(hoveredTile.gridX, hoveredTile.gridZ);
     }, [getTilePlacementState, hoveredTile]);
 
@@ -126,27 +97,6 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
 
     return (
       <>
-        <ApplySlowSystem />
-
-        {/*
-         * Death is settled in the shared scene system (not per scene) so that
-         * any scene rendering enemies — game and main menu alike — clears
-         * requestEnemyDeath and destroys the entity.
-         */}
-        <ApplyEffectSystem />
-
-        <EnemyDeathSystem />
-
-        {/*
-         * Runs right after death so a splitter's children appear the same
-         * frame the parent is killed, then continue along the path.
-         */}
-        <EnemySplitSystem />
-
-        <EnemyMovementSystem onEnemyReachEnd={onEnemyReachEnd} />
-
-        <MedicHealPulseSystem />
-
         {buildings.map((building) => (
           <Building key={building.id} building={building} />
         ))}
@@ -167,7 +117,6 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
           onSellTower={onSellTower}
           hoveredTile={hoveredTile}
           onTowerClick={onTowerClick}
-          fireProjectile={fireProjectile}
           selectedTower={selectedTower}
           selectedTowerType={selectedTowerTypeToPlace}
           hoveredTilePlacementState={hoveredTilePlacementState}

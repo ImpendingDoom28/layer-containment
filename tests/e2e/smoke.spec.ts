@@ -157,6 +157,11 @@ test("shows all tower types in the shop after starting a run", async ({
 test("rebinds a control in the Settings Controls section and remembers it", async ({
   page,
 }) => {
+  // CI runs e2e on a GPU-less runner (SwiftShader), where this menu/settings
+  // flow (including a full page reload) is several times slower than a real
+  // device; 30s is not enough headroom there.
+  test.setTimeout(60_000);
+
   const settingsStorageKey = "containment-layer-settings-v1";
 
   await onOpenMainMenu(page);
@@ -242,7 +247,9 @@ test("shows the level picker with Deploy before starting a level", async ({
 test("shows Empower Next Wave after wave 1 completes and clears after pick", async ({
   page,
 }) => {
-  test.setTimeout(180_000);
+  // Wave 1 completion is simulation-time bound; on the GPU-less CI runner
+  // (SwiftShader) it can take well over the original 120s.
+  test.setTimeout(300_000);
 
   await onOpenGame(page, { waitForTowerShop: true });
 
@@ -251,7 +258,7 @@ test("shows Empower Next Wave after wave 1 completes and clears after pick", asy
   await page.getByRole("button", { name: "Start next wave" }).click();
 
   await expect(page.getByText("Empower Next Wave")).toBeVisible({
-    timeout: 120_000,
+    timeout: 240_000,
   });
 
   // The per-pick gold bonus must appear exactly once per upgrade card (no
@@ -274,7 +281,9 @@ test("shows Empower Next Wave after wave 1 completes and clears after pick", asy
 test("lists the picked upgrade in the game stats panel and opens its modal", async ({
   page,
 }) => {
-  test.setTimeout(180_000);
+  // Wave 1 completion is simulation-time bound; on the GPU-less CI runner
+  // (SwiftShader) it can take well over the original 120s.
+  test.setTimeout(300_000);
 
   await onOpenGame(page, { waitForTowerShop: true });
 
@@ -283,7 +292,7 @@ test("lists the picked upgrade in the game stats panel and opens its modal", asy
   await page.getByRole("button", { name: "Start next wave" }).click();
 
   await expect(page.getByText("Empower Next Wave")).toBeVisible({
-    timeout: 120_000,
+    timeout: 240_000,
   });
 
   const firstCard = page

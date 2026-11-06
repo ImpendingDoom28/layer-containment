@@ -199,6 +199,23 @@ type RubbleInstancedMeshProps = {
   disposeGeometry?: boolean;
 };
 
+// Writes the per-instance matrices and refreshes the derived GPU data. The
+// renderer frustum-culls an InstancedMesh by its `boundingSphere`, which
+// three derives from the instance matrices only when it is null and then
+// caches — so it is recomputed after every write (including when the count
+// is unchanged) to keep a re-decorated mesh from being culled by a stale
+// sphere. Exported so the test can assert the refresh without a renderer.
+export const applyRubbleMatrices = (
+  mesh: InstancedMesh,
+  matrices: Matrix4[]
+): void => {
+  for (let i = 0; i < matrices.length; i += 1) {
+    mesh.setMatrixAt(i, matrices[i]);
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.computeBoundingSphere();
+};
+
 // One InstancedMesh per rubble variant (or its box fallback): a single
 // draw call per variant, the per-instance matrix carrying only
 // position/rotation/scale, and no raycast so the props never intercept
@@ -222,10 +239,7 @@ const RubbleInstancedMesh: FC<RubbleInstancedMeshProps> = ({
     const mesh = meshRef.current;
     if (!mesh || count === 0) return;
     mesh.raycast = () => null;
-    for (let i = 0; i < count; i += 1) {
-      mesh.setMatrixAt(i, matrices[i]);
-    }
-    mesh.instanceMatrix.needsUpdate = true;
+    applyRubbleMatrices(mesh, matrices);
   }, [geometry, material, matrices, count]);
 
   if (count === 0) return null;

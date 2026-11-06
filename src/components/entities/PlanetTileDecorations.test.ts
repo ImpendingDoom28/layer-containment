@@ -1,7 +1,17 @@
-import { describe, expect, it } from "vitest";
-import { Matrix4, Quaternion, Vector3 } from "three";
+import { describe, expect, it, vi } from "vitest";
+import {
+  BoxGeometry,
+  InstancedMesh,
+  Matrix4,
+  MeshStandardMaterial,
+  Quaternion,
+  Vector3,
+} from "three";
 
-import { buildRubbleMatrices } from "./PlanetTileDecorations";
+import {
+  applyRubbleMatrices,
+  buildRubbleMatrices,
+} from "./PlanetTileDecorations";
 import { RUBBLE_MODELS } from "../../constants/models";
 import { getPlanetRadius } from "../../utils/planetSurfaceMapping";
 import type { TileOccupancyMasks } from "../../utils/tileOccupancy";
@@ -111,5 +121,36 @@ describe("buildRubbleMatrices (deterministic rubble randomizer)", () => {
         expect(scale).toBeLessThanOrEqual(0.55);
       }
     }
+  });
+});
+
+describe("applyRubbleMatrices (instance refresh)", () => {
+  it("refreshes the instance data and recomputes the bounding sphere on every write", () => {
+    const mesh = new InstancedMesh(
+      new BoxGeometry(1, 1, 1),
+      new MeshStandardMaterial(),
+      3
+    );
+    const computeSpy = vi.spyOn(mesh, "computeBoundingSphere");
+    const matrices = buildRubbleMatrices(
+      makeOccupancy(GRID_SIZE),
+      GRID_SIZE,
+      TILE_SIZE,
+      0
+    )[0].slice(0, 3);
+
+    const versionBefore = mesh.instanceMatrix.version;
+    applyRubbleMatrices(mesh, matrices);
+    expect(computeSpy).toHaveBeenCalledTimes(1);
+    // Writing instance data bumps the attribute version so the GPU is re-sent.
+    expect(mesh.instanceMatrix.version).toBeGreaterThan(versionBefore);
+    // The sphere is actually derived (non-null) after the refresh.
+    expect(mesh.boundingSphere).not.toBeNull();
+
+    // Writing again with the same count must refresh again — the renderer
+    // culls by this cached sphere, so it cannot go stale when only the
+    // matrices change.
+    applyRubbleMatrices(mesh, matrices);
+    expect(computeSpy).toHaveBeenCalledTimes(2);
   });
 });

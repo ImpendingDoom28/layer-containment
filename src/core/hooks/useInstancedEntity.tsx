@@ -17,6 +17,15 @@ import {
   InstanceSlot,
 } from "../../utils/InstancedPool";
 
+// Idle slots must be hidden from their very first frame. The pool's
+// hide-on-acquire/release only governs slots once the per-frame sync sees
+// them, but the <Instances> element can mount long after the hook's
+// one-shot init effect ran (the pools are created in GameSessionSystem,
+// the slots in the scene), so a slot left at the default origin/scale-1
+// renders as a visible white instance. The same transform the pool's
+// `release` applies keeps every idle slot degenerate until acquired.
+const HIDDEN_SLOT_POSITION: [number, number, number] = [0, -10000, 0];
+
 type InstanceSlotsProps = {
   count: number;
   slotRefs: RefObject<(InstanceSlot | null)[]>;
@@ -27,6 +36,8 @@ const InstanceSlots: FC<InstanceSlotsProps> = memo(({ count, slotRefs }) => (
     {Array.from({ length: count }, (_, i) => (
       <Instance
         key={i}
+        position={HIDDEN_SLOT_POSITION}
+        scale={0}
         ref={(el: unknown) => {
           slotRefs.current[i] = el as InstanceSlot | null;
         }}

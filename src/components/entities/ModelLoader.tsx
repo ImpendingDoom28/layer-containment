@@ -1,5 +1,4 @@
 import {
-  Component,
   Suspense,
   memo,
   useEffect,
@@ -9,6 +8,8 @@ import {
 } from "react";
 import { useGLTF } from "@react-three/drei";
 import { type Object3D } from "three";
+
+import { ModelLoadErrorBoundary } from "./ModelLoadErrorBoundary";
 
 type ModelLoaderProps = {
   /** URL of the GLB to load (served from `public/`). */
@@ -90,22 +91,3 @@ const ModelLoaderModel: FC<{
 };
 
 ModelLoaderModel.displayName = "ModelLoaderModel";
-
-// Suspense only covers the *pending* load. If the GLB request itself fails
-// (network error, 404, parse error) useGLTF throws during render, and with no
-// error boundary that would unmount the whole scene rather than this object.
-// Catch it here and degrade to the fallback (e.g. the sphere body).
-class ModelLoadErrorBoundary extends Component<
-  { fallback: ReactNode; children: ReactNode },
-  { failed: boolean }
-> {
-  override state = { failed: false };
-
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-
-  override render() {
-    return this.state.failed ? this.props.fallback : this.props.children;
-  }
-}

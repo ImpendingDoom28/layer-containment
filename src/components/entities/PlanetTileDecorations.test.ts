@@ -35,6 +35,10 @@ const makeOccupancy = (
 
 const GRID_SIZE = 20;
 const TILE_SIZE = 1;
+// The land slab's full height (public/configs/game.json). Its bottom face sits
+// on the sphere surface (radius R); its top face — the visible land surface —
+// is a slab-height `pathYOffset` above that, at radius R + pathYOffset.
+const PATH_Y_OFFSET = 0.05;
 const PLANET_RADIUS = getPlanetRadius(GRID_SIZE, TILE_SIZE);
 // `flatFieldToSphereSurface` puts the flat field plane at y = 0.2 (the north
 // pole), so the planet center sits at (0, 0.2 - R, 0).
@@ -106,14 +110,20 @@ describe("buildRubbleMatrices (deterministic rubble randomizer)", () => {
     }
   });
 
-  it("grounds every prop on the planet surface with a bounded scale", () => {
-    const perVariant = buildRubbleMatrices(occupancy, GRID_SIZE, TILE_SIZE, 0);
+  it("seats every prop on the land's visible top face with a bounded scale", () => {
+    const perVariant = buildRubbleMatrices(
+      occupancy,
+      GRID_SIZE,
+      TILE_SIZE,
+      PATH_Y_OFFSET
+    );
     for (const list of perVariant) {
       for (const matrix of list) {
-        // The model origin (its grounded bottom-center) sits exactly on the
-        // sphere surface: |position - center| = R.
+        // The model origin (its grounded bottom-center) rests on the land slab's
+        // top face — radius R + pathYOffset from the planet center — not buried
+        // in the slab or floating above it.
         expect(positionOf(matrix).distanceTo(PLANET_CENTER)).toBeCloseTo(
-          PLANET_RADIUS,
+          PLANET_RADIUS + PATH_Y_OFFSET,
           3
         );
         const scale = scaleOf(matrix);

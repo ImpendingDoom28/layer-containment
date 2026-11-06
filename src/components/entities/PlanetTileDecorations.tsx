@@ -86,13 +86,15 @@ const UP = new Vector3(0, 1, 0);
  * Deterministic per-tile randomizer: every free tile rolls the same
  * presence/variant/offset/rotation/scale on every load (and in the level
  * editor), so the rubble "spawns randomly" without ever re-rolling a given
- * level.
+ * level. `surfaceTopHeight` is the height of the land's visible top face above
+ * the sphere surface (the slab's full `pathYOffset`), so each prop's grounded
+ * base rests on the surface rather than half-buried in the slab.
  */
 export const buildRubbleMatrices = (
   occupancy: TileOccupancyMasks,
   gridSize: number,
   tileSize: number,
-  surfaceHalfHeight: number
+  surfaceTopHeight: number
 ): Matrix4[][] => {
   const perVariant: Matrix4[][] = Array.from(
     { length: RUBBLE_MODELS.length },
@@ -136,7 +138,7 @@ export const buildRubbleMatrices = (
       scratchNormal.copy(normal);
       scratchObject.position
         .copy(surfacePoint)
-        .addScaledVector(scratchNormal, surfaceHalfHeight);
+        .addScaledVector(scratchNormal, surfaceTopHeight);
       scratchBaseQuat.setFromUnitVectors(UP, scratchNormal);
       scratchSpinQuat.setFromAxisAngle(scratchNormal, rot);
       scratchObject.quaternion.copy(scratchBaseQuat).multiply(scratchSpinQuat);
@@ -311,14 +313,12 @@ const RubbleVariantSlot: FC<RubbleVariantProps> = ({ spec, matrices }) => {
 export const PlanetTileDecorations: FC<PlanetTileDecorationsProps> = memo(
   ({ occupancy }) => {
     const pathYOffset = useGameStore(pathYOffsetSelector);
-    const surfaceHalfHeight = useMemo(() => pathYOffset / 2, [pathYOffset]);
     const tileSize = useGameStore(tileSizeSelector);
     const gridSize = useLevelStore(gridSizeSelector);
 
     const matricesPerVariant = useMemo(
-      () =>
-        buildRubbleMatrices(occupancy, gridSize, tileSize, surfaceHalfHeight),
-      [occupancy, gridSize, tileSize, surfaceHalfHeight]
+      () => buildRubbleMatrices(occupancy, gridSize, tileSize, pathYOffset),
+      [occupancy, gridSize, tileSize, pathYOffset]
     );
 
     if (matricesPerVariant.every((matrices) => matrices.length === 0)) {

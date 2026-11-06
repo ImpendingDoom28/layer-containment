@@ -24,6 +24,19 @@ type CreateWaterMaterialParams = {
   topY: number;
 };
 
+/**
+ * Peak vertex displacement (world units) of the animated water surface.
+ *
+ * Water tiles and the water bodies that sit in the same cells share one
+ * world-space wave field, so they MUST swell with the same amplitude: with
+ * equal amplitudes the two co-located top faces move in lockstep and their
+ * vertical gap stays constant, so they never cross. Different amplitudes make
+ * the gap oscillate with the wave field and the surfaces intersect on a
+ * moving boundary — the flicker. Exported so tiles and bodies share one
+ * value instead of each hard-coding their own.
+ */
+export const WATER_AMPLITUDE = 0.05;
+
 // GLSL for the shared wave field, included verbatim in both the vertex and the
 // fragment shader so the silhouette, the lighting, and the displacement all
 // sample one field. waterRippleGradient is a central difference of waterHeight,

@@ -29,7 +29,10 @@ import {
 import { hashGrid2D } from "../../core/tileGridHash";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import { createPlanetTileMaterial } from "../../utils/planetTileMaterial";
-import { createWaterMaterial } from "../../utils/waterMaterial";
+import {
+  createWaterMaterial,
+  WATER_AMPLITUDE,
+} from "../../utils/waterMaterial";
 import { useWaterClock } from "../../core/contexts/WaterClockContext";
 import { freezeSubtree } from "../../utils/freezeSubtree";
 
@@ -72,7 +75,6 @@ export const Tile: FC<TileProps> = memo(
     // Water tiles get a subdivided box (8×8 top-face grid) so the vertex
     // displacement has enough vertices to swell; the 4 corners of a plain box
     // could only tilt. Non-water (or hover) tiles stay a single-segment box.
-    const WATER_AMPLITUDE = 0.05;
     const WATER_TOP_SEGMENTS = 8;
     // Water sits below the land plane so the tiles read as a recessed pool:
     // the land edge casts a rim on the surface, and the swell moves inside

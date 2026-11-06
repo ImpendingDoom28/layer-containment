@@ -1,4 +1,16 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
+// The real enemy GLB, served through Playwright's request interception to
+// simulate a delayed or a failed model download.
+const TROOP_GLB_PATH = join(
+  process.cwd(),
+  "public",
+  "assets",
+  "models",
+  "troop.glb",
+);
 
 // The entry lives in stress/index.stress.html; with Vite's root at the repo
 // root it is served at /stress/index.stress.html (not the main-menu flow).
@@ -67,6 +79,14 @@ test("loads the stress scene with canvas and stats overlay", async ({
       timeout: 90_000,
     })
     .toBeGreaterThan(0);
+
+  // Every 3D model must have fully loaded (no primitive fallbacks); the
+  // overlay reports the run invalid if any model is still pending or failed.
+  await expect
+    .poll(async () => await readStat(page, "MODELS"), {
+      timeout: 90_000,
+    })
+    .toBe("valid");
 });
 
 test("auto-advances waves without any user input", async ({ page }) => {
@@ -135,4 +155,71 @@ test("reports 30-second average performance metrics", async ({ page }) => {
 
   // Sanity: the scene is genuinely rendering frames during the window.
   expect(averages?.fps).toBeGreaterThan(0);
+});
+
+test("reports MODELS loading until a delayed model settles, then valid", async ({
+  page,
+}) => {
+  // The scene is held back (MODELS loading, metrics window closed) while a
+  // model is still streaming; it reports valid only once every model has
+  // actually settled. Hold one enemy model's response until the test has
+  // *observed* "loading" (well past the 15s cap on the shared load promise,
+  // so the app must still read "loading" at that point), then release it so
+  // the "valid" check runs after the model settles — no race between startup
+  // timing and the delay.
+  const troopGlb = await readFile(TROOP_GLB_PATH);
+  let releaseHold: () => void;
+  const hold = new Promise<void>((resolve) => (releaseHold = resolve));
+  await page.route(/assets\/models\/troop\.glb/, async (route) => {
+    await hold;
+    await route.fulfill({
+      status: 200,
+      contentType: "model/gltf-binary",
+      body: troopGlb,
+    });
+  });
+
+  test.setTimeout(180_000);
+
+  await onOpenStressScene(page);
+  await expect(page.getByTestId("stress-stats-overlay")).toBeVisible();
+
+  // While the delayed model is still streaming the run must read "loading"
+  // (not "valid"), so the scene and the metrics window are held back.
+  await expect
+    .poll(async () => await readStat(page, "MODELS"), { timeout: 90_000 })
+    .toBe("loading");
+
+  // Release the held response: the model settles and the run becomes valid.
+  releaseHold();
+  await expect
+    .poll(async () => await readStat(page, "MODELS"), { timeout: 120_000 })
+    .toBe("valid");
+});
+
+test("marks the run invalid when a model fails to load", async ({ page }) => {
+  // A model that settles to a 404 cannot be measured: the run degrades that
+  // model to its primitive fallback (the existing `ModelLoader` behavior) and
+  // must be reported invalid, with the average window never opened.
+  await page.route(
+    /assets\/models\/troop\.glb/,
+    (route) => route.fulfill({ status: 404, body: "not found" }),
+  );
+
+  test.setTimeout(120_000);
+
+  await onOpenStressScene(page);
+  await expect(page.getByTestId("stress-stats-overlay")).toBeVisible();
+
+  await expect
+    .poll(async () => await readStat(page, "MODELS"), { timeout: 90_000 })
+    .toBe("invalid");
+
+  // The scene still renders (fallback primitives), but the 30s average window
+  // stays closed for an invalid run.
+  await expect
+    .poll(() => readFps(page), { timeout: 90_000 })
+    .toBeGreaterThan(0);
+  const text = await readStats(page);
+  expect(text).toContain("AVG WINDOW   0/30s");
 });

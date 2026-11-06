@@ -2,6 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- The entry is served at /stress/ but all runtime assets (the model GLBs
+         and audio) are addressed relative to the app root by the shared
+         constants (kept relative so the Electron file:// build works). Pin the
+         base to the app root so those relative URLs resolve to /assets/...
+         instead of /stress/assets/... — which the SPA would 404 to its HTML
+         fallback. Configs already use root-relative URLs, so they are
+         unaffected. -->
+    <base href="/" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LAYER CONTAINMENT — Stress Test</title>

@@ -61,6 +61,11 @@ export const useProjectileSystem = (enemyActions: EnemyActions) => {
         enemyId: targetEnemy.id,
         projectileType: projectile.projectileType,
         towerType: projectile.towerType,
+        // The blast radius and tower color: the rocket's impact FX (the
+        // ground-blast ring) reads both off the hit event to size and tint
+        // the area of effect.
+        aoeRadius: projectile.aoeRadius,
+        color: projectile.color,
         worldPosition: {
           x: targetEnemy.x,
           y: targetEnemy.size / 2,

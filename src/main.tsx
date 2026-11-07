@@ -26,7 +26,7 @@ void i18n.changeLanguage(useSettingsStore.getState().language);
 // data-testid marks that the app shell mounted (the desktop smoke flow's
 // boot step waits for it before interacting with the UI).
 const rootElement = document.getElementById("root")!;
-rootElement.dataset.testid = "smoke-ready";
+rootElement.dataset["testid"] = "smoke-ready";
 ReactDOM.createRoot(rootElement).render(<Game />);
 
 // PWA: cache the app shell for offline loads (production builds only).

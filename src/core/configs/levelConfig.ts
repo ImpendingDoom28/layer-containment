@@ -82,7 +82,15 @@ const bossModelSchema = z.object({
   node: z.string(),
 });
 
-const bossConfigSchema: z.ZodType<BossConfig> = z.object({
+// `everyNthWave` has `.default(4)`, so it is optional on the schema's input
+// side but required on its output side — the input type must reflect that,
+// otherwise the `z.ZodType<BossConfig>` annotation (Input = BossConfig,
+// required) rejects the defaulted field.
+const bossConfigSchema: z.ZodType<
+  BossConfig,
+  z.ZodTypeDef,
+  Omit<BossConfig, "everyNthWave"> & { everyNthWave?: number }
+> = z.object({
   name: z.string().min(1),
   everyNthWave: z.number().int().min(2).default(4),
   baseStats: z.object({

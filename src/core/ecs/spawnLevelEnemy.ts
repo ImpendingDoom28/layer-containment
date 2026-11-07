@@ -131,7 +131,7 @@ export const spawnLevelEnemy = (
   const entity = enemyActions(world).spawnEnemy(enemy);
   if (overrides?.isBoss) {
     entity.add(IsBoss);
-    useAlmanacStore.getState().discoverBoss(overrides.name);
+    useAlmanacStore.getState().discoverBoss(enemy.name);
   }
   return enemy;
 };

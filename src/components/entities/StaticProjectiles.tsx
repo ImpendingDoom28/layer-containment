@@ -1,6 +1,15 @@
 import { FC, memo, useMemo } from "react";
 
-import { CylinderGeometry, Quaternion, SphereGeometry, Vector3 } from "three";
+import {
+  BoxGeometry,
+  ConeGeometry,
+  CylinderGeometry,
+  Quaternion,
+  SphereGeometry,
+  Vector3,
+  type BufferGeometry,
+} from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 import {
   projectilesSelector,
@@ -13,6 +22,22 @@ import type { Projectile as ProjectileInstance } from "../../core/types/game";
 // showcase projectiles allocate no per-instance geometry.
 const unitSphere = new SphereGeometry(1, 16, 16);
 const unitCylinder = new CylinderGeometry(1, 1, 1, 8);
+
+// Shared rocket body (body + nose + two fins, authored along +Y), matching the
+// in-game rocket pool, so a static showcase rocket reads as a rocket.
+const buildStaticRocketGeometry = (): BufferGeometry => {
+  const body = new CylinderGeometry(0.05, 0.05, 0.18, 8);
+  body.translate(0, 0.09, 0);
+  const nose = new ConeGeometry(0.05, 0.12, 8);
+  nose.translate(0, 0.24, 0);
+  const finL = new BoxGeometry(0.012, 0.1, 0.07);
+  finL.translate(-0.062, 0.09, 0);
+  const finR = finL.clone().translate(0.124, 0, 0);
+  const merged = mergeGeometries([body, nose, finL, finR], false);
+  if (!merged) throw new Error("Failed to merge static rocket geometry");
+  return merged;
+};
+const rocketGeometry = buildStaticRocketGeometry();
 
 const UP = new Vector3(0, 1, 0);
 
@@ -99,6 +124,47 @@ const StaticProjectile: FC<StaticProjectileProps> = memo(
             depthWrite={false}
           />
         </mesh>
+      );
+    }
+
+    // The BRL rocket rests at the launch tube as a small rocket body, with the
+    // blast radius marked on the ground just like the aoe shot.
+    if (projectile.projectileType === "rocket") {
+      return (
+        <>
+          <mesh
+            position={start}
+            geometry={rocketGeometry}
+            castShadow
+            receiveShadow
+            raycast={() => null}
+          >
+            <meshStandardMaterial
+              color={projectile.color}
+              emissive={projectile.color}
+              emissiveIntensity={2}
+              toneMapped={false}
+            />
+          </mesh>
+          {projectile.aoeRadius !== undefined && (
+            <mesh
+              position={[start.x, 0.02, start.z]}
+              rotation={[-Math.PI / 2, 0, 0]}
+              raycast={() => null}
+            >
+              <ringGeometry
+                args={[projectile.aoeRadius * 0.85, projectile.aoeRadius, 32]}
+              />
+              <meshBasicMaterial
+                color={projectile.color}
+                transparent
+                opacity={0.3}
+                side={2}
+                depthWrite={false}
+              />
+            </mesh>
+          )}
+        </>
       );
     }
 

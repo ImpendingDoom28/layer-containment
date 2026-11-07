@@ -142,7 +142,7 @@ test("shows all tower types in the shop after starting a run", async ({
   await onOpenGame(page, { waitForTowerShop: true });
 
   await expect(page.getByRole("button", { name: /Slow Tower/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /AOE Tower/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /BRL/i })).toBeVisible();
   await expect(
     page.getByRole("button", { name: /Laser Tower/i })
   ).toBeVisible();

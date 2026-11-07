@@ -226,7 +226,7 @@ const AlmanacEnemyCard: FC<AlmanacEnemyCardProps> = ({
 const ALMANAC_TOWER_ICONS: Record<TowerType, IconName> = {
   basic: "Crosshair",
   slow: "Snowflake",
-  aoe: "Waves",
+  brl: "Rocket",
   laser: "Radar",
   relay: "Radio",
   chain: "Zap",

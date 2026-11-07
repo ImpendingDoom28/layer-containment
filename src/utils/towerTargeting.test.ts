@@ -40,12 +40,43 @@ const params = (range: number, lastTargetId?: number) => ({
   lastTargetId,
 });
 
+const paramsWithMinRange = (range: number, minRange: number) => ({
+  x: 0,
+  z: 0,
+  range,
+  minRange,
+});
+
 describe("pickTowerTarget", () => {
   it("returns null when no enemy is in range", () => {
     const enemies = [makeEnemy(1, 5, 0)];
     expect(pickTowerTarget(enemies, "nearest", params(2), alwaysVisible)).toBe(
       null
     );
+  });
+
+  it("ignores enemies inside the min-range dead zone", () => {
+    const enemies = [
+      makeEnemy(1, 1, 0), // too close
+      makeEnemy(2, 4, 0), // in the 2.5..5 band
+    ];
+    expect(
+      pickTowerTarget(enemies, "nearest", paramsWithMinRange(5, 2.5), alwaysVisible)
+    ).toBe(enemies[1]);
+  });
+
+  it("returns null when every enemy is inside the dead zone", () => {
+    const enemies = [makeEnemy(1, 1, 0), makeEnemy(2, 2, 0)];
+    expect(
+      pickTowerTarget(enemies, "nearest", paramsWithMinRange(5, 2.5), alwaysVisible)
+    ).toBe(null);
+  });
+
+  it("treats the min-range boundary as targetable", () => {
+    const enemies = [makeEnemy(1, 2.5, 0)];
+    expect(
+      pickTowerTarget(enemies, "nearest", paramsWithMinRange(5, 2.5), alwaysVisible)
+    ).toBe(enemies[0]);
   });
 
   it("ignores dead enemies", () => {
@@ -164,33 +195,43 @@ describe("isTargetStale", () => {
   const inRange = makeEnemy(1, 3, 0);
 
   it("treats a missing target as stale", () => {
-    expect(isTargetStale(null, 0, 0, 5, alwaysVisible)).toBe(true);
+    expect(isTargetStale(null, 0, 0, 5, undefined, alwaysVisible)).toBe(true);
   });
 
   it("treats a dead target as stale", () => {
-    expect(isTargetStale(makeEnemy(1, 3, 0, 0), 0, 0, 5, alwaysVisible)).toBe(
-      true
-    );
+    expect(
+      isTargetStale(makeEnemy(1, 3, 0, 0), 0, 0, 5, undefined, alwaysVisible)
+    ).toBe(true);
   });
 
   it("treats an out-of-range target as stale", () => {
-    expect(isTargetStale(makeEnemy(1, 9, 0), 0, 0, 5, alwaysVisible)).toBe(
-      true
-    );
+    expect(
+      isTargetStale(makeEnemy(1, 9, 0), 0, 0, 5, undefined, alwaysVisible)
+    ).toBe(true);
   });
 
   it("treats a target behind an obstacle as stale", () => {
     const hidden = (enemy: Enemy) => enemy.id !== 1;
-    expect(isTargetStale(inRange, 0, 0, 5, hidden)).toBe(true);
+    expect(isTargetStale(inRange, 0, 0, 5, undefined, hidden)).toBe(true);
   });
 
   it("keeps a live, in-range, visible target fresh", () => {
-    expect(isTargetStale(inRange, 0, 0, 5, alwaysVisible)).toBe(false);
+    expect(
+      isTargetStale(inRange, 0, 0, 5, undefined, alwaysVisible)
+    ).toBe(false);
   });
 
   it("is symmetric in the range check (boundary is not stale)", () => {
-    expect(isTargetStale(makeEnemy(1, 5, 0), 0, 0, 5, alwaysVisible)).toBe(
-      false
-    );
+    expect(
+      isTargetStale(makeEnemy(1, 5, 0), 0, 0, 5, undefined, alwaysVisible)
+    ).toBe(false);
+  });
+
+  it("treats a target inside the min-range dead zone as stale", () => {
+    expect(isTargetStale(inRange, 0, 0, 5, 3.5, alwaysVisible)).toBe(true);
+  });
+
+  it("keeps a target at exactly the min-range boundary fresh", () => {
+    expect(isTargetStale(inRange, 0, 0, 5, 3, alwaysVisible)).toBe(false);
   });
 });

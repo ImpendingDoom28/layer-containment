@@ -20,9 +20,14 @@ export const useProjectileSystem = (enemyActions: EnemyActions) => {
         damageEnemy(targetEnemy.id, projectile.damage, source);
       } else if (projectile.projectileType === "chain") {
         damageEnemy(targetEnemy.id, projectile.damage, source);
-      } else if (projectile.projectileType === "aoe" && projectile.aoeRadius) {
-        // Only AOE needs the full snapshot array; allocate it lazily so the
-        // far more common single/beam/chain hits don't allocate per hit.
+      } else if (
+        (projectile.projectileType === "aoe" ||
+          projectile.projectileType === "rocket") &&
+        projectile.aoeRadius
+      ) {
+        // Only AOE / the BRL rocket need the full snapshot array; allocate it
+        // lazily so the far more common single/beam/chain hits don't allocate
+        // per hit.
         const enemies = getEnemySnapshots(world);
         const enemiesInRange = findEnemiesInRange(
           enemies,

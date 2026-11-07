@@ -20,6 +20,7 @@ import { getEffectiveTowerCombatStats } from "../../core/relayBuffs";
 import type { TileData } from "../../core/types/utils";
 import type { Tower } from "../../core/types/game";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
+import { DeadZoneDisc } from "./effects/DeadZoneDisc";
 import { RangeRing } from "./effects/RangeRing";
 import {
   flatFieldToSphereOverlayPlanePose,
@@ -152,10 +153,12 @@ export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
         pathYOffset + PLACEMENT_OVERLAY_Y_EPSILON + 0.004
       );
 
+      const minRange = towerTypes[selectedTowerType].minRange;
       return {
         position,
         quaternion,
         range,
+        minRange,
         color: placementState.isBlocked ? invalidColor : validColor,
       };
     }, [
@@ -196,6 +199,14 @@ export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
             innerRadiusFraction={0.94}
             radialSegments={48}
             opacity={0.45}
+          />
+        )}
+        {rangeRing && (rangeRing.minRange ?? 0) > 0.01 && (
+          <DeadZoneDisc
+            radius={rangeRing.minRange ?? 0}
+            position={rangeRing.position}
+            quaternion={rangeRing.quaternion}
+            radialSegments={48}
           />
         )}
       </group>

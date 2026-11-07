@@ -16,7 +16,7 @@ import type {
 const towerTypeSchema = z.enum([
   "basic",
   "slow",
-  "aoe",
+  "brl",
   "laser",
   "relay",
   "chain",
@@ -32,7 +32,13 @@ const splitConfigSchema = z.object({
   minChildren: z.number().int().min(1),
   maxChildren: z.number().int().min(1),
 });
-const projectileTypeSchema = z.enum(["aoe", "single", "beam", "chain"]);
+const projectileTypeSchema = z.enum([
+  "aoe",
+  "single",
+  "beam",
+  "chain",
+  "rocket",
+]);
 const buildingShapeSchema = z.enum(["box", "cylinder"]);
 
 const pathWaypointSchema: z.ZodType<PathWaypoint> = z.object({

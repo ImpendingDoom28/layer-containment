@@ -184,7 +184,7 @@
       "gridX": 1,
       "gridZ": -2,
       "id": 6,
-      "type": "aoe",
+      "type": "brl",
       "x": 1,
       "z": -2
     },
@@ -192,7 +192,7 @@
       "gridX": -1,
       "gridZ": 2,
       "id": 7,
-      "type": "aoe",
+      "type": "brl",
       "x": -1,
       "z": 2
     },

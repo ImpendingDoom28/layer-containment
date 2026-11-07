@@ -307,7 +307,7 @@ describe("enemyActions", () => {
     // First hit kills; the entity stays alive (health 0) until
     // EnemyDeathSystem settles it, so more hits can land in that window.
     enemyActions(testWorld).damageEnemy(1, 150, { towerType: "basic" });
-    enemyActions(testWorld).damageEnemy(1, 25, { towerType: "aoe" });
+    enemyActions(testWorld).damageEnemy(1, 25, { towerType: "brl" });
     enemyActions(testWorld).damageEnemy(1, 10, { towerType: "laser" });
 
     const killed = testWorld

@@ -206,7 +206,7 @@ describe("3D asset showcase level", () => {
     for (const type of ["basic", "fast", "tank", "medic", "splitter"]) {
       expect(enemyTypes.has(type as never), `enemy type ${type} missing`).toBe(true);
     }
-    for (const type of ["basic", "slow", "aoe", "laser", "relay", "chain"]) {
+    for (const type of ["basic", "slow", "brl", "laser", "relay", "chain"]) {
       expect(towerTypes.has(type as never), `tower type ${type} missing`).toBe(true);
     }
   });

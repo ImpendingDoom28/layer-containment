@@ -75,7 +75,7 @@ describe("statsSystem", () => {
     );
     testWorld.spawn(
       damageDealtRequest({
-        towerType: "aoe",
+        towerType: "brl",
         enemyType: "basic",
         amount: 7,
         killed: true,
@@ -86,10 +86,10 @@ describe("statsSystem", () => {
 
     const stats = testWorld.queryFirst(IsStats);
     // Effective damage is summed per tower type.
-    expect(stats?.get(DamageByTowerType)).toEqual({ laser: 5, aoe: 7 });
+    expect(stats?.get(DamageByTowerType)).toEqual({ laser: 5, brl: 7 });
     expect(stats?.get(KillsByTowerType)).toEqual({
       laser: { fast: 1 },
-      aoe: { basic: 1 },
+      brl: { basic: 1 },
     });
   });
 

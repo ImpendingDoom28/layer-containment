@@ -5,7 +5,7 @@ export type GameStatus =
   "menu" | "playing" | "paused" | "gameMenu" | "gameOver" | "won";
 
 // Tower types
-export type TowerType = "basic" | "slow" | "aoe" | "laser" | "relay" | "chain";
+export type TowerType = "basic" | "slow" | "brl" | "laser" | "relay" | "chain";
 export type TowerTargeting =
   | "nearest"
   | "furthest"
@@ -102,7 +102,7 @@ export type EnemyUpgradeConfig = {
   indicatorColor: string;
 };
 
-export type ProjectileType = "aoe" | "single" | "beam" | "chain";
+export type ProjectileType = "aoe" | "single" | "beam" | "chain" | "rocket";
 
 // Path waypoint
 export type PathWaypoint = {
@@ -131,6 +131,12 @@ export type TowerMuzzleSpec = {
   turretNode?: string;
   barrelNode?: string;
   muzzle: { x: number; y: number; z: number } | null;
+  /**
+   * Multiple muzzle points in the turret node's local rest frame, cycled per
+   * shot (the BRL fires from each of its launcher tubes in turn). When present
+   * it takes precedence over the single `muzzle` point.
+   */
+  muzzleOffsets?: Array<{ x: number; y: number; z: number }>;
 };
 
 // Tower configuration
@@ -141,6 +147,12 @@ export type TowerConfig = {
 
   damage: number;
   range: number;
+  /**
+   * Minimum effective range (the artillery dead-zone): the tower refuses to
+   * target enemies closer than this. Absent for towers that can engage at any
+   * distance.
+   */
+  minRange?: number;
   fireRate: number;
   targeting: TowerTargeting;
   slowAmount?: number;

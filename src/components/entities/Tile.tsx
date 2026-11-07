@@ -29,7 +29,10 @@ import {
 import { hashGrid2D } from "../../core/tileGridHash";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import { createPlanetTileMaterial } from "../../utils/planetTileMaterial";
-import { createWaterMaterial } from "../../utils/waterMaterial";
+import {
+  createWaterMaterial,
+  WATER_AMPLITUDE,
+} from "../../utils/waterMaterial";
 import { useWaterClock } from "../../core/contexts/WaterClockContext";
 import { freezeSubtree } from "../../utils/freezeSubtree";
 
@@ -72,14 +75,15 @@ export const Tile: FC<TileProps> = memo(
     // Water tiles get a subdivided box (8×8 top-face grid) so the vertex
     // displacement has enough vertices to swell; the 4 corners of a plain box
     // could only tilt. Non-water (or hover) tiles stay a single-segment box.
-    const WATER_AMPLITUDE = 0.05;
     const WATER_TOP_SEGMENTS = 8;
-    // Water sits below the land plane so the tiles read as a recessed pool:
-    // the land edge casts a rim on the surface, and the swell moves inside
-    // the basin instead of poking through the shoreline. The offset must stay
-    // above the max swell (amplitude × max |waterHeight| ≈ 0.034) so the
-    // surface never crosses the land plane; 0.05 leaves a 0.016 margin.
-    const WATER_BED_OFFSET = 0.05;
+    // The tile's top face (the shore) sits at pathYOffset above the ground
+    // sphere, so the water has a 0.05 basin between the shore and the sphere.
+    // Recess the water top face to the middle of that basin — 0.025 above the
+    // sphere, 0.025 below the shore — so the ±~0.020 swell (WATER_AMPLITUDE ×
+    // field peak ~0.78) neither pokes through the shoreline nor digs through
+    // the ground sphere: the pool swells inside the basin instead of crossing
+    // the terrain it sits in.
+    const WATER_BED_OFFSET = 0.025;
     // The radial recess moves the mesh, not the slab's local coordinates, so
     // the top face is still at local y = pathYOffset/2 — that is what the
     // material's top-face mask keys off.

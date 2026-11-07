@@ -16,6 +16,17 @@ type DeadZoneDiscProps = {
 
 let cachedDeadZoneColor: string | null = null;
 
+// Destructuring defaults widen array literals to `number[]`, which fails to
+// assign to the tuple-typed mesh props, so the defaults live in named tuples.
+// The disc lies flat on the ground plane by default (facing up, rotated -PI/2
+// about X).
+const DEAD_ZONE_DEFAULT_POSITION: [number, number, number] = [0, 0, 0];
+const DEAD_ZONE_DEFAULT_ROTATION: [number, number, number] = [
+  -Math.PI / 2,
+  0,
+  0,
+];
+
 /**
  * The shared "negative" tint for areas a tower can't engage: the destructive
  * red mixed toward scene gray, matching the placement overlay's
@@ -42,13 +53,15 @@ export const DeadZoneDisc: FC<DeadZoneDiscProps> = memo(
     radius,
     radialSegments = 32,
     opacity = 0.4,
-    position = [0, 0, 0],
+    position = DEAD_ZONE_DEFAULT_POSITION,
     quaternion,
     rotation,
   }) => (
     <mesh
       position={position}
-      rotation={quaternion ? undefined : (rotation ?? [-Math.PI / 2, 0, 0])}
+      rotation={
+        quaternion ? undefined : (rotation ?? DEAD_ZONE_DEFAULT_ROTATION)
+      }
       quaternion={quaternion}
       raycast={() => null}
     >

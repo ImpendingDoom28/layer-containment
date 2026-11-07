@@ -35,8 +35,11 @@ const FIREBALL_FRACTION = 0.5;
 const sharedFrontGeometry = new RingGeometry(0.92, 1, 48);
 const sharedBodyGeometry = new RingGeometry(0.5, 1, 48);
 
-const FRONT_OPACITY = 0.9;
-const BODY_OPACITY = 0.3;
+// Kept deliberately low: the shockwave should barely tint the ground (a faint
+// ripple you notice if you watch for it), with only the front's relative
+// brightness distinguishing it from the body.
+const FRONT_OPACITY = 0.3;
+const BODY_OPACITY = 0.1;
 
 // One shared radial-gradient glow (white core fading to transparent) for every
 // explosion's fireball. Lazily created so importing this module in a DOM-less

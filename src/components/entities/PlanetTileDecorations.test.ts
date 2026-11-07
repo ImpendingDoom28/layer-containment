@@ -65,7 +65,12 @@ describe("buildRubbleMatrices (deterministic rubble randomizer)", () => {
     for (let variant = 0; variant < a.length; variant += 1) {
       expect(a[variant].length).toBe(b[variant].length);
       for (let i = 0; i < a[variant].length; i += 1) {
-        expect(a[variant][i].elements).toEqual(b[variant][i].elements);
+        expect(a[variant][i].matrix.elements).toEqual(
+          b[variant][i].matrix.elements
+        );
+        expect(a[variant][i].color.r).toBeCloseTo(b[variant][i].color.r, 6);
+        expect(a[variant][i].color.g).toBeCloseTo(b[variant][i].color.g, 6);
+        expect(a[variant][i].color.b).toBeCloseTo(b[variant][i].color.b, 6);
       }
     }
   });
@@ -98,8 +103,8 @@ describe("buildRubbleMatrices (deterministic rubble randomizer)", () => {
       const centerX = -(GRID_SIZE * TILE_SIZE) / 2 + tile.gridX + TILE_SIZE / 2;
       const centerZ = -(GRID_SIZE * TILE_SIZE) / 2 + tile.gridZ + TILE_SIZE / 2;
       for (const list of perVariant) {
-        for (const matrix of list) {
-          const position = positionOf(matrix);
+        for (const instance of list) {
+          const position = positionOf(instance.matrix);
           const distance = Math.hypot(
             position.x - centerX,
             position.z - centerZ
@@ -118,17 +123,23 @@ describe("buildRubbleMatrices (deterministic rubble randomizer)", () => {
       PATH_Y_OFFSET
     );
     for (const list of perVariant) {
-      for (const matrix of list) {
+      for (const instance of list) {
         // The model origin (its grounded bottom-center) rests on the land slab's
         // top face — radius R + pathYOffset from the planet center — not buried
         // in the slab or floating above it.
-        expect(positionOf(matrix).distanceTo(PLANET_CENTER)).toBeCloseTo(
-          PLANET_RADIUS + PATH_Y_OFFSET,
-          3
-        );
-        const scale = scaleOf(matrix);
+        expect(
+          positionOf(instance.matrix).distanceTo(PLANET_CENTER)
+        ).toBeCloseTo(PLANET_RADIUS + PATH_Y_OFFSET, 3);
+        const scale = scaleOf(instance.matrix);
         expect(scale).toBeGreaterThanOrEqual(0.3);
         expect(scale).toBeLessThanOrEqual(0.55);
+        // The color pitch is a small neutral tint around white, so repeated
+        // props read as varied stone instead of one cloned texture.
+        const { r, g, b } = instance.color;
+        expect(r).toBeCloseTo(g, 6);
+        expect(r).toBeCloseTo(b, 6);
+        expect(r).toBeGreaterThanOrEqual(0.85);
+        expect(r).toBeLessThanOrEqual(1.15);
       }
     }
   });
@@ -142,7 +153,7 @@ describe("applyRubbleMatrices (instance refresh)", () => {
       3
     );
     const computeSpy = vi.spyOn(mesh, "computeBoundingSphere");
-    const matrices = buildRubbleMatrices(
+    const instances = buildRubbleMatrices(
       makeOccupancy(GRID_SIZE),
       GRID_SIZE,
       TILE_SIZE,
@@ -150,17 +161,19 @@ describe("applyRubbleMatrices (instance refresh)", () => {
     )[0].slice(0, 3);
 
     const versionBefore = mesh.instanceMatrix.version;
-    applyRubbleMatrices(mesh, matrices);
+    applyRubbleMatrices(mesh, instances);
     expect(computeSpy).toHaveBeenCalledTimes(1);
     // Writing instance data bumps the attribute version so the GPU is re-sent.
     expect(mesh.instanceMatrix.version).toBeGreaterThan(versionBefore);
-    // The sphere is actually derived (non-null) after the refresh.
+    // The per-instance color is written and the sphere actually derived
+    // (non-null) after the refresh.
+    expect(mesh.instanceColor).not.toBeNull();
     expect(mesh.boundingSphere).not.toBeNull();
 
     // Writing again with the same count must refresh again — the renderer
     // culls by this cached sphere, so it cannot go stale when only the
     // matrices change.
-    applyRubbleMatrices(mesh, matrices);
+    applyRubbleMatrices(mesh, instances);
     expect(computeSpy).toHaveBeenCalledTimes(2);
   });
 });

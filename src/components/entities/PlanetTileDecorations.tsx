@@ -11,6 +11,7 @@ import { useGLTF } from "@react-three/drei";
 import {
   BoxGeometry,
   type BufferGeometry,
+  Color,
   InstancedMesh,
   Matrix4,
   type Mesh,
@@ -53,6 +54,12 @@ const RUBBLE_SURFACE_FRACTION = 0.32;
 const RUBBLE_SCALE_MIN = 0.3;
 const RUBBLE_SCALE_VARIANCE = 0.25;
 const RUBBLE_OFFSET_FRACTION = 0.3;
+// Per-instance color pitch: the models are flat grays, so tinting each
+// instance by a small factor (0.85..1.15) around white makes repeated props
+// read as varied stone instead of one cloned texture — the color analogue of
+// sound pitching. Applied as `instanceColor` (multiplied onto the fragment
+// material in the shader), so it stays one draw call per variant.
+const RUBBLE_COLOR_PITCH = 0.15;
 
 // Fallback stand-in (still loading, or a failed load): the old instanced box
 // props, re-grounded at y = 0 like the rubble geometry, so the same instance
@@ -80,6 +87,7 @@ const scratchObject = new Object3D();
 const scratchBaseQuat = new Quaternion();
 const scratchSpinQuat = new Quaternion();
 const scratchNormal = new Vector3();
+const scratchColor = new Color(1, 1, 1);
 const UP = new Vector3(0, 1, 0);
 
 /**
@@ -90,13 +98,20 @@ const UP = new Vector3(0, 1, 0);
  * the sphere surface (the slab's full `pathYOffset`), so each prop's grounded
  * base rests on the surface rather than half-buried in the slab.
  */
+export type RubbleInstance = {
+  matrix: Matrix4;
+  /** A small per-instance tint around white (0.85..1.15) so repeated props
+      don't read as one cloned texture. */
+  color: Color;
+};
+
 export const buildRubbleMatrices = (
   occupancy: TileOccupancyMasks,
   gridSize: number,
   tileSize: number,
   surfaceTopHeight: number
-): Matrix4[][] => {
-  const perVariant: Matrix4[][] = Array.from(
+): RubbleInstance[][] => {
+  const perVariant: RubbleInstance[][] = Array.from(
     { length: RUBBLE_MODELS.length },
     () => []
   );
@@ -122,6 +137,10 @@ export const buildRubbleMatrices = (
       const scale =
         RUBBLE_SCALE_MIN +
         RUBBLE_SCALE_VARIANCE * hashGrid2D(gridX + 2, gridZ + 7);
+      const pitch =
+        1 +
+        (hashGrid2D(gridX + 211, gridZ + 167) * 2 - 1) * RUBBLE_COLOR_PITCH;
+      scratchColor.setRGB(pitch, pitch, pitch);
 
       const wx =
         tileToWorldCoordinate(gridX, gridSize, tileSize) +
@@ -144,7 +163,10 @@ export const buildRubbleMatrices = (
       scratchObject.quaternion.copy(scratchBaseQuat).multiply(scratchSpinQuat);
       scratchObject.scale.setScalar(scale);
       scratchObject.updateMatrix();
-      perVariant[variant].push(scratchObject.matrix.clone());
+      perVariant[variant].push({
+        matrix: scratchObject.matrix.clone(),
+        color: scratchColor.clone(),
+      });
     }
   }
 
@@ -195,26 +217,31 @@ type RubbleInstancedMeshProps = {
   name: string;
   geometry: BufferGeometry;
   material: Material | Material[];
-  matrices: Matrix4[];
+  instances: RubbleInstance[];
   /** Disposes the geometry on unmount (the per-variant bakes); shared
       geometries (the fallback box) must not be disposed. */
   disposeGeometry?: boolean;
 };
 
-// Writes the per-instance matrices and refreshes the derived GPU data. The
-// renderer frustum-culls an InstancedMesh by its `boundingSphere`, which
-// three derives from the instance matrices only when it is null and then
-// caches — so it is recomputed after every write (including when the count
-// is unchanged) to keep a re-decorated mesh from being culled by a stale
-// sphere. Exported so the test can assert the refresh without a renderer.
+// Writes the per-instance matrices and colors and refreshes the derived GPU
+// data. The renderer frustum-culls an InstancedMesh by its `boundingSphere`,
+// which three derives from the instance matrices only when it is null and
+// then caches — so it is recomputed after every write (including when the
+// count is unchanged) to keep a re-decorated mesh from being culled by a
+// stale sphere. Exported so the test can assert the refresh without a
+// renderer.
 export const applyRubbleMatrices = (
   mesh: InstancedMesh,
-  matrices: Matrix4[]
+  instances: RubbleInstance[]
 ): void => {
-  for (let i = 0; i < matrices.length; i += 1) {
-    mesh.setMatrixAt(i, matrices[i]);
+  for (let i = 0; i < instances.length; i += 1) {
+    mesh.setMatrixAt(i, instances[i].matrix);
+    mesh.setColorAt(i, instances[i].color);
   }
   mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor !== null) {
+    mesh.instanceColor.needsUpdate = true;
+  }
   mesh.computeBoundingSphere();
 };
 
@@ -226,10 +253,10 @@ const RubbleInstancedMesh: FC<RubbleInstancedMeshProps> = ({
   name,
   geometry,
   material,
-  matrices,
+  instances,
   disposeGeometry,
 }) => {
-  const count = matrices.length;
+  const count = instances.length;
   const meshRef = useRef<InstancedMesh>(null);
 
   useEffect(() => {
@@ -241,8 +268,8 @@ const RubbleInstancedMesh: FC<RubbleInstancedMeshProps> = ({
     const mesh = meshRef.current;
     if (!mesh || count === 0) return;
     mesh.raycast = () => null;
-    applyRubbleMatrices(mesh, matrices);
-  }, [geometry, material, matrices, count]);
+    applyRubbleMatrices(mesh, instances);
+  }, [geometry, material, instances, count]);
 
   if (count === 0) return null;
 
@@ -260,10 +287,10 @@ const RubbleInstancedMesh: FC<RubbleInstancedMeshProps> = ({
 
 type RubbleVariantProps = {
   spec: RubbleModelSpec;
-  matrices: Matrix4[];
+  instances: RubbleInstance[];
 };
 
-const RubbleVariant: FC<RubbleVariantProps> = ({ spec, matrices }) => {
+const RubbleVariant: FC<RubbleVariantProps> = ({ spec, instances }) => {
   const gltf = useGLTF(spec.url);
   const baked = useMemo(
     () => bakeVariantGeometry(gltf.scene, spec.node),
@@ -276,7 +303,7 @@ const RubbleVariant: FC<RubbleVariantProps> = ({ spec, matrices }) => {
       name={`rubble-${spec.node}`}
       geometry={baked.geometry}
       material={baked.materials}
-      matrices={matrices}
+      instances={instances}
       disposeGeometry
     />
   );
@@ -286,20 +313,20 @@ const RubbleVariant: FC<RubbleVariantProps> = ({ spec, matrices }) => {
 // load shows the box fallback for this variant only, and a failed load
 // (network error, 404, parse error) keeps the box fallback permanently
 // instead of unmounting the scene.
-const RubbleVariantSlot: FC<RubbleVariantProps> = ({ spec, matrices }) => {
+const RubbleVariantSlot: FC<RubbleVariantProps> = ({ spec, instances }) => {
   const fallback = (
     <RubbleInstancedMesh
       name={`rubble-fallback-${spec.node}`}
       geometry={rubbleFallbackGeometry}
       material={getRubbleFallbackMaterial()}
-      matrices={matrices}
+      instances={instances}
     />
   );
 
   return (
     <ModelLoadErrorBoundary fallback={fallback}>
       <Suspense fallback={fallback}>
-        <RubbleVariant spec={spec} matrices={matrices} />
+        <RubbleVariant spec={spec} instances={instances} />
       </Suspense>
     </ModelLoadErrorBoundary>
   );
@@ -316,12 +343,12 @@ export const PlanetTileDecorations: FC<PlanetTileDecorationsProps> = memo(
     const tileSize = useGameStore(tileSizeSelector);
     const gridSize = useLevelStore(gridSizeSelector);
 
-    const matricesPerVariant = useMemo(
+    const instancesPerVariant = useMemo(
       () => buildRubbleMatrices(occupancy, gridSize, tileSize, pathYOffset),
       [occupancy, gridSize, tileSize, pathYOffset]
     );
 
-    if (matricesPerVariant.every((matrices) => matrices.length === 0)) {
+    if (instancesPerVariant.every((instances) => instances.length === 0)) {
       return null;
     }
 
@@ -331,7 +358,7 @@ export const PlanetTileDecorations: FC<PlanetTileDecorationsProps> = memo(
           <RubbleVariantSlot
             key={spec.node}
             spec={spec}
-            matrices={matricesPerVariant[variant]}
+            instances={instancesPerVariant[variant]}
           />
         ))}
       </group>

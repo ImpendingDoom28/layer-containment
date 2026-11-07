@@ -113,7 +113,9 @@ test("a tower can be selected and deselected from the bottom shop bar", async ({
   // flow through the compact bottom bar can.
   await openGameOnMobile(page);
 
-  const basic = page.getByRole("button", { name: /Basic Tower/i });
+  // The shop buttons are now 3D preview boxes: the tower name is an
+  // aria-label on the button (not visible text), so select by testid.
+  const basic = page.getByTestId("tower-basic");
   await expect(basic).toBeVisible();
   await basic.click();
 

@@ -85,7 +85,7 @@ varying float vAlpha;
 
 void main() {
   float distanceFromCenter = length(gl_PointCoord - vec2(0.5));
-  float falloff = smoothstep(0.5, 0.05, distanceFromCenter);
+  float falloff = 1.0 - smoothstep(0.05, 0.5, distanceFromCenter);
   gl_FragColor = vec4(uColor, vAlpha * falloff);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>

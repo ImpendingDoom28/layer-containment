@@ -20,6 +20,7 @@ import { getEffectiveTowerCombatStats } from "../../core/relayBuffs";
 import type { TileData } from "../../core/types/utils";
 import type { Tower } from "../../core/types/game";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
+import { DeadZoneDisc } from "./effects/DeadZoneDisc";
 import { RangeRing } from "./effects/RangeRing";
 import {
   flatFieldToSphereOverlayPlanePose,
@@ -201,14 +202,13 @@ export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
           />
         )}
         {rangeRing && (rangeRing.minRange ?? 0) > 0.01 && (
-          <RangeRing
-            range={rangeRing.minRange ?? 0}
+          <DeadZoneDisc
+            radius={rangeRing.minRange ?? 0}
             color={rangeRing.color}
             position={rangeRing.position}
             quaternion={rangeRing.quaternion}
-            innerRadiusFraction={0.85}
             radialSegments={48}
-            opacity={0.35}
+            opacity={0.4}
           />
         )}
       </group>

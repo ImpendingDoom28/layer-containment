@@ -42,7 +42,7 @@ export const getRunStats = (world: World): RunStatsSnapshot => {
     damageByTowerType: { ...damage },
     spendByTowerType: { ...spend },
     killsByTowerType: Object.fromEntries(
-      Object.entries(kills).map(([tower, byEnemy]) => [
+      Object.entries(kills ?? {}).map(([tower, byEnemy]) => [
         tower,
         { ...byEnemy },
       ])

@@ -4,6 +4,7 @@ import {
   Color,
   Group,
   Mesh,
+  MeshStandardMaterial,
   Vector3,
   type Material,
   type Object3D,
@@ -111,7 +112,9 @@ const makeGhostMaterial = (original: Material, invalid: boolean): Material => {
   const mat = original.clone();
   mat.transparent = true;
   mat.opacity = PREVIEW_OPACITY;
-  if (invalid) {
+  // Only color-bearing materials (e.g. MeshStandardMaterial from the GLTF)
+  // can be tinted; base Material has no `color`.
+  if (invalid && mat instanceof MeshStandardMaterial) {
     mat.color.copy(new Color(getCssColorValue("destructive")));
   }
   return mat;

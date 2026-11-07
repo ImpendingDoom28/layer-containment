@@ -153,7 +153,7 @@ export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
       );
 
       return {
-        position,
+        position: [position.x, position.y, position.z] as [number, number, number],
         quaternion,
         range,
         color: placementState.isBlocked ? invalidColor : validColor,

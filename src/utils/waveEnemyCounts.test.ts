@@ -215,7 +215,7 @@ describe("applyEnemyUpgradeCounts (cap scaling)", () => {
 describe("buildWaveSpawnQueue", () => {
   it("queues exactly sum(count) enemies — the old loop halved this", () => {
     // basic 10 + fast 3 + medic 1 (level 1 wave 2, no upgrade): 14, not 7.
-    const g = [
+    const g: WaveEnemyGroup[] = [
       { type: "basic", count: 10, spawnInterval: 1 },
       { type: "fast", count: 3, spawnInterval: 1 },
       { type: "medic", count: 1, spawnInterval: 1 },
@@ -231,7 +231,7 @@ describe("buildWaveSpawnQueue", () => {
     // Deterministic draws: always pick the first non-exhausted group, so the
     // queue is 5 basic, then 3 tank — order is group order, not a coin flip.
     const alwaysFirst = () => 0;
-    const g = [
+    const g: WaveEnemyGroup[] = [
       { type: "basic", count: 5, spawnInterval: 1 },
       { type: "tank", count: 3, spawnInterval: 2 },
     ];
@@ -244,7 +244,7 @@ describe("buildWaveSpawnQueue", () => {
   it("assigns cumulative per-group spawn intervals as delays", () => {
     // basic x2 (interval 1s) then tank x1 (interval 2s): delays 0, 1000, 2000.
     const alwaysFirst = () => 0;
-    const g = [
+    const g: WaveEnemyGroup[] = [
       { type: "basic", count: 2, spawnInterval: 1 },
       { type: "tank", count: 1, spawnInterval: 2 },
     ];
@@ -253,7 +253,7 @@ describe("buildWaveSpawnQueue", () => {
   });
 
   it("does not mutate the input groups", () => {
-    const g = [
+    const g: WaveEnemyGroup[] = [
       { type: "basic", count: 3, spawnInterval: 1 },
       { type: "tank", count: 2, spawnInterval: 1 },
     ];

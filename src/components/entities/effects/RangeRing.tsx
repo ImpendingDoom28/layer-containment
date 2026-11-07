@@ -1,6 +1,8 @@
 import { FC, memo } from "react";
 import { Quaternion } from "three";
 
+const DEFAULT_POSITION: [number, number, number] = [0, 0, 0];
+
 type RangeRingProps = {
   range: number;
   color: string;
@@ -25,7 +27,7 @@ export const RangeRing: FC<RangeRingProps> = memo(
     innerRadiusFraction = 0.9,
     radialSegments = 32,
     opacity = 0.3,
-    position = [0, 0, 0],
+    position = DEFAULT_POSITION,
     quaternion,
     rotation,
   }) => (

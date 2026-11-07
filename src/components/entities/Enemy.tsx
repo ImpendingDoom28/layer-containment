@@ -440,7 +440,14 @@ export const Enemy: FC<EnemyProps> = memo(
         </group>
 
         {/* Debug info */}
-        {debug && <GUIDebugInfo entity={entity} offsetY={size + 0.7} />}
+        {/* GUIDebugInfo enumerates a plain record; koota's Entity is a
+            branded object, so expose it as one for display. */}
+        {debug && (
+          <GUIDebugInfo
+            entity={entity as unknown as Record<string, unknown>}
+            offsetY={size + 0.7}
+          />
+        )}
       </group>
     );
   }

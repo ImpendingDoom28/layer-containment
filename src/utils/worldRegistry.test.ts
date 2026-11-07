@@ -1,17 +1,24 @@
 import { describe, expect, it, vi } from "vitest";
+import type { World } from "koota";
 
 import { createWorldRegistry } from "./worldRegistry";
 
 type Row = [id: number, value: string];
 
+/** Structural shape of the fake world: `query()` returns a `readEach` over rows. */
+type QueryWorld = {
+  query: () => { readEach: (fn: (row: Row) => void) => void };
+};
+
 /** Minimal world-shaped object: `query()` returns a `readEach` over rows. */
-const makeWorld = (rows: Row[]) => ({
-  query: () => ({
-    readEach: (fn: (row: Row) => void) => {
-      for (const row of rows) fn(row);
-    },
-  }),
-});
+const makeWorld = (rows: Row[]) =>
+  ({
+    query: () => ({
+      readEach: (fn: (row: Row) => void) => {
+        for (const row of rows) fn(row);
+      },
+    }),
+  }) as unknown as World & QueryWorld;
 
 /** Registry config: record is `{ id, value, copies }` — `copies` counts
  * how many times `update` re-copied the record in place. */
@@ -25,7 +32,7 @@ const createTestRegistry = () => {
     entry.copies += 1;
   });
   const { refresh, collect } = createWorldRegistry<number, Entry, Row>({
-    query: (world) => (world as ReturnType<typeof makeWorld>).query(),
+    query: (world) => (world as unknown as QueryWorld).query(),
     key: ([id]) => id,
     create,
     update,

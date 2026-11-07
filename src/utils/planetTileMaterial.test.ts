@@ -1,9 +1,17 @@
-import type { Shader, WebGLRenderer } from "three";
+import type { WebGLProgramParametersWithUniforms, WebGLRenderer } from "three";
 import { describe, expect, it } from "vitest";
 
 import { createPlanetTileMaterial } from "./planetTileMaterial";
 
-const minimalShaderForHook: Shader = {
+// three r183 no longer exports the old `Shader` type; onBeforeCompile now
+// receives WebGLProgramParametersWithUniforms. The tests only need the three
+// mutable fields the hook patches.
+type ShaderStub = Pick<
+  WebGLProgramParametersWithUniforms,
+  "uniforms" | "vertexShader" | "fragmentShader"
+>;
+
+const minimalShaderForHook: ShaderStub = {
   uniforms: {},
   vertexShader: `#include <common>
 #include <project_vertex>`,
@@ -44,7 +52,7 @@ describe("createPlanetTileMaterial", () => {
 
   it("injects fragment code without reserved GLSL identifier patch and with expected uniforms", () => {
     const mat = createPlanetTileMaterial(sampleParams);
-    const shader: Shader = {
+    const shader: ShaderStub = {
       uniforms: { ...minimalShaderForHook.uniforms },
       vertexShader: minimalShaderForHook.vertexShader,
       fragmentShader: minimalShaderForHook.fragmentShader,
@@ -54,7 +62,10 @@ describe("createPlanetTileMaterial", () => {
     if (onBeforeCompile == null) {
       throw new Error("expected onBeforeCompile");
     }
-    onBeforeCompile(shader, {} as WebGLRenderer);
+    onBeforeCompile(
+      shader as WebGLProgramParametersWithUniforms,
+      {} as WebGLRenderer
+    );
 
     expect(shader.fragmentShader).not.toMatch(/\bfloat patch\b/);
     expect(shader.fragmentShader).toContain("surfacePatch");

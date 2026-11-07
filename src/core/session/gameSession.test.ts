@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PlayableLevelId } from "../../constants/playableLevels";
+import type { AnyPlayableLevelId } from "../../constants/playableLevels";
 import type { LevelConfigData } from "../configs/levelConfig";
 import { worldBaseActions } from "../ecs/actions/baseActions";
 import { effectActions } from "../ecs/actions/effectActions";
@@ -22,7 +22,14 @@ import { createIdCounter } from "../hooks/utils/useNextId";
 import { useGameStore } from "../stores/useGameStore";
 import { useLevelStore } from "../stores/useLevelStore";
 import { useUpgradeStore } from "../stores/useUpgradeStore";
-import type { EnemyConfig, EnemyType, Tower, TowerConfig } from "../types/game";
+import type {
+  EnemyConfig,
+  EnemyType,
+  EnemyUpgradeConfig,
+  EnemyUpgradeId,
+  Tower,
+  TowerConfig,
+} from "../types/game";
 import { createGameSession } from "./gameSession";
 import type { GameSessionRuntime, SimulationFrame } from "./types";
 
@@ -50,6 +57,12 @@ const basicTower: TowerConfig = {
   projectileSpeed: 5,
   color: "#fff",
   description: "",
+  model: { url: "assets/models/tower_basic.glb", node: "Tower_Basic_ROOT" },
+  muzzle: {
+    turretNode: "Azimuth",
+    barrelNode: "Elevation",
+    muzzle: { x: 0, y: 0.3731, z: 1.071 },
+  },
 };
 
 const makeLevel = (
@@ -89,7 +102,7 @@ const frame: SimulationFrame = {
 };
 
 const makeSession = (
-  loadLevel = async (_levelId: PlayableLevelId) => makeLevel()
+  loadLevel = async (_levelId: AnyPlayableLevelId) => makeLevel()
 ) => {
   const towerIds = createIdCounter();
   const enemyIds = createIdCounter();
@@ -132,7 +145,7 @@ beforeEach(() => {
     towerHeight: 1,
     enemyTypes: { basic: basicEnemy } as Record<EnemyType, EnemyConfig>,
     towerTypes: { basic: basicTower } as Record<Tower["type"], TowerConfig>,
-    enemyUpgrades: {},
+    enemyUpgrades: {} as Record<EnemyUpgradeId, EnemyUpgradeConfig>,
   });
 });
 

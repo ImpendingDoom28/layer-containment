@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { createRoot, type ReactNode } from "react-dom/client";
-import { act } from "react";
+import { createRoot } from "react-dom/client";
+import { act, type ReactNode } from "react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { useGameStore } from "../../core/stores/useGameStore";
@@ -14,7 +14,7 @@ import { HUDUpgradePanel } from "./HUDUpgradePanel";
 // e2e in a real browser. Here we verify the rest of the lifecycle: the panel
 // renders on open and, crucially, stays mounted while sliding out after a pick
 // is confirmed (the "it just disappears" regression).
-(globalThis as unknown as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT =
+(globalThis as unknown as Record<string, unknown>)["IS_REACT_ACT_ENVIRONMENT"] =
   true;
 
 const upgradeConfigs: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {

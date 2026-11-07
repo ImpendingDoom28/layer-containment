@@ -21,7 +21,7 @@ import {
   Quaternion,
   Vector3,
 } from "three";
-import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 import { RUBBLE_MODELS, type RubbleModelSpec } from "../../constants/models";
 import { hashGrid2D } from "../../core/tileGridHash";

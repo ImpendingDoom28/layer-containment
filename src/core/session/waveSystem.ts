@@ -110,7 +110,7 @@ export const createWaveSystem = ({
     // inherits the player's full current upgrade stack. Each later appearance
     // is stronger: its base HP is scaled by `hpGrowthPerAppearance` per
     // appearance, so the boss keeps scaling without a new mechanic.
-    if (isBossWave(boss, currentWave)) {
+    if (boss && isBossWave(boss, currentWave)) {
       const { baseStats, name } = boss;
       spawnQueue.unshift({
         type: "tank",

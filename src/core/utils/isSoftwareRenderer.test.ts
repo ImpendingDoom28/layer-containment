@@ -25,10 +25,10 @@ const stubCanvas = (
     return null;
   };
   vi.spyOn(document, "createElement").mockImplementation(
-    (tag: string) =>
+    (tag: string): HTMLElement =>
       tag === "canvas"
         ? ({ getContext } as unknown as HTMLCanvasElement)
-        : null
+        : (null as unknown as HTMLElement)
   );
 };
 

@@ -7,8 +7,9 @@ import { useGameStore } from "../stores/useGameStore";
 import { useMenuParallax } from "./useMenuParallax";
 
 // React 19's act needs this flag to avoid a warning.
-(globalThis as unknown as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT =
-  true;
+(globalThis as unknown as Record<string, unknown>)[
+  "IS_REACT_ACT_ENVIRONMENT"
+] = true;
 
 // The hook coalesces pointer moves through requestAnimationFrame; drive the
 // frame queue manually so the tests control when a frame is processed.

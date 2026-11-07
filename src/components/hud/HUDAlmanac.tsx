@@ -420,7 +420,7 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
   const enemyUpgrades = useGameStore(enemyUpgradesSelector);
   const discoveredEnemies = useAlmanacStore(discoveredEnemiesSelector);
   const [activeTab, setActiveTab] = useState<AlmanacTab>("enemies");
-  const tabRefs = useRef<Partial<Record<AlmanacTab, HTMLButtonElement>>>({});
+  const tabRefs = useRef<Partial<Record<AlmanacTab, HTMLButtonElement | null>>>({});
   const tabIds = {
     enemies: "almanac-tab-enemies",
     towers: "almanac-tab-towers",

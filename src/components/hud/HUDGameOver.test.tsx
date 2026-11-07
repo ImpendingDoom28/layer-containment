@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { createRoot, type ReactNode } from "react-dom/client";
-import { act } from "react";
+import { createRoot } from "react-dom/client";
+import { act, type ReactNode } from "react";
 import {
   afterEach,
   beforeAll,
@@ -22,7 +22,7 @@ import type { RunStatsSnapshot } from "../../core/ecs/selectors/runStats";
 import { useGameStore } from "../../core/stores/useGameStore";
 import { HUDGameOver } from "./HUDGameOver";
 
-(globalThis as unknown as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT =
+(globalThis as unknown as Record<string, unknown>)["IS_REACT_ACT_ENVIRONMENT"] =
   true;
 
 // Load the locale so `t()` resolves real strings instead of raw keys.

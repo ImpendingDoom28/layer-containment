@@ -6,7 +6,13 @@ import {
   registerServiceWorker,
 } from "./registerServiceWorker";
 
-type Env = { DEV: boolean; BASE_URL: string };
+type Env = {
+  DEV: boolean;
+  MODE: string;
+  PROD: boolean;
+  SSR: boolean;
+  BASE_URL: string;
+};
 
 type DocumentStub = {
   readyState: "complete" | "loading";
@@ -21,6 +27,9 @@ type GlobalStubs = {
 
 const createEnv = (overrides: Partial<Env> = {}): Env => ({
   DEV: false,
+  MODE: "production",
+  PROD: true,
+  SSR: false,
   BASE_URL: "./",
   ...overrides,
 });

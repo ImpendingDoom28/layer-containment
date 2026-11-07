@@ -1,8 +1,6 @@
 import ReactThreeTestRenderer from "@react-three/test-renderer";
 import { describe, expect, it } from "vitest";
 import type { Mesh } from "three";
-import type { Entity } from "koota";
-
 import { SimulationClockProvider } from "../../../core/contexts/SimulationClockContext";
 import { useGameStore } from "../../../core/stores/useGameStore";
 import type {
@@ -64,6 +62,18 @@ const upgradeConfigs: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     ],
     indicatorColor: "#ffff00",
   },
+  reinforcements: {
+    id: "reinforcements",
+    name: "rf",
+    description: "",
+    displayRank: 2,
+    tiers: [
+      { countGrowth: 0.2, rewardMultiplier: 1.1 },
+      { countGrowth: 0.4, rewardMultiplier: 1.1 },
+      { countGrowth: 0.6, rewardMultiplier: 1.1 },
+    ],
+    indicatorColor: "#ff8800",
+  },
   missingOut: {
     id: "missingOut",
     name: "mo",
@@ -77,13 +87,6 @@ const upgradeConfigs: Record<EnemyUpgradeId, EnemyUpgradeConfig> = {
     indicatorColor: "#38bdf8",
   },
 };
-
-// Minimal koota entity: the only trait UpgradeEffect reads per frame is
-// Position (for the swift travel direction).
-const makeEntity = (x = 0, y = 0, z = 0): Entity =>
-  ({
-    get: () => ({ x, y, z }),
-  }) as unknown as Entity;
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
@@ -110,7 +113,6 @@ describe("UpgradeEffect", () => {
     const tier1 = await ReactThreeTestRenderer.create(
       <SimulationClockProvider>
         <UpgradeEffect
-          entity={makeEntity()}
           enemySize={0.4}
           upgradeStacks={[{ id: "armored", tier: 1 }]}
         />
@@ -119,7 +121,6 @@ describe("UpgradeEffect", () => {
     const tier3 = await ReactThreeTestRenderer.create(
       <SimulationClockProvider>
         <UpgradeEffect
-          entity={makeEntity()}
           enemySize={0.4}
           upgradeStacks={[{ id: "armored", tier: 3 }]}
         />
@@ -141,7 +142,6 @@ describe("UpgradeEffect", () => {
     const renderer = await ReactThreeTestRenderer.create(
       <SimulationClockProvider>
         <UpgradeEffect
-          entity={makeEntity()}
           enemySize={0.4}
           upgradeStacks={[{ id: "slowResistance", tier: 2 }]}
         />
@@ -164,7 +164,6 @@ describe("UpgradeEffect", () => {
     const tier1 = await ReactThreeTestRenderer.create(
       <SimulationClockProvider>
         <UpgradeEffect
-          entity={makeEntity()}
           enemySize={0.4}
           upgradeStacks={[{ id: "regenerating", tier: 1 }]}
         />
@@ -173,7 +172,6 @@ describe("UpgradeEffect", () => {
     const tier3 = await ReactThreeTestRenderer.create(
       <SimulationClockProvider>
         <UpgradeEffect
-          entity={makeEntity()}
           enemySize={0.4}
           upgradeStacks={[{ id: "regenerating", tier: 3 }]}
         />
@@ -198,7 +196,6 @@ describe("UpgradeEffect", () => {
     const tier1 = await ReactThreeTestRenderer.create(
       <SimulationClockProvider>
         <UpgradeEffect
-          entity={makeEntity()}
           enemySize={0.4}
           upgradeStacks={[{ id: "swift", tier: 1 }]}
         />
@@ -207,7 +204,6 @@ describe("UpgradeEffect", () => {
     const tier3 = await ReactThreeTestRenderer.create(
       <SimulationClockProvider>
         <UpgradeEffect
-          entity={makeEntity()}
           enemySize={0.4}
           upgradeStacks={[{ id: "swift", tier: 3 }]}
         />
@@ -229,7 +225,6 @@ describe("UpgradeEffect", () => {
     const renderer = await ReactThreeTestRenderer.create(
       <SimulationClockProvider>
         <UpgradeEffect
-          entity={makeEntity()}
           enemySize={0.4}
           upgradeStacks={[]}
         />

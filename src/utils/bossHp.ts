@@ -28,7 +28,7 @@ export const bossHealthForWave = (
   boss: BossConfig | null | undefined,
   waveNumber: number
 ): number => {
-  if (!isBossWave(boss, waveNumber)) return 0;
+  if (!boss || !isBossWave(boss, waveNumber)) return 0;
   const appearance = waveNumber / boss.everyNthWave;
   const hpScale = (boss.hpGrowthPerAppearance ?? 1) ** (appearance - 1);
   return Math.round(boss.baseStats.health * hpScale);

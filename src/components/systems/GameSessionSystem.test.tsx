@@ -33,7 +33,10 @@ const createSession = () => {
     tick: vi.fn(),
     startWave: vi.fn(),
     getRemainingEnemiesInWave: vi.fn(() => 0),
+    isRunStarting: false,
+    dispose: vi.fn(),
     connectRuntime: vi.fn(() => disconnectRuntime),
+    registerTurretNode: vi.fn(),
   };
   return { session, disconnectRuntime };
 };

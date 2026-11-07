@@ -98,7 +98,7 @@ const renderTwo = async (
 
 const frame = async (renderer: Awaited<ReturnType<typeof render>>["renderer"], n = 1) => {
   await ReactThreeTestRenderer.act(async () => {
-    await renderer.advanceFrames(n);
+    await renderer.advanceFrames(n, 1);
   });
 };
 

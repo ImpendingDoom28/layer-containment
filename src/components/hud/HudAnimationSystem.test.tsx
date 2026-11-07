@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { createRoot, type ReactNode } from "react-dom/client";
-import { act } from "react";
+import { createRoot } from "react-dom/client";
+import { act, type ReactNode } from "react";
 import {
   afterEach,
   beforeEach,
@@ -15,7 +15,7 @@ import { GameEvent } from "../../core/types/enums/events";
 import { gameEvents } from "../../utils/eventEmitter";
 import { HudAnimationSystem } from "./HudAnimationSystem";
 
-(globalThis as unknown as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT =
+(globalThis as unknown as Record<string, unknown>)["IS_REACT_ACT_ENVIRONMENT"] =
   true;
 
 const targetId = "tower-shop-row-basic";
@@ -32,16 +32,17 @@ describe("HudAnimationSystem", () => {
     // The system animates elements elsewhere in the document (the HUD rows),
     // so keep the target outside the React root container.
     targetElement = document.createElement("div");
-    targetElement.dataset.hudAnimationId = targetId;
+    targetElement.dataset["hudAnimationId"] = targetId;
     document.body.appendChild(targetElement);
     container = document.createElement("div");
     document.body.appendChild(container);
   });
 
   afterEach(() => {
-    if (root) {
+    const mountedRoot = root;
+    if (mountedRoot) {
       act(() => {
-        root.unmount();
+        mountedRoot.unmount();
       });
       root = null;
     }
@@ -53,9 +54,10 @@ describe("HudAnimationSystem", () => {
 
   const mount = () => {
     const element: ReactNode = <HudAnimationSystem />;
-    root = createRoot(container);
+    const newRoot = createRoot(container);
+    root = newRoot;
     act(() => {
-      root.render(element);
+      newRoot.render(element);
     });
   };
 

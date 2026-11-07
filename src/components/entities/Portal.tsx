@@ -63,7 +63,7 @@ export const Portal: FC<PortalProps> = memo(
         const pulse = Math.sin(time * 2) * 0.1 + 1;
         portalCoreRef.current.scale.set(pulse, pulse, pulse);
         const material = portalCoreRef.current
-          .material as THREE.MeshStandardMaterial;
+          .material as MeshStandardMaterial;
         material.emissiveIntensity = 0.3 + Math.sin(time * 3) * 0.2;
       }
 

@@ -345,9 +345,7 @@ describe("enemyActions", () => {
     });
 
     expect(dodged).toBe(false);
-    expect(testWorld.query(EnemyState).at(0)?.get(EnemyState)!.health).toBe(
-      100
-    );
+    expect(testWorld.query(EnemyState)[0]?.get(EnemyState)!.health).toBe(100);
     expect(testWorld.query(damageDealtRequest)).toHaveLength(0);
     expect(dodgedSpy).toHaveBeenCalledTimes(1);
     expect(killedSpy).not.toHaveBeenCalled();
@@ -368,7 +366,7 @@ describe("enemyActions", () => {
     });
 
     expect(killed).toBe(false);
-    expect(testWorld.query(EnemyState).at(0)?.get(EnemyState)!.health).toBe(70);
+    expect(testWorld.query(EnemyState)[0]?.get(EnemyState)!.health).toBe(70);
     expect(testWorld.query(damageDealtRequest)).toHaveLength(1);
   });
 

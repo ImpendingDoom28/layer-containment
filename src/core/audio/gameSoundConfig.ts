@@ -5,6 +5,7 @@ import {
 } from "@webgamedevkit/audio-engine";
 
 import { GameEvent } from "../../core/types/enums/events";
+import type { CameraMove } from "../../core/keybindingsConstants";
 import type {
   EnemyType,
   ProjectileType,
@@ -44,6 +45,9 @@ export const SOUND_CONFIGS = defineSoundConfigs(
       srces: TOWER_FIRE_SRCES,
     },
     [GameEvent.ENEMY_KILLED]: {
+      category: "sfx",
+    },
+    [GameEvent.ENEMY_DODGED]: {
       category: "sfx",
     },
     [GameEvent.ENEMY_REACHED_END]: {
@@ -91,6 +95,14 @@ export const SOUND_CONFIGS = defineSoundConfigs(
       category: "sfx",
       spatial: false,
     },
+    [GameEvent.TOUCH_CAMERA_MOVE]: {
+      category: "sfx",
+      spatial: false,
+    },
+    [GameEvent.TOUCH_CAMERA_ROTATE]: {
+      category: "sfx",
+      spatial: false,
+    },
   },
   forEvents<GameEvent>()
 );
@@ -107,6 +119,11 @@ export type AudioEventDataMap = {
     reward: number;
     size: number;
     color: string;
+    worldPosition: WorldPosition;
+  };
+  enemy_dodged: {
+    enemyId: number;
+    enemyType: EnemyType;
     worldPosition: WorldPosition;
   };
   enemy_reached_end: {
@@ -157,6 +174,14 @@ export type AudioEventDataMap = {
   ui_action_hold_end: Record<string, never>;
   ui_action_hold_abort: {
     progress: number;
+  };
+  touch_camera_move: {
+    move: CameraMove;
+    down: boolean;
+  };
+  touch_camera_rotate: {
+    deltaX: number;
+    deltaY: number;
   };
 };
 

@@ -67,7 +67,7 @@ export type UITypographyProps = {
    * </UITypography>
    *
    */
-  as?: keyof JSX.IntrinsicElements;
+  as?: keyof React.JSX.IntrinsicElements;
 } & Record<string, unknown>;
 
 export const UITypography: FC<UITypographyProps> = ({
@@ -106,7 +106,7 @@ export const UITypography: FC<UITypographyProps> = ({
   }, [variant, as]);
 
   return React.createElement(
-    renderVariant as string,
+    renderVariant,
     {
       ...props,
       className: classNames,

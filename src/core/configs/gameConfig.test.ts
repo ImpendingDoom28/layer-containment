@@ -56,7 +56,7 @@ describe("loadGameConfig", () => {
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(second).toBe(first);
-    expect(second.towerTypes.basic.id).toBe("basic");
+    expect(second.towerTypes.basic?.id).toBe("basic");
   });
 
   it("allows a retry after a failed load", async () => {

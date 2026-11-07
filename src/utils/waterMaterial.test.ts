@@ -1,4 +1,4 @@
-import type { Shader, WebGLRenderer } from "three";
+import type { WebGLProgramParametersWithUniforms, WebGLRenderer } from "three";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -8,7 +8,15 @@ import {
   type WaterTimeUniform,
 } from "./waterMaterial";
 
-const minimalShaderForHook: Shader = {
+// three r183 no longer exports the old `Shader` type; onBeforeCompile now
+// receives WebGLProgramParametersWithUniforms. The tests only need the three
+// mutable fields the hook patches.
+type ShaderStub = Pick<
+  WebGLProgramParametersWithUniforms,
+  "uniforms" | "vertexShader" | "fragmentShader"
+>;
+
+const minimalShaderForHook: ShaderStub = {
   uniforms: {},
   vertexShader: `#include <common>
  #include <begin_vertex>
@@ -122,7 +130,7 @@ describe("getWaterMaterial", () => {
       sampleParams.amplitude,
       sampleParams.topY
     );
-    const shader: Shader = {
+    const shader: ShaderStub = {
       uniforms: { ...minimalShaderForHook.uniforms },
       vertexShader: minimalShaderForHook.vertexShader,
       fragmentShader: minimalShaderForHook.fragmentShader,
@@ -132,7 +140,10 @@ describe("getWaterMaterial", () => {
     if (onBeforeCompile == null) {
       throw new Error("expected onBeforeCompile");
     }
-    onBeforeCompile(shader, {} as WebGLRenderer);
+    onBeforeCompile(
+      shader as WebGLProgramParametersWithUniforms,
+      {} as WebGLRenderer
+    );
 
     expect(shader.uniforms["uWaterTime"]).toBe(sampleParams.time);
     expect(shader.uniforms["uWaterAmplitude"]?.value).toBe(

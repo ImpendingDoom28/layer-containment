@@ -8,7 +8,12 @@ import { useGameStore } from "../stores/useGameStore";
 import { useLevelStore } from "../stores/useLevelStore";
 import { useUpgradeStore } from "../stores/useUpgradeStore";
 import { useWaveStore } from "../stores/useWaveStore";
-import type { EnemyConfig, EnemyType, EnemyUpgradeConfig } from "../types/game";
+import type {
+  EnemyConfig,
+  EnemyType,
+  EnemyUpgradeConfig,
+  EnemyUpgradeId,
+} from "../types/game";
 import { createWaveSystem } from "./waveSystem";
 
 const armoredUpgrade: EnemyUpgradeConfig = {
@@ -83,7 +88,7 @@ describe("createWaveSystem", () => {
         basic: basicConfig,
         tank: tankConfig,
       } as Record<EnemyType, EnemyConfig>,
-      enemyUpgrades: {},
+      enemyUpgrades: {} as Record<EnemyUpgradeId, EnemyUpgradeConfig>,
     });
     useLevelStore.setState({
       currentWave: 0,

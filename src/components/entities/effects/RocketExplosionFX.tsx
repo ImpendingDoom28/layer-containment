@@ -23,23 +23,14 @@ const EXPLOSION_DURATION = 0.55;
 // lasting part of the effect.
 const FIREBALL_FRACTION = 0.5;
 
-// The shockwave is two shared unit-radius rings (authored in the local XZ
-// plane), both additive-blended so the ground reads through them and they glow
-// via the bloom pass instead of painting over it:
-//   - a thin, bright FRONT (the leading edge) that sweeps out and lands on the
-//     blast radius, and
-//   - a wider, fainter BODY behind it (the displaced "wave") that fills the
-//     area the front has already passed and dissipates as it spreads.
-// Each explosion scales them out to its blast radius, so every explosion
-// reuses the same buffers instead of re-building geometry.
-const sharedFrontGeometry = new RingGeometry(0.92, 1, 48);
-const sharedBodyGeometry = new RingGeometry(0.5, 1, 48);
-
-// Kept deliberately low: the shockwave should barely tint the ground (a faint
-// ripple you notice if you watch for it), with only the front's relative
-// brightness distinguishing it from the body.
-const FRONT_OPACITY = 0.3;
-const BODY_OPACITY = 0.1;
+// One shared unit-radius ring geometry (authored in the local XZ plane); each
+// explosion scales it out to its blast radius, so every explosion reuses the
+// same buffers instead of re-building a ring. The band is wide (not a sharp
+// line) so it reads as a soft ripple of displaced air, and it is kept at a
+// low additive opacity so the ground reads through it (a faint ripple you
+// notice if you watch for it).
+const sharedRingGeometry = new RingGeometry(0.5, 1, 48);
+const RING_OPACITY = 0.1;
 
 // One shared radial-gradient glow (white core fading to transparent) for every
 // explosion's fireball. Lazily created so importing this module in a DOM-less
@@ -78,14 +69,14 @@ type RocketExplosionFXProps = {
 };
 
 /**
- * The BRL rocket's impact: a short bright fireball plus a ground **shockwave**
- * that sweeps out to the blast radius and dissipates. The shockwave is the
- * readable "area of effect" — its front lands exactly on the projectile's
- * `aoeRadius`, so the player sees how far the splash reaches without a
- * persistent marker cluttering the field. It is a thin bright front over a
- * faint wide trailing body, both additive-blended (transparent, the ground
- * shows through) and glowing via the bloom pass, so it reads as a shockwave
- * rather than a filled disc. The fireball is a camera-facing additive sprite.
+ * The BRL rocket's impact: a short bright fireball plus a faint ground
+ * **shockwave** that sweeps out to the blast radius and dissipates. The
+ * shockwave is the readable "area of effect" — its edge lands exactly on the
+ * projectile's `aoeRadius`, so the player sees how far the splash reaches
+ * without a persistent marker cluttering the field. It is a single wide,
+ * low-opacity ring, additive-blended (transparent, the ground shows through)
+ * and glowing via the bloom pass, so it reads as a soft ripple rather than a
+ * filled disc. The fireball is a camera-facing additive sprite.
  *
  * Everything animates in `useFrame` by mutation on the pause-aware simulation
  * clock (the burst freezes with the world on pause), so a rocket landing costs
@@ -106,8 +97,7 @@ export const RocketExplosionFX: FC<RocketExplosionFXProps> = memo(
     const reducedMotion = useReducedMotion();
 
     const groupRef = useRef<Group>(null);
-    const frontRef = useRef<Mesh>(null);
-    const bodyRef = useRef<Mesh>(null);
+    const ringRef = useRef<Mesh>(null);
     // The simulation time the burst started at (captured on the first frame),
     // so the whole effect runs on the pause-aware clock and freezes with the
     // world on pause.
@@ -143,21 +133,8 @@ export const RocketExplosionFX: FC<RocketExplosionFXProps> = memo(
       return sprite;
     }, [fireballMaterial, radius]);
 
-    // Shockwave: two per-explosion additive materials (each fades on its own
-    // timeline); the geometry is shared.
-    const frontMaterial = useMemo(
-      () =>
-        new MeshBasicMaterial({
-          color: new Color(color),
-          transparent: true,
-          opacity: 0,
-          blending: AdditiveBlending,
-          depthWrite: false,
-          side: DoubleSide,
-        }),
-      [color]
-    );
-    const bodyMaterial = useMemo(
+    // Shockwave: one per-explosion additive material; the geometry is shared.
+    const ringMaterial = useMemo(
       () =>
         new MeshBasicMaterial({
           color: new Color(color),
@@ -172,10 +149,9 @@ export const RocketExplosionFX: FC<RocketExplosionFXProps> = memo(
     useLayoutEffect(
       () => () => {
         fireballMaterial.dispose();
-        frontMaterial.dispose();
-        bodyMaterial.dispose();
+        ringMaterial.dispose();
       },
-      [fireballMaterial, frontMaterial, bodyMaterial]
+      [fireballMaterial, ringMaterial]
     );
 
     useFrame((state) => {
@@ -195,27 +171,21 @@ export const RocketExplosionFX: FC<RocketExplosionFXProps> = memo(
         fireballMaterial.opacity = (1 - fb) * 0.9;
       }
 
-      // Shockwave: the front and body sweep out together (fast at first,
-      // decelerating) to the blast radius, then dissipate as they spread.
-      // Additive blending keeps the ground visible through them; the fade
-      // front is the bright leading edge, the body the faint trailing wave.
+      // Shockwave: a soft ripple that sweeps out (fast at first,
+      // decelerating) to the blast radius and dissipates as it spreads.
+      // Additive blending keeps the ground visible through it.
       const ease = 1 - (1 - progress) ** 3;
       const scale = Math.max(radius * ease, 1e-4);
       const fade = 1 - progress;
-      if (frontRef.current) {
-        frontRef.current.scale.setScalar(scale);
-        frontMaterial.opacity = fade * FRONT_OPACITY;
-      }
-      if (bodyRef.current) {
-        bodyRef.current.scale.setScalar(scale);
-        bodyMaterial.opacity = fade ** 1.5 * BODY_OPACITY;
+      if (ringRef.current) {
+        ringRef.current.scale.setScalar(scale);
+        ringMaterial.opacity = fade ** 1.5 * RING_OPACITY;
       }
 
       if (progress >= 1) {
         doneRef.current = true;
         fireball.visible = false;
-        frontMaterial.opacity = 0;
-        bodyMaterial.opacity = 0;
+        ringMaterial.opacity = 0;
         onComplete?.();
       }
     });
@@ -224,20 +194,12 @@ export const RocketExplosionFX: FC<RocketExplosionFXProps> = memo(
       <group ref={groupRef} position={position}>
         <primitive object={fireball} />
         <mesh
-          ref={bodyRef}
-          geometry={sharedBodyGeometry}
-          material={bodyMaterial}
+          ref={ringRef}
+          geometry={sharedRingGeometry}
+          material={ringMaterial}
           rotation={[-Math.PI / 2, 0, 0]}
           // Collapsed until the first frame animates it out (no full-size
           // flash on the frame the rocket lands).
-          scale={0}
-          raycast={() => null}
-        />
-        <mesh
-          ref={frontRef}
-          geometry={sharedFrontGeometry}
-          material={frontMaterial}
-          rotation={[-Math.PI / 2, 0, 0]}
           scale={0}
           raycast={() => null}
         />

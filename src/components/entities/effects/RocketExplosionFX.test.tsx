@@ -90,16 +90,15 @@ const findFireball = (renderer: Renderer): SceneObject => {
   return found[0];
 };
 
-// The shockwave is two rings (a bright front + a fainter trailing body), so
-// there are two meshes in the group.
-const findRings = (renderer: Renderer): SceneObject[] => {
+// The shockwave is a single ring mesh in the group.
+const findRing = (renderer: Renderer): SceneObject => {
   const scene = renderer.scene.instance as unknown as SceneObject;
   const found: SceneObject[] = [];
   scene.traverse?.((o) => {
     if (o.type === "Mesh") found.push(o);
   });
-  expect(found.length).toBe(2);
-  return found;
+  expect(found.length).toBe(1);
+  return found[0];
 };
 
 const findExplosionGroup = (renderer: Renderer): SceneObject => {
@@ -135,50 +134,38 @@ describe("RocketExplosionFX", () => {
   it("grows the shockwave out to the blast radius", async () => {
     const { renderer } = await createHarness();
     try {
-      const [body, front] = findRings(renderer);
-      // Both rings start collapsed (the frame loop has not run yet).
-      expect(body.scale.x).toBeLessThanOrEqual(1e-3);
-      expect(front.scale.x).toBeLessThanOrEqual(1e-3);
+      const ring = findRing(renderer);
+      // Starts collapsed (the frame loop has not run yet).
+      expect(ring.scale.x).toBeLessThanOrEqual(1e-3);
 
       // Establish the burst's start time on the first frame, then advance
-      // partway through the burst: both rings have swollen toward the radius.
+      // partway through the burst: the ring has swollen toward the radius.
       await advanceFrame(renderer, 0.01);
       await advanceFrame(renderer, 0.3);
-      expect(front.scale.x).toBeGreaterThan(0.5);
-      expect(front.scale.x).toBeLessThan(RADIUS);
-      expect(body.scale.x).toBeGreaterThan(0.5);
-      expect(body.scale.x).toBeLessThan(RADIUS);
+      expect(ring.scale.x).toBeGreaterThan(0.5);
+      expect(ring.scale.x).toBeLessThan(RADIUS);
 
-      // By the end of the default duration both have landed on the radius.
+      // By the end of the default duration it has landed on the radius.
       await advanceFrame(renderer, 1.0);
-      expect(front.scale.x).toBeCloseTo(RADIUS, 3);
-      expect(body.scale.x).toBeCloseTo(RADIUS, 3);
+      expect(ring.scale.x).toBeCloseTo(RADIUS, 3);
     } finally {
       renderer.unmount();
     }
   });
 
-  it("renders the shockwave rings additively (transparent, still visible)", async () => {
+  it("renders the shockwave additively and faintly (see-through, still visible)", async () => {
     const { renderer } = await createHarness();
     try {
-      const rings = findRings(renderer);
+      const ring = findRing(renderer);
       // Additive blending (the shockwave glows / the ground shows through) and
-      // transparency for every ring — the "see-through but visible" property.
-      for (const ring of rings) {
-        expect(ring.material.blending).toBe(2); // THREE.AdditiveBlending
-        expect(ring.material.transparent).toBe(true);
-      }
-      // The front reads as a bright edge and the body as a fainter trail: the
-      // front's peak opacity is higher than the body's.
+      // transparency — the "see-through but visible" property.
+      expect(ring.material.blending).toBe(2); // THREE.AdditiveBlending
+      expect(ring.material.transparent).toBe(true);
+      // While it is playing it is visible but kept faint (a low opacity).
       await advanceFrame(renderer, 0.01);
       await advanceFrame(renderer, 0.2);
-      const [brighter, dimmer] = [...rings].sort(
-        (a, b) => b.material.opacity - a.material.opacity
-      );
-      expect(brighter.material.opacity).toBeGreaterThan(
-        dimmer.material.opacity
-      );
-      expect(dimmer.material.opacity).toBeGreaterThan(0);
+      expect(ring.material.opacity).toBeGreaterThan(0);
+      expect(ring.material.opacity).toBeLessThan(0.5);
     } finally {
       renderer.unmount();
     }

@@ -14,6 +14,8 @@ type DeadZoneDiscProps = {
   rotation?: [number, number, number];
 };
 
+const DEFAULT_POSITION: [number, number, number] = [0, 0, 0];
+
 let cachedDeadZoneColor: string | null = null;
 
 /**
@@ -42,7 +44,7 @@ export const DeadZoneDisc: FC<DeadZoneDiscProps> = memo(
     radius,
     radialSegments = 32,
     opacity = 0.4,
-    position = [0, 0, 0],
+    position = DEFAULT_POSITION,
     quaternion,
     rotation,
   }) => (

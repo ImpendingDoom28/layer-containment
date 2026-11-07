@@ -19,6 +19,8 @@ const STAR_MIN_SIZE = 0.04;
 const STAR_MAX_SIZE = 0.16;
 const STAR_DRIFT_SPEED = 0.006;
 const TINT_GREEN_FRACTION = 0.35;
+const HORIZON_TINT_MIX = 0.075;
+const SKY_TINT_MIX = 0.105;
 
 // Shared across every Skybox instance — the geometry never varies per mount.
 const skyGeometry = new SphereGeometry(SKYBOX_RADIUS, 32, 32);
@@ -42,7 +44,7 @@ varying vec3 vDirection;
 void main() {
   float horizonFactor = pow(1.0 - clamp(vDirection.y, 0.0, 1.0), 2.5);
   vec3 color = mix(uOverheadColor, uHorizonColor, horizonFactor);
-  color = mix(color, uTintColor, horizonFactor * 0.35);
+  color = mix(color, uTintColor, horizonFactor * ${SKY_TINT_MIX});
   gl_FragColor = vec4(color, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -156,7 +158,7 @@ export const Skybox: FC<SkyboxProps> = memo(
         uniforms: {
           uOverheadColor: { value: base.clone().multiplyScalar(0.55) },
           uHorizonColor: {
-            value: base.clone().multiplyScalar(2.4).lerp(tint, 0.25),
+            value: base.clone().multiplyScalar(2.4).lerp(tint, HORIZON_TINT_MIX),
           },
           uTintColor: { value: tint },
         },

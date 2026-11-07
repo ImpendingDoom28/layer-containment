@@ -27,6 +27,8 @@
     "test:e2e:stress": "playwright test --config stress/playwright.config.ts",
     "test:e2e:pwa": "playwright test --config pwa/playwright.config.ts",
     "generate:stress-level": "python3 scripts/generate-stress-level.py",
+    "typecheck": "tsc --noEmit",
+    "typecheck:desktop": "tsc -p electron/tsconfig.json",
     "dev:desktop": "tsc -p electron/tsconfig.json && node scripts/dev-desktop.mjs",
     "build:desktop": "npm run build && tsc -p electron/tsconfig.json && electron-builder --dir",
     "smoke:desktop": "tsc -p electron/tsconfig.json && node scripts/run-desktop.mjs --smoke",

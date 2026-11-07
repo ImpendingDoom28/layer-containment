@@ -14,6 +14,7 @@
 - After finishing a task (unless it's a code review):
   - Run a browser smoke test with Playwright — reuse the known flow from `.agents/smoke-test-handoff.md` before re-exploring.
   - Run unit tests with RTTR: `npm run test:unit`.
+  - Run TypeScript checks: `npm run typecheck` (the Vite dev server does not type-check — always verify types after changing code). When touching `electron/`, also run `npm run typecheck:desktop`. Fix all reported errors before considering the task done.
 - New features (not bugfixes): document them briefly in `README.md`.
 
 ## Code style (TypeScript)
@@ -24,7 +25,7 @@
 - Custom event handlers: `on`-prefix naming (e.g. `onSelectTower`).
 - Don't read/write `ref.current` during render; prefer atomic store selectors; DRY — reuse existing code over duplicating.
 - Remove unused imports after changes.
-- Do NOT run build commands or `npx tsc --noEmit` (assume the dev server is running).
+- Do NOT run build commands (assume the dev server is running) — but always run `npm run typecheck` to verify types after changes (`npm run typecheck:desktop` when touching `electron/`).
 
 ## Icons
 - Icons are static `.svg` assets in `src/components/ui/assets/icons`, rendered through `<img>` via `src/components/ui/Icon.tsx` — never React icon components or `lucide-react` (inline SVGs cost the browser real rendering work; `<img>` icons are pre-rasterized, inlined as data URLs, and skip React reconciliation).

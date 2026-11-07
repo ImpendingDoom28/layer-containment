@@ -1,6 +1,5 @@
 import {
   FC,
-  useEffect,
   useRef,
   useState,
   type KeyboardEvent,
@@ -20,12 +19,9 @@ import {
   UICardHeader,
   UICardTitle,
 } from "../ui/UICard";
-import { PLAYABLE_LEVEL_IDS } from "../../constants/playableLevels";
-import { loadLevelConfigFile } from "../../core/configs/levelConfig";
 import {
   useAlmanacStore,
   discoveredEnemiesSelector,
-  discoveredBossesSelector,
 } from "../../core/stores/useAlmanacStore";
 import {
   enemyTypesSelector,
@@ -41,12 +37,8 @@ import type {
   TowerConfig,
   TowerType,
 } from "../../core/types/game";
-import {
-  collectBosses,
-  type BossDirectoryEntry,
-} from "../../utils/bossDirectory";
 
-type AlmanacTab = "enemies" | "towers" | "upgrades" | "bosses";
+type AlmanacTab = "enemies" | "towers" | "upgrades";
 
 type AlmanacTabButtonProps = {
   tab: AlmanacTab;
@@ -107,7 +99,10 @@ const AlmanacStatRow: FC<AlmanacStatRowProps> = ({
 }) => (
   <div className="flex min-w-0 items-center gap-1.5">
     <Icon name={icon} color={iconColor} size={12} className="shrink-0" />
-    <UITypography variant="small" className="shrink-0 text-muted-foreground">
+    <UITypography
+      variant="small"
+      className="shrink-0 text-muted-foreground"
+    >
       {label}:
     </UITypography>
     <UITypography
@@ -215,128 +210,6 @@ const AlmanacEnemyCard: FC<AlmanacEnemyCardProps> = ({
         ) : (
           <div className="flex flex-col items-center justify-center py-4 text-center">
             <div className="mb-2 text-2xl opacity-30">👁️‍🗨️</div>
-            <UITypography
-              variant="small"
-              className="italic text-muted-foreground"
-            >
-              {t("almanac.undiscovered")}
-            </UITypography>
-          </div>
-        )}
-      </UICardContent>
-    </UICard>
-  );
-};
-
-type AlmanacBossCardProps = {
-  entry: BossDirectoryEntry;
-  isDiscovered: boolean;
-};
-
-const AlmanacBossCard: FC<AlmanacBossCardProps> = ({ entry, isDiscovered }) => {
-  const { t } = useTranslation();
-  const { boss, levelLabel } = entry;
-
-  return (
-    <UICard
-      className={`relative ${
-        isDiscovered
-          ? "ring-1 ring-red-500/40"
-          : "ring-1 ring-muted-foreground/20 italic"
-      }`}
-    >
-      <UICardHeader className="py-0! border-b border-border relative">
-        <UICardTitle
-          className={`absolute top-1 left-4 gap-2 ${!isDiscovered ? "text-muted-foreground" : ""}`}
-        >
-          <div
-            className={`relative flex items-center justify-center w-8 h-8 rounded-full ${!isDiscovered ? "bg-muted" : "bg-red-500/20"}`}
-            style={{
-              boxShadow: isDiscovered
-                ? "0 0 12px rgba(248,113,113,0.45)"
-                : undefined,
-            }}
-          >
-            <Icon
-              name="Skull"
-              color={isDiscovered ? "red3" : "muted"}
-              size={18}
-              className={isDiscovered ? "" : "opacity-60"}
-            />
-            {!isDiscovered && (
-              <span className="absolute text-xs not-italic font-bold text-muted-foreground">
-                ?
-              </span>
-            )}
-          </div>
-          <div className="flex flex-col">
-            <UITypography
-              variant="verySmall"
-              className="not-italic uppercase tracking-wider text-muted-foreground"
-            >
-              {levelLabel}
-            </UITypography>
-            <UITypography variant="medium">
-              {isDiscovered ? boss.name : t("almanac.undiscoveredName")}
-            </UITypography>
-          </div>
-        </UICardTitle>
-        <UICardAction>
-          <div
-            className={`mt-2 px-2 py-0.5 text-xs rounded-t-xs ${
-              isDiscovered
-                ? "bg-red-500/20 text-red-300"
-                : "bg-muted text-muted-foreground"
-            }`}
-          >
-            {isDiscovered ? t("almanac.discovered") : t("almanac.unknown")}
-          </div>
-        </UICardAction>
-      </UICardHeader>
-
-      <UICardContent>
-        {isDiscovered ? (
-          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-2">
-            <AlmanacStatRow
-              icon="HeartPulse"
-              iconColor="red"
-              label={t("almanac.health")}
-              value={boss.baseStats.health}
-            />
-            <AlmanacStatRow
-              icon="Gauge"
-              iconColor="orange"
-              label={t("almanac.speed")}
-              value={boss.baseStats.speed.toFixed(1)}
-            />
-            <AlmanacStatRow
-              icon="DollarSign"
-              iconColor="green"
-              label={t("almanac.reward")}
-              value={<UIMoney money={boss.baseStats.reward} variant="small" />}
-            />
-            <AlmanacStatRow
-              icon="Skull"
-              iconColor="red3"
-              label={t("almanac.baseDamage")}
-              value={boss.baseStats.healthLoss}
-            />
-            <AlmanacStatRow
-              icon="Waves"
-              iconColor="primary70"
-              label={t("almanac.appearsOnWave")}
-              value={boss.everyNthWave}
-            />
-            <AlmanacStatRow
-              icon="HeartPulse"
-              iconColor="red"
-              label={t("almanac.hpGrowth")}
-              value={`×${boss.hpGrowthPerAppearance ?? 1}`}
-            />
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-4 text-center">
-            <div className="mb-2 text-2xl opacity-30">💀</div>
             <UITypography
               variant="small"
               className="italic text-muted-foreground"
@@ -490,7 +363,9 @@ type AlmanacUpgradeCardProps = {
   upgradeConfig: EnemyUpgradeConfig;
 };
 
-const AlmanacUpgradeCard: FC<AlmanacUpgradeCardProps> = ({ upgradeConfig }) => {
+const AlmanacUpgradeCard: FC<AlmanacUpgradeCardProps> = ({
+  upgradeConfig,
+}) => {
   const { t } = useTranslation();
   const upgradeIcon = ALMANAC_UPGRADE_ICONS[upgradeConfig.id];
 
@@ -544,71 +419,33 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
   const towerTypes = useGameStore(towerTypesSelector);
   const enemyUpgrades = useGameStore(enemyUpgradesSelector);
   const discoveredEnemies = useAlmanacStore(discoveredEnemiesSelector);
-  const discoveredBosses = useAlmanacStore(discoveredBossesSelector);
   const [activeTab, setActiveTab] = useState<AlmanacTab>("enemies");
   const tabRefs = useRef<Partial<Record<AlmanacTab, HTMLButtonElement>>>({});
-  const [bossEntries, setBossEntries] = useState<BossDirectoryEntry[]>([]);
-  const [bossLoadFailed, setBossLoadFailed] = useState(false);
   const tabIds = {
     enemies: "almanac-tab-enemies",
     towers: "almanac-tab-towers",
     upgrades: "almanac-tab-upgrades",
-    bosses: "almanac-tab-bosses",
   };
   const panelId = "almanac-tabpanel";
 
-  // Bosses are defined per level in the level JSON files (not in the game
-  // store, which is only populated once a level is running — the almanac is
-  // opened from the main menu). Load each playable level's config and collect
-  // the bosses, mirroring the level picker's load.
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = async (): Promise<void> => {
-      try {
-        const results = await Promise.allSettled(
-          PLAYABLE_LEVEL_IDS.map(async (id) => ({
-            id,
-            data: await loadLevelConfigFile(id),
-          }))
-        );
-        // Keep the bosses of every level that loaded, even if one level's
-        // config failed to load.
-        const levels = results.flatMap((result) =>
-          result.status === "fulfilled" ? [result.value] : []
-        );
-        if (!cancelled) {
-          setBossEntries(collectBosses(levels));
-          setBossLoadFailed(
-            results.some((result) => result.status === "rejected")
-          );
-        }
-      } catch {
-        if (!cancelled) {
-          setBossEntries([]);
-          setBossLoadFailed(true);
-        }
-      }
-    };
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const enemyEntries = (
-    enemyTypes ? (Object.entries(enemyTypes) as [EnemyType, EnemyConfig][]) : []
+    enemyTypes
+      ? (Object.entries(enemyTypes) as [EnemyType, EnemyConfig][])
+      : []
   ).sort((a, b) => a[0].localeCompare(b[0]));
   const towerEntries = (
-    towerTypes ? (Object.entries(towerTypes) as [TowerType, TowerConfig][]) : []
+    towerTypes
+      ? (Object.entries(towerTypes) as [TowerType, TowerConfig][])
+      : []
   ).sort((a, b) => a[1].cost - b[1].cost);
   const upgradeEntries = (
     enemyUpgrades
-      ? (Object.entries(enemyUpgrades) as [
-          EnemyUpgradeId,
-          EnemyUpgradeConfig,
-        ][])
+      ? (
+          Object.entries(enemyUpgrades) as [
+            EnemyUpgradeId,
+            EnemyUpgradeConfig,
+          ][]
+        )
       : []
   ).sort((a, b) => a[1].displayRank - b[1].displayRank);
 
@@ -623,7 +460,6 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
     { tab: "enemies", label: t("almanac.tabEnemies"), icon: "Skull" },
     { tab: "towers", label: t("almanac.tabTowers"), icon: "GitBranch" },
     { tab: "upgrades", label: t("almanac.tabUpgrades"), icon: "Zap" },
-    { tab: "bosses", label: t("almanac.tabBosses"), icon: "AlertTriangle" },
   ];
 
   const onSelectTab = (tab: AlmanacTab) => {
@@ -670,7 +506,10 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
             </div>
             {towerEntries.length === 0 && (
               <div className="flex flex-col items-center justify-center flex-1 py-12 text-center">
-                <UITypography variant="body" className="text-muted-foreground">
+                <UITypography
+                  variant="body"
+                  className="text-muted-foreground"
+                >
                   {t("almanac.noTowerData")}
                 </UITypography>
               </div>
@@ -687,34 +526,11 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
             </div>
             {upgradeEntries.length === 0 && (
               <div className="flex flex-col items-center justify-center flex-1 py-12 text-center">
-                <UITypography variant="body" className="text-muted-foreground">
+                <UITypography
+                  variant="body"
+                  className="text-muted-foreground"
+                >
                   {t("almanac.noUpgradeData")}
-                </UITypography>
-              </div>
-            )}
-          </>
-        );
-      case "bosses":
-        return (
-          <>
-            <div className="grid grid-cols-1 gap-4">
-              {bossEntries.map((entry) => (
-                <AlmanacBossCard
-                  key={entry.levelId}
-                  entry={entry}
-                  isDiscovered={discoveredBosses.includes(entry.boss.name)}
-                />
-              ))}
-            </div>
-            {bossLoadFailed && (
-              <UITypography variant="body" className="text-destructive">
-                {t("almanac.bossLoadFailed")}
-              </UITypography>
-            )}
-            {bossEntries.length === 0 && !bossLoadFailed && (
-              <div className="flex flex-col items-center justify-center flex-1 py-12 text-center">
-                <UITypography variant="body" className="text-muted-foreground">
-                  {t("almanac.noBossData")}
                 </UITypography>
               </div>
             )}
@@ -735,7 +551,10 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
                   }}
                 />
               </div>
-              <UITypography variant="small" className="w-full py-1 text-end">
+              <UITypography
+                variant="small"
+                className="w-full py-1 text-end"
+              >
                 {t("almanac.discoveredCount", {
                   found: discoveryCount,
                   total: totalCount,
@@ -755,7 +574,10 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
 
             {enemyEntries.length === 0 && (
               <div className="flex flex-col items-center justify-center flex-1 py-12 text-center">
-                <UITypography variant="body" className="text-muted-foreground">
+                <UITypography
+                  variant="body"
+                  className="text-muted-foreground"
+                >
                   {t("almanac.noData")}
                 </UITypography>
               </div>
@@ -774,7 +596,9 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
           </UIButton>
           <UITypography variant="h4">{t("almanac.title")}</UITypography>
         </UICardTitle>
-        <UICardDescription>{t("almanac.description")}</UICardDescription>
+        <UICardDescription>
+          {t("almanac.description")}
+        </UICardDescription>
       </UICardHeader>
 
       <UICardContent className="min-h-0 flex-1 gap-4">

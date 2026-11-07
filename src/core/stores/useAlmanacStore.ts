@@ -7,13 +7,10 @@ import { GAME_NAME_ID } from "../../constants/game";
 
 type AlmanacStoreState = {
   discoveredEnemies: EnemyType[];
-  /** Boss names the player has met in battle (persisted across sessions). */
-  discoveredBosses: string[];
 };
 
 type AlmanacStoreActions = {
   discoverEnemy: (type: EnemyType) => void;
-  discoverBoss: (name: string) => void;
   isDiscovered: (type: EnemyType) => boolean;
   resetDiscoveries: () => void;
 };
@@ -22,7 +19,6 @@ type AlmanacStore = AlmanacStoreState & AlmanacStoreActions;
 
 const DEFAULT_STATE: AlmanacStoreState = {
   discoveredEnemies: [],
-  discoveredBosses: [],
 };
 
 export const useAlmanacStore = create<AlmanacStore>()(
@@ -37,19 +33,12 @@ export const useAlmanacStore = create<AlmanacStore>()(
         }
       },
 
-      discoverBoss: (name: string) => {
-        const { discoveredBosses } = get();
-        if (!discoveredBosses.includes(name)) {
-          set({ discoveredBosses: [...discoveredBosses, name] });
-        }
-      },
-
       isDiscovered: (type: EnemyType) => {
         return get().discoveredEnemies.includes(type);
       },
 
       resetDiscoveries: () => {
-        set({ discoveredEnemies: [], discoveredBosses: [] });
+        set({ discoveredEnemies: [] });
       },
     }),
     {
@@ -60,8 +49,6 @@ export const useAlmanacStore = create<AlmanacStore>()(
 
 export const discoveredEnemiesSelector = (state: AlmanacStore) =>
   state.discoveredEnemies;
-export const discoveredBossesSelector = (state: AlmanacStore) =>
-  state.discoveredBosses;
 export const discoverEnemySelector = (state: AlmanacStore) =>
   state.discoverEnemy;
 export const isDiscoveredSelector = (state: AlmanacStore) => state.isDiscovered;

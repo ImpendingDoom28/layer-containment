@@ -8,7 +8,6 @@ import {
   getTotalRewardMultiplierFromStack,
   getUniqueUpgradeIdsInStackOrder,
 } from "../../utils/enemyUpgradeTierEffects";
-import { useAlmanacStore } from "../stores/useAlmanacStore";
 import { useGameStore } from "../stores/useGameStore";
 import { useLevelStore } from "../stores/useLevelStore";
 import type {
@@ -131,7 +130,6 @@ export const spawnLevelEnemy = (
   const entity = enemyActions(world).spawnEnemy(enemy);
   if (overrides?.isBoss) {
     entity.add(IsBoss);
-    useAlmanacStore.getState().discoverBoss(enemy.name);
   }
   return enemy;
 };

@@ -111,10 +111,12 @@ export const en = {
   },
   almanac: {
     title: "Almanac",
-    description: "Field guide to the towers, enemies, and upgrades in the game",
+    description:
+      "Field guide to the towers, enemies, upgrades, and bosses in the game",
     tabEnemies: "Enemies",
     tabTowers: "Towers",
     tabUpgrades: "Upgrades",
+    tabBosses: "Bosses",
     discovered: "DISCOVERED",
     unknown: "UNKNOWN",
     undiscoveredName: "???",
@@ -122,6 +124,8 @@ export const en = {
     speed: "Speed",
     reward: "Reward",
     baseDamage: "Base Dmg",
+    appearsOnWave: "Appears",
+    hpGrowth: "HP Growth",
     undiscovered: "Encounter this enemy in battle to reveal its secrets...",
     discoveredCount: "{{found}} / {{total}} discovered",
     noData:
@@ -130,6 +134,8 @@ export const en = {
       "No tower data available. Start a game to load tower configurations.",
     noUpgradeData:
       "No upgrade data available. Start a game to load upgrade configurations.",
+    noBossData:
+      "No boss data available. Start a game to load level configurations.",
     tower: {
       damage: "Damage",
       range: "Range",
@@ -197,6 +203,10 @@ export const en = {
   },
   nextWavePreview: {
     nextWave: "Next Wave",
+    bossHealth: "{{health}} HP",
+  },
+  bossWaveBanner: {
+    title: "BOSS WAVE",
   },
   bossBar: {
     health: "Boss health",

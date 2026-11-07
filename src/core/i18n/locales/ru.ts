@@ -121,10 +121,12 @@ const ruValues = {
   },
   almanac: {
     title: "Алманах",
-    description: "Полевой справочник по башням, врагам и улучшениям игры",
+    description:
+      "Полевой справочник по башням, врагам, улучшениям и боссам игры",
     tabEnemies: "Враги",
     tabTowers: "Башни",
     tabUpgrades: "Улучшения",
+    tabBosses: "Боссы",
     discovered: "ОБНАРУЖЕН",
     unknown: "НЕИЗВЕСТЕН",
     undiscoveredName: "???",
@@ -132,6 +134,8 @@ const ruValues = {
     speed: "Скорость",
     reward: "Награда",
     baseDamage: "Урон по базе",
+    appearsOnWave: "Появление",
+    hpGrowth: "Рост HP",
     undiscovered: "Встретьте этого врага в бою, чтобы узнать о нём больше…",
     discoveredCount: "Обнаружено: {{found}} / {{total}}",
     noData: "Нет данных о врагах. Начните игру, чтобы загрузить конфигурации.",
@@ -139,6 +143,7 @@ const ruValues = {
       "Нет данных о башнях. Начните игру, чтобы загрузить конфигурации.",
     noUpgradeData:
       "Нет данных об улучшениях. Начните игру, чтобы загрузить конфигурации.",
+    noBossData: "Нет данных о боссах. Начните игру, чтобы загрузить уровни.",
     tower: {
       damage: "Урон",
       range: "Дальность",
@@ -206,6 +211,10 @@ const ruValues = {
   },
   nextWavePreview: {
     nextWave: "Следующая волна",
+    bossHealth: "{{health}} HP",
+  },
+  bossWaveBanner: {
+    title: "ВОЛНА БОССА",
   },
   bossBar: {
     health: "Здоровье босса",

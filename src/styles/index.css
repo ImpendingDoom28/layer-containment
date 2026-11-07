@@ -336,6 +336,12 @@
   .animate-hud-denied-shake {
     animation: none;
   }
+
+  /* Show the boss banner statically (no slide/scale) for its full life; the
+     component unmounts it after the duration, so it still disappears. */
+  .animate-boss-wave-banner {
+    animation: none;
+  }
 }
 
 /*
@@ -365,6 +371,33 @@
   /* Denied-action feedback: shake the tower shop row. Tailwind v4 reads
      animations from CSS (not tailwind.config.js), so the keyframes live here. */
   --animate-hud-denied-shake: hud-denied-shake 0.22s ease-out;
+
+  /* Boss-wave announcement: a one-shot "BOSS WAVE" flash that eases in,
+     holds, then fades out. Runs once per boss wave (the element remounts via
+     a key); the component unmounts it after the animation completes. */
+  --animate-boss-wave-banner: boss-wave-banner 2.6s ease-out forwards;
+
+  @keyframes boss-wave-banner {
+    0% {
+      opacity: 0;
+      transform: translateY(10px) scale(0.9);
+    }
+    12% {
+      opacity: 1;
+      transform: translateY(0) scale(1.06);
+    }
+    22% {
+      transform: translateY(0) scale(1);
+    }
+    78% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-8px) scale(0.98);
+    }
+  }
 
   @keyframes hud-denied-shake {
     0%,

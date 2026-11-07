@@ -1,9 +1,11 @@
 import { FC, useMemo } from "react";
 
+import { Icon } from "../ui/Icon";
 import { UICard, UICardContent, UICardHeader } from "../ui/UICard";
 import { UITypography } from "../ui/UITypography";
 import { GUIWrapper } from "./GUIWrapper";
 import {
+  bossSelector,
   currentWaveSelector,
   pathWaypointsSelector,
   totalWavesSelector,
@@ -25,6 +27,7 @@ import {
 } from "../../core/stores/useAlmanacStore";
 import { EnemyConfig, EnemyType } from "../../core/types/game";
 import { useTranslationInCanvas } from "../../core/i18n/useTranslationInCanvas";
+import { bossHealthForWave, isBossWave } from "../../utils/bossHp";
 import { applyEnemyUpgradeCounts } from "../../utils/waveEnemyCounts";
 import {
   nextWaveReadySelector,
@@ -73,6 +76,32 @@ const EnemyPreviewModel: FC<EnemyPreviewModelProps> = ({
   );
 };
 
+type BossPreviewRowProps = {
+  name: string;
+  health: number;
+  t: ReturnType<typeof useTranslationInCanvas>;
+};
+
+const BossPreviewRow: FC<BossPreviewRowProps> = ({ name, health, t }) => (
+  <div className="flex items-center gap-2 border border-red-500/60 bg-red-500/10 px-2 py-1.5">
+    <Icon name="Skull" color="red3" size={16} className="shrink-0" />
+    <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+      <UITypography
+        variant="small"
+        className="min-w-0 truncate font-semibold text-red-300"
+      >
+        {name}
+      </UITypography>
+      <UITypography
+        variant="verySmall"
+        className="shrink-0 font-semibold text-red-300"
+      >
+        {t("nextWavePreview.bossHealth", { health })}
+      </UITypography>
+    </div>
+  </div>
+);
+
 type GUINextWavePreviewProps = {
   pathIndex: number;
 };
@@ -86,6 +115,7 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
   const totalWaves = useLevelStore(totalWavesSelector);
   const waveConfigs = useLevelStore(waveConfigsSelector);
   const currentWave = useLevelStore(currentWaveSelector);
+  const boss = useLevelStore(bossSelector);
 
   const enemyTypes = useGameStore(enemyTypesSelector);
   const enemyUpgrades = useGameStore(enemyUpgradesSelector);
@@ -173,6 +203,10 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
     ] as [number, number, number];
   }, [pathIndex, pathWaypoints]);
 
+  const nextWaveNumber = currentWave + 1;
+  const isNextBossWave = isBossWave(boss, nextWaveNumber);
+  const nextBossHealth = bossHealthForWave(boss, nextWaveNumber);
+
   if (!shouldShow || !nextWaveConfig || portalGroups.length === 0) return null;
 
   return (
@@ -188,6 +222,9 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
             </UITypography>
           </UICardHeader>
           <UICardContent className="gap-2">
+            {isNextBossWave && (
+              <BossPreviewRow name={boss!.name} health={nextBossHealth} t={t} />
+            )}
             <div className="flex flex-col gap-1.5">
               {portalGroups.map(({ type, count }, index) => {
                 const enemyConfig = enemyTypes?.[type];

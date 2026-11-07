@@ -1,5 +1,6 @@
 import type { World } from "koota";
 
+import { bossHealthForWave, isBossWave } from "../../utils/bossHp";
 import { gameEvents } from "../../utils/eventEmitter";
 import {
   applyEnemyUpgradeCounts,
@@ -109,13 +110,7 @@ export const createWaveSystem = ({
     // inherits the player's full current upgrade stack. Each later appearance
     // is stronger: its base HP is scaled by `hpGrowthPerAppearance` per
     // appearance, so the boss keeps scaling without a new mechanic.
-    if (
-      boss &&
-      currentWave % boss.everyNthWave === 0 &&
-      boss.everyNthWave > 0
-    ) {
-      const appearance = currentWave / boss.everyNthWave;
-      const hpScale = (boss.hpGrowthPerAppearance ?? 1) ** (appearance - 1);
+    if (isBossWave(boss, currentWave)) {
       const { baseStats, name } = boss;
       spawnQueue.unshift({
         type: "tank",
@@ -123,7 +118,7 @@ export const createWaveSystem = ({
         upgrades: waveUpgrades,
         boss: {
           name,
-          health: Math.round(baseStats.health * hpScale),
+          health: bossHealthForWave(boss, currentWave),
           speed: baseStats.speed,
           size: baseStats.size,
           healthLoss: baseStats.healthLoss,

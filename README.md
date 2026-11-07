@@ -274,6 +274,7 @@ The dev server uses a fixed port (`5173`) and `strictPort: true`, so the URL is 
   - Regenerating enemies heal over time (can be countered with burst damage)
   - Missing Out enemies roll their dodge chance on every tower hit (5% / 10% / 15% per tier): a dodged hit deals no damage (the slow still applies, since a slow is a status, not damage) and floats a "MISS" over the enemy
 - **Enemy Facing**: every enemy spawns facing along the path (the direction of travel at its spawn point) and its facing refreshes each frame with a smooth turn, so all enemy types — including splitter children — always face down the path, around corners, and from any spawn point
+- **Boss waves**: every `4`th wave (4, 8, 12, ...) a **boss** joins the wave *alongside* the regular units — the regular wave is unchanged (same enemies, same counts). The boss is a normal enemy spawned with the rest of the wave, so it **inherits the player's full current upgrade stack** (Armored, Swift, Regenerating, Reinforcements, Missing Out, …) exactly like any other enemy of that wave. Each level defines its own boss in the level config (`boss`: name, `everyNthWave`, base stats, and `hpGrowthPerAppearance`) — Sector 1's is the **Colossus** (1000 HP, slow, large, 5 health on leak, high reward), and each later appearance is stronger (×1.5 HP per appearance) so it stays big without a new mechanic. Sectors 2 and 3 carry placeholder bosses to be tuned later. A **big boss bar** (name + wide health bar) appears at the top of the screen while the boss is on the field and hides the moment it dies
 
 ## Levels
 
@@ -304,6 +305,7 @@ Each level also carries **display metadata** and its own **base health**:
 - `label` — a short human-facing name shown as the card title in the level picker (falls back to `name`, then the level id). Defaults to `""`.
 - `description` — a one-line blurb shown under the label in the level picker. Defaults to `""`.
 - `startingHealth` — the player base's max health for that level (each level can have its own). Defaults to `20`. Previously a single `startingHealth` lived in `game.json`; it is now per-level, so the base spawned at run start uses the selected level's value.
+- `boss` — an optional per-level boss definition (see [Boss waves](#game-mechanics)): `name`, `everyNthWave` (default `4`), `baseStats` (`health`, `speed`, `size`, `healthLoss`, `reward`), and `hpGrowthPerAppearance` (per-later-appearance HP multiplier). Absent = the level has no boss waves.
 
 All three are editable in the Level Creator (`/editor`, Level panel). The level picker shows `label` as the title and `description` (with the wave count) as the subtitle; the menu scene (`level_main`), the 3D showcase (`level_testing`) and the stress entry still validate against the same schema but do not spawn a base from these values.
 

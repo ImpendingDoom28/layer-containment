@@ -198,6 +198,9 @@ export const en = {
   nextWavePreview: {
     nextWave: "Next Wave",
   },
+  bossBar: {
+    health: "Boss health",
+  },
   editor: {
     backToGame: "Back to game",
     modeSelect: "Select",

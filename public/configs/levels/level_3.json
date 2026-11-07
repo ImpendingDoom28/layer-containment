@@ -606,5 +606,17 @@
   "towers": [],
   "enemies": [],
   "projectiles": [],
-  "enemyWeights": null
+  "enemyWeights": null,
+  "boss": {
+    "name": "The Coil Sentinel",
+    "everyNthWave": 4,
+    "baseStats": {
+      "health": 1400,
+      "speed": 0.8,
+      "size": 1.6,
+      "healthLoss": 6,
+      "reward": 350
+    },
+    "hpGrowthPerAppearance": 1.6
+  }
 }

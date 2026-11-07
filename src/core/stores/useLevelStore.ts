@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import type {
+  BossConfig,
   Building,
   Enemy,
   EnemyType,
@@ -28,6 +29,8 @@ type LevelStoreState = {
   pathWaypoints: PathWaypoint[][];
   totalWaves: number;
   waveConfigs: WaveConfig[];
+  /** Per-level boss definition (absent = no boss waves for this level). */
+  boss: BossConfig | null;
   buildings: Building[];
   enemyWeights: Record<EnemyType, number> | null;
   money: number;
@@ -73,6 +76,7 @@ const DEFAULT_STATE: LevelStoreState = {
   enemyWeights: null,
   pathWaypoints: [],
   waveConfigs: [],
+  boss: null,
   buildings: [],
   towers: [],
   projectiles: [],
@@ -147,6 +151,7 @@ export const useLevelStore = create<LevelStore>((set) => ({
       pathWaypoints: levelData.pathWaypoints,
       totalWaves: levelData.waveConfigs.length,
       waveConfigs: levelData.waveConfigs,
+      boss: levelData.boss ?? null,
       buildings,
       towers,
       projectiles: levelData.projectiles,
@@ -250,6 +255,7 @@ export const watersSelector = (state: LevelStore) => state.waters;
 export const pathWaypointsSelector = (state: LevelStore) => state.pathWaypoints;
 export const totalWavesSelector = (state: LevelStore) => state.totalWaves;
 export const waveConfigsSelector = (state: LevelStore) => state.waveConfigs;
+export const bossSelector = (state: LevelStore) => state.boss;
 export const buildingsSelector = (state: LevelStore) => state.buildings;
 export const setGridSizeSelector = (state: LevelStore) => state.setGridSize;
 export const setPathWaypointsSelector = (state: LevelStore) =>

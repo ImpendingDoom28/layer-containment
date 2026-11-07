@@ -586,5 +586,17 @@
   "towers": [],
   "enemies": [],
   "projectiles": [],
-  "enemyWeights": null
+  "enemyWeights": null,
+  "boss": {
+    "name": "The Convergence Warden",
+    "everyNthWave": 4,
+    "baseStats": {
+      "health": 1200,
+      "speed": 0.7,
+      "size": 1.5,
+      "healthLoss": 5,
+      "reward": 300
+    },
+    "hpGrowthPerAppearance": 1.5
+  }
 }

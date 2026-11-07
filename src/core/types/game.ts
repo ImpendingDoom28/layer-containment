@@ -260,6 +260,41 @@ export type WaveEnemyGroup = {
   pathIndex?: number;
 };
 
+/**
+ * Per-level boss definition (the level JSON's `boss`). Every `N`-th wave
+ * (`everyNthWave`, default 4) spawns the boss alongside the regular wave.
+ *
+ * `baseStats` are the boss's stats at its first appearance: `health`,
+ * `speed`, `size`, `healthLoss`, and `reward` (the base values the upgrade
+ * stack then multiplies, exactly like a regular enemy of that wave).
+ *
+ * `hpGrowthPerAppearance` multiplies the boss's health on each later
+ * appearance of the same wave (e.g. 1.5: wave 8's boss has 1.5× wave 4's
+ * base HP, wave 12's has 2.25×), so the boss keeps scaling without a new
+ * mechanic. Absent or 1 = no growth.
+ *
+ * `name` is the boss's display name (shown on the boss bar and in the
+ * almanac); `model` is the GLB the boss body renders (absent = the tankee
+ * model).
+ */
+export type BossConfig = {
+  name: string;
+  /** Every N-th wave spawns the boss (wave 4, 8, 12, ... for N = 4). */
+  everyNthWave: number;
+  baseStats: {
+    health: number;
+    speed: number;
+    size: number;
+    healthLoss: number;
+    reward: number;
+  };
+  hpGrowthPerAppearance?: number;
+  model?: {
+    url: string;
+    node: string;
+  };
+};
+
 // Wave configuration
 export type WaveConfig = {
   totalEnemies: number;

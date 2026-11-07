@@ -12,6 +12,13 @@ import type { PositionData } from "./position";
 
 export const IsEnemy = trait();
 
+/**
+ * Tags a level boss (a themed enemy spawned alongside a boss wave). The HUD
+ * boss bar watches for the first entity carrying this tag to show the boss's
+ * name and health; it is destroyed with the boss.
+ */
+export const IsBoss = trait();
+
 export const requestEnemyDeath = trait();
 
 /**

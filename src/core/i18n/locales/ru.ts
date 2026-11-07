@@ -207,6 +207,9 @@ const ruValues = {
   nextWavePreview: {
     nextWave: "Следующая волна",
   },
+  bossBar: {
+    health: "Здоровье босса",
+  },
   editor: {
     backToGame: "Назад в игру",
     modeSelect: "Выделение",

@@ -147,6 +147,12 @@ export type TowerConfig = {
 
   damage: number;
   range: number;
+  /**
+   * Minimum effective range (the artillery dead-zone): the tower refuses to
+   * target enemies closer than this. Absent for towers that can engage at any
+   * distance.
+   */
+  minRange?: number;
   fireRate: number;
   targeting: TowerTargeting;
   slowAmount?: number;

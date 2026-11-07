@@ -206,10 +206,11 @@
       "bodyWidthScale": 1.2,
       "color": "#ef4444",
       "cost": 125,
-      "damage": 50,
-      "description": "Ballistic rocket launcher",
-      "fireRate": 3,
+      "damage": 40,
+      "description": "A long-range AoE missile artillery",
+      "fireRate": 4,
       "id": "brl",
+      "minRange": 2.5,
       "model": {
         "node": "Tower_AOE_ROOT",
         "url": "assets/models/tower_aoe.glb"
@@ -225,9 +226,9 @@
         "turretNode": "Azimuth001"
       },
       "name": "BRL",
-      "projectileSpeed": 10,
+      "projectileSpeed": 8,
       "projectileType": "rocket",
-      "range": 4,
+      "range": 5,
       "targeting": "nearest",
       "topScale": 1,
       "topShape": "flat"

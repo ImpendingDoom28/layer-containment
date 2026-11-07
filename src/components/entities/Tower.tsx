@@ -320,6 +320,17 @@ export const Tower: FC<TowerProps> = memo(
             position={[0, 0.1, 0]}
           />
         )}
+        {/* Artillery dead-zone boundary: the tower cannot engage enemies closer
+            than minRange, so mark the inner edge of its effective band. */}
+        {isSelected && (tower.minRange ?? 0) > 0.01 && (
+          <RangeRing
+            range={tower.minRange ?? 0}
+            color={tower.color}
+            position={[0, 0.1, 0]}
+            innerRadiusFraction={0.85}
+            opacity={0.25}
+          />
+        )}
         <GUIDebugInfo entity={tower} offsetY={towerHeight + 0.3} />
       </group>
     );

@@ -152,10 +152,12 @@ export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
         pathYOffset + PLACEMENT_OVERLAY_Y_EPSILON + 0.004
       );
 
+      const minRange = towerTypes[selectedTowerType].minRange;
       return {
         position,
         quaternion,
         range,
+        minRange,
         color: placementState.isBlocked ? invalidColor : validColor,
       };
     }, [
@@ -196,6 +198,17 @@ export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
             innerRadiusFraction={0.94}
             radialSegments={48}
             opacity={0.45}
+          />
+        )}
+        {rangeRing && (rangeRing.minRange ?? 0) > 0.01 && (
+          <RangeRing
+            range={rangeRing.minRange ?? 0}
+            color={rangeRing.color}
+            position={rangeRing.position}
+            quaternion={rangeRing.quaternion}
+            innerRadiusFraction={0.85}
+            radialSegments={48}
+            opacity={0.35}
           />
         )}
       </group>

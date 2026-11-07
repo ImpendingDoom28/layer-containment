@@ -250,6 +250,7 @@ export const createTowerCombatSystem = (
               tower.x,
               tower.z,
               effectiveStats.range,
+              tower.minRange,
               isVisible
             )))
       ) {
@@ -260,6 +261,7 @@ export const createTowerCombatSystem = (
             x: tower.x,
             z: tower.z,
             range: effectiveStats.range,
+            minRange: tower.minRange,
             lastTargetId: lastTargets.get(tower.id),
           },
           isVisible

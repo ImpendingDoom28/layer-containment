@@ -303,8 +303,7 @@ export const en = {
     },
     brl: {
       name: "BRL",
-      description:
-        "Ballistic rocket launcher: loops a rocket in an arc from one of its four launcher tubes (the tube changes with every shot) and detonates it on impact for area damage.",
+      description: "A long-range AoE missile artillery",
     },
     laser: {
       name: "Laser Tower",

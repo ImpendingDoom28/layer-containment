@@ -13,7 +13,7 @@ A 3D tower defense game built with React, Tailwind CSS, and React Three Fiber.
 - **Six tower types**:
   - Basic Tower: Fast firing, single target damage (targets nearest enemy)
   - Slow Tower: Slows enemies on hit with debuff effects
-  - BRL (Ballistic Rocket Launcher): Fires a rocket from one of its four top launcher tubes (the tube that fires rotates with every shot) in a ballistic arc — it climbs, peaks, and nose-dives onto its target — then detonates on impact for area damage over a wide radius
+  - BRL (Ballistic Rocket Launcher): Fires a rocket from one of its four top launcher tubes (the tube that fires rotates with every shot) in a ballistic arc — it climbs, peaks, and nose-dives onto its target — then detonates on impact for area damage over a wide radius. It's long-range artillery with a **minimum effective range**: enemies closer than 2.5 tiles are out of reach (the rocket needs room to arc), so it only fires on targets between 2.5 and 5 tiles away
   - Laser Tower: Piercing beam that hits multiple enemies in a line (targets furthest enemy)
   - Relay Tower: Support tower that buffs **edge-adjacent** combat towers (+damage and +range; multiple relays stack with diminishing returns). Does not attack; placement preview highlights neighbor tiles that already hold a combat tower
   - Chain Lightning: First hit on the primary target, then the bolt travels and strikes up to three more enemies in order (each hop deals 15% less damage than the previous hit, multiplicative)
@@ -250,7 +250,7 @@ The dev server uses a fixed port (`5173`) and `strictPort: true`, so the URL is 
 - **Tower Types**: Each tower has unique stats:
   - **Basic Tower**: $50, 20 damage, 3.5 range, 1s fire rate
   - **Slow Tower**: $80, 10 damage, 3 range, 0.8s fire rate, slows enemies by 60% for 2s
-  - **AOE Tower**: $150, 30 damage, 3 range, 3s fire rate, 1.25 radius area damage
+  - **BRL (Ballistic Rocket Launcher)**: $125, 40 damage, 5 range (2.5–5, minimum effective range), 4s fire rate, 1.5 radius area damage
   - **Laser Tower**: $200, 15 damage, 4 range, 2s fire rate, pierces up to 5 enemies
 - **Tower Selling**: Sell towers for 50% of their purchase price
 - **Targeting**: Towers pick a target each shot. Each attacking tower has a targeting strategy — **Nearest** (closest enemy in range), **Furthest** (farthest in range), **Lowest HP** (weakest enemy in range), **Highest HP** (toughest enemy in range), or **Focused** (keeps firing its last target as long as that enemy stays in range and in line of sight, falling back to the nearest candidate otherwise). The default per tower comes from the game config; you can change any placed tower's strategy at any time from its info panel (select the tower, then use the Targeting carousel selector, which cycles the options with left/right arrows)

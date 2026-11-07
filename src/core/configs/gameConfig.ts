@@ -72,6 +72,7 @@ const towerConfigSchema: z.ZodType<TowerConfig> = z.object({
   cost: z.number(),
   damage: z.number(),
   range: z.number(),
+  minRange: z.number().optional(),
   fireRate: z.number(),
   targeting: towerTargetingSchema,
   slowAmount: z.number().optional(),

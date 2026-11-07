@@ -54,6 +54,7 @@ const ROCKET_NOSE_LENGTH = 0.12;
 const ROCKET_FIN_LENGTH = 0.1;
 const ROCKET_FIN_THICKNESS = 0.012;
 const ROCKET_EMISSIVE_INTENSITY = 2;
+const ROCKET_REFERENCE_SPEED = 10;
 
 const buildRocketGeometry = (): THREE.BufferGeometry => {
   const body = new THREE.CylinderGeometry(
@@ -919,8 +920,14 @@ export const useInstancedProjectiles = (
       // nose on the very first frame, before the step's finite difference
       // takes over.
       const rocketHDist = Math.hypot(dx, dz);
-      const rocketFlightTime = 0.35 + Math.min(0.5, rocketHDist * 0.075);
       const rocketArcHeight = Math.max(0.9, rocketHDist * 0.18);
+      // The distance-based flight time was tuned assuming a nominal rocket
+      // speed of 10, so scale it by ROCKET_REFERENCE_SPEED/speed to let the
+      // configured projectileSpeed control how long the arc takes (lower speed
+      // = slower artillery).
+      const rocketFlightTime =
+        (0.35 + Math.min(0.5, rocketHDist * 0.075)) *
+        (ROCKET_REFERENCE_SPEED / Math.max(0.1, params.speed));
       if (visualPool === "rocket") {
         velocityX = dx / rocketFlightTime;
         velocityY = dy / rocketFlightTime + (4 * rocketArcHeight) / rocketFlightTime;

@@ -24,8 +24,9 @@ const FIREBALL_FRACTION = 0.5;
 
 // One shared unit-radius ring geometry (authored in the local XZ plane); each
 // explosion scales it out to its blast radius, so every explosion reuses the
-// same buffers instead of re-building a ring.
-const sharedRingGeometry = new RingGeometry(0.86, 1, 40);
+// same buffers instead of re-building a ring. The band is narrow so it reads
+// as a shockwave front sweeping out, not a filled disc.
+const sharedRingGeometry = new RingGeometry(0.92, 1, 48);
 
 // One shared radial-gradient glow (white core fading to transparent) for every
 // explosion's fireball. Lazily created so importing this module in a DOM-less
@@ -143,15 +144,18 @@ export const RocketExplosionFX: FC<RocketExplosionFXProps> = memo(
         fireballMaterial.opacity = (1 - fb) * 0.9;
       }
 
-      // Ground ring: an ease-out swell that lands exactly on the blast radius,
-      // bright on the way out and gone as it settles.
+      // Ground ring: a thin shockwave front that sweeps out to the blast
+      // radius (fast at first, decelerating) and dissipates as it spreads.
+      // The fill stays low so the ground reads through it; the emissive glow
+      // (picked up by the bloom pass) is what makes the front visible.
       const ring = ringRef.current;
       if (ring) {
         const ease = 1 - (1 - progress) ** 3;
         ring.scale.setScalar(Math.max(radius * ease, 1e-4));
         const material = ring.material as MeshStandardMaterial;
-        material.opacity = (1 - progress) * 0.75;
-        material.emissiveIntensity = 1.4 * (1 - progress);
+        const fade = 1 - progress;
+        material.opacity = fade ** 2 * 0.5;
+        material.emissiveIntensity = fade ** 1.5 * 1.6;
       }
 
       if (progress >= 1) {

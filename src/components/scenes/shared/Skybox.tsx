@@ -19,8 +19,8 @@ const STAR_MIN_SIZE = 0.04;
 const STAR_MAX_SIZE = 0.16;
 const STAR_DRIFT_SPEED = 0.006;
 const TINT_GREEN_FRACTION = 0.35;
-const HORIZON_TINT_MIX = 0.025;
-const SKY_TINT_MIX = 0.035;
+const HORIZON_TINT_MIX = 0.0125;
+const SKY_TINT_MIX = 0.0175;
 
 // Shared across every Skybox instance — the geometry never varies per mount.
 const skyGeometry = new SphereGeometry(SKYBOX_RADIUS, 32, 32);

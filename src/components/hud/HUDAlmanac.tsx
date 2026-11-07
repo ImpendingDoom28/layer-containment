@@ -548,6 +548,7 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
   const [activeTab, setActiveTab] = useState<AlmanacTab>("enemies");
   const tabRefs = useRef<Partial<Record<AlmanacTab, HTMLButtonElement>>>({});
   const [bossEntries, setBossEntries] = useState<BossDirectoryEntry[]>([]);
+  const [bossLoadFailed, setBossLoadFailed] = useState(false);
   const tabIds = {
     enemies: "almanac-tab-enemies",
     towers: "almanac-tab-towers",
@@ -565,17 +566,28 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
 
     const load = async (): Promise<void> => {
       try {
-        const levels = await Promise.all(
+        const results = await Promise.allSettled(
           PLAYABLE_LEVEL_IDS.map(async (id) => ({
             id,
             data: await loadLevelConfigFile(id),
           }))
         );
+        // Keep the bosses of every level that loaded, even if one level's
+        // config failed to load.
+        const levels = results.flatMap((result) =>
+          result.status === "fulfilled" ? [result.value] : []
+        );
         if (!cancelled) {
           setBossEntries(collectBosses(levels));
+          setBossLoadFailed(
+            results.some((result) => result.status === "rejected")
+          );
         }
       } catch {
-        if (!cancelled) setBossEntries([]);
+        if (!cancelled) {
+          setBossEntries([]);
+          setBossLoadFailed(true);
+        }
       }
     };
 
@@ -694,7 +706,12 @@ export const HUDAlmanac: FC<HUDAlmanacProps> = ({ onBack }) => {
                 />
               ))}
             </div>
-            {bossEntries.length === 0 && (
+            {bossLoadFailed && (
+              <UITypography variant="body" className="text-destructive">
+                {t("almanac.bossLoadFailed")}
+              </UITypography>
+            )}
+            {bossEntries.length === 0 && !bossLoadFailed && (
               <div className="flex flex-col items-center justify-center flex-1 py-12 text-center">
                 <UITypography variant="body" className="text-muted-foreground">
                   {t("almanac.noBossData")}

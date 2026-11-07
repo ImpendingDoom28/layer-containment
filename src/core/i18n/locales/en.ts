@@ -136,6 +136,7 @@ export const en = {
       "No upgrade data available. Start a game to load upgrade configurations.",
     noBossData:
       "No boss data available. Start a game to load level configurations.",
+    bossLoadFailed: "Some level data could not be loaded.",
     tower: {
       damage: "Damage",
       range: "Range",

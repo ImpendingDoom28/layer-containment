@@ -89,7 +89,7 @@ describe("HUDGameOver", () => {
       towerTypes: {
         basic: makeTowerConfig("basic", "Basic Tower"),
         slow: makeTowerConfig("slow", "Slow Tower"),
-        aoe: makeTowerConfig("aoe", "AOE Tower"),
+        brl: makeTowerConfig("brl", "BRL"),
         laser: makeTowerConfig("laser", "Laser Tower"),
         relay: makeTowerConfig("relay", "Relay Tower"),
         chain: makeTowerConfig("chain", "Chain Tower"),

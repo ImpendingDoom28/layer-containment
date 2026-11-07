@@ -308,9 +308,9 @@ export const en = {
       name: "Slow Tower",
       description: "Slows enemies on hit",
     },
-    aoe: {
-      name: "AOE Tower",
-      description: "Area damage tower",
+    brl: {
+      name: "BRL",
+      description: "A long-range AoE missile artillery",
     },
     laser: {
       name: "Laser Tower",

@@ -14,6 +14,11 @@ export type TargetingParams = {
   x: number;
   z: number;
   range: number;
+  /**
+   * Minimum effective range (artillery dead-zone): enemies closer than this
+   * are not targetable. `undefined` (the common case) means no inner limit.
+   */
+  minRange?: number;
   /** Focused: the enemy the tower was aiming at last time it fired. */
   lastTargetId?: number;
 };
@@ -42,8 +47,10 @@ export const pickTowerTarget = (
   const candidates: Enemy[] = [];
   for (const enemy of enemies) {
     if (enemy.health <= 0) continue;
-    if (distance2D(params.x, params.z, enemy.x, enemy.z) > params.range)
-      continue;
+    const dist = distance2D(params.x, params.z, enemy.x, enemy.z);
+    if (dist > params.range) continue;
+    // Artillery dead-zone: too close to shoot (the rocket needs room to arc).
+    if (params.minRange !== undefined && dist < params.minRange) continue;
     if (!isVisible(enemy)) continue;
     candidates.push(enemy);
   }
@@ -117,9 +124,14 @@ export const isTargetStale = (
   x: number,
   z: number,
   range: number,
+  minRange: number | undefined,
   isVisible: (enemy: Enemy) => boolean
-): boolean =>
-  target === null ||
-  target.health <= 0 ||
-  distance2D(x, z, target.x, target.z) > range ||
-  !isVisible(target);
+): boolean => {
+  if (target === null || target.health <= 0) return true;
+  const dist = distance2D(x, z, target.x, target.z);
+  return (
+    dist > range ||
+    (minRange !== undefined && dist < minRange) ||
+    !isVisible(target)
+  );
+};

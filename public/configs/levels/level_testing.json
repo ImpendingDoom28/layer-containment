@@ -370,7 +370,7 @@
   "towers": [
     { "id": 1, "type": "basic", "gridX": 3, "gridZ": 6, "x": -6.5, "z": -3.5 },
     { "id": 2, "type": "slow", "gridX": 4, "gridZ": 6, "x": -5.5, "z": -3.5 },
-    { "id": 3, "type": "aoe", "gridX": 5, "gridZ": 6, "x": -4.5, "z": -3.5 },
+    { "id": 3, "type": "brl", "gridX": 5, "gridZ": 6, "x": -4.5, "z": -3.5 },
     { "id": 4, "type": "laser", "gridX": 6, "gridZ": 6, "x": -3.5, "z": -3.5 },
     { "id": 5, "type": "relay", "gridX": 7, "gridZ": 6, "x": -2.5, "z": -3.5 },
     { "id": 6, "type": "chain", "gridX": 8, "gridZ": 6, "x": -1.5, "z": -3.5 }
@@ -442,8 +442,8 @@
     {
       "id": 2,
       "towerId": 3,
-      "towerType": "aoe",
-      "projectileType": "aoe",
+      "towerType": "brl",
+      "projectileType": "rocket",
       "startX": -4.5,
       "startY": 0.4,
       "startZ": 5.5,

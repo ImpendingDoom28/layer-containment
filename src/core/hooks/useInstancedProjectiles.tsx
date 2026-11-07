@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ReactElement } from "react";
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 import {
   InstancedPoolStats,
@@ -39,6 +40,49 @@ const CHAIN_BOLT_LENGTH = 0.5;
 const CHAIN_BOLT_EMISSIVE_INTENSITY = 2;
 
 /**
+ * The BRL rocket: a short body with a conical nose and two small fins, built
+ * once from primitives so every rocket in flight shares a single geometry
+ * (and material). The model is authored along the local +Y axis with its base
+ * at the origin, so pointing +Y at the velocity orients the nose along the
+ * flight path. One instance matrix carries position, the velocity-aligned
+ * rotation, and a uniform length scale, so the pool's `setTransform` drives it
+ * with the same call a sphere uses.
+ */
+const ROCKET_BODY_RADIUS = 0.05;
+const ROCKET_BODY_LENGTH = 0.18;
+const ROCKET_NOSE_LENGTH = 0.12;
+const ROCKET_FIN_LENGTH = 0.1;
+const ROCKET_FIN_THICKNESS = 0.012;
+const ROCKET_EMISSIVE_INTENSITY = 2;
+const ROCKET_REFERENCE_SPEED = 10;
+
+const buildRocketGeometry = (): THREE.BufferGeometry => {
+  const body = new THREE.CylinderGeometry(
+    ROCKET_BODY_RADIUS,
+    ROCKET_BODY_RADIUS,
+    ROCKET_BODY_LENGTH,
+    8
+  );
+  body.translate(0, ROCKET_BODY_LENGTH * 0.5, 0);
+  const nose = new THREE.ConeGeometry(
+    ROCKET_BODY_RADIUS,
+    ROCKET_NOSE_LENGTH,
+    8
+  );
+  nose.translate(0, ROCKET_BODY_LENGTH + ROCKET_NOSE_LENGTH * 0.5, 0);
+  const finLeft = new THREE.BoxGeometry(
+    ROCKET_FIN_THICKNESS,
+    ROCKET_FIN_LENGTH,
+    ROCKET_BODY_RADIUS * 1.4
+  );
+  finLeft.translate(-ROCKET_BODY_RADIUS - ROCKET_FIN_THICKNESS * 0.5, ROCKET_BODY_LENGTH * 0.5, 0);
+  const finRight = finLeft.clone().translate(ROCKET_BODY_RADIUS + ROCKET_FIN_THICKNESS, 0, 0);
+  const merged = mergeGeometries([body, nose, finLeft, finRight], false);
+  if (!merged) throw new Error("Failed to merge rocket geometry");
+  return merged;
+};
+
+/**
  * Trails for the travelling single/AoE spheres: a short fading streak behind
  * each in-flight projectile makes shots read faster and fills the field with
  * motion. One pooled instanced slot per projectile (a stretched, motion-
@@ -63,13 +107,14 @@ const scratchStruckWorld = new THREE.Vector3();
 const scratchNextWorld = new THREE.Vector3();
 const trailScratchPosition = new THREE.Vector3();
 
-type VisualPoolKind = "sphere" | "beam" | "bolt";
+type VisualPoolKind = "sphere" | "beam" | "bolt" | "rocket";
 
 const resolveVisualPool = (
   projectileType: Projectile["projectileType"]
 ): VisualPoolKind => {
   if (projectileType === "beam") return "beam";
   if (projectileType === "chain") return "bolt";
+  if (projectileType === "rocket") return "rocket";
   return "sphere";
 };
 
@@ -127,6 +172,13 @@ type PooledProjectile = Projectile & {
   pendingHit: boolean;
   /** Remaining chain hops (primary target is separate); only used for chain bolts. */
   chainQueue?: ChainAdditionalHit[];
+  /**
+   * BRL rocket arc state: elapsed flight time, total flight time, and the
+   * lobe height above the straight launch→target line. Only used for rockets.
+   */
+  arcT: number;
+  arcFlightTime: number;
+  arcHeight: number;
 };
 
 const setBoltVelocityTowards = (
@@ -276,6 +328,7 @@ type NonBeamStepContext = {
   currentTime: number;
   boltPool: InstancedPoolRef | null;
   spherePool: InstancedPoolRef | null;
+  rocketPool: InstancedPoolRef | null;
   trailPool: InstancedPoolRef | null;
   projectileSize: number;
   enemiesById: Map<number, Enemy>;
@@ -298,6 +351,7 @@ const stepNonBeamProjectile = (
     currentTime,
     boltPool,
     spherePool,
+    rocketPool,
     trailPool,
     projectileSize,
     enemiesById,
@@ -334,6 +388,128 @@ const stepNonBeamProjectile = (
     }
 
     toRemove.push(projectile.id);
+    return;
+  }
+
+  if (projectile.visualPool === "rocket") {
+    // BRL rocket: a ballistic arc. The horizontal position eases from the
+    // launch tube toward the target's *current* position (the rocket homes,
+    // so it lands on a moving enemy), and the height rides a parabolic lobe —
+    // rising to `arcHeight` at the midpoint and falling back to the target's
+    // height at the end. Sampling by normalized flight time makes the arc
+    // deterministic (no integration drift) and it always ends at the target,
+    // where the hit threshold settles the impact.
+    const targetEnemy = enemiesById.get(projectile.targetId);
+    if (!targetEnemy || targetEnemy.health <= 0) {
+      toRemove.push(projectile.id);
+      return;
+    }
+
+    const gridSize = useLevelStore.getState().gridSize;
+    const pathWaypoints = useLevelStore.getState().pathWaypoints;
+    const { tileSize } = useGameStore.getState();
+    const planetRadius = getPlanetRadius(gridSize, tileSize);
+    const pathPos = getPositionAlongMultiplePaths(
+      pathWaypoints,
+      targetEnemy.pathIndex,
+      targetEnemy.pathProgress
+    );
+    flatCombatPointToWorldPosition(
+      targetEnemy.x,
+      targetEnemy.z,
+      pathPos.y + targetEnemy.size,
+      planetRadius,
+      scratchTargetWorld
+    );
+
+    const prevX = projectile.currentX;
+    const prevY = projectile.currentY;
+    const prevZ = projectile.currentZ;
+
+    projectile.arcT = Math.min(
+      projectile.arcT + delta,
+      projectile.arcFlightTime
+    );
+    const u =
+      projectile.arcFlightTime > 0
+        ? projectile.arcT / projectile.arcFlightTime
+        : 1;
+    // Linear homing on the horizontal plane…
+    projectile.currentX = projectile.startX + (scratchTargetWorld.x - projectile.startX) * u;
+    projectile.currentZ = projectile.startZ + (scratchTargetWorld.z - projectile.startZ) * u;
+    // …with the vertical offset on a parabolic lobe (0 at launch, peak at
+    // u = 0.5, back to 0 at impact) so the rocket climbs and then drops in on
+    // the target.
+    const lobe = 4 * u * (1 - u);
+    projectile.currentY =
+      projectile.startY + (scratchTargetWorld.y - projectile.startY) * u +
+      projectile.arcHeight * lobe;
+
+    // Velocity for orientation and the trail (finite difference; the nose
+    // points along the travel, so the rocket tilts over its apex and
+    // nose-dives into the impact).
+    if (delta > 1e-6) {
+      projectile.velocityX = (projectile.currentX - prevX) / delta;
+      projectile.velocityY = (projectile.currentY - prevY) / delta;
+      projectile.velocityZ = (projectile.currentZ - prevZ) / delta;
+    }
+
+    const speed = Math.hypot(
+      projectile.velocityX,
+      projectile.velocityY,
+      projectile.velocityZ
+    );
+    if (speed > 1e-6) {
+      tempDirection.set(
+        projectile.velocityX / speed,
+        projectile.velocityY / speed,
+        projectile.velocityZ / speed
+      );
+      tempQuaternion.setFromUnitVectors(tempUpVector, tempDirection);
+      tempPosition.set(
+        projectile.currentX,
+        projectile.currentY,
+        projectile.currentZ
+      );
+      rocketPool?.setTransform(
+        projectile.instanceIndex,
+        tempPosition,
+        tempQuaternion,
+        tempScale.set(1, 1, 1)
+      );
+    }
+
+    if (projectile.trailInstanceIndex >= 0 && trailPool) {
+      const pose = computeTrailPose(
+        projectile.currentX,
+        projectile.currentY,
+        projectile.currentZ,
+        projectile.velocityX,
+        projectile.velocityY,
+        projectile.velocityZ,
+        projectileSize
+      );
+      if (pose) {
+        trailPool.setTransform(
+          projectile.trailInstanceIndex,
+          pose.position,
+          pose.quaternion,
+          pose.scale
+        );
+      }
+    }
+
+    // The arc is homing, so when the flight time is up the rocket sits
+    // exactly on the target: settle the hit here (the horizontal homing
+    // replaces the distance-threshold check straight projectiles use).
+    if (u >= 1) {
+      if (!canHit) {
+        projectile.pendingHit = true;
+        return;
+      }
+      onHit(projectile, targetEnemy, currentTime);
+      toRemove.push(projectile.id);
+    }
     return;
   }
 
@@ -591,6 +767,37 @@ export const useInstancedProjectiles = (
       instancesContent: boltInstancesContent,
     });
 
+  // One shared rocket body (body + nose + fins merged) for every in-flight
+  // BRL rocket; the material tints each instance with the tower color, like
+  // the other solid projectiles.
+  const rocketGeometry = useMemo(() => buildRocketGeometry(), []);
+  useEffect(() => () => rocketGeometry.dispose(), [rocketGeometry]);
+
+  const rocketInstancesContent = useMemo(
+    () => (
+      <>
+        <primitive object={rocketGeometry} attach="geometry" />
+        <meshStandardMaterial
+          color={defaultColor}
+          emissive={defaultColor}
+          emissiveIntensity={ROCKET_EMISSIVE_INTENSITY}
+          toneMapped={false}
+          onBeforeCompile={patchEmissiveByInstanceColor}
+        />
+      </>
+    ),
+    [defaultColor, rocketGeometry]
+  );
+
+  const { pool: rocketPool, InstancedEntity: InstancedRocketInstances } =
+    useInstancedEntity({
+      limit: maxProjectiles,
+      defaultColor,
+      frustumCulled: false,
+      castShadow: true,
+      instancesContent: rocketInstancesContent,
+    });
+
   const trailInstancesContent = useMemo(
     () => (
       <>
@@ -647,9 +854,10 @@ export const useInstancedProjectiles = (
       beam: beamPool,
       bolt: boltPool,
       sphere: spherePool,
+      rocket: rocketPool,
       trail: trailPool,
     }),
-    [beamPool, boltPool, spherePool, trailPool]
+    [beamPool, boltPool, spherePool, rocketPool, trailPool]
   );
 
   const removeProjectile = useCallback(
@@ -681,9 +889,11 @@ export const useInstancedProjectiles = (
       const index = pool.acquire();
       if (index === -1) return { ...params, id: -1 };
 
-      // Sphere projectiles get a pooled trail slot; a full trail pool (or
-      // reduced motion) degrades gracefully to the plain sphere.
-      const wantTrail = visualPool === "sphere" && !reducedMotion;
+      // The single/AoE spheres and the BRL rockets get a pooled trail slot; a
+      // full trail pool (or reduced motion) degrades gracefully to the plain
+      // body.
+      const wantTrail =
+        (visualPool === "sphere" || visualPool === "rocket") && !reducedMotion;
       const trailPool = wantTrail ? pools.trail : null;
       const trailIndex = trailPool ? trailPool.acquire() : -1;
 
@@ -695,9 +905,34 @@ export const useInstancedProjectiles = (
       const dz = params.targetZ - params.startZ;
       const length = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-      const velocityX = length > 0 ? (dx / length) * params.speed : 0;
-      const velocityY = length > 0 ? (dy / length) * params.speed : 0;
-      const velocityZ = length > 0 ? (dz / length) * params.speed : 0;
+      let velocityX = length > 0 ? (dx / length) * params.speed : 0;
+      let velocityY = length > 0 ? (dy / length) * params.speed : 0;
+      let velocityZ = length > 0 ? (dz / length) * params.speed : 0;
+
+      // BRL rocket: a ballistic arc instead of a straight shot. The rocket
+      // rides a parabolic lobe — rising then falling, peaking at `arcHeight`
+      // above the launch plane — and homes on the target's current position,
+      // so it leaves the tube, climbs, and drops onto a moving target. The
+      // lobe is sampled by normalized flight time (see the step) rather than
+      // integrated, so it is deterministic and never overshoots. The launch
+      // velocity (the lobe's slope at u = 0, i.e. `dx/dt = dx/flightTime`,
+      // `dy/dt = dy/flightTime + 4·arcHeight/flightTime`) is used to point the
+      // nose on the very first frame, before the step's finite difference
+      // takes over.
+      const rocketHDist = Math.hypot(dx, dz);
+      const rocketArcHeight = Math.max(0.9, rocketHDist * 0.18);
+      // The distance-based flight time was tuned assuming a nominal rocket
+      // speed of 10, so scale it by ROCKET_REFERENCE_SPEED/speed to let the
+      // configured projectileSpeed control how long the arc takes (lower speed
+      // = slower artillery).
+      const rocketFlightTime =
+        (0.35 + Math.min(0.5, rocketHDist * 0.075)) *
+        (ROCKET_REFERENCE_SPEED / Math.max(0.1, params.speed));
+      if (visualPool === "rocket") {
+        velocityX = dx / rocketFlightTime;
+        velocityY = dy / rocketFlightTime + (4 * rocketArcHeight) / rocketFlightTime;
+        velocityZ = dz / rocketFlightTime;
+      }
 
       const pooledProjectile: PooledProjectile = {
         ...params,
@@ -718,6 +953,9 @@ export const useInstancedProjectiles = (
           visualPool === "bolt"
             ? [...(params.chainAdditionalHits ?? [])]
             : undefined,
+        arcT: 0,
+        arcFlightTime: rocketFlightTime,
+        arcHeight: rocketArcHeight,
       };
 
       projectilesRef.current.set(id, pooledProjectile);
@@ -742,6 +980,18 @@ export const useInstancedProjectiles = (
           vy: velocityY,
           vz: velocityZ,
         });
+      } else if (visualPool === "rocket") {
+        // Point the nose at the launch velocity (strongly upward at first).
+        const speed0 = Math.hypot(velocityX, velocityY, velocityZ);
+        if (speed0 > 1e-6) {
+          tempDirection.set(velocityX / speed0, velocityY / speed0, velocityZ / speed0);
+        } else {
+          tempDirection.set(0, 1, 0);
+        }
+        tempQuaternion.setFromUnitVectors(tempUpVector, tempDirection);
+        tempPosition.set(params.startX, params.startY, params.startZ);
+        tempScale.set(1, 1, 1);
+        pool.setTransform(index, tempPosition, tempQuaternion, tempScale);
       } else {
         pool.setPosition(index, params.startX, params.startY, params.startZ);
         pool.setScale(index, 1, 1, 1);
@@ -803,6 +1053,7 @@ export const useInstancedProjectiles = (
             currentTime,
             boltPool,
             spherePool,
+            rocketPool,
             trailPool,
             projectileSize,
             enemiesById: enemiesByIdRef.current,
@@ -822,6 +1073,7 @@ export const useInstancedProjectiles = (
       beamDuration,
       boltPool,
       onHit,
+      rocketPool,
       spherePool,
       trailPool,
       projectileSize,
@@ -863,6 +1115,7 @@ export const useInstancedProjectiles = (
       {InstancedSphereInstances}
       {InstancedBeamInstances}
       {InstancedBoltInstances}
+      {InstancedRocketInstances}
       {reducedMotion ? null : InstancedTrailInstances}
     </>
   );

@@ -206,7 +206,7 @@
       "bodyWidthScale": 1.2,
       "color": "#ef4444",
       "cost": 125,
-      "damage": 40,
+      "damage": 50,
       "description": "A long-range AoE missile artillery",
       "fireRate": 4,
       "id": "brl",

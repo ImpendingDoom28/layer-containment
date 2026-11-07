@@ -250,7 +250,7 @@ The dev server uses a fixed port (`5173`) and `strictPort: true`, so the URL is 
 - **Tower Types**: Each tower has unique stats:
   - **Basic Tower**: $50, 20 damage, 3.5 range, 1s fire rate
   - **Slow Tower**: $80, 10 damage, 3 range, 0.8s fire rate, slows enemies by 60% for 2s
-  - **BRL (Ballistic Rocket Launcher)**: $125, 40 damage, 5 range (2.5–5, minimum effective range), 4s fire rate, 1.5 radius area damage
+  - **BRL (Ballistic Rocket Launcher)**: $125, 50 damage, 5 range (2.5–5, minimum effective range), 4s fire rate, 1.5 radius area damage
   - **Laser Tower**: $200, 15 damage, 4 range, 2s fire rate, pierces up to 5 enemies
 - **Tower Selling**: Sell towers for 50% of their purchase price
 - **Targeting**: Towers pick a target each shot. Each attacking tower has a targeting strategy — **Nearest** (closest enemy in range), **Furthest** (farthest in range), **Lowest HP** (weakest enemy in range), **Highest HP** (toughest enemy in range), or **Focused** (keeps firing its last target as long as that enemy stays in range and in line of sight, falling back to the nearest candidate otherwise). The default per tower comes from the game config; you can change any placed tower's strategy at any time from its info panel (select the tower, then use the Targeting carousel selector, which cycles the options with left/right arrows)

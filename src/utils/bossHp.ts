@@ -1,4 +1,13 @@
-import type { BossConfig } from "../core/types/game";
+import type {
+  BossConfig,
+  EnemyUpgradeConfig,
+  EnemyUpgradeId,
+} from "../core/types/game";
+import {
+  getStackTierForEnemy,
+  getTieredUpgradeEffect,
+  getUniqueUpgradeIdsInStackOrder,
+} from "./enemyUpgradeTierEffects";
 
 /**
  * Whether a given (1-based) wave number is one of the level's boss waves —
@@ -23,4 +32,35 @@ export const bossHealthForWave = (
   const appearance = waveNumber / boss.everyNthWave;
   const hpScale = (boss.hpGrowthPerAppearance ?? 1) ** (appearance - 1);
   return Math.round(boss.baseStats.health * hpScale);
+};
+
+/**
+ * The boss HP a player actually sees in the next-wave preview, i.e.
+ * `bossHealthForWave` with the currently selected enemy upgrades applied — the
+ * boss is spawned with the wave's upgrade stack (`spawnLevelEnemy` multiplies
+ * its base health by each upgrade's `healthMultiplier` in stack order), so the
+ * preview shows the same number. An empty stack returns the bare
+ * `bossHealthForWave`.
+ */
+export const bossHealthWithUpgrades = (
+  boss: BossConfig | null | undefined,
+  waveNumber: number,
+  upgradeStack: readonly EnemyUpgradeId[] = [],
+  enemyUpgrades?: Record<EnemyUpgradeId, EnemyUpgradeConfig> | null
+): number => {
+  const baseHealth = bossHealthForWave(boss, waveNumber);
+  if (baseHealth === 0) return 0;
+  let health = baseHealth;
+  if (enemyUpgrades) {
+    for (const upgradeId of getUniqueUpgradeIdsInStackOrder(upgradeStack)) {
+      const upgrade = enemyUpgrades[upgradeId];
+      if (!upgrade) continue;
+      const stackTier = getStackTierForEnemy(upgradeId, upgradeStack);
+      const effect = getTieredUpgradeEffect(upgrade, stackTier);
+      if (effect.healthMultiplier) {
+        health = Math.round(health * effect.healthMultiplier);
+      }
+    }
+  }
+  return health;
 };

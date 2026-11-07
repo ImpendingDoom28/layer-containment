@@ -27,7 +27,7 @@ import {
 } from "../../core/stores/useAlmanacStore";
 import { EnemyConfig, EnemyType } from "../../core/types/game";
 import { useTranslationInCanvas } from "../../core/i18n/useTranslationInCanvas";
-import { bossHealthForWave, isBossWave } from "../../utils/bossHp";
+import { bossHealthWithUpgrades, isBossWave } from "../../utils/bossHp";
 import { applyEnemyUpgradeCounts } from "../../utils/waveEnemyCounts";
 import {
   nextWaveReadySelector,
@@ -205,9 +205,19 @@ export const GUINextWavePreview: FC<GUINextWavePreviewProps> = ({
 
   const nextWaveNumber = currentWave + 1;
   const isNextBossWave = isBossWave(boss, nextWaveNumber);
-  const nextBossHealth = bossHealthForWave(boss, nextWaveNumber);
+  // The boss is spawned with the wave's upgrade stack, so the preview shows
+  // the same HP the boss will actually have.
+  const nextBossHealth = bossHealthWithUpgrades(
+    boss,
+    nextWaveNumber,
+    levelEnemyUpgradeStack,
+    enemyUpgrades
+  );
 
-  if (!shouldShow || !nextWaveConfig || portalGroups.length === 0) return null;
+  if (!shouldShow || !nextWaveConfig) return null;
+  // On a boss wave the boss enters from an unknown portal, so the warning
+  // shows even on a portal that has no regular enemies of its own.
+  if (portalGroups.length === 0 && !isNextBossWave) return null;
 
   return (
     <group position={worldPosition}>

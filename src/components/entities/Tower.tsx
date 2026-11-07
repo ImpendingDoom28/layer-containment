@@ -324,14 +324,10 @@ export const Tower: FC<TowerProps> = memo(
         {/* Artillery dead zone: the filled disc shows the area the tower
             refuses to shoot at (enemies closer than minRange are out of reach).
             It sits under the outer range ring so the ring's gap to the disc is
-            the tower's real firing band. */}
+            the tower's real firing band. Tinted with the shared "negative"
+            (destructive) color so the no-fire zone reads as off-limits. */}
         {isSelected && (tower.minRange ?? 0) > 0.01 && (
-          <DeadZoneDisc
-            radius={tower.minRange ?? 0}
-            color={tower.color}
-            position={[0, 0.06, 0]}
-            opacity={0.35}
-          />
+          <DeadZoneDisc radius={tower.minRange ?? 0} position={[0, 0.06, 0]} />
         )}
         <GUIDebugInfo entity={tower} offsetY={towerHeight + 0.3} />
       </group>

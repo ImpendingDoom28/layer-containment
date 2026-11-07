@@ -204,11 +204,9 @@ export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
         {rangeRing && (rangeRing.minRange ?? 0) > 0.01 && (
           <DeadZoneDisc
             radius={rangeRing.minRange ?? 0}
-            color={rangeRing.color}
             position={rangeRing.position}
             quaternion={rangeRing.quaternion}
             radialSegments={48}
-            opacity={0.4}
           />
         )}
       </group>

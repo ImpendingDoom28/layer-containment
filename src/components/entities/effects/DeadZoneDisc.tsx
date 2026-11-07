@@ -1,9 +1,10 @@
 import { FC, memo } from "react";
-import { Quaternion } from "three";
+import { Color, Quaternion } from "three";
+
+import { getCssColorValue } from "../../ui/lib/cssUtils";
 
 type DeadZoneDiscProps = {
   radius: number;
-  color: string;
   radialSegments?: number;
   opacity?: number;
   position?: [number, number, number];
@@ -11,6 +12,23 @@ type DeadZoneDiscProps = {
   quaternion?: Quaternion;
   /** Local orientation (selected tower, inside an already-oriented group). */
   rotation?: [number, number, number];
+};
+
+let cachedDeadZoneColor: string | null = null;
+
+/**
+ * The shared "negative" tint for areas a tower can't engage: the destructive
+ * red mixed toward scene gray, matching the placement overlay's
+ * "can't place here" color, so a no-fire zone reads as off-limits no matter
+ * which tower type shows it.
+ */
+export const getDeadZoneColor = (): string => {
+  if (!cachedDeadZoneColor) {
+    const c = new Color(getCssColorValue("scene-hp-low"));
+    c.lerp(new Color(getCssColorValue("scene-gray-600")), 0.5);
+    cachedDeadZoneColor = `#${c.getHexString()}`;
+  }
+  return cachedDeadZoneColor;
 };
 
 /**
@@ -22,7 +40,6 @@ type DeadZoneDiscProps = {
 export const DeadZoneDisc: FC<DeadZoneDiscProps> = memo(
   ({
     radius,
-    color,
     radialSegments = 32,
     opacity = 0.4,
     position = [0, 0, 0],
@@ -37,7 +54,7 @@ export const DeadZoneDisc: FC<DeadZoneDiscProps> = memo(
     >
       <circleGeometry args={[radius, radialSegments]} />
       <meshBasicMaterial
-        color={color}
+        color={getDeadZoneColor()}
         transparent
         opacity={opacity}
         side={2}

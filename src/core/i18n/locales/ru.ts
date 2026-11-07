@@ -206,6 +206,13 @@ const ruValues = {
   },
   nextWavePreview: {
     nextWave: "Следующая волна",
+    bossHealth: "{{health}} HP",
+  },
+  bossWaveBanner: {
+    title: "ВОЛНА БОССА",
+  },
+  bossBar: {
+    health: "Здоровье босса",
   },
   editor: {
     backToGame: "Назад в игру",

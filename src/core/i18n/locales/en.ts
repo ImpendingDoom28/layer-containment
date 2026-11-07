@@ -197,6 +197,13 @@ export const en = {
   },
   nextWavePreview: {
     nextWave: "Next Wave",
+    bossHealth: "{{health}} HP",
+  },
+  bossWaveBanner: {
+    title: "BOSS WAVE",
+  },
+  bossBar: {
+    health: "Boss health",
   },
   editor: {
     backToGame: "Back to game",

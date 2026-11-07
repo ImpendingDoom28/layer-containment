@@ -3,6 +3,7 @@ import { z } from "zod";
 import { loadFile } from "../../utils/fileLoader";
 import { MAX_GRID_SIZE, MIN_GRID_SIZE } from "../../utils/gridSizeLimits";
 import type {
+  BossConfig,
   Building,
   Enemy,
   EnemyUpgradeStack,
@@ -74,6 +75,33 @@ const waveEnemyGroupSchema = z.object({
   spawnInterval: z.number(),
   /** Portal (path index) the group emerges from; omitted = distributed evenly. */
   pathIndex: z.number().int().min(0).optional(),
+});
+
+const bossModelSchema = z.object({
+  url: z.string(),
+  node: z.string(),
+});
+
+// `everyNthWave` has `.default(4)`, so it is optional on the schema's input
+// side but required on its output side — the input type must reflect that,
+// otherwise the `z.ZodType<BossConfig>` annotation (Input = BossConfig,
+// required) rejects the defaulted field.
+const bossConfigSchema: z.ZodType<
+  BossConfig,
+  z.ZodTypeDef,
+  Omit<BossConfig, "everyNthWave"> & { everyNthWave?: number }
+> = z.object({
+  name: z.string().min(1),
+  everyNthWave: z.number().int().min(2).default(4),
+  baseStats: z.object({
+    health: z.number().positive(),
+    speed: z.number().positive(),
+    size: z.number().positive(),
+    healthLoss: z.number().int().min(1),
+    reward: z.number().positive(),
+  }),
+  hpGrowthPerAppearance: z.number().positive().optional(),
+  model: bossModelSchema.optional(),
 });
 
 const waveConfigSchema: z.ZodType<WaveConfig> = z.object({
@@ -185,6 +213,8 @@ export const levelConfigSchema = z.object({
   waters: z.array(waterBodyConfigSchema).default([]),
   pathWaypoints: z.array(z.array(pathWaypointSchema)),
   waveConfigs: z.array(waveConfigSchema),
+  /** Per-level boss definition; absent = no boss waves for this level. */
+  boss: bossConfigSchema.optional(),
   buildings: z.array(buildingSchema),
   towers: z.array(towerSchema),
   enemies: z.array(enemySchema),

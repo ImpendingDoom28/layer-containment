@@ -11,6 +11,8 @@ import { MainMenuScene } from "../scenes/mainMenu/MainMenuScene";
 import { HUDTowerShop } from "../hud/HUDTowerShop";
 import { HudAnimationSystem } from "../hud/HudAnimationSystem";
 import { HUDGameStats } from "../hud/HUDGameStats";
+import { HUDBossBar } from "../hud/HUDBossBar";
+import { HUDBossWaveBanner } from "../hud/HUDBossWaveBanner";
 import { HUDGameOver } from "../hud/HUDGameOver";
 import { HUDMainMenu } from "../hud/main/HUDMainMenu";
 import { HUDGameMenu } from "../hud/HUDGameMenu";
@@ -284,7 +286,9 @@ export const GamePage: FC<GamePageProps> = ({
                   </>
                 )}
 
-                <KeyboardHandlingSystem onGameMenuEscape={gameMenuClose.startClose} />
+                <KeyboardHandlingSystem
+                  onGameMenuEscape={gameMenuClose.startClose}
+                />
               </Suspense>
             </GameSessionSystem>
 
@@ -325,6 +329,14 @@ export const GamePage: FC<GamePageProps> = ({
                   onStartWave={startWave}
                   onOpenGameMenu={openGameMenu}
                 />
+
+                {/* Big boss bar for the level boss (waves 4, 8, 12, ...).
+                    Self-gates on the active `IsBoss` entity. */}
+                <HUDBossBar />
+
+                {/* One-shot "BOSS WAVE" flash on boss-wave start. Self-gates
+                    on the WAVE_STARTED event + the level boss. */}
+                <HUDBossWaveBanner />
 
                 {/* Mobile scheme: on-screen D-pad for camera moves (no WASD
                     on touch screens). Self-gates on viewport + scheme. */}

@@ -1,5 +1,6 @@
 import type { World } from "koota";
 
+import { bossHealthForWave, isBossWave } from "../../utils/bossHp";
 import { gameEvents } from "../../utils/eventEmitter";
 import {
   applyEnemyUpgradeCounts,
@@ -15,11 +16,26 @@ import { GameEvent } from "../types/enums/events";
 import type { EnemyType, EnemyUpgradeId } from "../types/game";
 import type { SimulationFrame } from "./types";
 
+type BossSpawnStats = {
+  name: string;
+  health: number;
+  speed: number;
+  size: number;
+  healthLoss: number;
+  reward: number;
+};
+
 type SpawnQueueItem = {
   type: EnemyType;
   delaySeconds: number;
   upgrades: EnemyUpgradeId[];
   pathIndex?: number;
+  /**
+   * Present when this queue item is the level boss. Carries the boss's base
+   * stats (already scaled for this appearance) and the `IsBoss` tag; the
+   * spawn applies them additively under the wave's upgrade stack.
+   */
+  boss?: BossSpawnStats;
 };
 
 export type WaveSystem = {
@@ -64,7 +80,8 @@ export const createWaveSystem = ({
     waveStartedAt = null;
     waveStarted = false;
 
-    const { totalWaves, waveConfigs, pathWaypoints } = useLevelStore.getState();
+    const { totalWaves, waveConfigs, pathWaypoints, boss } =
+      useLevelStore.getState();
     if (currentWave <= 0 || currentWave > totalWaves) return;
 
     const waveConfig = waveConfigs[currentWave - 1];
@@ -86,6 +103,29 @@ export const createWaveSystem = ({
       delaySeconds: item.delay / 1000,
       upgrades: waveUpgrades,
     }));
+
+    // A boss wave: every `everyNthWave`-th wave (4, 8, 12, ...) the level
+    // spawns its boss alongside the unchanged regular wave. The boss joins the
+    // queue at t=0 (before the regular units) and, like any other enemy,
+    // inherits the player's full current upgrade stack. Each later appearance
+    // is stronger: its base HP is scaled by `hpGrowthPerAppearance` per
+    // appearance, so the boss keeps scaling without a new mechanic.
+    if (isBossWave(boss, currentWave)) {
+      const { baseStats, name } = boss;
+      spawnQueue.unshift({
+        type: "tank",
+        delaySeconds: 0,
+        upgrades: waveUpgrades,
+        boss: {
+          name,
+          health: bossHealthForWave(boss, currentWave),
+          speed: baseStats.speed,
+          size: baseStats.size,
+          healthLoss: baseStats.healthLoss,
+          reward: baseStats.reward,
+        },
+      });
+    }
   };
 
   const syncWave = () => {
@@ -179,7 +219,18 @@ export const createWaveSystem = ({
         getNextEnemyId,
         nextSpawn.type,
         nextSpawn.upgrades,
-        nextSpawn.pathIndex
+        nextSpawn.pathIndex,
+        nextSpawn.boss
+          ? {
+              name: nextSpawn.boss.name,
+              health: nextSpawn.boss.health,
+              speed: nextSpawn.boss.speed,
+              size: nextSpawn.boss.size,
+              healthLoss: nextSpawn.boss.healthLoss,
+              reward: nextSpawn.boss.reward,
+              isBoss: true,
+            }
+          : undefined
       );
       spawnQueueIndex += 1;
     }

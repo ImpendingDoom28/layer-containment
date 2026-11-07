@@ -338,5 +338,17 @@
       ],
       "totalEnemies": 42
     }
-  ]
+  ],
+  "boss": {
+    "name": "Colossus",
+    "everyNthWave": 4,
+    "baseStats": {
+      "health": 1000,
+      "speed": 0.6,
+      "size": 1.4,
+      "healthLoss": 5,
+      "reward": 250
+    },
+    "hpGrowthPerAppearance": 1.5
+  }
 }

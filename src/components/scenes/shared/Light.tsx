@@ -24,8 +24,20 @@ import { isSoftwareRenderer } from "../../../core/utils/isSoftwareRenderer";
 const SHADOW_BOX_MARGIN = 8;
 const SHADOW_MAP_SIZE = 2048;
 
+// Sky cyan dimmed down from `scene-water-emissive`, so up-facing surfaces pick
+// up the same tint the skybox horizon carries; the ground bounce stays a
+// neutral mid-gray.
+const HEMISPHERE_SKY_COLOR = "#2b6f80";
+const HEMISPHERE_GROUND_COLOR = "#4a4a52";
+const RIM_LIGHT_COLOR = "#7fb4ff";
+
 /**
- * Scene lighting: a dim ambient fill, the key light, and a weak back light.
+ * Scene lighting: a hemisphere fill, the key light, and a cool rim light.
+ *
+ * The hemisphere light replaces a flat ambient: its cyan-tinted sky term
+ * shades up-facing surfaces toward the skybox horizon while the gray ground
+ * term keeps undersides neutral, so the fill has direction instead of
+ * flattening everything.
  *
  * The key light is the only shadow caster. Its shadow map is a fixed-size
  * ortho box over the level board (sized from the level store's grid), so the
@@ -33,6 +45,10 @@ const SHADOW_MAP_SIZE = 2048;
  * toggleable in Settings → Quality; they are auto-disabled on software (CPU)
  * WebGL renderers (SwiftShader / llvmpipe — headless CI), where the shadow
  * pass would starve the main thread the same way a fullscreen bloom pass does.
+ *
+ * The rim light sits on the far side of the board from the default camera
+ * and casts no shadow: it grazes the back/top edges of towers and enemies
+ * with a dim cool blue, silhouetting them against the dark sky.
  */
 export const Light: FC = () => {
   const shadowsEnabled = useSettingsStore(shadowsEnabledSelector);
@@ -70,7 +86,9 @@ export const Light: FC = () => {
 
   return (
     <>
-      <ambientLight intensity={0.45} />
+      <hemisphereLight
+        args={[HEMISPHERE_SKY_COLOR, HEMISPHERE_GROUND_COLOR, 0.55]}
+      />
       <directionalLight
         ref={shadowLightRef}
         name="shadow-light"
@@ -87,7 +105,11 @@ export const Light: FC = () => {
         shadow-bias={-0.0004}
         shadow-normalBias={0.02}
       />
-      <directionalLight position={[-10, 5, -5]} intensity={0.3} />
+      <directionalLight
+        position={[-6, 9, -14]}
+        intensity={0.45}
+        color={RIM_LIGHT_COLOR}
+      />
     </>
   );
 };

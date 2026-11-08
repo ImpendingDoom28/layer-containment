@@ -8,6 +8,7 @@ import { GUIDebugInfo } from "../gui/GUIDebugInfo";
 import { DeadZoneDisc } from "./effects/DeadZoneDisc";
 import { RangeRing } from "./effects/RangeRing";
 import { TowerFireFX } from "./effects/TowerFireFX";
+import { registerTowerIdleAnimation } from "./effects/towerIdleRig";
 import { TowerModel } from "./TowerModel";
 import { Vector3D } from "../../core/types/utils";
 import { getCssColorValue } from "../ui/lib/cssUtils";
@@ -102,14 +103,27 @@ export const Tower: FC<TowerProps> = memo(
     // zero margin (no grace band) is safe and keeps it from being culled.
     useFrustumCulling(groupRef, isPreview ? 0 : FRUSTUM_CULLING_MARGIN);
 
+    // The tower's idle-animation registration cleanup (registered once the
+    // model loads, unregistered on unmount via the null callback below).
+    const idleCleanupRef = useRef<(() => void) | null>(null);
+
     // Report the model's rotating turret node to the system (it swings it
-    // toward the target in its per-frame update). The preview tower is
-    // decorative and never fires, so it does not register a node.
+    // toward the target in its per-frame update) and register the tower with
+    // the shared idle-animation driver. The preview tower is decorative and
+    // never fires, so it registers neither.
     const onModelReady = useCallback(
       (object: Object3D | null) => {
         if (isPreview || !tower) return;
+        idleCleanupRef.current?.();
+        idleCleanupRef.current = null;
+        if (object == null) {
+          turretNodeRef.current = null;
+          barrelNodeRef.current = null;
+          onTurretNode?.(tower.id, null);
+          return;
+        }
         const turret =
-          object != null && tower.muzzle?.turretNode != null
+          tower.muzzle?.turretNode != null
             ? object.getObjectByName(tower.muzzle.turretNode)
             : undefined;
         const node = turret ?? null;
@@ -119,6 +133,7 @@ export const Tower: FC<TowerProps> = memo(
             ? node.getObjectByName(tower.muzzle.barrelNode) ?? null
             : null;
         onTurretNode?.(tower.id, node);
+        idleCleanupRef.current = registerTowerIdleAnimation(tower, object);
       },
       [isPreview, tower, onTurretNode]
     );

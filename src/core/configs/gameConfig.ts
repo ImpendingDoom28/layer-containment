@@ -85,6 +85,7 @@ const towerConfigSchema: z.ZodType<TowerConfig> = z.object({
   description: z.string(),
   model: towerModelSchema,
   muzzle: towerMuzzleSchema,
+  idleNode: z.string().optional(),
   topShape: z.enum(["cone", "sphere", "cylinder", "flat", "coil"]).optional(),
   bodyWidthScale: z.number().optional(),
   topScale: z.number().optional(),

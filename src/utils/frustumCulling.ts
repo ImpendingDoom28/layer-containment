@@ -161,16 +161,33 @@ export const computeBoundingRadius = (object: Object3D): number => {
 const TRANSFORM_FLOATS_PER_NODE = 10;
 
 /**
+ * `userData` flag marking a subtree whose local transforms are always in
+ * gentle perpetual motion (a tower's idle-animation top node: the scan/bob
+ * pivot and everything under it, including the firing recoil's barrel). Its
+ * displacement is bounded to a few centimeters — far inside the culling
+ * hysteresis margin — so the staleness snapshot excludes it; otherwise the
+ * idle motion would re-trigger the bounding-box walk every frame.
+ * `captureTransformSnapshot` and `isTransformSnapshotStale` skip flagged
+ * subtrees identically, so the flat index sequences stay aligned.
+ */
+export const FRUSTUM_CULL_SNAPSHOT_EXCLUDE = "frustumCullSnapshotExclude";
+
+const isSnapshotExcluded = (o: Object3D): boolean =>
+  o.userData?.[FRUSTUM_CULL_SNAPSHOT_EXCLUDE] === true;
+
+/**
  * Captures the local transforms of `object`'s *descendants* (never `object`
  * itself — its position moves the whole sphere and is re-read every frame,
  * and its rotation leaves the bounding sphere intact, see
  * `computeBoundingRadius`) as a flat pre-order sequence, 10 floats per node:
  * position, quaternion, scale. Allocated only when a re-measure happens,
- * which is rare.
+ * which is rare. Subtrees flagged `FRUSTUM_CULL_SNAPSHOT_EXCLUDE` are
+ * skipped.
  */
 export const captureTransformSnapshot = (object: Object3D): Float64Array => {
   const values: number[] = [];
   const walk = (o: Object3D): void => {
+    if (isSnapshotExcluded(o)) return;
     const p = o.position,
       q = o.quaternion,
       s = o.scale;
@@ -197,6 +214,7 @@ export const isTransformSnapshotStale = (
   let i = 0;
   const walk = (o: Object3D): void => {
     if (stale) return;
+    if (isSnapshotExcluded(o)) return;
     if (i + TRANSFORM_FLOATS_PER_NODE > snapshot.length) {
       stale = true;
       return;

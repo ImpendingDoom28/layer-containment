@@ -170,6 +170,12 @@ export type TowerConfig = {
   model: TowerModelSpec;
   /** The rotating turret node and its rest muzzle (the shot origin). */
   muzzle: TowerMuzzleSpec;
+  /**
+   * The decorative top node the idle animation scans and bobs for a tower
+   * without a firing turret (the relay's "Pulse_Array"). Towers with a
+   * `muzzle.turretNode` animate that node instead.
+   */
+  idleNode?: string;
 
   topShape?: "cone" | "sphere" | "cylinder" | "flat" | "coil";
   bodyWidthScale?: number;

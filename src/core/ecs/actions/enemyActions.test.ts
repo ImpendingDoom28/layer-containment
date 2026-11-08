@@ -22,6 +22,7 @@ import { useLevelStore } from "../../stores/useLevelStore";
 import type { Enemy, EnemyConfig, EnemyType } from "../../types/game";
 import { runEnemyDeathSystem } from "../systems/enemyDeathSystem";
 import { runEnemySplitSystem } from "../systems/enemySplitSystem";
+import { SPLITTER_DEATH_PREBURST_SECONDS } from "../../../constants/enemyLocomotion";
 import { GameEvent } from "../../types/enums/events";
 import { gameEvents } from "../../../utils/eventEmitter";
 import {
@@ -133,7 +134,8 @@ describe("enemyActions", () => {
     let nextChildId = 100;
     actions.spawnEnemy(splitterEnemy(1, 100));
     actions.damageEnemy(1, 100);
-    runEnemyDeathSystem(testWorld);
+    runEnemyDeathSystem(testWorld, 0);
+    runEnemyDeathSystem(testWorld, SPLITTER_DEATH_PREBURST_SECONDS);
     runEnemySplitSystem(testWorld, () => nextChildId++);
 
     // The parent is gone; every remaining enemy is a split child, and all of
@@ -438,8 +440,15 @@ describe("enemyActions.getRemainingEnemyCount (wave-end clarity)", () => {
     expect(actions.getLivingEnemyCount()).toBe(0);
     expect(actions.getRemainingEnemyCount()).toBe(1);
 
-    // The death system settles the kill: parent destroyed, split pending.
-    runEnemyDeathSystem(testWorld);
+    // The first pass stamps the pre-burst window: the dead splitter lingers
+    // (still counted) while the squash-stretch anticipation plays.
+    runEnemyDeathSystem(testWorld, 0);
+    expect(actions.getLivingEnemyCount()).toBe(0);
+    expect(actions.getRemainingEnemyCount()).toBe(1);
+
+    // The window elapses; the death system settles the kill: parent
+    // destroyed, split pending.
+    runEnemyDeathSystem(testWorld, SPLITTER_DEATH_PREBURST_SECONDS);
     expect(actions.getLivingEnemyCount()).toBe(0);
     expect(actions.getRemainingEnemyCount()).toBe(1);
 
@@ -449,14 +458,18 @@ describe("enemyActions.getRemainingEnemyCount (wave-end clarity)", () => {
     expect(children.length).toBeGreaterThanOrEqual(2);
     expect(actions.getRemainingEnemyCount()).toBe(children.length);
 
-    // Killing the children leaves pending deaths until they are settled.
+    // Killing the children leaves pending deaths until they are settled. The
+    // children are splitters too, so their deaths also get the pre-burst
+    // window: the first pass stamps them, the second settles them.
     for (const child of children) {
       actions.damageEnemy(child.id, child.maxHealth + 1);
     }
     expect(actions.getLivingEnemyCount()).toBe(0);
     expect(actions.getRemainingEnemyCount()).toBe(children.length);
 
-    runEnemyDeathSystem(testWorld);
+    runEnemyDeathSystem(testWorld, 0);
+    expect(actions.getRemainingEnemyCount()).toBe(children.length);
+    runEnemyDeathSystem(testWorld, SPLITTER_DEATH_PREBURST_SECONDS + 0.05);
     // Only now is the field actually cleared up.
     expect(actions.getRemainingEnemyCount()).toBe(0);
     expect(actions.getLivingEnemyCount()).toBe(0);
@@ -469,7 +482,7 @@ describe("enemyActions.getRemainingEnemyCount (wave-end clarity)", () => {
     actions.damageEnemy(20, 100);
     expect(actions.getRemainingEnemyCount()).toBe(1);
 
-    runEnemyDeathSystem(testWorld);
+    runEnemyDeathSystem(testWorld, 0);
     expect(actions.getRemainingEnemyCount()).toBe(0);
   });
 });

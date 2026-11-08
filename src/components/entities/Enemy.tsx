@@ -51,6 +51,7 @@ import { HitFlash } from "./effects/HitFlash";
 import { MedicHealBurstEffect } from "./effects/MedicHealBurstEffect";
 import { SlowEffect } from "./effects/SlowEffect";
 import { UpgradeEffect } from "./effects/UpgradeEffect";
+import { EnemyLocomotion } from "./EnemyLocomotion";
 import { EnemyModel } from "./EnemyModel";
 
 type EnemyProps = {
@@ -271,7 +272,26 @@ export const Enemy: FC<EnemyProps> = memo(
     useFrame((state, delta) => {
       const live = entity.get(EnemyState);
       const pos = entity.get(Position);
-      if (!live || !pos || live.health <= 0) return;
+      if (!live || !pos) return;
+
+      // Dead splitter in its pre-burst window: the ECS holds the entity back
+      // for the squash-stretch anticipation before the split and the burst,
+      // so drive the body scale here instead of mirroring motion.
+      if (live.health <= 0) {
+        // A dead enemy never reaches the flash decay below — clear any
+        // in-flight flash from the killing blow so the marker doesn't linger
+        // through a squash-stretch anticipation, and hide the empty health
+        // bar so it doesn't hover over the wind-up. The squash itself is
+        // driven by the `EnemyLocomotion` wrapper from the entity's
+        // locomotion trait.
+        if (hitFlashRef.current > 0) {
+          hitFlashRef.current = 0;
+          flashMaterial.opacity = 0;
+          if (hitMarkerRef.current) hitMarkerRef.current.visible = false;
+        }
+        if (healthBarRef.current) healthBarRef.current.visible = false;
+        return;
+      }
 
       // The movement system already advanced the position and facing; this
       // frame just mirrors both onto the mesh (allocation-free via scratch
@@ -403,27 +423,30 @@ export const Enemy: FC<EnemyProps> = memo(
             the hit marker — a hidden clone of the body's own shape re-pointed
             at the per-enemy flash material — so the marker is automatically
             model-shaped (the Wraith gets a Wraith-shaped one) with no
-            per-model support. */}
+            per-model support. EnemyLocomotion animates the whole body (model
+            or fallback alike) from the entity's locomotion trait. */}
         <group position={[0, size / 2, 0]}>
-          <HitFlash
-            markerRef={hitMarkerRef}
-            flashMaterial={flashMaterial}
-            body={
-              <EnemyModel
-                type={snapshot.type}
-                size={size}
-                fallback={
-                  <mesh
-                    castShadow
-                    receiveShadow
-                    scale={[size, size, size]}
-                    geometry={sharedUnitSphere}
-                    material={getEnemyBodyMaterial(snapshot.color)}
-                  />
-                }
-              />
-            }
-          />
+          <EnemyLocomotion entity={entity}>
+            <HitFlash
+              markerRef={hitMarkerRef}
+              flashMaterial={flashMaterial}
+              body={
+                <EnemyModel
+                  type={snapshot.type}
+                  size={size}
+                  fallback={
+                    <mesh
+                      castShadow
+                      receiveShadow
+                      scale={[size, size, size]}
+                      geometry={sharedUnitSphere}
+                      material={getEnemyBodyMaterial(snapshot.color)}
+                    />
+                  }
+                />
+              }
+            />
+          </EnemyLocomotion>
         </group>
 
         {/* Health bar - faces the camera, billboarded by hand in useFrame so

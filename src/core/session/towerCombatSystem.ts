@@ -285,7 +285,16 @@ export const createTowerCombatSystem = (
       // the fire gate below; when the render layer has registered the turret
       // node, the same yaw is mirrored onto it so the mesh matches the gate.
 
-      const currentYaw = turretYaws.get(tower.id) ?? 0;
+      // While the tower is idle the view layer's idle scan has drifted the
+      // turret node's yaw away from the stored logical yaw, so the first aim
+      // step of a fresh target acquisition starts from the node's *visible*
+      // yaw (with a registered node that equals the stored yaw while aiming,
+      // so this is a no-op mid-target). Without a registered node the stored
+      // logical yaw is the only source of truth.
+      const registeredNode = turretNodes.get(tower.id);
+      const currentYaw = registeredNode
+        ? registeredNode.rotation.y
+        : (turretYaws.get(tower.id) ?? 0);
       let desiredYaw = currentYaw;
       let steppedYaw = currentYaw;
       if (pickedTarget) {
@@ -297,9 +306,8 @@ export const createTowerCombatSystem = (
         );
         steppedYaw = stepYaw(currentYaw, desiredYaw, frame.deltaSeconds);
         turretYaws.set(tower.id, steppedYaw);
-        const node = turretNodes.get(tower.id);
-        if (node) {
-          node.rotation.y = steppedYaw;
+        if (registeredNode) {
+          registeredNode.rotation.y = steppedYaw;
         }
       }
 

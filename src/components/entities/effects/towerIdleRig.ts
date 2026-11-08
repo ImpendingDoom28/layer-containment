@@ -145,8 +145,17 @@ export const unregisterTowerIdleAnimation = (towerId: number): void => {
   const rig = idleRigs.get(towerId);
   if (!rig) return;
   idleRigs.delete(towerId);
-  if (rig.topNode) delete rig.topNode.userData[FRUSTUM_CULL_SNAPSHOT_EXCLUDE];
-  for (const { material } of rig.emissives) material.dispose();
+  if (rig.topNode) {
+    // Restore the animated baseline before cleanup so a later re-registration
+    // (e.g. the tower's model being re-fitted) captures the model's rest pose
+    // instead of a mid-scan / mid-bob pose.
+    rig.topNode.position.y = rig.restY;
+    delete rig.topNode.userData[FRUSTUM_CULL_SNAPSHOT_EXCLUDE];
+  }
+  for (const { material, base } of rig.emissives) {
+    material.emissiveIntensity = base;
+    material.dispose();
+  }
 };
 
 /**

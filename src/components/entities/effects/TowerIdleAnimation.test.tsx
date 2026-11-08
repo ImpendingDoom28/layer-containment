@@ -228,6 +228,30 @@ describe("registerTowerIdleAnimation", () => {
     unregister();
   });
 
+  it("restores the rest pose on unregister so a re-registration captures the true baseline", () => {
+    const { group, turret: top, emissiveMesh } = makeModel();
+    const unregister = registerTowerIdleAnimation(tower(7), group);
+    const rig = getTowerIdleRigs().get(7)!;
+    // Drive the rig to a mid-animation pose (bob + breathing).
+    updateTowerIdleRig(rig, 1, false, false);
+    const clone = emissiveMesh.material as MeshStandardMaterial;
+    expect(top.position.y).not.toBe(1);
+    expect(clone.emissiveIntensity).not.toBe(1);
+
+    unregister();
+    expect(top.position.y).toBe(1);
+    expect(clone.emissiveIntensity).toBe(1);
+
+    // Re-registering after the restore captures the model's true rest pose
+    // again, not the mid-animation pose.
+    const unregister2 = registerTowerIdleAnimation(tower(7), group);
+    expect(getTowerIdleRigs().get(7)!.restY).toBe(1);
+    expect(
+      getTowerIdleRigs().get(7)!.emissives[0].base
+    ).toBe(1);
+    unregister2();
+  });
+
   it("converts the bob amplitude into model-local units via the model fit scale", () => {
     const { group } = makeModel();
     registerTowerIdleAnimation(tower(7), group);

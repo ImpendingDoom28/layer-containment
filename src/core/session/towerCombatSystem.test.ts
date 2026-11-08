@@ -21,6 +21,7 @@ import type {
 import {
   TOWER_TURN_LAMBDA,
   createTowerCombatSystem,
+  normalizeAngleDelta,
   type TowerCombatSystem,
 } from "./towerCombatSystem";
 
@@ -293,6 +294,33 @@ describe("createTowerCombatSystem turret aim", () => {
     enemyActions(testWorld).removeEnemy(1);
     tick(2);
     expect(combat.hasTowerTarget(tower.id)).toBe(false);
+  });
+
+  it("starts a fresh aim from the node's visible yaw when an idle scan has drifted it", () => {
+    // The stored logical yaw is 0 (no target yet), but the view layer's idle
+    // scan has drifted the visible turret node's yaw in the meantime.
+    const node = registerTurretNode();
+    node.rotation.y = 0.4;
+
+    enemyActions(testWorld).spawnEnemy(makeEnemy(1)); // (0.5, 0): 90 deg away
+    tick(1);
+
+    // The first aim step must start from the visible yaw (0.4), not the
+    // stored logical yaw (0) — stepping from 0.4 eases a shorter remaining
+    // arc toward the 90 deg target, so the result sits closer to 0.4 than a
+    // step from 0 would. The mesh never snaps on target acquisition.
+    const expectedFromVisible =
+      0.4 +
+      normalizeAngleDelta(Math.PI / 2 - 0.4) *
+        (1 - Math.exp(-TOWER_TURN_LAMBDA * 1));
+    expect(node.rotation.y).toBeCloseTo(expectedFromVisible, 6);
+    const expectedFromStored =
+      0 + normalizeAngleDelta(Math.PI / 2) * (1 - Math.exp(-TOWER_TURN_LAMBDA * 1));
+    expect(Math.abs(node.rotation.y - expectedFromVisible)).toBeLessThan(
+      Math.abs(node.rotation.y - expectedFromStored)
+    );
+    // The fire gate reads the same stepped value, so gate and mesh agree.
+    expect(combat.getTurretYaw(tower.id)).toBeCloseTo(node.rotation.y, 6);
   });
 
   it("eases the turret toward the target across frames", () => {

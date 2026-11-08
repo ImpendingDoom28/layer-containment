@@ -6,7 +6,7 @@ import type { Entity } from "koota";
 import { getDeathSquashScale } from "../../constants/enemyLocomotion";
 import { useSimulationClock } from "../../core/contexts/SimulationClockContext";
 import { useReducedMotion } from "../../core/hooks/useReducedMotion";
-import { EnemyState } from "../../core/ecs/traits/enemy";
+import { EnemyState, requestEnemyDeath } from "../../core/ecs/traits/enemy";
 import { EnemyLocomotion as EnemyLocomotionTrait } from "../../core/ecs/traits/locomotion";
 
 type EnemyLocomotionProps = {
@@ -58,12 +58,20 @@ export const EnemyLocomotion: FC<EnemyLocomotionProps> = memo(
 
       // Death anticipation: the ECS keeps the dead entity for the pre-burst
       // window, so drive the squash-stretch here instead of the idle motion.
+      // The start time comes from the death request's stamp once the death
+      // system has processed the kill, so the animation and the ECS hold can
+      // never drift apart by a frame; the local ref covers the one frame
+      // between the killing blow and the stamp.
       if (spec.deathPreburstSeconds > 0) {
         const live = entity.get(EnemyState);
         if (live && live.health <= 0) {
           deathAnimStartRef.current ??= time;
-          const progress =
-            (time - deathAnimStartRef.current) / spec.deathPreburstSeconds;
+          const requestedAt = entity.get(requestEnemyDeath)?.requestedAt;
+          const start =
+            requestedAt != null && requestedAt >= 0
+              ? requestedAt
+              : deathAnimStartRef.current;
+          const progress = (time - start) / spec.deathPreburstSeconds;
           const { y, xz } = getDeathSquashScale(progress);
           group.scale.set(xz, y, xz);
           return;

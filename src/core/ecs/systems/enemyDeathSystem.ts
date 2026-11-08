@@ -21,7 +21,7 @@ import { splitRequest } from "../traits/split";
  */
 export const runEnemyDeathSystem = (
   world: World,
-  simulationTimeSeconds = 0
+  simulationTimeSeconds: number
 ): void => {
   const pending = world.query(IsEnemy, EnemyState, requestEnemyDeath);
   if (pending.length === 0) return;

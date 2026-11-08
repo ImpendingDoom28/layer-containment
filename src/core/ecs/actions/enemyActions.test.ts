@@ -482,7 +482,7 @@ describe("enemyActions.getRemainingEnemyCount (wave-end clarity)", () => {
     actions.damageEnemy(20, 100);
     expect(actions.getRemainingEnemyCount()).toBe(1);
 
-    runEnemyDeathSystem(testWorld);
+    runEnemyDeathSystem(testWorld, 0);
     expect(actions.getRemainingEnemyCount()).toBe(0);
   });
 });

@@ -12,6 +12,7 @@ import { useFrame } from "@react-three/fiber";
 import {
   BoxGeometry,
   Matrix4,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   Quaternion,
   SphereGeometry,
@@ -64,7 +65,11 @@ type EnemyProps = {
 // enemies under fire) was the last significant per-frame cost.
 const sharedUnitSphere = new SphereGeometry(1, 12, 12);
 const sharedUnitBox = new BoxGeometry(1, 1, 1);
-const sharedBlackBarMaterial = new MeshStandardMaterial({
+// Health-bar materials are unlit (basic, not standard): the bar is HUD
+// chrome floating over the battlefield, so it must stay at full brightness
+// from every camera angle — a lit material goes near-black whenever no
+// light hits the camera-facing side.
+const sharedBlackBarMaterial = new MeshBasicMaterial({
   color: getCssColorValue("scene-black"),
 });
 
@@ -83,11 +88,11 @@ const getEnemyBodyMaterial = (color: string): MeshStandardMaterial => {
 };
 
 const healthTierMaterials = {
-  high: new MeshStandardMaterial({ color: getCssColorValue("scene-hp-high") }),
-  medium: new MeshStandardMaterial({
+  high: new MeshBasicMaterial({ color: getCssColorValue("scene-hp-high") }),
+  medium: new MeshBasicMaterial({
     color: getCssColorValue("scene-hp-medium"),
   }),
-  low: new MeshStandardMaterial({ color: getCssColorValue("scene-hp-low") }),
+  low: new MeshBasicMaterial({ color: getCssColorValue("scene-hp-low") }),
 } as const;
 
 const HEALTH_TIER_ORDER = ["low", "medium", "high"] as const;

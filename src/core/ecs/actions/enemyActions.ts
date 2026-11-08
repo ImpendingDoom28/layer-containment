@@ -23,6 +23,14 @@ import {
 } from "../traits/enemy";
 import { Position, type PositionData } from "../traits/position";
 import { FacingDirection } from "../traits/facing";
+import {
+  EnemyLocomotion,
+  type EnemyLocomotionData,
+} from "../traits/locomotion";
+import {
+  ENEMY_LOCOMOTION,
+  getLocomotionPhase,
+} from "../../../constants/enemyLocomotion";
 import { splitRequest } from "../traits/split";
 import { isBase } from "../traits/base";
 import { damageRequest } from "../traits/damage";
@@ -91,6 +99,23 @@ const enemyToPosition = (enemyData: Enemy): PositionData => ({
   y: 0,
   z: enemyData.z,
 });
+
+/**
+ * Resolves the type's animation recipe (`ENEMY_LOCOMOTION`) onto the entity:
+ * the bob amplitude ratio becomes world units now that the size is known,
+ * and the phase is seeded by the enemy id so a wave never animates in sync.
+ */
+const enemyToLocomotion = (enemyData: Enemy): EnemyLocomotionData => {
+  const spec = ENEMY_LOCOMOTION[enemyData.type];
+  return {
+    phase: getLocomotionPhase(enemyData.id),
+    bobAmplitude: spec.bobAmplitudeRatio * enemyData.size,
+    bobFrequency: spec.bobFrequency,
+    breathAmplitude: spec.breathAmplitude,
+    breathFrequency: spec.breathFrequency,
+    deathPreburstSeconds: spec.deathPreburstSeconds,
+  };
+};
 
 /** Settle a kill: reward, kill count, ENEMY_KILLED. Private to the enemy domain. */
 const handleEnemyDeath = (world: World, enemy: Enemy): void => {
@@ -179,6 +204,7 @@ export const enemyActions = createActions((world) => ({
     entity.set(EnemyMotion, enemyToMotion(enemyData));
     entity.set(Position, enemyToPosition(enemyData));
     entity.set(FacingDirection, enemyToFacing(enemyData));
+    entity.add(EnemyLocomotion(enemyToLocomotion(enemyData)));
 
     enemyEntitiesById.set(enemyData.id, entity);
 

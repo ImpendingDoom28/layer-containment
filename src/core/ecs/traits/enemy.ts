@@ -21,10 +21,10 @@ export const IsBoss = trait();
 
 /**
  * Raised by damage/arrival when an enemy dies. The EnemyDeathSystem consumes
- * it — immediately for most enemies, but a splitter is held back for a short
- * pre-burst window (`requestedAt` records the simulation timestamp of the
- * killing blow; `-1` = not yet stamped) so the renderer can play the
- * squash-stretch anticipation before the split and the burst.
+ * it — immediately for most enemies, but an enemy whose `EnemyLocomotion`
+ * carries a `deathPreburstSeconds` window is held back for its squash-stretch
+ * anticipation (`requestedAt` records the simulation timestamp of the killing
+ * blow; `-1` = not yet stamped) before the split and the burst.
  */
 export const requestEnemyDeath = trait({ requestedAt: -1 });
 

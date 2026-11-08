@@ -458,14 +458,18 @@ describe("enemyActions.getRemainingEnemyCount (wave-end clarity)", () => {
     expect(children.length).toBeGreaterThanOrEqual(2);
     expect(actions.getRemainingEnemyCount()).toBe(children.length);
 
-    // Killing the children leaves pending deaths until they are settled.
+    // Killing the children leaves pending deaths until they are settled. The
+    // children are splitters too, so their deaths also get the pre-burst
+    // window: the first pass stamps them, the second settles them.
     for (const child of children) {
       actions.damageEnemy(child.id, child.maxHealth + 1);
     }
     expect(actions.getLivingEnemyCount()).toBe(0);
     expect(actions.getRemainingEnemyCount()).toBe(children.length);
 
-    runEnemyDeathSystem(testWorld);
+    runEnemyDeathSystem(testWorld, 0);
+    expect(actions.getRemainingEnemyCount()).toBe(children.length);
+    runEnemyDeathSystem(testWorld, SPLITTER_DEATH_PREBURST_SECONDS + 0.05);
     // Only now is the field actually cleared up.
     expect(actions.getRemainingEnemyCount()).toBe(0);
     expect(actions.getLivingEnemyCount()).toBe(0);

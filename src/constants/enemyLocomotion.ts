@@ -1,7 +1,13 @@
-// Idle/death locomotion animation tunables for enemy bodies. All animations
-// are driven on the pause-aware simulation clock, so they freeze with the
-// game and speed up with the time scale. Durations are in simulation
-// seconds, frequencies in rad/s, amplitudes in radians or scale units.
+import type { EnemyType } from "../core/types/game";
+
+// Idle/death locomotion animation tunables for enemy bodies. The spec map
+// below is the single place that decides *which* enemy type animates *how*;
+// `spawnEnemy` resolves it onto the entity's `EnemyLocomotion` trait, and the
+// renderer (`EnemyLocomotion`) animates purely from that trait — neither side
+// knows about enemy types or models. All animations are driven on the
+// pause-aware simulation clock, so they freeze with the game and speed up
+// with the time scale. Durations are in simulation seconds, frequencies in
+// rad/s, amplitudes in world units or scale units.
 
 // Wraith (fast): the drone hovers, bobbing vertically as it travels.
 export const WRAITH_BOB_AMPLITUDE_RATIO = 0.12; // of the body radius
@@ -17,6 +23,44 @@ export const SPLITTER_BREATH_FREQUENCY = 3.4;
 // and the shrapnel land together).
 export const SPLITTER_DEATH_PREBURST_SECONDS = 0.28;
 
+/**
+ * Per-type animation recipe. `bobAmplitudeRatio` is relative to the body
+ * radius (resolved to world units at spawn, when the size is known); the rest
+ * are absolute. A zero channel is off.
+ */
+export type EnemyLocomotionSpec = {
+  bobAmplitudeRatio: number;
+  bobFrequency: number;
+  breathAmplitude: number;
+  breathFrequency: number;
+  deathPreburstSeconds: number;
+};
+
+const NO_LOCOMOTION: EnemyLocomotionSpec = {
+  bobAmplitudeRatio: 0,
+  bobFrequency: 0,
+  breathAmplitude: 0,
+  breathFrequency: 0,
+  deathPreburstSeconds: 0,
+};
+
+export const ENEMY_LOCOMOTION: Record<EnemyType, EnemyLocomotionSpec> = {
+  basic: NO_LOCOMOTION,
+  medic: NO_LOCOMOTION,
+  tank: NO_LOCOMOTION,
+  fast: {
+    ...NO_LOCOMOTION,
+    bobAmplitudeRatio: WRAITH_BOB_AMPLITUDE_RATIO,
+    bobFrequency: WRAITH_BOB_FREQUENCY,
+  },
+  splitter: {
+    ...NO_LOCOMOTION,
+    breathAmplitude: SPLITTER_BREATH_AMPLITUDE,
+    breathFrequency: SPLITTER_BREATH_FREQUENCY,
+    deathPreburstSeconds: SPLITTER_DEATH_PREBURST_SECONDS,
+  },
+};
+
 const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
 const easeInCubic = (t: number): number => t * t * t;
 
@@ -24,12 +68,12 @@ const easeInCubic = (t: number): number => t * t * t;
 const SQUASH_PHASE = 0.45;
 
 /**
- * Squash-stretch scale curve for the splitter's death anticipation.
- * Progress 0→0.45 squashes the colony down and wide (winding up), 0.45→1
- * stretches it up and narrow (launching into the burst). Returns scale
- * multipliers for the vertical axis and both horizontal axes.
+ * Squash-stretch scale curve for a death anticipation. Progress 0→0.45
+ * squashes the body down and wide (winding up), 0.45→1 stretches it up and
+ * narrow (launching into the burst). Returns scale multipliers for the
+ * vertical axis and both horizontal axes.
  */
-export const getSplitterDeathSquashScale = (
+export const getDeathSquashScale = (
   progress: number
 ): { y: number; xz: number } => {
   const p = Math.min(1, Math.max(0, progress));

@@ -1,5 +1,4 @@
-import { useCallback, useRef, memo, type FC, type ReactNode } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useCallback, memo, type FC, type ReactNode } from "react";
 import {
   Box3,
   Euler,
@@ -15,15 +14,6 @@ import {
   ENEMY_MODELS,
   type EnemyModelSpec,
 } from "../../constants/models";
-import {
-  getLocomotionPhase,
-  SPLITTER_BREATH_AMPLITUDE,
-  SPLITTER_BREATH_FREQUENCY,
-  WRAITH_BOB_AMPLITUDE_RATIO,
-  WRAITH_BOB_FREQUENCY,
-} from "../../constants/enemyLocomotion";
-import { useSimulationClock } from "../../core/contexts/SimulationClockContext";
-import { useReducedMotion } from "../../core/hooks/useReducedMotion";
 import type { EnemyType } from "../../core/types/game";
 import { ModelLoader } from "./ModelLoader";
 
@@ -81,8 +71,6 @@ type EnemyModelProps = {
   type: EnemyType;
   size: number;
   fallback: ReactNode;
-  /** Stable per-enemy seed (the enemy id) so a wave never animates in sync. */
-  seed?: number;
 };
 
 /**
@@ -91,64 +79,22 @@ type EnemyModelProps = {
  * component only supplies the shared `prepare` transform (scale to the body's
  * diameter, recenter, and yaw the nose into the direction of travel). `size`
  * is the enemy body radius; `type` picks the model from `ENEMY_MODELS`.
- *
- * On top of the static model it runs the per-type idle locomotion on the
- * pause-aware simulation clock: the Wraith drone hover-bobs and the
- * Splitter's cell colony breathes (a ±3% scale loop), so the bodies read as
- * creatures rather than static assets. All idle motion is skipped under
- * `prefers-reduced-motion`.
  */
 export const EnemyModel: FC<EnemyModelProps> = memo(
-  ({ type, size, fallback, seed = 0 }) => {
+  ({ type, size, fallback }) => {
     const model: EnemyModelSpec = ENEMY_MODELS[type];
-    const { getSimulationTime } = useSimulationClock();
-    const reducedMotion = useReducedMotion();
     const prepare = useCallback(
       (source: Object3D) =>
         prepareModel(source, size * 2, ENEMY_MODEL_ROTATION_Y),
       [size]
     );
-
-    const locomotionRef = useRef<Group>(null);
-    // Under reduced motion the rest pose is restored once per toggle instead
-    // of rewriting the same values every frame.
-    const reducedMotionResetRef = useRef(false);
-    const phase = getLocomotionPhase(seed);
-
-    useFrame((state) => {
-      const group = locomotionRef.current;
-      if (!group) return;
-      if (reducedMotion) {
-        if (!reducedMotionResetRef.current) {
-          reducedMotionResetRef.current = true;
-          group.position.y = 0;
-          group.scale.setScalar(1);
-        }
-        return;
-      }
-      reducedMotionResetRef.current = false;
-      const time = getSimulationTime(state.clock.elapsedTime);
-      if (type === "fast") {
-        group.position.y =
-          Math.sin(time * WRAITH_BOB_FREQUENCY + phase) *
-          size *
-          WRAITH_BOB_AMPLITUDE_RATIO;
-      } else if (type === "splitter") {
-        group.scale.setScalar(
-          1 + Math.sin(time * SPLITTER_BREATH_FREQUENCY + phase) * SPLITTER_BREATH_AMPLITUDE
-        );
-      }
-    });
-
     return (
-      <group ref={locomotionRef}>
-        <ModelLoader
-          url={model.url}
-          node={model.node}
-          prepare={prepare}
-          fallback={fallback}
-        />
-      </group>
+      <ModelLoader
+        url={model.url}
+        node={model.node}
+        prepare={prepare}
+        fallback={fallback}
+      />
     );
   }
 );

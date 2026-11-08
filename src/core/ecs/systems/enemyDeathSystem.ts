@@ -1,8 +1,8 @@
 import type { World } from "koota";
 
-import { SPLITTER_DEATH_PREBURST_SECONDS } from "../../../constants/enemyLocomotion";
 import { enemyActions } from "../actions/enemyActions";
 import { EnemyState, IsEnemy, requestEnemyDeath } from "../traits/enemy";
+import { EnemyLocomotion } from "../traits/locomotion";
 import { Position } from "../traits/position";
 import { EnemyMotion } from "../traits/enemy";
 import { splitRequest } from "../traits/split";
@@ -10,11 +10,14 @@ import { splitRequest } from "../traits/split";
 /**
  * Consumes `requestEnemyDeath` via the enemy domain's own `removeEnemy`
  * action. A splitter raises a `splitRequest` first so the EnemySplitSystem
- * can spawn its death-children from the captured death location — but only
- * after a short pre-burst window: the killing blow stamps the request with
- * the simulation time and the dead colony lingers (frozen, still counted by
+ * can spawn its death-children from the captured death location.
+ *
+ * An enemy whose `EnemyLocomotion` carries a `deathPreburstSeconds` window is
+ * held back first: the killing blow stamps the request with the simulation
+ * time and the dead enemy lingers (frozen, still counted by
  * `getRemainingEnemyCount`) while the renderer plays the squash-stretch
- * anticipation, so the burst and the shrapnel land at the end of the squash.
+ * anticipation, so the burst (and the split shrapnel) land at the end of the
+ * squash.
  */
 export const runEnemyDeathSystem = (
   world: World,
@@ -28,7 +31,9 @@ export const runEnemyDeathSystem = (
     const state = entity.get(EnemyState);
     if (!state) continue;
 
-    if (state.split) {
+    const preburstSeconds =
+      entity.get(EnemyLocomotion)?.deathPreburstSeconds ?? 0;
+    if (preburstSeconds > 0) {
       const request = entity.get(requestEnemyDeath);
       if (!request) continue;
       if (request.requestedAt < 0) {
@@ -37,10 +42,7 @@ export const runEnemyDeathSystem = (
         });
         continue;
       }
-      if (
-        simulationTimeSeconds - request.requestedAt <
-        SPLITTER_DEATH_PREBURST_SECONDS
-      ) {
+      if (simulationTimeSeconds - request.requestedAt < preburstSeconds) {
         continue;
       }
     }

@@ -2,14 +2,17 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { enemyActions } from "../actions/enemyActions";
 import { IsEnemy, requestEnemyDeath } from "../traits/enemy";
+import { EnemyLocomotion } from "../traits/locomotion";
 import { splitRequest } from "../traits/split";
 import { testWorld } from "../world";
 import { useGameStore } from "../../stores/useGameStore";
 import { useLevelStore } from "../../stores/useLevelStore";
 import type { Enemy } from "../../types/game";
 import {
-  getSplitterDeathSquashScale,
+  ENEMY_LOCOMOTION,
+  getDeathSquashScale,
   SPLITTER_DEATH_PREBURST_SECONDS,
+  WRAITH_BOB_AMPLITUDE_RATIO,
 } from "../../../constants/enemyLocomotion";
 
 import { runEnemyDeathSystem } from "./enemyDeathSystem";
@@ -57,6 +60,32 @@ describe("runEnemyDeathSystem", () => {
     expect(testWorld.query(splitRequest).length).toBe(0);
   });
 
+  it("resolves the type's locomotion spec onto the entity at spawn", () => {
+    const actions = enemyActions(testWorld);
+
+    const wraith = actions.spawnEnemy({ ...baseEnemy(7), type: "fast" });
+    const wraithLocomotion = wraith.get(EnemyLocomotion);
+    expect(wraithLocomotion?.bobAmplitude).toBeCloseTo(
+      0.4 * WRAITH_BOB_AMPLITUDE_RATIO
+    );
+    expect(wraithLocomotion?.deathPreburstSeconds).toBe(0);
+
+    const splitter = actions.spawnEnemy(splitterEnemy(8));
+    const splitterLocomotion = splitter.get(EnemyLocomotion);
+    expect(splitterLocomotion?.deathPreburstSeconds).toBe(
+      SPLITTER_DEATH_PREBURST_SECONDS
+    );
+    expect(splitterLocomotion?.breathAmplitude).toBe(
+      ENEMY_LOCOMOTION.splitter.breathAmplitude
+    );
+
+    const plain = actions.spawnEnemy(baseEnemy(9));
+    const plainLocomotion = plain.get(EnemyLocomotion);
+    expect(plainLocomotion?.bobAmplitude).toBe(0);
+    expect(plainLocomotion?.breathAmplitude).toBe(0);
+    expect(plainLocomotion?.deathPreburstSeconds).toBe(0);
+  });
+
   it("holds a dead splitter back for the pre-burst window, then splits", () => {
     const actions = enemyActions(testWorld);
     actions.spawnEnemy(splitterEnemy(1));
@@ -99,14 +128,14 @@ describe("runEnemyDeathSystem", () => {
   });
 });
 
-describe("getSplitterDeathSquashScale", () => {
+describe("getDeathSquashScale", () => {
   it("starts and stays within sane scale bounds", () => {
-    const start = getSplitterDeathSquashScale(0);
+    const start = getDeathSquashScale(0);
     expect(start.y).toBeCloseTo(1);
     expect(start.xz).toBeCloseTo(1);
 
     for (let i = 0; i <= 20; i += 1) {
-      const { y, xz } = getSplitterDeathSquashScale(i / 20);
+      const { y, xz } = getDeathSquashScale(i / 20);
       expect(y).toBeGreaterThan(0.5);
       expect(y).toBeLessThan(1.5);
       expect(xz).toBeGreaterThan(0.5);
@@ -115,21 +144,21 @@ describe("getSplitterDeathSquashScale", () => {
   });
 
   it("squashes down and wide mid-window, then stretches up at the end", () => {
-    const mid = getSplitterDeathSquashScale(0.45);
+    const mid = getDeathSquashScale(0.45);
     expect(mid.y).toBeLessThan(1);
     expect(mid.xz).toBeGreaterThan(1);
 
-    const end = getSplitterDeathSquashScale(1);
+    const end = getDeathSquashScale(1);
     expect(end.y).toBeGreaterThan(1);
     expect(end.xz).toBeLessThan(1);
   });
 
   it("clamps out-of-range progress", () => {
-    expect(getSplitterDeathSquashScale(-1)).toEqual(
-      getSplitterDeathSquashScale(0)
+    expect(getDeathSquashScale(-1)).toEqual(
+      getDeathSquashScale(0)
     );
-    expect(getSplitterDeathSquashScale(2)).toEqual(
-      getSplitterDeathSquashScale(1)
+    expect(getDeathSquashScale(2)).toEqual(
+      getDeathSquashScale(1)
     );
   });
 });

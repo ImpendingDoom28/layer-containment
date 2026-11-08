@@ -31,7 +31,7 @@ import {
 const SCAN_AMPLITUDE = 0.28;
 const SCAN_SPEED = 0.35;
 const SCAN_FADE_IN = 1.2;
-const BOB_AMPLITUDE = 0.02;
+const BOB_AMPLITUDE = 0.01;
 const BOB_SPEED = 1.1;
 const BREATH_AMPLITUDE = 0.25;
 const BREATH_SPEED = 0.9;
@@ -84,6 +84,18 @@ describe("updateTowerIdleRig", () => {
     );
   });
 
+  it("starts the scan from the middle of its range when a tower goes idle", () => {
+    const { rig, top } = makeRig(1);
+    rig.heldYaw = 0.9;
+    // A tower that just went idle (idleSince = simTime) sweeps at zero
+    // offset — the middle of its range — not from an end of the swing.
+    updateTowerIdleRig(rig, 5, false, false);
+    expect(top.rotation.y).toBeCloseTo(0.9, 6);
+    // And it eases out from there as the sweep progresses.
+    updateTowerIdleRig(rig, 5 + 0.5, false, false);
+    expect(top.rotation.y).not.toBeCloseTo(0.9, 6);
+  });
+
   it("phase-offsets towers so no two move in lockstep", () => {
     const a = makeRig(1);
     const b = makeRig(2);
@@ -113,12 +125,13 @@ describe("updateTowerIdleRig", () => {
     // First idle frame: the fade-in starts, so the yaw holds the last aim.
     updateTowerIdleRig(rig, 10, false, false);
     expect(top.rotation.y).toBeCloseTo(0.3, 6);
-    // After the fade-in the scan sweeps at full amplitude around the held yaw.
-    updateTowerIdleRig(rig, 10 + SCAN_FADE_IN + 1, false, false);
+    // After the fade-in the scan sweeps at full amplitude around the held yaw,
+    // timed from the moment the tower went idle (t − idleSince), so the sweep
+    // starts from the middle (zero offset) of its range.
+    const idleFor = SCAN_FADE_IN + 1;
+    updateTowerIdleRig(rig, 10 + idleFor, false, false);
     expect(top.rotation.y).toBeCloseTo(
-      0.3 +
-        SCAN_AMPLITUDE *
-          Math.sin(SCAN_SPEED * (10 + SCAN_FADE_IN + 1) + rig.phase),
+      0.3 + SCAN_AMPLITUDE * Math.sin(SCAN_SPEED * idleFor),
       6
     );
   });
@@ -140,12 +153,12 @@ describe("updateTowerIdleRig", () => {
     // the adopted aim (zero sweep amplitude)…
     updateTowerIdleRig(rig, 7, false, false);
     expect(top.rotation.y).toBeCloseTo(0.8, 6);
-    // …and after the fade-in the scan sweeps at full amplitude around it.
-    updateTowerIdleRig(rig, 7 + SCAN_FADE_IN + 0.5, false, false);
+    // …and after the fade-in the scan sweeps at full amplitude around it,
+    // measured from the idle start (t − idleSince).
+    const idleFor = SCAN_FADE_IN + 0.5;
+    updateTowerIdleRig(rig, 7 + idleFor, false, false);
     expect(top.rotation.y).toBeCloseTo(
-      0.8 +
-        SCAN_AMPLITUDE *
-          Math.sin(SCAN_SPEED * (7 + SCAN_FADE_IN + 0.5) + rig.phase),
+      0.8 + SCAN_AMPLITUDE * Math.sin(SCAN_SPEED * idleFor),
       6
     );
   });

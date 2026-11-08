@@ -11,13 +11,16 @@ import { FRUSTUM_CULL_SNAPSHOT_EXCLUDE } from "../../../utils/frustumCulling";
 // Scan: the top piece (the aiming turret, or the relay's pulse array)
 // sweeps ±SCAN_AMPLITUDE around its held aim at SCAN_SPEED — a full sweep
 // takes ~18 s. The scan fades in over SCAN_FADE_IN after the tower goes
-// idle so a turret that just lost its target does not snap sideways.
+// idle so a turret that just lost its target does not snap sideways, and it
+// is timed from the moment the tower goes idle, so a freshly-idle tower
+// always starts its sweep from the middle (the held yaw), never from an
+// end of the swing.
 const SCAN_AMPLITUDE = 0.28;
 const SCAN_SPEED = 0.35;
 const SCAN_FADE_IN = 1.2;
 // Bob: the top piece floats ±BOB_WORLD_AMPLITUDE (world units, converted to
 // the node's model-local units at registration) at BOB_SPEED (~6 s period).
-const BOB_WORLD_AMPLITUDE = 0.02;
+const BOB_WORLD_AMPLITUDE = 0.01;
 const BOB_SPEED = 1.1;
 // Breathing: the tower's emissive "energy" material pulses ±BREATH_AMPLITUDE
 // around its rest intensity (~7 s period).
@@ -201,7 +204,14 @@ export const updateTowerIdleRig = (
   }
   if (rig.idleSince === null) rig.idleSince = simTime;
   const fadeIn = Math.min(1, (simTime - rig.idleSince) / SCAN_FADE_IN);
+  // The sweep is timed from the moment the tower went idle, so the scan
+  // starts from the middle of its range (the held yaw) rather than an
+  // arbitrary point on the wave — a tower that just finished aiming or was
+  // just placed eases out from the center. Towers still desync because they
+  // go idle at different simulation times (no per-tower phase needed here).
   topNode.rotation.y =
     rig.heldYaw +
-    SCAN_AMPLITUDE * fadeIn * Math.sin(SCAN_SPEED * simTime + rig.phase);
+    SCAN_AMPLITUDE *
+      fadeIn *
+      Math.sin(SCAN_SPEED * (simTime - rig.idleSince));
 };

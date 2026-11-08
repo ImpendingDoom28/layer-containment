@@ -45,6 +45,6 @@ export const getSplitterDeathSquashScale = (
   return { y: 0.62 + 0.78 * t, xz: 1.22 - 0.5 * t };
 };
 
-/** Deterministic per-enemy animation phase so a wave never bob in sync. */
+/** Deterministic per-enemy animation phase so a wave never bobs in sync. */
 export const getLocomotionPhase = (seed: number): number =>
   (seed * 2.399963) % (Math.PI * 2);

@@ -282,6 +282,14 @@ export const Enemy: FC<EnemyProps> = memo(
       // for the squash-stretch anticipation before the split and the burst,
       // so drive the body scale here instead of mirroring motion.
       if (live.health <= 0) {
+        // A dead enemy never reaches the flash decay below — clear any
+        // in-flight flash from the killing blow so the marker doesn't
+        // linger through the splitter's squash-stretch.
+        if (hitFlashRef.current > 0) {
+          hitFlashRef.current = 0;
+          flashMaterial.opacity = 0;
+          if (hitMarkerRef.current) hitMarkerRef.current.visible = false;
+        }
         if (live.split && bodyRef.current) {
           // The empty health bar would hover over the wind-up — hide it.
           if (healthBarRef.current) healthBarRef.current.visible = false;

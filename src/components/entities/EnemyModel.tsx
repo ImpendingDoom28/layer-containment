@@ -124,6 +124,9 @@ export const EnemyModel: FC<EnemyModelProps> = memo(
 
     const locomotionRef = useRef<Group>(null);
     const platesRef = useRef<WobblingPlate[]>([]);
+    // Under reduced motion the rest pose is restored once per toggle instead
+    // of rewriting the same values every frame.
+    const reducedMotionResetRef = useRef(false);
     const phase = getLocomotionPhase(seed);
 
     // The armor plates live inside the prepared model clone, so collect them
@@ -155,14 +158,18 @@ export const EnemyModel: FC<EnemyModelProps> = memo(
       const group = locomotionRef.current;
       if (!group) return;
       if (reducedMotion) {
-        group.position.y = 0;
-        group.scale.setScalar(1);
-        for (const plate of platesRef.current) {
-          plate.node.rotation.x = plate.baseRotationX;
-          plate.node.rotation.z = plate.baseRotationZ;
+        if (!reducedMotionResetRef.current) {
+          reducedMotionResetRef.current = true;
+          group.position.y = 0;
+          group.scale.setScalar(1);
+          for (const plate of platesRef.current) {
+            plate.node.rotation.x = plate.baseRotationX;
+            plate.node.rotation.z = plate.baseRotationZ;
+          }
         }
         return;
       }
+      reducedMotionResetRef.current = false;
       const time = getSimulationTime(state.clock.elapsedTime);
       if (type === "fast") {
         group.position.y =

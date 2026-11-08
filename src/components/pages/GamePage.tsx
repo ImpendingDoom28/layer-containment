@@ -19,6 +19,7 @@ import { HUDGameMenu } from "../hud/HUDGameMenu";
 import { HUDControlsIntroModal } from "../hud/HUDControlsIntroModal";
 import { HUDUpgradePanel } from "../hud/HUDUpgradePanel";
 import { HUDPauseOverlay } from "../hud/HUDPauseOverlay";
+import { HUDBaseDamageFlash } from "../hud/HUDBaseDamageFlash";
 import { HUDMobileControls } from "../hud/HUDMobileControls";
 import { HUDLoading } from "../hud/HUDLoading";
 import { KeyboardHandlingSystem } from "../systems/KeyboardHandlingSystem";
@@ -308,6 +309,10 @@ export const GamePage: FC<GamePageProps> = ({
       {isGameReady && !isMenu && (
         <>
           <HUDPauseOverlay gameStatus={gameStatus} />
+
+          {/* Red-tinted vignette flash when the base takes damage (paired
+              with the base-damage camera punch). Self-gates on health drops. */}
+          <HUDBaseDamageFlash />
 
           <HudAnimationSystem />
 

@@ -26,6 +26,13 @@ import {
   UI_ACTION_DENIED_CAMERA_SHAKE_SCALE_Y,
 } from "../../../constants/uiActionDeniedFeedback";
 import {
+  CAMERA_PUNCH_BASE_DAMAGE_AMPLITUDE,
+  CAMERA_PUNCH_BASE_DAMAGE_DURATION_MS,
+  CAMERA_PUNCH_EXPLOSION_AMPLITUDE,
+  CAMERA_PUNCH_EXPLOSION_DURATION_MS,
+  CAMERA_PUNCH_ORIGIN,
+} from "../../../constants/cameraPunch";
+import {
   PAUSE_FOV_BASE,
   PAUSE_FOV_DAMP_LAMBDA,
   PAUSE_FOV_MIN,
@@ -38,12 +45,32 @@ import {
   useSettingsStore,
 } from "../../../core/stores/useSettingsStore";
 import { useReducedMotion } from "../../../core/hooks/useReducedMotion";
+import {
+  flatCombatPointToWorldPosition,
+  getPlanetRadius,
+} from "../../../utils/planetSurfaceMapping";
 
 // Reusable vectors to avoid GC pressure in useFrame
 const forwardVector = new Vector3();
 const rightVector = new Vector3();
 const moveVector = new Vector3();
 const upVector = new Vector3(0, 1, 0);
+
+/** The pending micro punch: amplitude, remaining time, and kick direction. */
+type PunchState = {
+  amplitude: number;
+  durationMs: number;
+  remainingMs: number;
+  /** Unit vector toward the event (the kick pulls the camera at it). */
+  direction: Vector3;
+};
+
+const PUNCH_IDLE: PunchState = {
+  amplitude: 0,
+  durationMs: 0,
+  remainingMs: 0,
+  direction: new Vector3(),
+};
 
 // Mirrors R3F's click-distance threshold: below it a pointerdown+up counts as
 // a genuine click, beyond it as a drag.
@@ -84,6 +111,10 @@ export const GameCamera = ({
   const initialized = useRef(false);
   const shakeOffsetRef = useRef(new Vector3());
   const shakeRemainingMsRef = useRef(0);
+  // The micro punch (explosion / base damage) is one pending kick at a time:
+  // a new event replaces whatever is still decaying, like the denied shake.
+  const punchRef = useRef<PunchState>(PUNCH_IDLE);
+  const punchOffsetRef = useRef(new Vector3());
   const fovRef = useRef(PAUSE_FOV_BASE);
   const keybindings = useSettingsStore(keybindingsSelector);
   const controlScheme = useSettingsStore(controlSchemeSelector);
@@ -105,6 +136,83 @@ export const GameCamera = ({
     );
     return unsubscribe;
   }, []);
+
+  // Micro punches for big events: a tiny kick when an AoE / rocket
+  // explosion lands, a slightly stronger one when the base takes damage.
+  // Both reuse the denied-shake decay in useFrame (a linear fade of a single
+  // directional kick) at a much smaller amplitude. Skipped under
+  // `prefers-reduced-motion`, like the denial shake.
+  useEffect(() => {
+    const flatToWorld = (
+      data: { worldPosition?: { x: number; z: number } } | undefined
+    ): Vector3 => {
+      // Flat-field (x, z) mapped onto the planet surface: the kick aims at
+      // where the blast actually is. No position (base damage) falls back to
+      // the field center, which on a spherical field is straight up.
+      const origin = data?.worldPosition ?? CAMERA_PUNCH_ORIGIN;
+      return flatCombatPointToWorldPosition(
+        origin.x,
+        origin.z,
+        0.15,
+        getPlanetRadius(gridSize, tileSize)
+      );
+    };
+
+    const startPunch = (amplitude: number, durationMs: number, target: Vector3) => {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        return;
+      }
+      const current = camera.position;
+      const dx = target.x - current.x;
+      const dy = target.y - current.y;
+      const dz = target.z - current.z;
+      const len = Math.hypot(dx, dy, dz);
+      const punch = punchRef.current;
+      punch.amplitude = amplitude;
+      punch.durationMs = durationMs;
+      punch.remainingMs = durationMs;
+      if (len < 1e-6) {
+        punch.direction.set(0, 0, 0);
+      } else {
+        punch.direction.set(dx / len, dy / len, dz / len);
+      }
+    };
+
+    const onExplosion = (data: {
+      worldPosition?: { x: number; z: number };
+    }) => {
+      startPunch(
+        CAMERA_PUNCH_EXPLOSION_AMPLITUDE,
+        CAMERA_PUNCH_EXPLOSION_DURATION_MS,
+        flatToWorld(data)
+      );
+    };
+
+    const onBaseDamage = (data: {
+      worldPosition?: { x: number; z: number };
+    }) => {
+      startPunch(
+        CAMERA_PUNCH_BASE_DAMAGE_AMPLITUDE,
+        CAMERA_PUNCH_BASE_DAMAGE_DURATION_MS,
+        flatToWorld(data)
+      );
+    };
+
+    const unsubscribeExplosion = gameEvents.on(
+      GameEvent.PROJECTILE_EXPLOSION,
+      onExplosion
+    );
+    const unsubscribeBaseDamage = gameEvents.on(
+      GameEvent.BASE_DAMAGE_TAKEN,
+      onBaseDamage
+    );
+    return () => {
+      unsubscribeExplosion();
+      unsubscribeBaseDamage();
+      punchRef.current = PUNCH_IDLE;
+      punchOffsetRef.current.set(0, 0, 0);
+    };
+  }, [camera, gridSize, tileSize]);
 
   // On-screen D-pad (mobile control scheme): the pad holds/releases camera
   // moves through the event emitter, the same source of truth as physical
@@ -346,6 +454,7 @@ export const GameCamera = ({
     }
 
     camera.position.sub(shakeOffsetRef.current);
+    camera.position.sub(punchOffsetRef.current);
 
     const { forward, backward, left, right, up, down } = moveState.current;
 
@@ -402,9 +511,10 @@ export const GameCamera = ({
       Math.min(maxHeight, camera.position.y)
     );
 
+    const decMs = delta * MS_PER_SECOND;
+
     const shakeMs = shakeRemainingMsRef.current;
     if (shakeMs > 0) {
-      const decMs = delta * MS_PER_SECOND;
       shakeRemainingMsRef.current = Math.max(0, shakeMs - decMs);
       const fade = shakeMs / UI_ACTION_DENIED_CAMERA_SHAKE_DURATION_MS;
       const amp = UI_ACTION_DENIED_CAMERA_SHAKE_AMPLITUDE * fade;
@@ -424,7 +534,28 @@ export const GameCamera = ({
       shakeOffsetRef.current.set(0, 0, 0);
     }
 
+    // The micro punch (explosion / base damage): the same decaying offset as
+    // the denied shake, but a single directional kick toward the event
+    // instead of a jitter. The offset is negative — the camera is pulled
+    // toward the blast on the way in and springs back over the remaining
+    // window, so the punch reads as a hit, not a drift.
+    const punch = punchRef.current;
+    if (punch.remainingMs > 0) {
+      punch.remainingMs = Math.max(0, punch.remainingMs - decMs);
+      const fade =
+        punch.durationMs > 0 ? punch.remainingMs / punch.durationMs : 0;
+      const amp = -punch.amplitude * fade;
+      punchOffsetRef.current.set(
+        punch.direction.x * amp,
+        punch.direction.y * amp,
+        punch.direction.z * amp
+      );
+    } else {
+      punchOffsetRef.current.set(0, 0, 0);
+    }
+
     camera.position.add(shakeOffsetRef.current);
+    camera.position.add(punchOffsetRef.current);
 
     camera.rotation.order = "YXZ";
     camera.rotation.y = rotation.current.yaw;

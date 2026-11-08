@@ -10,6 +10,17 @@ export const GameEvent = {
   ENEMY_DODGED: "enemy_dodged",
   ENEMY_REACHED_END: "enemy_reached_end",
   PROJECTILE_HIT: "projectile_hit",
+  /**
+   * An AoE or BRL rocket detonated (its area damage resolved). Carries the
+   * flat-field hit position so the micro camera punch kicks toward it.
+   */
+  PROJECTILE_EXPLOSION: "projectile_explosion",
+  /**
+   * The player's base took damage (enemies reaching the end of a path).
+   * Carries the merged damage amount and the flat-field damage position so
+   * the stronger, red-tinted micro camera punch can kick toward it.
+   */
+  BASE_DAMAGE_TAKEN: "base_damage_taken",
   WAVE_STARTED: "wave_started",
   GAME_OVER: "game_over",
   GAME_WON: "game_won",

@@ -19,8 +19,6 @@ import {
   getLocomotionPhase,
   SPLITTER_BREATH_AMPLITUDE,
   SPLITTER_BREATH_FREQUENCY,
-  TANKEE_PLATE_WOBBLE_AMPLITUDE,
-  TANKEE_PLATE_WOBBLE_FREQUENCY,
   WRAITH_BOB_AMPLITUDE_RATIO,
   WRAITH_BOB_FREQUENCY,
 } from "../../constants/enemyLocomotion";
@@ -79,17 +77,6 @@ const prepareModel = (
   return group;
 };
 
-// The Tankee's armor plates are the Cube109 mesh children of its chassis; the
-// wobble rocks them around their rest rotation so they read as loose plating.
-const TANKEE_PLATE_NAME_PATTERN = /^Cube109/;
-
-type WobblingPlate = {
-  node: Object3D;
-  baseRotationX: number;
-  baseRotationZ: number;
-  phase: number;
-};
-
 type EnemyModelProps = {
   type: EnemyType;
   size: number;
@@ -106,10 +93,10 @@ type EnemyModelProps = {
  * is the enemy body radius; `type` picks the model from `ENEMY_MODELS`.
  *
  * On top of the static model it runs the per-type idle locomotion on the
- * pause-aware simulation clock: the Wraith drone hover-bobs, the Tankee's
- * armor plates wobble on their mounts, and the Splitter's cell colony
- * breathes (a ±3% scale loop), so the bodies read as creatures rather than
- * static assets. All idle motion is skipped under `prefers-reduced-motion`.
+ * pause-aware simulation clock: the Wraith drone hover-bobs and the
+ * Splitter's cell colony breathes (a ±3% scale loop), so the bodies read as
+ * creatures rather than static assets. All idle motion is skipped under
+ * `prefers-reduced-motion`.
  */
 export const EnemyModel: FC<EnemyModelProps> = memo(
   ({ type, size, fallback, seed = 0 }) => {
@@ -123,36 +110,10 @@ export const EnemyModel: FC<EnemyModelProps> = memo(
     );
 
     const locomotionRef = useRef<Group>(null);
-    const platesRef = useRef<WobblingPlate[]>([]);
     // Under reduced motion the rest pose is restored once per toggle instead
     // of rewriting the same values every frame.
     const reducedMotionResetRef = useRef(false);
     const phase = getLocomotionPhase(seed);
-
-    // The armor plates live inside the prepared model clone, so collect them
-    // (with their rest rotations) each time the loaded object (re)appears.
-    const onObjectReady = useCallback(
-      (object: Object3D | null) => {
-        const plates: WobblingPlate[] = [];
-        if (object && type === "tank") {
-          object.traverse((child) => {
-            if (
-              (child as Partial<Mesh>).isMesh &&
-              TANKEE_PLATE_NAME_PATTERN.test(child.name)
-            ) {
-              plates.push({
-                node: child,
-                baseRotationX: child.rotation.x,
-                baseRotationZ: child.rotation.z,
-                phase: plates.length * 1.7,
-              });
-            }
-          });
-        }
-        platesRef.current = plates;
-      },
-      [type]
-    );
 
     useFrame((state) => {
       const group = locomotionRef.current;
@@ -162,10 +123,6 @@ export const EnemyModel: FC<EnemyModelProps> = memo(
           reducedMotionResetRef.current = true;
           group.position.y = 0;
           group.scale.setScalar(1);
-          for (const plate of platesRef.current) {
-            plate.node.rotation.x = plate.baseRotationX;
-            plate.node.rotation.z = plate.baseRotationZ;
-          }
         }
         return;
       }
@@ -180,20 +137,6 @@ export const EnemyModel: FC<EnemyModelProps> = memo(
         group.scale.setScalar(
           1 + Math.sin(time * SPLITTER_BREATH_FREQUENCY + phase) * SPLITTER_BREATH_AMPLITUDE
         );
-      } else if (type === "tank") {
-        for (const plate of platesRef.current) {
-          plate.node.rotation.x =
-            plate.baseRotationX +
-            Math.sin(time * TANKEE_PLATE_WOBBLE_FREQUENCY + phase + plate.phase) *
-              TANKEE_PLATE_WOBBLE_AMPLITUDE;
-          plate.node.rotation.z =
-            plate.baseRotationZ +
-            Math.cos(
-              time * TANKEE_PLATE_WOBBLE_FREQUENCY * 0.8 + phase + plate.phase
-            ) *
-              TANKEE_PLATE_WOBBLE_AMPLITUDE *
-              0.7;
-        }
       }
     });
 
@@ -204,7 +147,6 @@ export const EnemyModel: FC<EnemyModelProps> = memo(
           node={model.node}
           prepare={prepare}
           fallback={fallback}
-          onObjectReady={onObjectReady}
         />
       </group>
     );

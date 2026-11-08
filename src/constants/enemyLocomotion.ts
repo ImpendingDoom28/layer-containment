@@ -7,10 +7,6 @@
 export const WRAITH_BOB_AMPLITUDE_RATIO = 0.12; // of the body radius
 export const WRAITH_BOB_FREQUENCY = 7;
 
-// Tankee (tank): the armor plates sit loose on the chassis and wobble.
-export const TANKEE_PLATE_WOBBLE_AMPLITUDE = 0.05; // radians (~3°)
-export const TANKEE_PLATE_WOBBLE_FREQUENCY = 5.5;
-
 // Splitter: the cell colony breathes like a creature (±3% scale).
 export const SPLITTER_BREATH_AMPLITUDE = 0.03;
 export const SPLITTER_BREATH_FREQUENCY = 3.4;

@@ -28,6 +28,7 @@ type GameSessionRuntimeContextValue = {
   InstancedProjectiles: ReactElement;
   fireProjectile: GameSessionRuntime["fireProjectile"];
   registerTurretNode: (towerId: number, node: Object3D | null) => void;
+  hasTowerTarget: (towerId: number) => boolean;
 };
 
 const GameSessionRuntimeContext =
@@ -102,9 +103,15 @@ export const GameSessionSystem: FC<GameSessionSystemProps> = ({
   }, -1);
 
   const registerTurretNode = session.registerTurretNode;
+  const hasTowerTarget = session.hasTowerTarget;
   const value = useMemo<GameSessionRuntimeContextValue>(
-    () => ({ InstancedProjectiles, fireProjectile, registerTurretNode }),
-    [InstancedProjectiles, fireProjectile, registerTurretNode]
+    () => ({
+      InstancedProjectiles,
+      fireProjectile,
+      registerTurretNode,
+      hasTowerTarget,
+    }),
+    [InstancedProjectiles, fireProjectile, registerTurretNode, hasTowerTarget]
   );
 
   return (

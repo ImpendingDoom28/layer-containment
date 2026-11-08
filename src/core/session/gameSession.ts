@@ -228,5 +228,6 @@ export const createGameSession = ({
     dispose,
     connectRuntime,
     registerTurretNode: towerCombat.registerTurretNode,
+    hasTowerTarget: towerCombat.hasTowerTarget,
   };
 };

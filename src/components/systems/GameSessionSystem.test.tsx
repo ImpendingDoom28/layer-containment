@@ -37,6 +37,7 @@ const createSession = () => {
     dispose: vi.fn(),
     connectRuntime: vi.fn(() => disconnectRuntime),
     registerTurretNode: vi.fn(),
+    hasTowerTarget: vi.fn(() => false),
   };
   return { session, disconnectRuntime };
 };

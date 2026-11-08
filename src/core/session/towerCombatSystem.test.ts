@@ -280,6 +280,21 @@ describe("createTowerCombatSystem turret aim", () => {
     expect(node.rotation.y).toBeCloseTo(Math.PI / 2, 2);
   });
 
+  it("reports the picked target for the idle-animation scan", () => {
+    // No enemy in range: the idle scan may take over the turret's yaw.
+    expect(combat.hasTowerTarget(tower.id)).toBe(false);
+    expect(combat.hasTowerTarget(999)).toBe(false);
+
+    enemyActions(testWorld).spawnEnemy(makeEnemy(1)); // (0.5, 0): in range
+    tick(1);
+    expect(combat.hasTowerTarget(tower.id)).toBe(true);
+
+    // Once the target is gone the sim releases the turret to the idle scan.
+    enemyActions(testWorld).removeEnemy(1);
+    tick(2);
+    expect(combat.hasTowerTarget(tower.id)).toBe(false);
+  });
+
   it("eases the turret toward the target across frames", () => {
     const node = registerTurretNode();
     enemyActions(testWorld).spawnEnemy(makeEnemy(1)); // (0.5, 0): 90 deg from rest

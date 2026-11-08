@@ -17,6 +17,7 @@ import {
   expandFrustum,
   isSphereVisible,
   isTransformSnapshotStale,
+  FRUSTUM_CULL_SNAPSHOT_EXCLUDE,
 } from "./frustumCulling";
 
 // Camera at the origin looking down -Z (three.js default orientation): the
@@ -229,5 +230,21 @@ describe("transform snapshot staleness", () => {
     group.rotation.y = 1;
     group.scale.set(2, 2, 2);
     expect(isTransformSnapshotStale(group, snapshot)).toBe(false);
+  });
+
+  it("skips subtrees flagged as perpetually animated (the tower idle tops)", () => {
+    const { group, a, b } = makeGroup();
+    // The idle-animation driver writes `a`'s transform every frame (scan +
+    // bob), so its subtree is excluded from the snapshot.
+    a.userData[FRUSTUM_CULL_SNAPSHOT_EXCLUDE] = true;
+    const snapshot = captureTransformSnapshot(group);
+
+    a.position.y += 0.01;
+    a.rotation.y += 0.3;
+    expect(isTransformSnapshotStale(group, snapshot)).toBe(false);
+
+    // A sibling subtree still under the snapshot is detected as usual.
+    b.position.x += 1;
+    expect(isTransformSnapshotStale(group, snapshot)).toBe(true);
   });
 });

@@ -81,6 +81,10 @@ export type TowerCombatSystem = {
   reset: () => void;
   /** The logical yaw a turret has eased toward so far (0 before the first swing). */
   getTurretYaw: (towerId: number) => number;
+  /** True while the tower has a live picked target and the aim pass is
+   *  driving its turret node, so the view layer's idle scan leaves the
+   *  node's yaw alone. */
+  hasTowerTarget: (towerId: number) => boolean;
   /** The render layer registers each turret's model node so the muzzle origin can
    *  be read from its world matrix; `null` unregisters (unmount / fallback). */
   registerTurretNode: (towerId: number, node: Object3D | null) => void;
@@ -128,6 +132,9 @@ export const createTowerCombatSystem = (
 
   const getTurretYaw = (towerId: number): number =>
     turretYaws.get(towerId) ?? 0;
+
+  const hasTowerTarget = (towerId: number): boolean =>
+    cachedTargets.get(towerId) != null;
 
   const registerTurretNode = (towerId: number, node: Object3D | null) => {
     if (node) {
@@ -469,5 +476,5 @@ export const createTowerCombatSystem = (
     });
   };
 
-  return { tick, reset, getTurretYaw, registerTurretNode };
+  return { tick, reset, getTurretYaw, hasTowerTarget, registerTurretNode };
 };

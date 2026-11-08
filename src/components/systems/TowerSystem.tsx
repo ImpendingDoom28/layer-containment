@@ -8,6 +8,7 @@ import type {
 import type { TileData } from "../../core/types/utils";
 import type { TilePlacementState } from "../../utils/tilePlacement";
 import { Tower } from "../entities/Tower";
+import { TowerIdleAnimation } from "../entities/effects/TowerIdleAnimation";
 import { GUITowerInfoPanel } from "../gui/GUITowerInfoPanel";
 import {
   tileSizeSelector,
@@ -46,7 +47,7 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     selectedTowerType,
     hoveredTilePlacementState,
   }) => {
-    const { registerTurretNode } = useGameSessionRuntime();
+    const { registerTurretNode, hasTowerTarget } = useGameSessionRuntime();
 
     const towerTypes = useGameStore(towerTypesSelector);
     const tileSize = useGameStore(tileSizeSelector);
@@ -103,6 +104,10 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
 
     return (
       <>
+        {/* One shared frame loop for every placed tower's idle motion
+            (scan / bob / emissive breathing); each Tower registers its rig
+            with the driver on model load. */}
+        <TowerIdleAnimation hasTowerTarget={hasTowerTarget} />
         <group name="towers">
           {towers.map((tower) => {
             const effectiveStats = combatStatsByTowerId.get(tower.id) ?? {

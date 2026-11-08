@@ -335,6 +335,7 @@
         "node": "Tower_Relay_ROOT",
         "url": "assets/models/tower_relay.glb"
       },
+      "idleNode": "Pulse_Array",
       "muzzle": {
         "muzzle": null
       },

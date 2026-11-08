@@ -35,6 +35,9 @@ export type GameSessionController = GameSession & {
   /** The render layer registers each turret's model node so the sim can mirror
    *  the logical aim onto it and read the muzzle from its world matrix. */
   registerTurretNode: (towerId: number, node: Object3D | null) => void;
+  /** True while the tower has a live target (the sim is driving its turret
+   *  node's yaw), so idle-animation passes leave the yaw alone. */
+  hasTowerTarget: (towerId: number) => boolean;
 };
 
 export type GameSessionDependencies = {

@@ -195,8 +195,8 @@ export const Skybox: FC<SkyboxProps> = memo(
     }, [starGeometry, skyMaterial, starMaterial]);
 
     useFrame((state) => {
-      starMaterial.uniforms.uTime.value = state.clock.elapsedTime;
-      starMaterial.uniforms.uPointScale.value =
+      starMaterial.uniforms["uTime"].value = state.clock.elapsedTime;
+      starMaterial.uniforms["uPointScale"].value =
         (state.size.height * state.gl.getPixelRatio()) /
         (2 *
           Math.tan(

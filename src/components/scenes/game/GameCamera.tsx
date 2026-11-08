@@ -65,12 +65,12 @@ type PunchState = {
   direction: Vector3;
 };
 
-const PUNCH_IDLE: PunchState = {
+const createIdlePunch = (): PunchState => ({
   amplitude: 0,
   durationMs: 0,
   remainingMs: 0,
   direction: new Vector3(),
-};
+});
 
 // Mirrors R3F's click-distance threshold: below it a pointerdown+up counts as
 // a genuine click, beyond it as a drag.
@@ -113,7 +113,7 @@ export const GameCamera = ({
   const shakeRemainingMsRef = useRef(0);
   // The micro punch (explosion / base damage) is one pending kick at a time:
   // a new event replaces whatever is still decaying, like the denied shake.
-  const punchRef = useRef<PunchState>(PUNCH_IDLE);
+  const punchRef = useRef<PunchState>(createIdlePunch());
   const punchOffsetRef = useRef(new Vector3());
   const fovRef = useRef(PAUSE_FOV_BASE);
   const keybindings = useSettingsStore(keybindingsSelector);
@@ -209,7 +209,8 @@ export const GameCamera = ({
     return () => {
       unsubscribeExplosion();
       unsubscribeBaseDamage();
-      punchRef.current = PUNCH_IDLE;
+      punchRef.current = createIdlePunch();
+      camera.position.sub(punchOffsetRef.current);
       punchOffsetRef.current.set(0, 0, 0);
     };
   }, [camera, gridSize, tileSize]);
@@ -536,15 +537,15 @@ export const GameCamera = ({
 
     // The micro punch (explosion / base damage): the same decaying offset as
     // the denied shake, but a single directional kick toward the event
-    // instead of a jitter. The offset is negative — the camera is pulled
-    // toward the blast on the way in and springs back over the remaining
-    // window, so the punch reads as a hit, not a drift.
+    // instead of a jitter. The camera is pulled toward the blast on the way
+    // in and springs back over the remaining window, so the punch reads as a
+    // hit, not a drift.
     const punch = punchRef.current;
     if (punch.remainingMs > 0) {
       punch.remainingMs = Math.max(0, punch.remainingMs - decMs);
       const fade =
         punch.durationMs > 0 ? punch.remainingMs / punch.durationMs : 0;
-      const amp = -punch.amplitude * fade;
+      const amp = punch.amplitude * fade;
       punchOffsetRef.current.set(
         punch.direction.x * amp,
         punch.direction.y * amp,

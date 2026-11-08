@@ -10,12 +10,7 @@ import {
 } from "../../core/stores/useGameStore";
 import type { HeldClose } from "../../core/hooks/useHeldClose";
 import { UIButton } from "../ui/buttons/UIButton";
-import {
-  UICard,
-  UICardContent,
-  UICardHeader,
-  UICardTitle,
-} from "../ui/UICard";
+import { UICard, UICardContent, UICardHeader, UICardTitle } from "../ui/UICard";
 import { UIConfirmModal } from "../ui/UIConfirmModal";
 import { UITypography } from "../ui/UITypography";
 import { cn } from "../ui/lib/twUtils";
@@ -81,7 +76,9 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
         {showSettings ? (
           <HUDSettings className="w-full" />
         ) : (
-          <UICard className={cn("h-full w-full bg-transparent", className)}>
+          <UICard
+            className={cn("flex h-full w-full bg-transparent", className)}
+          >
             <UICardHeader>
               <UICardTitle>
                 <UIButton
@@ -92,51 +89,72 @@ export const HUDGameMenu: FC<HUDGameMenuProps> = ({
                 >
                   <Icon name="ArrowLeft" />
                 </UIButton>
-                <UITypography variant="h4">
-                  {t("gameMenu.title")}
-                </UITypography>
+                <UITypography variant="h4">{t("gameMenu.title")}</UITypography>
               </UICardTitle>
             </UICardHeader>
             <UICardContent className="flex flex-col flex-1 min-h-0 gap-1 overflow-y-auto">
-              <UIButton
-                onClick={() => startClose(onResume)}
-                className="justify-between text-sm text-left group text-foreground"
-              >
-                <span className="transition-transform group-hover:translate-x-1">
-                  {t("gameMenu.continue")}
-                </span>
-                <Icon name="ArrowRight" size={16} className="transition-transform group-hover:translate-x-1" />
-              </UIButton>
-              <UIButton
-                onClick={() => setShowRestartConfirm(true)}
-                variant="secondary"
-                className="justify-between mt-2 text-sm text-left group text-foreground hover:border-primary/30"
-              >
-                <span className="transition-transform group-hover:translate-x-1">
-                  {t("gameMenu.restart")}
-                </span>
-                <Icon name="ArrowRight" color="muted" size={16} className="transition-transform group-hover:translate-x-1" />
-              </UIButton>
-              <UIButton
-                onClick={() => setShowSettings(true)}
-                variant="outline"
-                className="justify-between text-sm text-left group text-foreground hover:border-primary/30"
-              >
-                <span className="transition-transform group-hover:translate-x-1">
-                  {t("gameMenu.settings")}
-                </span>
-                <Icon name="ArrowRight" color="muted" size={16} className="transition-transform group-hover:translate-x-1" />
-              </UIButton>
-              <UIButton
-                onClick={() => setShowExitConfirm(true)}
-                variant="secondary"
-                className="justify-between text-sm text-left group text-foreground hover:border-primary/30"
-              >
-                <span className="transition-transform group-hover:translate-x-1">
-                  {t("gameMenu.goToMainMenu")}
-                </span>
-                <Icon name="ArrowRight" color="muted" size={16} className="transition-transform group-hover:translate-x-1" />
-              </UIButton>
+              <div className="flex flex-col h-full">
+                <div className="mt-auto flex flex-col">
+                  <UIButton
+                    onClick={() => startClose(onResume)}
+                    className="justify-between text-sm text-left group text-foreground"
+                  >
+                    <span className="transition-transform group-hover:translate-x-1">
+                      {t("gameMenu.continue")}
+                    </span>
+                    <Icon
+                      name="ArrowRight"
+                      size={16}
+                      className="transition-transform group-hover:translate-x-1"
+                    />
+                  </UIButton>
+                  <UIButton
+                    onClick={() => setShowRestartConfirm(true)}
+                    variant="ghost"
+                    className="justify-between text-sm text-left group text-foreground hover:border-primary/30"
+                  >
+                    <span className="transition-transform group-hover:translate-x-1">
+                      {t("gameMenu.restart")}
+                    </span>
+                    <Icon
+                      name="ArrowRight"
+                      color="muted"
+                      size={16}
+                      className="transition-transform group-hover:translate-x-1"
+                    />
+                  </UIButton>
+                  <UIButton
+                    onClick={() => setShowSettings(true)}
+                    variant="ghost"
+                    className="justify-between text-sm text-left group text-foreground hover:border-primary/30 mt-8"
+                  >
+                    <span className="transition-transform group-hover:translate-x-1">
+                      {t("gameMenu.settings")}
+                    </span>
+                    <Icon
+                      name="ArrowRight"
+                      color="muted"
+                      size={16}
+                      className="transition-transform group-hover:translate-x-1"
+                    />
+                  </UIButton>
+                  <UIButton
+                    onClick={() => setShowExitConfirm(true)}
+                    variant="ghost"
+                    className="justify-between text-sm text-left group text-foreground hover:border-primary/30"
+                  >
+                    <span className="transition-transform group-hover:translate-x-1">
+                      {t("gameMenu.goToMainMenu")}
+                    </span>
+                    <Icon
+                      name="ArrowRight"
+                      color="muted"
+                      size={16}
+                      className="transition-transform group-hover:translate-x-1"
+                    />
+                  </UIButton>
+                </div>
+              </div>
             </UICardContent>
           </UICard>
         )}

@@ -30,6 +30,12 @@ export const HUDBaseDamageFlash: FC = () => {
       // A drop: spike the flash (a higher hit doesn't change the flash — it
       // is a per-tick acknowledgment, not damage-scaled).
       lastHealthRef.current = baseHealth;
+      if (
+        window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ===
+        true
+      ) {
+        return;
+      }
       flashLevelRef.current = 1;
       const element = elementRef.current;
       if (element) {

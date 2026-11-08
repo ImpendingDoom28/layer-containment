@@ -56,6 +56,16 @@ export const SOUND_CONFIGS = defineSoundConfigs(
     [GameEvent.PROJECTILE_HIT]: {
       category: "sfx",
     },
+    // Visual-only micro camera punches (they reuse the denied-shake
+    // machinery, not audio); registered so the `GameEvent` map is complete.
+    [GameEvent.PROJECTILE_EXPLOSION]: {
+      category: "sfx",
+      spatial: false,
+    },
+    [GameEvent.BASE_DAMAGE_TAKEN]: {
+      category: "sfx",
+      spatial: false,
+    },
     [GameEvent.WAVE_STARTED]: {
       category: "sfx",
     },
@@ -137,6 +147,15 @@ export type AudioEventDataMap = {
     towerType: TowerType;
     projectileType: ProjectileType;
     worldPosition: WorldPosition;
+  };
+  projectile_explosion: {
+    projectileId: number;
+    towerType: TowerType;
+    worldPosition: WorldPosition;
+  };
+  base_damage_taken: {
+    amount: number;
+    worldPosition?: WorldPosition;
   };
   wave_started: {
     waveNumber: number;

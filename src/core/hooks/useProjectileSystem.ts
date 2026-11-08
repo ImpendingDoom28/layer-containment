@@ -72,6 +72,23 @@ export const useProjectileSystem = (enemyActions: EnemyActions) => {
           z: targetEnemy.z,
         },
       });
+      if (
+        (projectile.projectileType === "aoe" ||
+          projectile.projectileType === "rocket") &&
+        projectile.aoeRadius
+      ) {
+        // The detonation itself (not the single-target hit that triggers it):
+        // the micro camera punch listens to this and kicks toward the blast.
+        gameEvents.emit(GameEvent.PROJECTILE_EXPLOSION, {
+          projectileId: projectile.id,
+          towerType: projectile.towerType,
+          worldPosition: {
+            x: targetEnemy.x,
+            y: 0,
+            z: targetEnemy.z,
+          },
+        });
+      }
     },
     [damageEnemy, slowEnemy]
   );

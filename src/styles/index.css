@@ -416,6 +416,20 @@
   }
 }
 
+/*
+ * Base-damage feedback: the red-tinted half of the base-damage camera punch
+ * (see HUDBaseDamageFlash). A screen-edge vignette — the center of the field
+ * stays readable while the edges bleed red. The component spikes its
+ * opacity; the gradient shape is static.
+ */
+.base-damage-flash {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(239, 68, 68, 0) 55%,
+    rgba(239, 68, 68, 0.55) 100%
+  );
+}
+
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

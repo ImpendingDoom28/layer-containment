@@ -3,7 +3,7 @@ import type { SimulationFrame } from "./types";
 export type SimulationPipelineSystems = {
   applySlow: (simulationTimeSeconds: number) => void;
   applyEffects: () => void;
-  settleEnemyDeaths: () => void;
+  settleEnemyDeaths: (simulationTimeSeconds: number) => void;
   splitEnemies: () => void;
   moveEnemies: (frame: SimulationFrame) => void;
   healEnemies: (simulationTimeSeconds: number) => void;
@@ -25,7 +25,7 @@ export const runSimulationPipeline = (
     systems.healEnemies(frame.simulationTimeSeconds);
   }
   systems.applyEffects();
-  systems.settleEnemyDeaths();
+  systems.settleEnemyDeaths(frame.simulationTimeSeconds);
   systems.splitEnemies();
   systems.moveEnemies(frame);
   if (frame.canResolveGameplay) {

@@ -1,5 +1,6 @@
 import type { World } from "koota";
 
+import { SPLITTER_DEATH_PREBURST_SECONDS } from "../../../constants/enemyLocomotion";
 import { enemyActions } from "../actions/enemyActions";
 import { EnemyState, IsEnemy, requestEnemyDeath } from "../traits/enemy";
 import { Position } from "../traits/position";
@@ -9,9 +10,16 @@ import { splitRequest } from "../traits/split";
 /**
  * Consumes `requestEnemyDeath` via the enemy domain's own `removeEnemy`
  * action. A splitter raises a `splitRequest` first so the EnemySplitSystem
- * can spawn its death-children from the captured death location.
+ * can spawn its death-children from the captured death location — but only
+ * after a short pre-burst window: the killing blow stamps the request with
+ * the simulation time and the dead colony lingers (frozen, still counted by
+ * `getRemainingEnemyCount`) while the renderer plays the squash-stretch
+ * anticipation, so the burst and the shrapnel land at the end of the squash.
  */
-export const runEnemyDeathSystem = (world: World): void => {
+export const runEnemyDeathSystem = (
+  world: World,
+  simulationTimeSeconds = 0
+): void => {
   const pending = world.query(IsEnemy, EnemyState, requestEnemyDeath);
   if (pending.length === 0) return;
 
@@ -19,6 +27,23 @@ export const runEnemyDeathSystem = (world: World): void => {
   for (const entity of pending) {
     const state = entity.get(EnemyState);
     if (!state) continue;
+
+    if (state.split) {
+      const request = entity.get(requestEnemyDeath);
+      if (!request) continue;
+      if (request.requestedAt < 0) {
+        entity.set(requestEnemyDeath, {
+          requestedAt: simulationTimeSeconds,
+        });
+        continue;
+      }
+      if (
+        simulationTimeSeconds - request.requestedAt <
+        SPLITTER_DEATH_PREBURST_SECONDS
+      ) {
+        continue;
+      }
+    }
 
     const motion = entity.get(EnemyMotion);
     const position = entity.get(Position);

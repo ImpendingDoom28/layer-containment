@@ -19,7 +19,14 @@ export const IsEnemy = trait();
  */
 export const IsBoss = trait();
 
-export const requestEnemyDeath = trait();
+/**
+ * Raised by damage/arrival when an enemy dies. The EnemyDeathSystem consumes
+ * it — immediately for most enemies, but a splitter is held back for a short
+ * pre-burst window (`requestedAt` records the simulation timestamp of the
+ * killing blow; `-1` = not yet stamped) so the renderer can play the
+ * squash-stretch anticipation before the split and the burst.
+ */
+export const requestEnemyDeath = trait({ requestedAt: -1 });
 
 /**
  * Cold enemy data: changes only on discrete events (damage, slow, heal,

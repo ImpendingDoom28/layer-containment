@@ -51,6 +51,10 @@ import { MedicHealBurstEffect } from "./effects/MedicHealBurstEffect";
 import { SlowEffect } from "./effects/SlowEffect";
 import { UpgradeEffect } from "./effects/UpgradeEffect";
 import { EnemyModel } from "./EnemyModel";
+import {
+  getSplitterDeathSquashScale,
+  SPLITTER_DEATH_PREBURST_SECONDS,
+} from "../../constants/enemyLocomotion";
 
 type EnemyProps = {
   entity: Entity;
@@ -171,6 +175,12 @@ export const Enemy: FC<EnemyProps> = memo(
     useFrustumCulling(meshRef);
     const healthBarRef = useRef<Group>(null);
     const fillBarRef = useRef<Mesh>(null);
+    // The body group: scaled by the splitter's squash-stretch anticipation in
+    // the pre-burst window after the killing blow (the ECS holds the dead
+    // splitter back for SPLITTER_DEATH_PREBURST_SECONDS, then the split and
+    // the burst land together).
+    const bodyRef = useRef<Group>(null);
+    const deathAnimStartRef = useRef<number | null>(null);
     // The hit marker: `HitFlash` wraps the body and renders a hidden clone of
     // it re-pointed at the per-enemy `flashMaterial`, so the marker's shape
     // always matches the body (the model clone, or a sphere for a fallback
@@ -266,7 +276,24 @@ export const Enemy: FC<EnemyProps> = memo(
     useFrame((state, delta) => {
       const live = entity.get(EnemyState);
       const pos = entity.get(Position);
-      if (!live || !pos || live.health <= 0) return;
+      if (!live || !pos) return;
+
+      // Dead splitter in its pre-burst window: the ECS holds the entity back
+      // for the squash-stretch anticipation before the split and the burst,
+      // so drive the body scale here instead of mirroring motion.
+      if (live.health <= 0) {
+        if (live.split && bodyRef.current) {
+          // The empty health bar would hover over the wind-up — hide it.
+          if (healthBarRef.current) healthBarRef.current.visible = false;
+          const now = getSimulationTime(state.clock.elapsedTime);
+          deathAnimStartRef.current ??= now;
+          const progress =
+            (now - deathAnimStartRef.current) / SPLITTER_DEATH_PREBURST_SECONDS;
+          const { y, xz } = getSplitterDeathSquashScale(progress);
+          bodyRef.current.scale.set(xz, y, xz);
+        }
+        return;
+      }
 
       // The movement system already advanced the position and facing; this
       // frame just mirrors both onto the mesh (allocation-free via scratch
@@ -399,7 +426,7 @@ export const Enemy: FC<EnemyProps> = memo(
             at the per-enemy flash material — so the marker is automatically
             model-shaped (the Wraith gets a Wraith-shaped one) with no
             per-model support. */}
-        <group position={[0, size / 2, 0]}>
+        <group ref={bodyRef} position={[0, size / 2, 0]}>
           <HitFlash
             markerRef={hitMarkerRef}
             flashMaterial={flashMaterial}
@@ -407,6 +434,7 @@ export const Enemy: FC<EnemyProps> = memo(
               <EnemyModel
                 type={snapshot.type}
                 size={size}
+                seed={snapshot.id}
                 fallback={
                   <mesh
                     castShadow

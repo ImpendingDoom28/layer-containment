@@ -1,10 +1,16 @@
 import { memo, useEffect, useRef, useState } from "react";
+import { Quaternion } from "three";
 
 import { useGameStore } from "../../../core/stores/useGameStore";
 import { useLevelStore } from "../../../core/stores/useLevelStore";
 import { gameEvents } from "../../../utils/eventEmitter";
 import { GameEvent } from "../../../core/types/enums/events";
-import { getPlanetRadius, flatCombatPointToWorldPosition } from "../../../utils/planetSurfaceMapping";
+import {
+  getPlanetRadius,
+  flatCombatPointToWorldPosition,
+  flatFieldToSphereSurface,
+  getSurfaceQuaternion,
+} from "../../../utils/planetSurfaceMapping";
 import { useReducedMotion } from "../../../core/hooks/useReducedMotion";
 import { useNextId } from "../../../core/hooks/utils/useNextId";
 import { getCssColorValue } from "../../ui/lib/cssUtils";
@@ -12,9 +18,14 @@ import { useTranslationInCanvas } from "../../../core/i18n/useTranslationInCanva
 
 import { Effect } from "./Effect";
 import { FloatingTexts, type FloatingTextsHandle } from "./FloatingTexts";
+import { RocketExplosionFX } from "./RocketExplosionFX";
 
 const MAX_ACTIVE_BURSTS = 8;
 const BURST_DURATION = 0.5;
+// The BRL fires from a single tower at a 4s cadence, so a couple of
+// overlapping rockets is the real-world ceiling; cap the live explosion list
+// just in case several land on the same frame.
+const MAX_ACTIVE_EXPLOSIONS = 6;
 const REWARD_TEXT_HEIGHT = 0.45;
 // Matches the missing-out upgrade indicator color (public/configs/game.json).
 const DODGE_TEXT_COLOR = "#38bdf8";
@@ -22,6 +33,14 @@ const DODGE_TEXT_COLOR = "#38bdf8";
 type DeathBurst = {
   id: number;
   position: [number, number, number];
+  color: string;
+};
+
+type RocketExplosion = {
+  id: number;
+  position: [number, number, number];
+  quaternion: Quaternion;
+  radius: number;
   color: string;
 };
 
@@ -35,14 +54,17 @@ type CombatJuiceProps = {
 
 /**
  * Subscribes to combat game events and renders their juice: gold reward floats
- * (camera-facing sprites) and a small burst when an enemy dies. Event payload
- * positions are flat-field coordinates, mapped onto the planet surface here.
+ * (camera-facing sprites), a small burst when an enemy dies, and — on a BRL
+ * rocket impact — a ground-blast area of effect (a fireball plus a ring that
+ * expands to the projectile's blast radius). Event payload positions are
+ * flat-field coordinates, mapped onto the planet surface here.
  */
 export const CombatJuice = memo(
   ({ showRewardText = true }: CombatJuiceProps) => {
     const floatingTextsRef = useRef<FloatingTextsHandle>(null);
     const [bursts, setBursts] = useState<DeathBurst[]>([]);
-    const { getNextId: getNextBurstId } = useNextId();
+    const [explosions, setExplosions] = useState<RocketExplosion[]>([]);
+    const { getNextId } = useNextId();
 
     const gridSize = useLevelStore((state) => state.gridSize);
     const tileSize = useGameStore((state) => state.tileSize);
@@ -74,7 +96,7 @@ export const CombatJuice = memo(
         setBursts((prev) => [
           ...prev.slice(-(MAX_ACTIVE_BURSTS - 1)),
           {
-            id: getNextBurstId(),
+            id: getNextId(),
             position: [position.x, position.y, position.z],
             color: data.color,
           },
@@ -97,16 +119,54 @@ export const CombatJuice = memo(
         );
       };
 
+      const onProjectileHit = (data: {
+        projectileType: string;
+        aoeRadius?: number;
+        color?: string;
+        worldPosition: { x: number; y: number; z: number };
+      }) => {
+        // Only the BRL rocket gets the ground-blast area of effect: a ring
+        // that expands to the projectile's aoeRadius at the impact point.
+        if (data.projectileType !== "rocket" || !data.aoeRadius) return;
+        const position = flatCombatPointToWorldPosition(
+          data.worldPosition.x,
+          data.worldPosition.z,
+          0.05,
+          planetRadius
+        );
+        const normal = flatFieldToSphereSurface(
+          data.worldPosition.x,
+          data.worldPosition.z,
+          planetRadius
+        ).normal;
+        setExplosions((prev) => [
+          ...prev.slice(-(MAX_ACTIVE_EXPLOSIONS - 1)),
+          {
+            id: getNextId(),
+            position: [position.x, position.y, position.z],
+            quaternion: getSurfaceQuaternion(normal),
+            radius: data.aoeRadius as number,
+            color: data.color ?? "#ef4444",
+          },
+        ]);
+      };
+
       gameEvents.on(GameEvent.ENEMY_KILLED, onEnemyKilled);
       gameEvents.on(GameEvent.ENEMY_DODGED, onEnemyDodged);
+      gameEvents.on(GameEvent.PROJECTILE_HIT, onProjectileHit);
       return () => {
         gameEvents.off(GameEvent.ENEMY_KILLED, onEnemyKilled);
         gameEvents.off(GameEvent.ENEMY_DODGED, onEnemyDodged);
+        gameEvents.off(GameEvent.PROJECTILE_HIT, onProjectileHit);
       };
     }, [planetRadius, t, showRewardText]);
 
     const onBurstComplete = (id: number) => {
       setBursts((prev) => prev.filter((burst) => burst.id !== id));
+    };
+
+    const onExplosionComplete = (id: number) => {
+      setExplosions((prev) => prev.filter((explosion) => explosion.id !== id));
     };
 
     return (
@@ -119,6 +179,16 @@ export const CombatJuice = memo(
             color={burst.color}
             duration={reducedMotion ? BURST_DURATION * 1.5 : BURST_DURATION}
             onComplete={() => onBurstComplete(burst.id)}
+          />
+        ))}
+        {explosions.map((explosion) => (
+          <RocketExplosionFX
+            key={explosion.id}
+            position={explosion.position}
+            quaternion={explosion.quaternion}
+            radius={explosion.radius}
+            color={explosion.color}
+            onComplete={() => onExplosionComplete(explosion.id)}
           />
         ))}
       </>

@@ -13,6 +13,7 @@ import type {
   EnemyType,
   EnemyUpgradeConfig,
   EnemyUpgradeId,
+  Tower,
 } from "../types/game";
 import { createWaveSystem } from "./waveSystem";
 
@@ -28,6 +29,56 @@ const armoredUpgrade: EnemyUpgradeConfig = {
     { healthMultiplier: 2, rewardMultiplier: 1.1875 },
   ],
 };
+
+const swiftUpgrade: EnemyUpgradeConfig = {
+  id: "swift",
+  name: "Swift",
+  description: "+35% speed",
+  displayRank: 1,
+  indicatorColor: "#facc15",
+  tiers: [
+    { speedMultiplier: 1.35, rewardMultiplier: 1.1 },
+    { speedMultiplier: 1.5, rewardMultiplier: 1.04 },
+    { speedMultiplier: 1.7, rewardMultiplier: 1.0555 },
+  ],
+};
+
+const slowResistanceUpgrade: EnemyUpgradeConfig = {
+  id: "slowResistance",
+  name: "Unstoppable",
+  description: "Slow resistance",
+  displayRank: 1,
+  indicatorColor: "#8b5cf6",
+  tiers: [
+    { slowResistance: 0.25, rewardMultiplier: 1.05 },
+    { slowResistance: 0.65, rewardMultiplier: 1.05 },
+    { slowResistance: 1, rewardMultiplier: 1.115 },
+  ],
+};
+
+const makeSlowTower = (id: number): Tower => ({
+  id,
+  type: "slow",
+  name: "Slow Tower",
+  cost: 75,
+  damage: 10,
+  range: 3,
+  fireRate: 0.8,
+  targeting: "nearest",
+  projectileType: "single",
+  projectileSpeed: 10,
+  color: "#8b5cf6",
+  description: "Slows enemies on hit",
+  model: { url: "assets/models/tower_slow.glb", node: "Tower_Slow_ROOT" },
+  muzzle: { muzzle: { x: 0, y: 0.55, z: 0.63 } },
+  slowAmount: 0.7,
+  slowDuration: 3,
+  lastFireTime: 0,
+  gridX: 0,
+  gridZ: 0,
+  x: 0,
+  z: 0,
+});
 
 const basicConfig: EnemyConfig = {
   id: "basic",
@@ -256,6 +307,95 @@ describe("createWaveSystem", () => {
     expect(useWaveStore.getState().nextWaveReady).toBe(true);
     waves.startWave();
     expect(useLevelStore.getState().currentWave).toBe(2);
+  });
+
+  describe("upgrade gate", () => {
+    // Clears the first (single-enemy) wave and lets the 0.3s completion delay
+    // run, which opens the upgrade gate.
+    const clearWave1AndOpenGate = (
+      waves: ReturnType<typeof createWaveSystem>
+    ) => {
+      waves.startWave();
+      tick(waves, 1);
+      enemyActions(testWorld).removeEnemy(1, false);
+      tick(waves, 1.5);
+    };
+
+    it("offers the Unstoppable upgrade only when a slow tower is placed", () => {
+      useGameStore.setState({
+        enemyUpgrades: {
+          swift: swiftUpgrade,
+          slowResistance: slowResistanceUpgrade,
+        } as Record<EnemyUpgradeId, EnemyUpgradeConfig>,
+      });
+      useLevelStore.setState({ towers: [makeSlowTower(100)] });
+
+      let nextId = 1;
+      const waves = createWaveSystem({
+        world: testWorld,
+        getNextEnemyId: () => nextId++,
+        winGame: vi.fn(),
+      });
+      useLevelStore.setState({
+        totalWaves: 2,
+        waveConfigs: [
+          {
+            totalEnemies: 1,
+            enemies: [{ type: "basic", count: 1, spawnInterval: 0.5 }],
+          },
+          {
+            totalEnemies: 1,
+            enemies: [{ type: "basic", count: 1, spawnInterval: 0.5 }],
+          },
+        ],
+      });
+
+      clearWave1AndOpenGate(waves);
+
+      const { pendingEnemyUpgradeGate, upgradeChoiceOptions } =
+        useUpgradeStore.getState();
+      expect(pendingEnemyUpgradeGate).toBe(true);
+      expect(upgradeChoiceOptions).toContain("slowResistance");
+      expect(upgradeChoiceOptions).toContain("swift");
+    });
+
+    it("hides the Unstoppable upgrade when no slow tower is placed", () => {
+      useGameStore.setState({
+        enemyUpgrades: {
+          swift: swiftUpgrade,
+          slowResistance: slowResistanceUpgrade,
+        } as Record<EnemyUpgradeId, EnemyUpgradeConfig>,
+      });
+      useLevelStore.setState({ towers: [] });
+
+      let nextId = 1;
+      const waves = createWaveSystem({
+        world: testWorld,
+        getNextEnemyId: () => nextId++,
+        winGame: vi.fn(),
+      });
+      useLevelStore.setState({
+        totalWaves: 2,
+        waveConfigs: [
+          {
+            totalEnemies: 1,
+            enemies: [{ type: "basic", count: 1, spawnInterval: 0.5 }],
+          },
+          {
+            totalEnemies: 1,
+            enemies: [{ type: "basic", count: 1, spawnInterval: 0.5 }],
+          },
+        ],
+      });
+
+      clearWave1AndOpenGate(waves);
+
+      const { pendingEnemyUpgradeGate, upgradeChoiceOptions } =
+        useUpgradeStore.getState();
+      expect(pendingEnemyUpgradeGate).toBe(true);
+      expect(upgradeChoiceOptions).not.toContain("slowResistance");
+      expect(upgradeChoiceOptions).toContain("swift");
+    });
   });
 
   describe("boss waves", () => {

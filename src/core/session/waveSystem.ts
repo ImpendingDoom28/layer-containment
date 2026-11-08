@@ -192,11 +192,19 @@ export const createWaveSystem = ({
           if (currentWave < totalWaves) {
             const enemyUpgrades = useGameStore.getState().enemyUpgrades;
             if (enemyUpgrades && Object.keys(enemyUpgrades).length > 0) {
-              useUpgradeStore
+              // The Unstoppable (slow-resistance) upgrade only counters a slow
+              // tower: offer it in the choice only when the player has placed
+              // at least one, so a player is never rewarded for countering a
+              // tower they never built.
+              const hasSlowTower = useLevelStore
                 .getState()
-                .openEnemyUpgradeGate(
-                  Object.keys(enemyUpgrades) as EnemyUpgradeId[]
-                );
+                .towers.some((tower) => tower.type === "slow");
+              const allUpgradeIds = (
+                Object.keys(enemyUpgrades) as EnemyUpgradeId[]
+              ).filter((uid) => uid !== "slowResistance" || hasSlowTower);
+              if (allUpgradeIds.length > 0) {
+                useUpgradeStore.getState().openEnemyUpgradeGate(allUpgradeIds);
+              }
             }
           } else {
             winGame();

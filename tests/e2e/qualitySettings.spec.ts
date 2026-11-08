@@ -45,6 +45,9 @@ test("shows the Quality section with bloom and shadows, defaulting to on", async
 test("toggling shadows off persists the setting and the toggle reflects it", async ({
   page,
 }) => {
+  // Two full app boots (initial load + reload); on software WebGL each boot
+  // alone can eat most of the default 30s budget.
+  test.setTimeout(90_000);
   await openSettings(page);
 
   const shadows = page.getByLabel("Shadows");
@@ -63,6 +66,7 @@ test("toggling shadows off persists the setting and the toggle reflects it", asy
 test("toggling bloom off persists the setting and the toggle reflects it", async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   await openSettings(page);
 
   const bloom = page.getByLabel("Bloom (glow)");

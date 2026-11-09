@@ -35,7 +35,12 @@ type SceneObject = {
   quaternion: { x: number; y: number; z: number; w: number };
   scale: { x: number; y: number; z: number };
   visible: boolean;
-  material: { opacity: number; blending: number; transparent: boolean };
+  material: {
+    type: string;
+    opacity: number;
+    blending: number;
+    transparent: boolean;
+  };
   traverse?: (fn: (o: SceneObject) => void) => void;
   children: SceneObject[];
 };
@@ -85,21 +90,24 @@ const findGroup = (renderer: Renderer): SceneObject => {
   return found!;
 };
 
+// The settling ring is the only additive mesh; the debris shards are lit
+// (standard, normal-blended) meshes. Distinguish by `material.blending`
+// (THREE.AdditiveBlending === 2, THREE.NormalBlending === 1).
 const findRing = (renderer: Renderer): SceneObject => {
   const scene = renderer.scene.instance as unknown as SceneObject;
   const found: SceneObject[] = [];
   scene.traverse?.((o) => {
-    if (o.type === "Mesh") found.push(o);
+    if (o.type === "Mesh" && o.material.blending === 2) found.push(o);
   });
   expect(found.length).toBe(1);
   return found[0];
 };
 
-const findPuffs = (renderer: Renderer): SceneObject[] => {
+const findShards = (renderer: Renderer): SceneObject[] => {
   const scene = renderer.scene.instance as unknown as SceneObject;
   const found: SceneObject[] = [];
   scene.traverse?.((o) => {
-    if (o.type === "Sprite") found.push(o);
+    if (o.type === "Mesh" && o.material.blending === 1) found.push(o);
   });
   expect(found.length).toBeGreaterThan(0);
   return found;
@@ -131,38 +139,38 @@ describe("DustBurstFX", () => {
     const { renderer } = await createHarness();
     try {
       const ring = findRing(renderer);
-      const puffs = findPuffs(renderer);
+      const shards = findShards(renderer);
 
       // Establish the burst's start time, then a frame still inside the delay
       // (before the drop has impacted): the dust has not started yet.
       await advanceFrame(renderer, 0.05);
       await advanceFrame(renderer, 0.2);
       expect(ring.scale.x).toBeLessThanOrEqual(1e-3);
-      for (const puff of puffs) {
-        expect(puff.visible).toBe(false);
+      for (const shard of shards) {
+        expect(shard.visible).toBe(false);
       }
     } finally {
       renderer.unmount();
     }
   });
 
-  it("swells the settling ring and pops the puffs out once the delay elapses", async () => {
+  it("swells the settling ring and pops the shards out once the delay elapses", async () => {
     const { renderer } = await createHarness();
     try {
       const ring = findRing(renderer);
-      const puffs = findPuffs(renderer);
+      const shards = findShards(renderer);
 
       // Past the delay, partway through the burst: the ring has swollen toward
-      // its radius and the puffs are visible and moving out.
+      // its radius and the shards are visible and moving out.
       await advanceFrame(renderer, 0.05);
       await advanceFrame(renderer, 0.5);
       expect(ring.scale.x).toBeGreaterThan(0.2);
       expect(ring.scale.x).toBeLessThan(RING_RADIUS);
-      for (const puff of puffs) {
-        expect(puff.visible).toBe(true);
-        // A puff has travelled out from the centre.
+      for (const shard of shards) {
+        expect(shard.visible).toBe(true);
+        // A shard has travelled out from the centre.
         expect(
-          Math.hypot(puff.position.x, puff.position.z)
+          Math.hypot(shard.position.x, shard.position.z)
         ).toBeGreaterThan(0);
       }
       // The ring is rendered additively and faintly (see-through).
@@ -170,24 +178,32 @@ describe("DustBurstFX", () => {
       expect(ring.material.transparent).toBe(true);
       expect(ring.material.opacity).toBeGreaterThan(0);
       expect(ring.material.opacity).toBeLessThan(0.5);
+      // The debris shards are lit (they pick up the scene lights) and start
+      // opaque (solid chunks of ground), not flat unlit sprites.
+      for (const shard of shards) {
+        expect(shard.material.type).toBe("MeshStandardMaterial");
+        expect(shard.material.opacity).toBe(1);
+      }
     } finally {
       renderer.unmount();
     }
   });
 
-  it("keeps the dust clear of the tower base (ring inner edge + puffs stay outside)", async () => {
+  it("keeps the dust clear of the tower base (ring inner edge + shards stay outside)", async () => {
     const { renderer } = await createHarness();
     try {
       const ring = findRing(renderer);
-      const puffs = findPuffs(renderer);
+      const shards = findShards(renderer);
 
       const BASE_RADIUS = 0.3; // the default `baseRadius`
       const RING_INNER_FRACTION = 0.92; // matches the shared thin-band ring
-      const PUFF_HALF_SIZE = 0.16 / 2; // the puff's soft edge (half its size)
+      // The largest shard's bounding radius (the tetrahedron's circumscribed
+      // sphere radius, 1, scaled to the shard's max size and grown by the kick).
+      const SHARD_MAX_RADIUS = 0.09 * (0.5 + 0.8) * 1.3;
 
       // Sample the whole burst (from impact through completion) and verify the
       // dust never overlaps the model: the ring's inner edge sits on the base
-      // radius and each puff's soft edge stays outside it.
+      // radius and each shard's bounding radius stays outside it.
       const sample = async (rawTime: number) => {
         await advanceFrame(renderer, rawTime);
         if (ring.scale.x > 1e-3) {
@@ -195,10 +211,10 @@ describe("DustBurstFX", () => {
             BASE_RADIUS - 1e-6
           );
         }
-        for (const puff of puffs) {
-          if (!puff.visible) continue;
-          const radius = Math.hypot(puff.position.x, puff.position.z);
-          expect(radius - PUFF_HALF_SIZE).toBeGreaterThanOrEqual(
+        for (const shard of shards) {
+          if (!shard.visible) continue;
+          const radius = Math.hypot(shard.position.x, shard.position.z);
+          expect(radius - SHARD_MAX_RADIUS).toBeGreaterThanOrEqual(
             BASE_RADIUS - 1e-6
           );
         }
@@ -217,15 +233,15 @@ describe("DustBurstFX", () => {
     const { renderer } = await createHarness();
     try {
       const ring = findRing(renderer);
-      const puffs = findPuffs(renderer);
+      const shards = findShards(renderer);
 
       await advanceFrame(renderer, 0.05);
       // Run well past the delay + duration: the burst has fully dissipated.
       await advanceFrame(renderer, 0.05 + DELAY + DURATION + 0.5);
       expect(ring.scale.x).toBeLessThanOrEqual(1e-3);
       expect(ring.material.opacity).toBe(0);
-      for (const puff of puffs) {
-        expect(puff.visible).toBe(false);
+      for (const shard of shards) {
+        expect(shard.visible).toBe(false);
       }
     } finally {
       renderer.unmount();

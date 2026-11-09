@@ -248,7 +248,11 @@ export const CombatJuice = memo(
             position={placement.position}
             quaternion={placement.quaternion}
             color={DUST_COLOR}
-            delay={DROP_DURATION}
+            baseRadius={placement.baseRadius}
+            // Under reduced motion the tower lands instantly (no drop), so the
+            // dust must not wait out the drop duration — it appears with the
+            // impact.
+            delay={reducedMotion ? 0 : DROP_DURATION}
             onComplete={() => onPlacementComplete(placement.id)}
           />
         ))}

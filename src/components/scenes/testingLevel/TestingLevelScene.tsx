@@ -32,10 +32,9 @@ import { useTileOccupancyMasks } from "../../../core/hooks/utils/useTileOccupanc
 import { IsEnemy } from "../../../core/ecs/traits/enemy";
 import { SimulationClockProvider } from "../../../core/contexts/SimulationClockContext";
 
-// The tiles are purely visual here (no placement), so stable no-ops keep the
-// memoized `Grid` from re-rendering on unrelated store updates.
+// The tiles are purely visual here (no placement), so a stable no-op keeps
+// the memoized `Grid` from re-rendering on unrelated store updates.
 const noopPlaceTower = () => undefined;
-const noopSetHoveredTile = () => undefined;
 
 // Reinforcements showcase portals: the level's own `Path` portal always renders
 // at tier 0 (no reinforcements picked for the run), so the upgrade's visual is
@@ -91,12 +90,7 @@ export const TestingLevelScene: FC = () => {
 
       <TestingLevelCamera />
 
-      <Grid
-        placeTower={noopPlaceTower}
-        hoveredTile={null}
-        setHoveredTile={noopSetHoveredTile}
-        occupancy={occupancy}
-      />
+      <Grid placeTower={noopPlaceTower} occupancy={occupancy} />
 
       <PlanetTileDecorations occupancy={occupancy} />
 

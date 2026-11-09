@@ -7,13 +7,13 @@ import { Enemy } from "../entities/Enemy";
 import {
   buildingsSelector,
   gridOffsetSelector,
+  hoveredTileSelector,
   pathWaypointsSelector,
   towersSelector,
   useLevelStore,
   watersSelector,
 } from "../../core/stores/useLevelStore";
 import type { Tower as TowerInstance, Tower } from "../../core/types/game";
-import type { TileData } from "../../core/types/utils";
 import type { TilePlacementState } from "../../utils/tilePlacement";
 import { getTilePlacementState as getSharedTilePlacementState } from "../../utils/tilePlacement";
 import { EffectSystem } from "./EffectSystem";
@@ -30,12 +30,11 @@ import { useGameSessionRuntime } from "./GameSessionSystem";
 
 type EntitiesSystemProps = {
   onSellTower: ((towerId: number) => void) | null;
-  hoveredTile: TileData | null;
   selectedTower: TowerInstance | null;
 };
 
 export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
-  ({ onSellTower, hoveredTile, selectedTower }) => {
+  ({ onSellTower, selectedTower }) => {
     const enemyEntities = useQuery(IsEnemy);
     const { InstancedProjectiles } = useGameSessionRuntime();
     const selectedTowerTypeToPlace = useGameStore(
@@ -45,13 +44,15 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
       setSelectedTowerTypeToPlaceSelector
     );
     const setSelectedTower = useGameStore(setSelectedTowerSelector);
+    const tileSize = useGameStore(tileSizeSelector);
+    const pathWidth = useGameStore(pathWidthSelector);
+
     const buildings = useLevelStore(buildingsSelector);
     const waters = useLevelStore(watersSelector);
     const towers = useLevelStore(towersSelector);
     const gridOffset = useLevelStore(gridOffsetSelector);
     const pathWaypoints = useLevelStore(pathWaypointsSelector);
-    const tileSize = useGameStore(tileSizeSelector);
-    const pathWidth = useGameStore(pathWidthSelector);
+    const hoveredTile = useLevelStore(hoveredTileSelector);
 
     const getTilePlacementState = useCallback(
       (gridX: number, gridZ: number) =>

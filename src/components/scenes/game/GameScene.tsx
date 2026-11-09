@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { AudioListenerSync } from "@webgamedevkit/audio-engine/r3f";
 
 import { Grid } from "../../entities/Grid";
@@ -12,7 +11,6 @@ import type {
   GameStatus,
   TowerType,
 } from "../../../core/types/game";
-import { TileData } from "../../../core/types/utils";
 import { EntitiesSystem } from "../../systems/EntitiesSystem";
 import { CombatJuice } from "../../entities/effects/CombatJuice";
 import {
@@ -53,7 +51,6 @@ export const GameScene: React.FC<GameSceneProps> = ({
   const gridOffset = useLevelStore(gridOffsetSelector);
   const tileSize = useGameStore(tileSizeSelector);
   const pathWidth = useGameStore(pathWidthSelector);
-  const [hoveredTile, setHoveredTile] = useState<TileData | null>(null);
 
   const occupancy = useTileOccupancyMasks({
     gridSize,
@@ -83,27 +80,15 @@ export const GameScene: React.FC<GameSceneProps> = ({
         <Path key={index} pathIndex={index} />
       ))}
 
-      <Grid
-        placeTower={placeTower}
-        hoveredTile={hoveredTile}
-        setHoveredTile={setHoveredTile}
-        occupancy={occupancy}
-      />
+      <Grid placeTower={placeTower} occupancy={occupancy} />
 
       <PlanetTileDecorations occupancy={occupancy} />
 
-      <PlacementHighlightOverlay hoveredTile={hoveredTile} />
+      <PlacementHighlightOverlay />
 
-      <RelayBuffPreviewOverlay
-        hoveredTile={hoveredTile}
-        selectedTower={selectedTower}
-      />
+      <RelayBuffPreviewOverlay selectedTower={selectedTower} />
 
-      <EntitiesSystem
-        onSellTower={onSellTower}
-        hoveredTile={hoveredTile}
-        selectedTower={selectedTower}
-      />
+      <EntitiesSystem onSellTower={onSellTower} selectedTower={selectedTower} />
 
       <CombatJuice />
     </>

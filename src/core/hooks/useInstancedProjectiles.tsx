@@ -544,16 +544,18 @@ const stepChainBoltHoming = (
       projectile.velocityY = (dy / distance) * projectile.speed;
       projectile.velocityZ = (dz / distance) * projectile.speed;
     } else {
-      const step = closeBy / distance;
       // Keep the gap: stop short of the target.
       const travel = Math.max(0, Math.min(distance - gap, closeBy));
       const s = travel / distance;
       projectile.currentX += dx * s;
       projectile.currentY += dy * s;
       projectile.currentZ += dz * s;
-      projectile.velocityX = dx * step;
-      projectile.velocityY = dy * step;
-      projectile.velocityZ = dz * step;
+      // Store the real velocity (speed along the aim), not the frame
+      // displacement — the trail streak's length is proportional to it, so a
+      // displacement (scaled by delta) would always yield the minimum streak.
+      projectile.velocityX = (dx / distance) * projectile.speed;
+      projectile.velocityY = (dy / distance) * projectile.speed;
+      projectile.velocityZ = (dz / distance) * projectile.speed;
     }
   }
 

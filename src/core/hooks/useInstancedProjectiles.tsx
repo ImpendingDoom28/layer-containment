@@ -57,11 +57,15 @@ const CHAIN_LIGHT_DECAY = 2;
 const CHAIN_LIGHT_AHEAD_OFFSET = 0.05;
 const CHAIN_LIGHT_Y_OFFSET = 0.08;
 // A fixed, small pool of the carried lights: the concurrent count of chain
-// bolts is well below this, and keeping the pool a constant size in the scene
-// (idle lights at zero intensity, moved off-board) means the scene's light
-// count — and therefore the compiled shader programs — never change when the
-// first bolt fires or the last one lands.
-const CHAIN_LIGHT_POOL_SIZE = 6;
+// bolts is well below this (fire rate 2s, ~0.5s flight), and keeping the pool
+// a constant size in the scene (idle lights at zero intensity, moved off-board)
+// means the scene's light count — and therefore the compiled shader programs —
+// never change when the first bolt fires or the last one lands. The size is
+// deliberately small because every *mounted* PointLight (even an idle one at
+// zero intensity) adds to every material's per-fragment light cost; a larger
+// pool noticeably slows software-rendered (SwiftShader) CI e2e. A full pool
+// degrades gracefully to an unlit bolt.
+const CHAIN_LIGHT_POOL_SIZE = 2;
 
 /**
  * The BRL rocket: a short body with a conical nose and two small fins, built

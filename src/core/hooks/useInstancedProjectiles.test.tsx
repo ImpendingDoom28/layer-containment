@@ -213,17 +213,62 @@ describe("useInstancedProjectiles trails", () => {
     }
   });
 
-  it("does not allocate trail slots for beams or chain bolts", async () => {
+  it("does not allocate a trail slot for beams but does for chain bolts", async () => {
     const renderer = await createRenderer();
     try {
       enemyActions(world).spawnEnemy(baseEnemy());
 
       fireAtEnemy({ projectileType: "beam" });
-      fireAtEnemy({ projectileType: "chain" });
       expect(api!.getTrailPoolStats()!.inUse).toBe(0);
 
-      await advance(3);
-      expect(api!.getTrailPoolStats()!.inUse).toBe(0);
+      // The arc bolt creeps toward its target at its own (slow) speed and
+      // carries a trail streak, so it holds a trail slot while in flight.
+      fireAtEnemy({ projectileType: "chain" });
+      expect(api!.getTrailPoolStats()!.inUse).toBe(1);
+    } finally {
+      await renderer.unmount();
+    }
+  });
+
+  it("re-aims a chain bolt at its target as it moves (arc-lightning homing)", async () => {
+    const renderer = await createRenderer();
+    try {
+      // A real (non-collapsing) field: with a zero-sized level every flat
+      // point maps to the same pole, so the target cannot be anywhere but the
+      // bolt's start.
+      useLevelStore.getState().setGridSize(10, 1);
+      useLevelStore.getState().setPathWaypoints([
+        [{ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }],
+      ]);
+      useGameStore.setState({ tileSize: 1 });
+
+      // The target starts at flat (30, 0) — ~30 world units from the bolt's
+      // launch point, so the 1-second frames cannot close the gap before the
+      // first re-aim.
+      enemyActions(world).spawnEnemy({
+        ...baseEnemy(),
+        x: 30,
+        z: 0,
+        pathProgress: 10,
+      });
+
+      const projectile = fireAtEnemy({ projectileType: "chain", speed: 7 });
+      expect(projectile.id).toBeGreaterThan(0);
+
+      // Frame 1: the bolt closes 7 units and has not struck yet.
+      await advance(1);
+      expect(onHit).not.toHaveBeenCalled();
+
+      // The target escapes out of the bolt's straight flight line (z = 40).
+      // A bolt that kept the launch-time direction would never get within the
+      // hit radius of it; the arc bolt re-aims at the live position and still
+      // strikes.
+      enemyActions(world).updateEnemy(1, { z: 40 });
+      // At speed 7 the bolt closes ~7 units per frame; ~75 units of
+      // separation needs ~9 more frames before it is inside the threshold.
+      await advance(10);
+      expect(onHit).toHaveBeenCalledTimes(1);
+      expect(api!.getActiveProjectiles()).toHaveLength(0);
     } finally {
       await renderer.unmount();
     }

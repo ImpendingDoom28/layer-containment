@@ -38,6 +38,30 @@ import { refreshEnemyRegistry } from "../ecs/selectors/enemySnapshots";
 const CHAIN_BOLT_RADIUS = 0.03;
 const CHAIN_BOLT_LENGTH = 0.5;
 const CHAIN_BOLT_EMISSIVE_INTENSITY = 2;
+// The chain bolt's slow drift ("arc lightning"): the bolt chases a point that
+// lags the enemy by this many world units along its own travel direction, so
+// it creeps after its target instead of zipping to it in an instant. The
+// existing hit threshold (plus this lag) keeps the strike distance sane: the
+// bolt never sits more than the lag away from a living target.
+const CHAIN_LAG = 0.4;
+// The small light the bolt carries with it: it rides the bolt's head and
+// projects the tower's color onto nearby enemies (a real PointLight that
+// washes over the models it passes). The falloff is tuned so the glow reaches
+// roughly 1.5 world units from the bolt.
+const CHAIN_LIGHT_INTENSITY = 1.6;
+const CHAIN_LIGHT_DISTANCE = 3.2;
+const CHAIN_LIGHT_DECAY = 2;
+// The carried light's rest pose: a small offset ahead of the bolt head along
+// the travel direction (so the glow leads the strike point and washes over
+// the enemy the bolt is about to hit), plus a fixed lift off the ground.
+const CHAIN_LIGHT_AHEAD_OFFSET = 0.05;
+const CHAIN_LIGHT_Y_OFFSET = 0.08;
+// A fixed, small pool of the carried lights: the concurrent count of chain
+// bolts is well below this, and keeping the pool a constant size in the scene
+// (idle lights at zero intensity, moved off-board) means the scene's light
+// count — and therefore the compiled shader programs — never change when the
+// first bolt fires or the last one lands.
+const CHAIN_LIGHT_POOL_SIZE = 6;
 
 /**
  * The BRL rocket: a short body with a conical nose and two small fins, built
@@ -127,10 +151,102 @@ type ChainBoltKinematics = {
   vz: number;
 };
 
+/**
+ * A fixed pool of the small lights the chain bolts carry (real
+ * `THREE.PointLight`s — drei's `<Instances>` can only instance meshes, so the
+ * light is a real light object that is created once, moved per frame, and
+ * toggled on/off rather than mounted/unmounted). Keeping the pool a constant
+ * size in the scene (idle lights at zero intensity, parked off-board) means
+ * the scene's light count — and therefore the compiled shader programs —
+ * never change when the first bolt fires or the last one lands: no shader
+ * recompile hitch. The lights are rendered by the hook's returned element via
+ * `<primitive>`, so they live in the same scene as the game.
+ */
+export type ChainLightPool = {
+  /** The pool's light objects (rendered into the scene by the hook). */
+  lights: THREE.PointLight[];
+  /** Grab a free light, tinted with the bolt's color; returns its index or -1 when the pool is full (the bolt then flies unlit). */
+  acquire: (color: string) => number;
+  /** Park a light off-board at zero intensity and return it to the pool. */
+  release: (index: number) => void;
+  /** Park every in-use light (a run ended mid-flight) and return them to the pool. */
+  releaseAll: () => void;
+  /** Move an in-use light to the bolt head plus a small lead offset. */
+  setLightPose: (
+    index: number,
+    x: number,
+    y: number,
+    z: number,
+    direction: THREE.Vector3
+  ) => void;
+};
+
+const createChainLightPool = (size: number): ChainLightPool => {
+  const lights: THREE.PointLight[] = [];
+  const free: number[] = [];
+  const used = new Set<number>();
+
+  for (let i = 0; i < size; i++) {
+    const light = new THREE.PointLight(
+      new THREE.Color("#ffffff"),
+      CHAIN_LIGHT_INTENSITY,
+      CHAIN_LIGHT_DISTANCE,
+      CHAIN_LIGHT_DECAY
+    );
+    light.intensity = 0;
+    light.position.set(0, -10000, 0);
+    lights.push(light);
+    free.push(i);
+  }
+
+  const park = (index: number): void => {
+    const light = lights[index];
+    light.intensity = 0;
+    light.position.set(0, -10000, 0);
+  };
+
+  return {
+    lights,
+    acquire: (color) => {
+      const index = free.pop();
+      if (index === undefined) return -1;
+      used.add(index);
+      lights[index].color.set(color);
+      lights[index].intensity = CHAIN_LIGHT_INTENSITY;
+      return index;
+    },
+    release: (index) => {
+      if (!used.has(index)) return;
+      used.delete(index);
+      park(index);
+      free.push(index);
+    },
+    releaseAll: () => {
+      for (const index of used) {
+        used.delete(index);
+        park(index);
+        free.push(index);
+      }
+    },
+    setLightPose: (index, x, y, z, direction) => {
+      const light = lights[index];
+      if (!light || !used.has(index)) return;
+      const lead = CHAIN_BOLT_LENGTH * 0.5 + CHAIN_LIGHT_AHEAD_OFFSET;
+      light.position.set(
+        x + direction.x * lead,
+        y + direction.y * lead + CHAIN_LIGHT_Y_OFFSET,
+        z + direction.z * lead
+      );
+    },
+  };
+};
+
 const applyChainBoltTransform = (
   pool: InstancedPoolRef | null,
   index: number,
-  k: ChainBoltKinematics
+  k: ChainBoltKinematics,
+  lightPool: ChainLightPool | null = null,
+  lightIndex: number = -1
 ): void => {
   if (!pool) return;
 
@@ -148,12 +264,18 @@ const applyChainBoltTransform = (
   );
   tempScale.set(1, CHAIN_BOLT_LENGTH, 1);
   pool.setTransform(index, tempPosition, tempQuaternion, tempScale);
+  lightPool?.setLightPose(lightIndex, k.x, k.y, k.z, tempDirection);
 };
 
 type PooledProjectile = Projectile & {
   instanceIndex: number;
-  /** Slot of the trail streak in the trail pool; -1 for non-sphere visuals. */
+  /**
+   * Slot of the trail streak in the trail pool; -1 when there is none (beams,
+   * and trails disabled by reduced motion).
+   */
   trailInstanceIndex: number;
+  /** Slot of the bolt's carried point light in the light pool; -1 for non-bolts. */
+  lightIndex: number;
   visualPool: VisualPoolKind;
   currentX: number;
   currentY: number;
@@ -206,6 +328,7 @@ const tryContinueChainBoltAfterHit = (
   projectile: PooledProjectile,
   struckEnemy: Enemy,
   boltPool: InstancedPoolRef | null,
+  lightPool: ChainLightPool | null,
   enemiesById: Map<number, Enemy>
 ): boolean => {
   if (!projectile.chainQueue?.length) return false;
@@ -261,14 +384,20 @@ const tryContinueChainBoltAfterHit = (
     scratchNextWorld.y,
     scratchNextWorld.z
   );
-  applyChainBoltTransform(boltPool, projectile.instanceIndex, {
-    x: projectile.currentX,
-    y: projectile.currentY,
-    z: projectile.currentZ,
-    vx: projectile.velocityX,
-    vy: projectile.velocityY,
-    vz: projectile.velocityZ,
-  });
+  applyChainBoltTransform(
+    boltPool,
+    projectile.instanceIndex,
+    {
+      x: projectile.currentX,
+      y: projectile.currentY,
+      z: projectile.currentZ,
+      vx: projectile.velocityX,
+      vy: projectile.velocityY,
+      vz: projectile.velocityZ,
+    },
+    lightPool,
+    projectile.lightIndex
+  );
   return true;
 };
 
@@ -327,6 +456,7 @@ type NonBeamStepContext = {
   delta: number;
   currentTime: number;
   boltPool: InstancedPoolRef | null;
+  lightPool: ChainLightPool | null;
   spherePool: InstancedPoolRef | null;
   rocketPool: InstancedPoolRef | null;
   trailPool: InstancedPoolRef | null;
@@ -342,6 +472,123 @@ type NonBeamStepContext = {
   canHit: boolean;
 };
 
+/**
+ * Arc-lightning chase for chain bolts: the bolt keeps a CHAIN_LAG gap between
+ * itself and its target, re-aiming every frame at the *current* target world
+ * position. It therefore creeps after a moving enemy at its own (slow)
+ * projectile speed instead of zipping to where the enemy was when it fired —
+ * the "arc" that shoots a slowly drifting bolt at the enemy. The gap bounds
+ * the strike distance: the bolt can never sit more than CHAIN_LAG beyond the
+ * hit threshold from a living target, so every strike lands cleanly.
+ */
+const stepChainBoltHoming = (
+  projectile: PooledProjectile,
+  ctx: NonBeamStepContext
+): void => {
+  const {
+    delta,
+    boltPool,
+    lightPool,
+    trailPool,
+    projectileSize,
+    enemiesById,
+    hitThreshold,
+    toRemove,
+  } = ctx;
+
+  const targetEnemy = enemiesById.get(projectile.targetId);
+  if (!targetEnemy || targetEnemy.health <= 0) {
+    toRemove.push(projectile.id);
+    return;
+  }
+
+  const gridSize = useLevelStore.getState().gridSize;
+  const pathWaypoints = useLevelStore.getState().pathWaypoints;
+  const { tileSize } = useGameStore.getState();
+  const planetRadius = getPlanetRadius(gridSize, tileSize);
+  const pathPos = getPositionAlongMultiplePaths(
+    pathWaypoints,
+    targetEnemy.pathIndex,
+    targetEnemy.pathProgress
+  );
+  flatCombatPointToWorldPosition(
+    targetEnemy.x,
+    targetEnemy.z,
+    pathPos.y + targetEnemy.size,
+    planetRadius,
+    scratchTargetWorld
+  );
+
+  const dx = scratchTargetWorld.x - projectile.currentX;
+  const dy = scratchTargetWorld.y - projectile.currentY;
+  const dz = scratchTargetWorld.z - projectile.currentZ;
+  const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+  if (distance > 1e-6) {
+    // The kept gap is clamped below the hit threshold (a small enemy has a
+    // small threshold), so the bolt always ends up inside it.
+    const gap = Math.min(CHAIN_LAG, hitThreshold * 0.75);
+    // Re-aim every frame toward the gap point, so the bolt closes in at its
+    // own speed (the slow `projectileSpeed` from the tower config).
+    const closeBy = projectile.speed * delta;
+    if (closeBy >= distance) {
+      // The frame's step reaches the target: park exactly on it and let the
+      // distance-threshold check settle the hit below.
+      projectile.currentX = scratchTargetWorld.x;
+      projectile.currentY = scratchTargetWorld.y;
+      projectile.currentZ = scratchTargetWorld.z;
+      projectile.velocityX = (dx / distance) * projectile.speed;
+      projectile.velocityY = (dy / distance) * projectile.speed;
+      projectile.velocityZ = (dz / distance) * projectile.speed;
+    } else {
+      const step = closeBy / distance;
+      // Keep the gap: stop short of the target.
+      const travel = Math.max(0, Math.min(distance - gap, closeBy));
+      const s = travel / distance;
+      projectile.currentX += dx * s;
+      projectile.currentY += dy * s;
+      projectile.currentZ += dz * s;
+      projectile.velocityX = dx * step;
+      projectile.velocityY = dy * step;
+      projectile.velocityZ = dz * step;
+    }
+  }
+
+  applyChainBoltTransform(
+    boltPool,
+    projectile.instanceIndex,
+    {
+      x: projectile.currentX,
+      y: projectile.currentY,
+      z: projectile.currentZ,
+      vx: projectile.velocityX,
+      vy: projectile.velocityY,
+      vz: projectile.velocityZ,
+    },
+    lightPool,
+    projectile.lightIndex
+  );
+
+  if (projectile.trailInstanceIndex >= 0 && trailPool) {
+    const pose = computeTrailPose(
+      projectile.currentX,
+      projectile.currentY,
+      projectile.currentZ,
+      projectile.velocityX,
+      projectile.velocityY,
+      projectile.velocityZ,
+      projectileSize
+    );
+    if (pose) {
+      trailPool.setTransform(
+        projectile.trailInstanceIndex,
+        pose.position,
+        pose.quaternion,
+        pose.scale
+      );
+    }
+  }
+};
+
 const stepNonBeamProjectile = (
   projectile: PooledProjectile,
   ctx: NonBeamStepContext
@@ -350,6 +597,7 @@ const stepNonBeamProjectile = (
     delta,
     currentTime,
     boltPool,
+    lightPool,
     spherePool,
     rocketPool,
     trailPool,
@@ -380,6 +628,7 @@ const stepNonBeamProjectile = (
         projectile,
         pendingTarget,
         boltPool,
+        lightPool,
         enemiesById
       )
     ) {
@@ -388,6 +637,76 @@ const stepNonBeamProjectile = (
     }
 
     toRemove.push(projectile.id);
+    return;
+  }
+
+  if (projectile.visualPool === "bolt") {
+    // Arc lightning: the bolt chases its target instead of flying the
+    // launch-time vector, so a moving enemy is actually hit (the old
+    // straight-line flight would pass it by). The chase re-aims at the
+    // target's live world position every frame and keeps a CHAIN_LAG gap.
+    stepChainBoltHoming(projectile, ctx);
+
+    const targetEnemy = enemiesById.get(projectile.targetId);
+    if (!targetEnemy || targetEnemy.health <= 0) {
+      toRemove.push(projectile.id);
+      return;
+    }
+
+    const gridSize = useLevelStore.getState().gridSize;
+    const pathWaypoints = useLevelStore.getState().pathWaypoints;
+    const { tileSize } = useGameStore.getState();
+    const planetRadius = getPlanetRadius(gridSize, tileSize);
+    const pathPos = getPositionAlongMultiplePaths(
+      pathWaypoints,
+      targetEnemy.pathIndex,
+      targetEnemy.pathProgress
+    );
+    flatCombatPointToWorldPosition(
+      targetEnemy.x,
+      targetEnemy.z,
+      pathPos.y + targetEnemy.size,
+      planetRadius,
+      scratchTargetWorld
+    );
+    const distToTarget = Math.hypot(
+      projectile.currentX - scratchTargetWorld.x,
+      projectile.currentY - scratchTargetWorld.y,
+      projectile.currentZ - scratchTargetWorld.z
+    );
+
+    if (distToTarget < hitThreshold) {
+      if (!canHit) {
+        projectile.pendingHit = true;
+        return;
+      }
+
+      onHit(projectile, targetEnemy, currentTime);
+
+      if (
+        tryContinueChainBoltAfterHit(
+          projectile,
+          targetEnemy,
+          boltPool,
+          lightPool,
+          enemiesById
+        )
+      ) {
+        return;
+      }
+
+      toRemove.push(projectile.id);
+      return;
+    }
+
+    const distFromStart = Math.hypot(
+      projectile.currentX - projectile.startX,
+      projectile.currentY - projectile.startY,
+      projectile.currentZ - projectile.startZ
+    );
+    if (distFromStart > projectile.range * 1.5) {
+      toRemove.push(projectile.id);
+    }
     return;
   }
 
@@ -517,41 +836,32 @@ const stepNonBeamProjectile = (
   projectile.currentY += projectile.velocityY * delta;
   projectile.currentZ += projectile.velocityZ * delta;
 
-  if (projectile.visualPool === "bolt") {
-    applyChainBoltTransform(boltPool, projectile.instanceIndex, {
-      x: projectile.currentX,
-      y: projectile.currentY,
-      z: projectile.currentZ,
-      vx: projectile.velocityX,
-      vy: projectile.velocityY,
-      vz: projectile.velocityZ,
-    });
-  } else {
-    spherePool?.setPosition(
-      projectile.instanceIndex,
+  // Bolts are handled above (arc-lightning chase), so the straight-line
+  // movement that remains is the sphere pool's.
+  spherePool?.setPosition(
+    projectile.instanceIndex,
+    projectile.currentX,
+    projectile.currentY,
+    projectile.currentZ
+  );
+
+  if (projectile.trailInstanceIndex >= 0 && trailPool) {
+    const pose = computeTrailPose(
       projectile.currentX,
       projectile.currentY,
-      projectile.currentZ
+      projectile.currentZ,
+      projectile.velocityX,
+      projectile.velocityY,
+      projectile.velocityZ,
+      projectileSize
     );
-
-    if (projectile.trailInstanceIndex >= 0 && trailPool) {
-      const pose = computeTrailPose(
-        projectile.currentX,
-        projectile.currentY,
-        projectile.currentZ,
-        projectile.velocityX,
-        projectile.velocityY,
-        projectile.velocityZ,
-        projectileSize
+    if (pose) {
+      trailPool.setTransform(
+        projectile.trailInstanceIndex,
+        pose.position,
+        pose.quaternion,
+        pose.scale
       );
-      if (pose) {
-        trailPool.setTransform(
-          projectile.trailInstanceIndex,
-          pose.position,
-          pose.quaternion,
-          pose.scale
-        );
-      }
     }
   }
 
@@ -595,19 +905,6 @@ const stepNonBeamProjectile = (
     }
 
     onHit(projectile, targetEnemy, currentTime);
-
-    if (
-      projectile.visualPool === "bolt" &&
-      tryContinueChainBoltAfterHit(
-        projectile,
-        targetEnemy,
-        boltPool,
-        enemiesById
-      )
-    ) {
-      return;
-    }
-
     toRemove.push(projectile.id);
     return;
   }
@@ -834,6 +1131,16 @@ export const useInstancedProjectiles = (
       instancesContent: trailInstancesContent,
     });
 
+  // The small light each chain bolt carries: a real THREE.PointLight (drei
+  // can't instance lights, so these are plain light objects in a fixed pool —
+  // created once, moved per frame, intensity-toggled on acquire/release). The
+  // fixed size keeps the scene's light count constant, so no shader program
+  // is (re)compiled while bolts come and go.
+  const chainLightPool = useMemo(
+    () => createChainLightPool(CHAIN_LIGHT_POOL_SIZE),
+    []
+  );
+
   const projectilesRef = useRef<Map<number, PooledProjectile>>(new Map());
   const enemiesByIdRef = useRef<Map<number, Enemy>>(new Map());
   const toRemoveRef = useRef<number[]>([]);
@@ -874,9 +1181,13 @@ export const useInstancedProjectiles = (
         pools.trail?.release(projectile.trailInstanceIndex);
       }
 
+      if (projectile.lightIndex >= 0) {
+        chainLightPool.release(projectile.lightIndex);
+      }
+
       onRemove(projectileId);
     },
-    [pools, onRemove]
+    [chainLightPool, pools, onRemove]
   );
 
   const fireProjectile = useCallback(
@@ -889,13 +1200,21 @@ export const useInstancedProjectiles = (
       const index = pool.acquire();
       if (index === -1) return { ...params, id: -1 };
 
-      // The single/AoE spheres and the BRL rockets get a pooled trail slot; a
-      // full trail pool (or reduced motion) degrades gracefully to the plain
-      // body.
+      // The single/AoE spheres, the BRL rockets, and the chain bolts get a
+      // pooled trail slot; a full trail pool (or reduced motion) degrades
+      // gracefully to the plain body.
       const wantTrail =
-        (visualPool === "sphere" || visualPool === "rocket") && !reducedMotion;
+        (visualPool === "sphere" ||
+          visualPool === "rocket" ||
+          visualPool === "bolt") &&
+        !reducedMotion;
       const trailPool = wantTrail ? pools.trail : null;
       const trailIndex = trailPool ? trailPool.acquire() : -1;
+
+      // A chain bolt grabs its carried light slot; a full light pool (rare —
+      // only under a heavy chain volley) degrades gracefully to an unlit bolt.
+      const lightIndex =
+        visualPool === "bolt" ? chainLightPool.acquire(params.color ?? defaultColor) : -1;
 
       const id = getNextProjectileId();
       const color = params.color ?? defaultColor;
@@ -939,6 +1258,7 @@ export const useInstancedProjectiles = (
         id,
         instanceIndex: index,
         trailInstanceIndex: wantTrail && trailIndex !== -1 ? trailIndex : -1,
+        lightIndex,
         visualPool,
         currentX: params.startX,
         currentY: params.startY,
@@ -972,14 +1292,20 @@ export const useInstancedProjectiles = (
 
         pool.setTransform(index, tempPosition, tempQuaternion, tempScale);
       } else if (visualPool === "bolt") {
-        applyChainBoltTransform(pool, index, {
-          x: params.startX,
-          y: params.startY,
-          z: params.startZ,
-          vx: velocityX,
-          vy: velocityY,
-          vz: velocityZ,
-        });
+        applyChainBoltTransform(
+          pool,
+          index,
+          {
+            x: params.startX,
+            y: params.startY,
+            z: params.startZ,
+            vx: velocityX,
+            vy: velocityY,
+            vz: velocityZ,
+          },
+          chainLightPool,
+          lightIndex
+        );
       } else if (visualPool === "rocket") {
         // Point the nose at the launch velocity (strongly upward at first).
         const speed0 = Math.hypot(velocityX, velocityY, velocityZ);
@@ -1022,7 +1348,14 @@ export const useInstancedProjectiles = (
 
       return pooledProjectile;
     },
-    [defaultColor, getNextProjectileId, pools, projectileSize, reducedMotion]
+    [
+      chainLightPool,
+      defaultColor,
+      getNextProjectileId,
+      pools,
+      projectileSize,
+      reducedMotion,
+    ]
   );
 
   const updateProjectilesFrame = useCallback(
@@ -1052,6 +1385,7 @@ export const useInstancedProjectiles = (
             delta,
             currentTime,
             boltPool,
+            lightPool: chainLightPool,
             spherePool,
             rocketPool,
             trailPool,
@@ -1072,6 +1406,7 @@ export const useInstancedProjectiles = (
     [
       beamDuration,
       boltPool,
+      chainLightPool,
       onHit,
       rocketPool,
       spherePool,
@@ -1088,7 +1423,8 @@ export const useInstancedProjectiles = (
     });
     projectilesRef.current.clear();
     Object.values(pools).forEach((pool) => pool?.releaseAll());
-  }, [pools, onRemove]);
+    chainLightPool.releaseAll();
+  }, [chainLightPool, pools, onRemove]);
 
   const getActiveProjectiles = useCallback((): PooledProjectile[] => {
     return Array.from(projectilesRef.current.values());
@@ -1117,6 +1453,9 @@ export const useInstancedProjectiles = (
       {InstancedBoltInstances}
       {InstancedRocketInstances}
       {reducedMotion ? null : InstancedTrailInstances}
+      {chainLightPool.lights.map((light, index) => (
+        <primitive key={`chain-light-${index}`} object={light} />
+      ))}
     </>
   );
 

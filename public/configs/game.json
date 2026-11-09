@@ -268,8 +268,8 @@
       "color": "#fbbf24",
       "cost": 200,
       "damage": 25,
-      "description": "Chain lightning jumps to nearby enemies (-30% damage per hop, up to 3 hops).",
-      "fireRate": 1,
+      "description": "Fires a slow-drifting arc of lightning that creeps toward its target and lights up the enemies around it; chains to nearby enemies (-30% damage per hop, up to 3 hops).",
+      "fireRate": 2,
       "id": "chain",
       "maxChainHops": 3,
       "model": {
@@ -286,7 +286,7 @@
         "turretNode": "Field_Array"
       },
       "name": "Chain Lightning",
-      "projectileSpeed": 14,
+      "projectileSpeed": 7,
       "projectileType": "chain",
       "range": 3.5,
       "targeting": "nearest",

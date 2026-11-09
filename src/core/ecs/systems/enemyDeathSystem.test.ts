@@ -68,6 +68,7 @@ describe("runEnemyDeathSystem", () => {
     expect(wraithLocomotion?.bobAmplitude).toBeCloseTo(
       0.4 * WRAITH_BOB_AMPLITUDE_RATIO
     );
+    expect(wraithLocomotion?.walkAmplitude).toBe(0);
     expect(wraithLocomotion?.deathPreburstSeconds).toBe(0);
 
     const splitter = actions.spawnEnemy(splitterEnemy(8));
@@ -79,11 +80,17 @@ describe("runEnemyDeathSystem", () => {
       ENEMY_LOCOMOTION.splitter.breathAmplitude
     );
 
-    const plain = actions.spawnEnemy(baseEnemy(9));
-    const plainLocomotion = plain.get(EnemyLocomotion);
-    expect(plainLocomotion?.bobAmplitude).toBe(0);
-    expect(plainLocomotion?.breathAmplitude).toBe(0);
-    expect(plainLocomotion?.deathPreburstSeconds).toBe(0);
+    const troop = actions.spawnEnemy(baseEnemy(9));
+    const troopLocomotion = troop.get(EnemyLocomotion);
+    expect(troopLocomotion?.bobAmplitude).toBe(0);
+    expect(troopLocomotion?.walkAmplitude).toBe(
+      ENEMY_LOCOMOTION.basic.walkAmplitude
+    );
+    expect(troopLocomotion?.walkFrequency).toBe(
+      ENEMY_LOCOMOTION.basic.walkFrequency
+    );
+    expect(troopLocomotion?.breathAmplitude).toBe(0);
+    expect(troopLocomotion?.deathPreburstSeconds).toBe(0);
   });
 
   it("holds a dead splitter back for the pre-burst window, then splits", () => {

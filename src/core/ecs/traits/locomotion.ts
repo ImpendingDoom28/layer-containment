@@ -19,6 +19,9 @@ export const EnemyLocomotion = trait({
   /** Breathing loop: scale oscillation amplitude (0.03 = ±3%). */
   breathAmplitude: 0,
   breathFrequency: 0,
+  /** Biped walk: hip swing amplitude in radians and frequency in rad/s. */
+  walkAmplitude: 0,
+  walkFrequency: 0,
   /** Death anticipation: seconds the dead entity lingers for squash-stretch. */
   deathPreburstSeconds: 0,
 });

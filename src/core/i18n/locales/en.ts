@@ -337,7 +337,7 @@ export const en = {
       description: "Swift scout unit that sacrifices durability for speed.",
     },
     medic: {
-      name: "Medic",
+      name: "R&H drone",
       description:
         "Support unit. Every few seconds restores HP to nearby allies (not itself).",
     },

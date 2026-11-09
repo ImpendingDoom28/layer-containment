@@ -9,12 +9,12 @@ import {
   updateEnemyWalkRig,
 } from "./enemyWalkRig";
 
-const makeModel = () => {
+const makeModel = (leftName: string, rightName: string) => {
   const model = new Group();
   const leftLeg = new Object3D();
   const rightLeg = new Object3D();
-  leftLeg.name = "Leg_L";
-  rightLeg.name = "Leg_R";
+  leftLeg.name = leftName;
+  rightLeg.name = rightName;
   leftLeg.rotation.x = 0.1;
   rightLeg.rotation.x = -0.2;
   model.add(leftLeg, rightLeg);
@@ -23,7 +23,7 @@ const makeModel = () => {
 
 describe("enemyWalkRig", () => {
   it("swings the legs in opposition around their rest pitches", () => {
-    const { model, leftLeg, rightLeg } = makeModel();
+    const { model, leftLeg, rightLeg } = makeModel("Leg_L", "Leg_R");
     const rig = createEnemyWalkRig(model);
     expect(rig).not.toBeNull();
 
@@ -40,8 +40,17 @@ describe("enemyWalkRig", () => {
     expect(rightLeg.userData[FRUSTUM_CULL_SNAPSHOT_EXCLUDE]).toBe(true);
   });
 
+  it("binds the medic model's suffixed pivot names", () => {
+    const { model, leftLeg, rightLeg } = makeModel("Leg_L001", "Leg_R001");
+    const rig = createEnemyWalkRig(model);
+
+    expect(rig).not.toBeNull();
+    expect(rig!.leftLeg.node).toBe(leftLeg);
+    expect(rig!.rightLeg.node).toBe(rightLeg);
+  });
+
   it("does not create a rig when either leg pivot is absent", () => {
-    const { model, rightLeg, leftLeg } = makeModel();
+    const { model, rightLeg, leftLeg } = makeModel("Leg_L", "Leg_R");
     model.remove(rightLeg);
 
     expect(createEnemyWalkRig(model)).toBeNull();
@@ -49,7 +58,7 @@ describe("enemyWalkRig", () => {
   });
 
   it("restores the rest pose for reduced motion", () => {
-    const { model, leftLeg, rightLeg } = makeModel();
+    const { model, leftLeg, rightLeg } = makeModel("Leg_L", "Leg_R");
     const rig = createEnemyWalkRig(model)!;
     updateEnemyWalkRig(rig, 1, 0.55, 9.5, 0);
     expect(leftLeg.rotation.x).not.toBe(0.1);
@@ -61,7 +70,7 @@ describe("enemyWalkRig", () => {
   });
 
   it("restores the pose and culling flags when released", () => {
-    const { model, leftLeg, rightLeg } = makeModel();
+    const { model, leftLeg, rightLeg } = makeModel("Leg_L", "Leg_R");
     const rig = createEnemyWalkRig(model)!;
     updateEnemyWalkRig(rig, 1, 0.55, 9.5, 0);
 

@@ -2,8 +2,10 @@ import type { Object3D } from "three";
 
 import { FRUSTUM_CULL_SNAPSHOT_EXCLUDE } from "../../utils/frustumCulling";
 
-const LEFT_LEG_NODE = "Leg_L";
-const RIGHT_LEG_NODE = "Leg_R";
+// The models' hip pivots carry the same names, with a Blender export suffix on
+// the second model (`Leg_L` vs `Leg_L001`), so the prefix is what is shared.
+const LEFT_LEG_PREFIX = "Leg_L";
+const RIGHT_LEG_PREFIX = "Leg_R";
 
 type WalkLeg = {
   node: Object3D;
@@ -15,9 +17,17 @@ export type EnemyWalkRig = {
   rightLeg: WalkLeg;
 };
 
+const findLeg = (model: Object3D, prefix: string): Object3D | null => {
+  let found: Object3D | null = null;
+  model.traverse((object) => {
+    if (!found && object.name.startsWith(prefix)) found = object;
+  });
+  return found;
+};
+
 export const createEnemyWalkRig = (model: Object3D): EnemyWalkRig | null => {
-  const leftLeg = model.getObjectByName(LEFT_LEG_NODE);
-  const rightLeg = model.getObjectByName(RIGHT_LEG_NODE);
+  const leftLeg = findLeg(model, LEFT_LEG_PREFIX);
+  const rightLeg = findLeg(model, RIGHT_LEG_PREFIX);
   if (!leftLeg || !rightLeg) return null;
 
   // Per-frame leg swings must not trigger a fresh culling-bound measurement.

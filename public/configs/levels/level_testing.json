@@ -74,7 +74,7 @@
     {
       "id": 4,
       "type": "medic",
-      "name": "Medic",
+      "name": "R&H drone",
       "health": 45,
       "speed": 1.2,
       "reward": 12,

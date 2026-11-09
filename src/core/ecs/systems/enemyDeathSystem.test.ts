@@ -91,6 +91,17 @@ describe("runEnemyDeathSystem", () => {
     );
     expect(troopLocomotion?.breathAmplitude).toBe(0);
     expect(troopLocomotion?.deathPreburstSeconds).toBe(0);
+
+    const medic = actions.spawnEnemy({ ...baseEnemy(10), type: "medic" });
+    const medicLocomotion = medic.get(EnemyLocomotion);
+    expect(medicLocomotion?.walkAmplitude).toBe(
+      ENEMY_LOCOMOTION.medic.walkAmplitude
+    );
+    expect(medicLocomotion?.walkFrequency).toBe(
+      ENEMY_LOCOMOTION.medic.walkFrequency
+    );
+    expect(medicLocomotion?.breathAmplitude).toBe(0);
+    expect(medicLocomotion?.deathPreburstSeconds).toBe(0);
   });
 
   it("holds a dead splitter back for the pre-burst window, then splits", () => {
@@ -161,11 +172,7 @@ describe("getDeathSquashScale", () => {
   });
 
   it("clamps out-of-range progress", () => {
-    expect(getDeathSquashScale(-1)).toEqual(
-      getDeathSquashScale(0)
-    );
-    expect(getDeathSquashScale(2)).toEqual(
-      getDeathSquashScale(1)
-    );
+    expect(getDeathSquashScale(-1)).toEqual(getDeathSquashScale(0));
+    expect(getDeathSquashScale(2)).toEqual(getDeathSquashScale(1));
   });
 });

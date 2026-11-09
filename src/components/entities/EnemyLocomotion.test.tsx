@@ -107,8 +107,11 @@ describe("EnemyLocomotion walking", () => {
       await advanceFrame(renderer, 0.2);
       const pausedPitch = leftLeg.rotation.x;
       await advanceFrame(renderer, 0.4);
-      expect(leftLeg.rotation.x).toBe(pausedPitch);
-      expect(rightLeg.rotation.x).toBe(-pausedPitch);
+      // The pause clock's `now - (now - segmentStart)` fold can differ by a
+      // float ULP between two raw times, so compare with a tight tolerance —
+      // still far tighter than any visible motion.
+      expect(leftLeg.rotation.x).toBeCloseTo(pausedPitch, 12);
+      expect(rightLeg.rotation.x).toBeCloseTo(-pausedPitch, 12);
     } finally {
       await renderer.unmount();
       entity.destroy();

@@ -9,9 +9,10 @@ import type { EnemyType } from "../core/types/game";
 // with the time scale. Durations are in simulation seconds, frequencies in
 // rad/s, amplitudes in world units, scale units, or radians.
 
-// Troop: alternating leg swings around the model's hip pivots.
-export const TROOP_WALK_AMPLITUDE = 0.55;
-export const TROOP_WALK_FREQUENCY = 9.5;
+// Biped enemies (troop, R&H drone): alternating leg swings around the
+// model's hip pivots.
+export const WALK_AMPLITUDE = 0.55;
+export const WALK_FREQUENCY = 9.5;
 
 // Wraith (fast): the drone hovers, bobbing vertically as it travels.
 export const WRAITH_BOB_AMPLITUDE_RATIO = 0.12; // of the body radius
@@ -52,13 +53,20 @@ const NO_LOCOMOTION: EnemyLocomotionSpec = {
   deathPreburstSeconds: 0,
 };
 
+const WALK: Partial<EnemyLocomotionSpec> = {
+  walkAmplitude: WALK_AMPLITUDE,
+  walkFrequency: WALK_FREQUENCY,
+};
+
 export const ENEMY_LOCOMOTION: Record<EnemyType, EnemyLocomotionSpec> = {
   basic: {
     ...NO_LOCOMOTION,
-    walkAmplitude: TROOP_WALK_AMPLITUDE,
-    walkFrequency: TROOP_WALK_FREQUENCY,
+    ...WALK,
   },
-  medic: NO_LOCOMOTION,
+  medic: {
+    ...NO_LOCOMOTION,
+    ...WALK,
+  },
   tank: NO_LOCOMOTION,
   fast: {
     ...NO_LOCOMOTION,

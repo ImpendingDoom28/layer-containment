@@ -220,6 +220,7 @@ const ruValues = {
     modePath: "Путь",
     modeBuilding: "Здание",
     modeWater: "Вода",
+    modeCanyon: "Каньон",
     modeErase: "Стереть",
     level: "Уровень",
     name: "Имя",

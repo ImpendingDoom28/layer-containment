@@ -2,13 +2,16 @@ import { useCallback, useMemo } from "react";
 
 import type { ThreeEvent } from "@react-three/fiber";
 
+import { Bridge } from "../../entities/Bridge";
 import { EndBuilding } from "../../entities/EndBuilding";
 import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
 import { Portal } from "../../entities/Portal";
 import { Water } from "../../entities/Water";
+import { BRIDGE_ELEVATION, getBridgeTiles } from "../../../utils/canyonBridges";
 import { Light } from "../shared/Light";
 import { Skybox } from "../shared/Skybox";
 import {
+  pathYOffsetSelector,
   tileSizeSelector,
   pathWidthSelector,
   useGameStore,
@@ -45,6 +48,7 @@ const getWaypointColor = (
 export const LevelEditorScene = () => {
   const tileSize = useGameStore(tileSizeSelector);
   const pathWidth = useGameStore(pathWidthSelector);
+  const pathYOffset = useGameStore(pathYOffsetSelector);
   const {
     draftLevel,
     activeTool,
@@ -69,7 +73,26 @@ export const LevelEditorScene = () => {
     pathWaypoints: draftLevel.pathWaypoints,
     pathWidth,
     waters: draftLevel.waters,
+    canyons: draftLevel.canyons,
   });
+
+  // Bridge tiles per path, memoized so hover-only re-renders (the editor's
+  // `hoveredTile` changes per tile) reuse the same arrays and the `Bridge`
+  // memo holds instead of re-merging its geometry.
+  const bridgeTilesByPath = useMemo(
+    () =>
+      draftLevel.canyons.length === 0
+        ? []
+        : draftLevel.pathWaypoints.map((path) =>
+            getBridgeTiles(
+              path,
+              draftLevel.canyons,
+              draftLevel.gridSize,
+              tileSize
+            )
+          ),
+    [draftLevel.pathWaypoints, draftLevel.canyons, draftLevel.gridSize, tileSize]
+  );
 
   const tiles = useMemo(() => {
     const tileEntries: Array<{ gridX: number; gridZ: number }> = [];
@@ -133,6 +156,7 @@ export const LevelEditorScene = () => {
             towers: [],
             buildings: draftLevel.buildings,
             waters: draftLevel.waters,
+            canyons: draftLevel.canyons,
             gridOffset,
             tileSize,
             pathWaypoints: draftLevel.pathWaypoints,
@@ -144,8 +168,15 @@ export const LevelEditorScene = () => {
             activeTool === "placeBuilding" && !placementState.isBlocked;
           const canPaintWater =
             activeTool === "water" && !placementState.isOnPath;
+          const canPaintCanyon =
+            activeTool === "canyon" &&
+            !placementState.isOnPath &&
+            !placementState.isOccupiedByBuilding &&
+            !placementState.isCanyon;
           const canHighlightEditorAction =
-            canPlaceBuilding || (activeTool === "water" && canPaintWater);
+            canPlaceBuilding ||
+            (activeTool === "water" && canPaintWater) ||
+            canPaintCanyon;
           const baseTileColor =
             draftLevel.tileColor ?? getCssColorValue("editor-default-tile");
 
@@ -287,6 +318,23 @@ export const LevelEditorScene = () => {
             </group>
           );
         })}
+      </group>
+
+      <group>
+        {bridgeTilesByPath.map((bridgeTiles, pathIndex) =>
+          bridgeTiles.length === 0 ? null : (
+            <Bridge
+              key={`editor-bridge-${pathIndex}`}
+              tiles={bridgeTiles}
+              deckHeight={BRIDGE_ELEVATION}
+              pathYOffset={pathYOffset}
+              pathWidth={pathWidth}
+              tileSize={tileSize}
+              gridSize={draftLevel.gridSize}
+              renderDeck
+            />
+          )
+        )}
       </group>
 
       <group>

@@ -6,6 +6,7 @@ import { Building } from "../entities/Building";
 import { Enemy } from "../entities/Enemy";
 import {
   buildingsSelector,
+  canyonsSelector,
   gridOffsetSelector,
   hoveredTileSelector,
   pathWaypointsSelector,
@@ -48,6 +49,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
     const pathWidth = useGameStore(pathWidthSelector);
 
     const buildings = useLevelStore(buildingsSelector);
+    const canyons = useLevelStore(canyonsSelector);
     const waters = useLevelStore(watersSelector);
     const towers = useLevelStore(towersSelector);
     const gridOffset = useLevelStore(gridOffsetSelector);
@@ -62,6 +64,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
           towers,
           buildings,
           waters,
+          canyons,
           gridOffset,
           tileSize,
           pathWaypoints,
@@ -71,6 +74,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
         towers,
         buildings,
         waters,
+        canyons,
         gridOffset,
         tileSize,
         pathWaypoints,

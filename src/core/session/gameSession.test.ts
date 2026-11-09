@@ -76,6 +76,7 @@ const makeLevel = (
   startingMoney,
   gridSize: 8,
   waters: [],
+  canyons: [],
   pathWaypoints: [
     [
       { x: 0, y: 0, z: 0 },

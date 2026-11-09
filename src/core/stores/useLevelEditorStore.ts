@@ -15,7 +15,9 @@ import { validateLevel } from "../../utils/validateLevel";
 import {
   clampWaterToGrid,
   computeWaveTotalEnemies,
+  createCanyonDefaults,
   createEmptyLevelConfig,
+  filterCanyonsToGrid,
   filterWatersToGrid,
   getLevelGridOffset,
   normalizeImportedLevel,
@@ -302,6 +304,10 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
             ),
             nextGridSize
           ),
+          canyons: filterCanyonsToGrid(
+            state.draftLevel.canyons,
+            nextGridSize
+          ),
           buildings: state.draftLevel.buildings.map((building) =>
             withRecalculatedBuildingCoordinates(
               {
@@ -545,12 +551,13 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
         towers: [],
         buildings: state.draftLevel.buildings,
         waters: state.draftLevel.waters,
+        canyons: state.draftLevel.canyons,
         gridOffset: getLevelGridOffset(state.draftLevel.gridSize, tileSize),
         tileSize,
         pathWaypoints: state.draftLevel.pathWaypoints,
         pathWidth,
       });
-      if (waterCheck.isWater) {
+      if (waterCheck.isWater && !waterCheck.isCanyon) {
         return state;
       }
 
@@ -685,6 +692,22 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
           };
         }
 
+        const canyonAtTile = draftLevel.canyons.find(
+          (item) => item.gridX === tile.gridX && item.gridZ === tile.gridZ
+        );
+        if (canyonAtTile) {
+          return {
+            draftLevel: {
+              ...draftLevel,
+              canyons: draftLevel.canyons.filter(
+                (item) => item.id !== canyonAtTile.id
+              ),
+            },
+            selected: null,
+            hasUnsavedChanges: true,
+          };
+        }
+
         if (waypointSelection) {
           return {
             draftLevel: {
@@ -715,6 +738,7 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
           towers: [],
           buildings: draftLevel.buildings,
           waters: draftLevel.waters,
+          canyons: draftLevel.canyons,
           gridOffset: getLevelGridOffset(draftLevel.gridSize, tileSize),
           tileSize,
           pathWaypoints: draftLevel.pathWaypoints,
@@ -752,6 +776,7 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
           towers: [],
           buildings: draftLevel.buildings,
           waters: draftLevel.waters,
+          canyons: draftLevel.canyons,
           gridOffset: getLevelGridOffset(draftLevel.gridSize, tileSize),
           tileSize,
           pathWaypoints: draftLevel.pathWaypoints,
@@ -781,6 +806,45 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
         };
       }
 
+      if (activeTool === "canyon") {
+        const placementState = getTilePlacementState({
+          gridX: tile.gridX,
+          gridZ: tile.gridZ,
+          towers: [],
+          buildings: draftLevel.buildings,
+          waters: draftLevel.waters,
+          canyons: draftLevel.canyons,
+          gridOffset: getLevelGridOffset(draftLevel.gridSize, tileSize),
+          tileSize,
+          pathWaypoints: draftLevel.pathWaypoints,
+          pathWidth,
+        });
+
+        if (placementState.isOnPath || placementState.isOccupiedByBuilding) {
+          return state;
+        }
+
+        const hasCanyon = draftLevel.canyons.some(
+          (c) => c.gridX === tile.gridX && c.gridZ === tile.gridZ
+        );
+        const nextCanyons = hasCanyon
+          ? draftLevel.canyons.filter(
+              (c) => !(c.gridX === tile.gridX && c.gridZ === tile.gridZ)
+            )
+          : [
+              ...draftLevel.canyons,
+              createCanyonDefaults(tile.gridX, tile.gridZ, draftLevel),
+            ];
+
+        return {
+          draftLevel: {
+            ...draftLevel,
+            canyons: filterCanyonsToGrid(nextCanyons, draftLevel.gridSize),
+          },
+          hasUnsavedChanges: true,
+        };
+      }
+
       const nextWaypoint = tileToWaypoint(tile, draftLevel.gridSize, tileSize);
       const ensuredPaths = ensurePathExists(
         draftLevel.pathWaypoints,
@@ -794,6 +858,7 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
         towers: [],
         buildings: draftLevel.buildings,
         waters: draftLevel.waters,
+        canyons: draftLevel.canyons,
         gridOffset: getLevelGridOffset(draftLevel.gridSize, tileSize),
         tileSize,
         pathWaypoints: draftLevel.pathWaypoints,
@@ -802,6 +867,7 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
 
       if (
         pathTargetPlacement.isWater &&
+        !pathTargetPlacement.isCanyon &&
         (activeTool === "drawPath" ||
           activeTool === "setSpawn" ||
           activeTool === "setBase")

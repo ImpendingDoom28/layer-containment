@@ -120,7 +120,11 @@ export const buildRubbleMatrices = (
   for (let gridX = 0; gridX < gridSize; gridX += 1) {
     for (let gridZ = 0; gridZ < gridSize; gridZ += 1) {
       const index = gridZ * occupancy.gridSize + gridX;
-      if (occupancy.onPath[index] === 1 || occupancy.water[index] === 1) {
+      if (
+        occupancy.onPath[index] === 1 ||
+        occupancy.water[index] === 1 ||
+        occupancy.canyon[index] === 1
+      ) {
         continue;
       }
 

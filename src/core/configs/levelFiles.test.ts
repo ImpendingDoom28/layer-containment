@@ -94,7 +94,13 @@ describe("playable level files", () => {
           `building ${building.id} at ${building.gridX},${building.gridZ} is on the path`
         ).toBe(false);
       }
+      const canyonKeys = new Set(
+        (level.canyons ?? []).map((c) => `${c.gridX},${c.gridZ}`)
+      );
       for (const water of level.waters) {
+        // Water is allowed on the path only over a canyon (a river the path
+        // bridges): the bridge deck runs above the water.
+        if (canyonKeys.has(`${water.gridX},${water.gridZ}`)) continue;
         expect(
           isOnPath(water.gridX, water.gridZ),
           `water ${water.id} at ${water.gridX},${water.gridZ} is on the path`
@@ -132,10 +138,13 @@ describe("playable level files", () => {
       }
     });
 
-    it(`${id}: path waypoints never sit on water`, () => {
+    it(`${id}: path waypoints never sit on water (except over a canyon)`, () => {
       const level = loadLevel(id);
       const waterKeys = new Set(
         level.waters.map((w) => `${w.gridX},${w.gridZ}`)
+      );
+      const canyonKeys = new Set(
+        (level.canyons ?? []).map((c) => `${c.gridX},${c.gridZ}`)
       );
       for (const path of level.pathWaypoints) {
         for (const waypoint of path) {
@@ -144,11 +153,27 @@ describe("playable level files", () => {
             level.gridSize,
             TILE_SIZE
           );
+          // Over a canyon the path bridges the water in the gorge, so a
+          // waypoint there sits above the water rather than in it.
+          const onWaterOverCanyon = canyonKeys.has(`${gridX},${gridZ}`);
           expect(
-            waterKeys.has(`${gridX},${gridZ}`),
+            waterKeys.has(`${gridX},${gridZ}`) && !onWaterOverCanyon,
             `path waypoint at grid ${gridX},${gridZ} sits on water`
           ).toBe(false);
         }
+      }
+    });
+
+    it(`${id}: buildings never sit on canyon tiles`, () => {
+      const level = loadLevel(id);
+      const canyonKeys = new Set(
+        (level.canyons ?? []).map((c) => `${c.gridX},${c.gridZ}`)
+      );
+      for (const building of level.buildings) {
+        expect(
+          canyonKeys.has(`${building.gridX},${building.gridZ}`),
+          `building ${building.id} at ${building.gridX},${building.gridZ} is on a canyon tile`
+        ).toBe(false);
       }
     });
 
@@ -174,6 +199,18 @@ describe("playable level files", () => {
         expect(inBounds(water.gridX)).toBe(true);
         expect(inBounds(water.gridZ)).toBe(true);
       }
+      for (const canyon of level.canyons ?? []) {
+        expect(inBounds(canyon.gridX)).toBe(true);
+        expect(inBounds(canyon.gridZ)).toBe(true);
+      }
+    });
+
+    it(`${id}: no duplicate canyon tiles`, () => {
+      const level = loadLevel(id);
+      const canyonKeys = (level.canyons ?? []).map(
+        (c) => `${c.gridX},${c.gridZ}`
+      );
+      expect(new Set(canyonKeys).size).toBe(canyonKeys.length);
     });
   }
 });

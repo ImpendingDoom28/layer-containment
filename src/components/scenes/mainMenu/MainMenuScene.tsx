@@ -5,6 +5,7 @@ import { useActions } from "koota/react";
 import type { EnemyType } from "../../../core/types/game";
 import { LevelSystem } from "../../systems/LevelSystem";
 import {
+  canyonsSelector,
   gridOffsetSelector,
   gridSizeSelector,
   useLevelStore,
@@ -76,6 +77,7 @@ export const MainMenuScene: FC = () => {
   const gridSize = useLevelStore(gridSizeSelector);
   const gridOffset = useLevelStore(gridOffsetSelector);
   const waters = useLevelStore(watersSelector);
+  const canyons = useLevelStore(canyonsSelector);
   const { addEnemy } = levelSystem;
   const { getLivingEnemyCount } = useActions(enemyActions);
 
@@ -86,6 +88,7 @@ export const MainMenuScene: FC = () => {
     pathWaypoints,
     pathWidth,
     waters,
+    canyons,
   });
 
   const lastSpawnTime = useRef(0);
@@ -141,7 +144,9 @@ export const MainMenuScene: FC = () => {
           rock props) behind the ambient enemies. Tower placement is
           impossible in the menu, so the tiles are purely visual and get
           no-op interaction wiring. */}
-      <Grid placeTower={noopPlaceTower} occupancy={occupancy} />
+      <Grid placeTower={noopPlaceTower} occupancy={occupancy}
+        canyonBBox={null}
+      />
 
       <PlanetTileDecorations occupancy={occupancy} />
 

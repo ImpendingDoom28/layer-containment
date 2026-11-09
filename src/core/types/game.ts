@@ -360,3 +360,14 @@ export type WaterBody = {
   x: number;
   z: number;
 };
+
+/**
+ * A single canyon tile in level JSON (grid layout only). A canyon is a
+ * non-buildable rocky basin: no land tile or rubble renders in its cells, and
+ * a path crossing it is automatically bridged (see `canyonBridges.ts`).
+ */
+export type CanyonConfig = {
+  id: number;
+  gridX: number;
+  gridZ: number;
+};

@@ -16,6 +16,7 @@ const makeLevel = (
   startingMoney: 100,
   gridSize: 10,
   waters: [],
+  canyons: [],
   pathWaypoints: [
     [
       { x: -4, y: 0, z: -4 },
@@ -83,7 +84,36 @@ describe("validateLevel", () => {
       TILE_SIZE
     );
     expect(
-      issues.some((issue) => issue.message === "Waypoint cannot be on water.")
+      issues.some(
+        (issue) =>
+          issue.message === "Waypoint cannot be on water (except over a canyon)."
+      )
     ).toBe(true);
+  });
+
+  it("allows a waypoint over water that sits on a canyon tile (bridge)", () => {
+    const level = makeLevel();
+    const [firstWaypoint] = level.pathWaypoints[0];
+    const tile = waypointToTile(firstWaypoint, level.gridSize, TILE_SIZE);
+    const issues = validateLevel(
+      makeLevel({
+        waters: [
+          {
+            id: 1,
+            gridX: tile.gridX,
+            gridZ: tile.gridZ,
+            shape: "box",
+            color: "#0e7490",
+          },
+        ],
+        canyons: [{ id: 1, gridX: tile.gridX, gridZ: tile.gridZ }],
+      }),
+      TILE_SIZE
+    );
+    expect(
+      issues.some((issue) =>
+        issue.message.includes("Waypoint cannot be on water")
+      )
+    ).toBe(false);
   });
 });

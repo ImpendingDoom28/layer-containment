@@ -14,6 +14,7 @@ import {
 import {
   addMoneySelector,
   buildingsSelector,
+  canyonsSelector,
   currentWaveSelector,
   enemiesKilledSelector,
   gridOffsetSelector,
@@ -55,6 +56,7 @@ import { spawnLevelEnemy } from "../ecs/spawnLevelEnemy";
 export const useLevelSystem = () => {
   const buildings = useLevelStore(buildingsSelector);
   const waters = useLevelStore(watersSelector);
+  const canyons = useLevelStore(canyonsSelector);
   const gridOffset = useLevelStore(gridOffsetSelector);
   const gridSize = useLevelStore(gridSizeSelector);
   const setTowers = useLevelStore(setTowersSelector);
@@ -98,13 +100,23 @@ export const useLevelSystem = () => {
         towers,
         buildings,
         waters,
+        canyons,
         gridOffset,
         tileSize,
         pathWaypoints,
         pathWidth,
       });
     },
-    [towers, buildings, waters, gridOffset, tileSize, pathWaypoints, pathWidth]
+    [
+      towers,
+      buildings,
+      waters,
+      canyons,
+      gridOffset,
+      tileSize,
+      pathWaypoints,
+      pathWidth,
+    ]
   );
 
   const placeTower = useCallback(

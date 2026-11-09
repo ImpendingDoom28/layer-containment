@@ -20,6 +20,7 @@ const toolTokenMap: Record<LevelEditorTool, ColorToken> = {
   setBase: "editor-tool-set-base",
   erase: "editor-tool-erase",
   water: "editor-tool-water",
+  canyon: "editor-tool-canyon",
 };
 
 const getToolPreviewColor = (tool: LevelEditorTool): string =>
@@ -56,7 +57,12 @@ export const LevelEditorTerrainTile: FC<LevelEditorTerrainTileProps> = memo(
     onTileHoverEnd,
   }) => {
     const material = useMemo(() => {
-      if (!placementState.isOnPath && !placementState.isWater && !isHovered) {
+      if (
+        !placementState.isOnPath &&
+        !placementState.isWater &&
+        !placementState.isCanyon &&
+        !isHovered
+      ) {
         return createPlanetTileMaterial({
           baseColor: landBaseColor,
           emissive: getCssColorValue("scene-black"),
@@ -81,6 +87,8 @@ export const LevelEditorTerrainTile: FC<LevelEditorTerrainTileProps> = memo(
         color = getCssColorValue("scene-gray-800");
       } else if (placementState.isWater) {
         color = getCssColorValue("scene-water");
+      } else if (placementState.isCanyon) {
+        color = getCssColorValue("scene-canyon-rock");
       } else {
         color = landBaseColor;
       }
@@ -102,6 +110,7 @@ export const LevelEditorTerrainTile: FC<LevelEditorTerrainTileProps> = memo(
       landBaseColor,
       placementState.isOnPath,
       placementState.isWater,
+      placementState.isCanyon,
     ]);
 
     useEffect(

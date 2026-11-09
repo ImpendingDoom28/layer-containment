@@ -79,6 +79,7 @@ export const validateLevel = (
   });
 
   const waters = level.waters ?? [];
+  const canyons = level.canyons ?? [];
 
   level.pathWaypoints.forEach((path, pathIndex) => {
     path.forEach((waypoint, waypointIndex) => {
@@ -86,10 +87,16 @@ export const validateLevel = (
       const onWater = waters.some(
         (w) => w.gridX === tile.gridX && w.gridZ === tile.gridZ
       );
-      if (onWater) {
+      // Water is only allowed under a bridge (on a canyon tile): the path
+      // bridges over the canyon floor, so a waypoint there sits above the
+      // water rather than in it.
+      const onCanyon = canyons.some(
+        (c) => c.gridX === tile.gridX && c.gridZ === tile.gridZ
+      );
+      if (onWater && !onCanyon) {
         customIssues.push({
           path: `pathWaypoints.${pathIndex}.${waypointIndex}`,
-          message: "Waypoint cannot be on water.",
+          message: "Waypoint cannot be on water (except over a canyon).",
         });
       }
     });

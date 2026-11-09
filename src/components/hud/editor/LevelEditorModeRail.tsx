@@ -25,6 +25,7 @@ const MODES: ModeEntry[] = [
   },
   { mode: "building", defaultTool: "placeBuilding", icon: "Box", accentClass: "bg-blue-600" },
   { mode: "water", defaultTool: "water", icon: "Droplets", accentClass: "bg-cyan-600" },
+  { mode: "canyon", defaultTool: "canyon", icon: "Mountain", accentClass: "bg-yellow-700" },
   { mode: "erase", defaultTool: "erase", icon: "Eraser", accentClass: "bg-red-600" },
 ];
 
@@ -36,6 +37,7 @@ const TOOL_TO_MODE: Record<LevelEditorTool, LevelEditorMode> = {
   setBase: "path",
   erase: "erase",
   water: "water",
+  canyon: "canyon",
 };
 
 type LevelEditorModeRailProps = {

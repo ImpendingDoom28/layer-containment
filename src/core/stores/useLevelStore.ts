@@ -3,6 +3,7 @@ import { create } from "zustand";
 import type {
   BossConfig,
   Building,
+  CanyonConfig,
   Enemy,
   EnemyType,
   PathWaypoint,
@@ -17,6 +18,7 @@ import {
   withRecalculatedBuildingCoordinates,
   withRecalculatedWaterCoordinates,
 } from "../../utils/levelEditor";
+import { buildCanyonBridgePaths } from "../../utils/canyonBridges";
 import { getUpgradeStacks } from "../../utils/upgradeStacks";
 import { enemyActions } from "../ecs/actions/enemyActions";
 import { splitRequest } from "../ecs/traits/split";
@@ -27,6 +29,7 @@ import { useGameStore } from "./useGameStore";
 type LevelStoreState = {
   gridSize: number;
   waters: WaterBody[];
+  canyons: CanyonConfig[];
   pathWaypoints: PathWaypoint[][];
   totalWaves: number;
   waveConfigs: WaveConfig[];
@@ -75,6 +78,7 @@ const DEFAULT_STATE: LevelStoreState = {
   gridOffset: 0,
   gridSize: 0,
   waters: [],
+  canyons: [],
   totalWaves: 0,
   enemyWeights: null,
   pathWaypoints: [],
@@ -117,13 +121,23 @@ export const useLevelStore = create<LevelStore>((set) => ({
     if (!towerTypes || !enemyTypes || !enemyUpgrades) return;
 
     const gridOffset = getLevelGridOffset(levelData.gridSize, tileSize);
+    // Bake a bridge elevation into any path that crosses a canyon. This is the
+    // single point of change: enemies (position.y = waypoint.y), tower aiming
+    // (targetPathPos.y), and the path strip render (yBase + pathYOffset) all
+    // read these waypoints, so they all follow the bridge height automatically.
+    const pathWaypoints = buildCanyonBridgePaths(
+      levelData.pathWaypoints,
+      levelData.canyons ?? [],
+      levelData.gridSize,
+      tileSize
+    );
     const actions = enemyActions(world);
 
     actions.clearAllEnemies();
     // The waypoints must be in the store before any enemy spawns: spawnEnemy
     // derives each enemy's initial facing (the direction along the path) from
     // them.
-    set({ pathWaypoints: levelData.pathWaypoints });
+    set({ pathWaypoints });
     for (const enemy of buildLevelConfigEnemies(levelData, enemyTypes)) {
       actions.spawnEnemy(enemy);
     }
@@ -152,7 +166,8 @@ export const useLevelStore = create<LevelStore>((set) => ({
       enemiesKilled: 0,
       gridSize: levelData.gridSize,
       waters,
-      pathWaypoints: levelData.pathWaypoints,
+      canyons: levelData.canyons ?? [],
+      pathWaypoints,
       totalWaves: levelData.waveConfigs.length,
       waveConfigs: levelData.waveConfigs,
       boss: levelData.boss ?? null,
@@ -260,6 +275,7 @@ export const useLevelStore = create<LevelStore>((set) => ({
 export const gridOffsetSelector = (state: LevelStore) => state.gridOffset;
 export const gridSizeSelector = (state: LevelStore) => state.gridSize;
 export const watersSelector = (state: LevelStore) => state.waters;
+export const canyonsSelector = (state: LevelStore) => state.canyons;
 export const pathWaypointsSelector = (state: LevelStore) => state.pathWaypoints;
 export const totalWavesSelector = (state: LevelStore) => state.totalWaves;
 export const waveConfigsSelector = (state: LevelStore) => state.waveConfigs;

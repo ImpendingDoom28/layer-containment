@@ -71,6 +71,7 @@ type EnemyModelProps = {
   type: EnemyType;
   size: number;
   fallback: ReactNode;
+  onModelReady?: (object: Object3D | null) => void;
 };
 
 /**
@@ -81,7 +82,7 @@ type EnemyModelProps = {
  * is the enemy body radius; `type` picks the model from `ENEMY_MODELS`.
  */
 export const EnemyModel: FC<EnemyModelProps> = memo(
-  ({ type, size, fallback }) => {
+  ({ type, size, fallback, onModelReady }) => {
     const model: EnemyModelSpec = ENEMY_MODELS[type];
     const prepare = useCallback(
       (source: Object3D) =>
@@ -94,6 +95,7 @@ export const EnemyModel: FC<EnemyModelProps> = memo(
         node={model.node}
         prepare={prepare}
         fallback={fallback}
+        onObjectReady={onModelReady}
       />
     );
   }

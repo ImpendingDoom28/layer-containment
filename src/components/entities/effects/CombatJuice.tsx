@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Quaternion } from "three";
 
 import { useGameStore } from "../../../core/stores/useGameStore";
@@ -34,8 +34,10 @@ const MAX_ACTIVE_PLACEMENTS = 8;
 const REWARD_TEXT_HEIGHT = 0.45;
 // Matches the missing-out upgrade indicator color (public/configs/game.json).
 const DODGE_TEXT_COLOR = "#38bdf8";
-// The dust a placed tower kicks up: a neutral, warm-tinted dust colour.
-const DUST_COLOR = "#d6c7a8";
+// The dust a placed tower kicks up uses the colour of the tiles it lands on
+// (the scene land base), so the burst reads as the ground being kicked up
+// rather than a foreign puff of sand.
+const DUST_COLOR_TOKEN = "scene-gray-700" as const;
 
 type DeathBurst = {
   id: number;
@@ -88,6 +90,9 @@ export const CombatJuice = memo(
     const planetRadius = getPlanetRadius(gridSize, tileSize);
     const reducedMotion = useReducedMotion();
     const t = useTranslationInCanvas();
+    // The dust is the colour of the tiles (the scene land base), read once from
+    // the theme so it stays in sync if the palette changes.
+    const dustColor = useMemo(() => getCssColorValue(DUST_COLOR_TOKEN), []);
 
     useEffect(() => {
       const onEnemyKilled = (data: {
@@ -247,7 +252,7 @@ export const CombatJuice = memo(
             key={placement.id}
             position={placement.position}
             quaternion={placement.quaternion}
-            color={DUST_COLOR}
+            color={dustColor}
             baseRadius={placement.baseRadius}
             // Under reduced motion the tower lands instantly (no drop), so the
             // dust must not wait out the drop duration — it appears with the

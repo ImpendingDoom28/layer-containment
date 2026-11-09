@@ -1,4 +1,13 @@
-import { FC, useRef, useMemo, useCallback, memo } from "react";
+import {
+  FC,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  memo,
+} from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import type { Group, Object3D } from "three";
 import { CylinderGeometry, MeshStandardMaterial } from "three";
@@ -9,6 +18,8 @@ import { DeadZoneDisc } from "./effects/DeadZoneDisc";
 import { RangeRing } from "./effects/RangeRing";
 import { TowerFireFX } from "./effects/TowerFireFX";
 import { registerTowerIdleAnimation } from "./effects/towerIdleRig";
+import { TowerPlacementFX } from "./effects/TowerPlacementFX";
+import { getPlacementDropHeight } from "./effects/towerPlacementRig";
 import { TowerModel } from "./TowerModel";
 import { Vector3D } from "../../core/types/utils";
 import { getCssColorValue } from "../ui/lib/cssUtils";
@@ -32,6 +43,7 @@ import {
   FRUSTUM_CULLING_MARGIN,
   useFrustumCulling,
 } from "../../core/hooks/useFrustumCulling";
+import { useReducedMotion } from "../../core/hooks/useReducedMotion";
 
 const baseMaterial = new MeshStandardMaterial({ color: "#4b5563" });
 const basePreviewMaterial = new MeshStandardMaterial({
@@ -84,6 +96,9 @@ export const Tower: FC<TowerProps> = memo(
     // barrels on basic/laser, the wide aoe base) must not swallow the click
     // aimed at a neighbouring tile, so the tower's click handler is disabled.
     const isPlacing = useGameStore(selectedTowerTypeToPlaceSelector) !== null;
+    // The placement drop is skipped under `prefers-reduced-motion` (the tower
+    // appears at rest instantly).
+    const reducedMotion = useReducedMotion();
     const towerBasePosition: Vector3D = [0, towerBaseRadius, 0];
     const towerBodyPosition: Vector3D = [
       0,
@@ -106,6 +121,44 @@ export const Tower: FC<TowerProps> = memo(
     // The tower's idle-animation registration cleanup (registered once the
     // model loads, unregistered on unmount via the null callback below).
     const idleCleanupRef = useRef<(() => void) | null>(null);
+    // The drop group wrapping the model: a freshly placed tower animates this
+    // group down from above (the placement drop) before the idle animation and
+    // frustum culling see a clean rest pose. The callback ref also stashes the
+    // group in state so the drop FX (which needs the live instance) can mount
+    // once it exists.
+    const dropGroupInstanceRef = useRef<Group | null>(null);
+    const [dropGroup, setDropGroup] = useState<Group | null>(null);
+    const onDropGroupRef = useCallback((group: Group | null) => {
+      dropGroupInstanceRef.current = group;
+      setDropGroup(group);
+    }, []);
+    // The placement drop plays once, on mount of a real (non-preview) tower;
+    // `false` when it has settled (or is skipped for the preview tower).
+    const [isDropping, setIsDropping] = useState(
+      () => !isPreview && tower != null
+    );
+
+    useLayoutEffect(() => {
+      // Pre-position the drop group at the deployed height before the first
+      // paint (so the tower appears already in the air, not popping up from
+      // rest). Under reduced motion there is no drop, so it stays at rest.
+      const group = dropGroupInstanceRef.current;
+      if (group && !reducedMotion && isDropping) {
+        group.position.y = getPlacementDropHeight(towerBaseRadius);
+      }
+    }, [reducedMotion, isDropping, towerBaseRadius]);
+
+    useEffect(() => {
+      // If the tower is unmounted before the drop settles (selling, a scene
+      // change), restore the rest pose so no mid-drop transform leaks.
+      return () => {
+        const group = dropGroupInstanceRef.current;
+        if (group) {
+          group.position.y = 0;
+          group.scale.y = 1;
+        }
+      };
+    }, []);
 
     // Report the model's rotating turret node to the system (it swings it
     // toward the target in its per-frame update) and register the tower with
@@ -309,23 +362,38 @@ export const Tower: FC<TowerProps> = memo(
               }
         }
       >
-        <TowerModel
-          type={tower.type}
-          model={tower.model}
-          size={tileSize * 0.9}
-          variant={isPreview ? (isInvalidPlacement ? "invalid" : "preview") : "solid"}
-          fallback={towerBody}
-          onModelReady={onModelReady}
-        />
-        {/* Firing feedback (muzzle flash + barrel recoil) is only for placed
-            towers: the placement preview never fires. */}
-        {!isPreview && (
-          <TowerFireFX
-            tower={tower}
-            color={tower.color}
-            turretNodeRef={turretNodeRef}
-            barrelNodeRef={barrelNodeRef}
-            towerHeight={towerHeight}
+        {/* The drop group wraps the model (and its firing feedback): a
+            freshly placed tower animates this group down from above on
+            placement. The selection indicators below stay anchored to the
+            tile and do not drop. */}
+        <group ref={onDropGroupRef}>
+          <TowerModel
+            type={tower.type}
+            model={tower.model}
+            size={tileSize * 0.9}
+            variant={isPreview ? (isInvalidPlacement ? "invalid" : "preview") : "solid"}
+            fallback={towerBody}
+            onModelReady={onModelReady}
+          />
+          {/* Firing feedback (muzzle flash + barrel recoil) is only for placed
+              towers: the placement preview never fires. */}
+          {!isPreview && (
+            <TowerFireFX
+              tower={tower}
+              color={tower.color}
+              turretNodeRef={turretNodeRef}
+              barrelNodeRef={barrelNodeRef}
+              towerHeight={towerHeight}
+            />
+          )}
+        </group>
+        {/* The placement drop: runs once on a freshly placed tower's mount
+            (ease-in fall from above + a hard-push impact settle). */}
+        {isDropping && dropGroup != null && (
+          <TowerPlacementFX
+            dropGroup={dropGroup}
+            dropHeight={getPlacementDropHeight(towerBaseRadius)}
+            onDone={() => setIsDropping(false)}
           />
         )}
         {/* Selection indicator */}

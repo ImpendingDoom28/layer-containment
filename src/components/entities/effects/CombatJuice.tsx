@@ -19,6 +19,8 @@ import { useTranslationInCanvas } from "../../../core/i18n/useTranslationInCanva
 import { Effect } from "./Effect";
 import { FloatingTexts, type FloatingTextsHandle } from "./FloatingTexts";
 import { RocketExplosionFX } from "./RocketExplosionFX";
+import { DustBurstFX } from "./DustBurstFX";
+import { DROP_DURATION } from "./towerPlacementRig";
 
 const MAX_ACTIVE_BURSTS = 8;
 const BURST_DURATION = 0.5;
@@ -26,9 +28,14 @@ const BURST_DURATION = 0.5;
 // overlapping rockets is the real-world ceiling; cap the live explosion list
 // just in case several land on the same frame.
 const MAX_ACTIVE_EXPLOSIONS = 6;
+// A player places towers one at a time; a handful of overlapping dust bursts
+// is the real-world ceiling, so cap the live list just in case.
+const MAX_ACTIVE_PLACEMENTS = 8;
 const REWARD_TEXT_HEIGHT = 0.45;
 // Matches the missing-out upgrade indicator color (public/configs/game.json).
 const DODGE_TEXT_COLOR = "#38bdf8";
+// The dust a placed tower kicks up: a neutral, warm-tinted dust colour.
+const DUST_COLOR = "#d6c7a8";
 
 type DeathBurst = {
   id: number;
@@ -44,6 +51,12 @@ type RocketExplosion = {
   color: string;
 };
 
+type PlacementDust = {
+  id: number;
+  position: [number, number, number];
+  quaternion: Quaternion;
+};
+
 type CombatJuiceProps = {
   /**
    * Show the gold reward float on kills. Off in the main menu, which has no
@@ -54,16 +67,19 @@ type CombatJuiceProps = {
 
 /**
  * Subscribes to combat game events and renders their juice: gold reward floats
- * (camera-facing sprites), a small burst when an enemy dies, and — on a BRL
- * rocket impact — a ground-blast area of effect (a fireball plus a ring that
- * expands to the projectile's blast radius). Event payload positions are
- * flat-field coordinates, mapped onto the planet surface here.
+ * (camera-facing sprites), a small burst when an enemy dies, — on a BRL rocket
+ * impact — a ground-blast area of effect (a fireball plus a ring that expands
+ * to the projectile's blast radius), and — when a tower is placed — a small
+ * dust burst kicked up at its base, timed to land as the placement drop
+ * impacts. Event payload positions are flat-field coordinates, mapped onto the
+ * planet surface here.
  */
 export const CombatJuice = memo(
   ({ showRewardText = true }: CombatJuiceProps) => {
     const floatingTextsRef = useRef<FloatingTextsHandle>(null);
     const [bursts, setBursts] = useState<DeathBurst[]>([]);
     const [explosions, setExplosions] = useState<RocketExplosion[]>([]);
+    const [placements, setPlacements] = useState<PlacementDust[]>([]);
     const { getNextId } = useNextId();
 
     const gridSize = useLevelStore((state) => state.gridSize);
@@ -151,13 +167,42 @@ export const CombatJuice = memo(
         ]);
       };
 
+      const onTowerPlaced = (data: {
+        worldPosition: { x: number; y: number; z: number };
+      }) => {
+        // A small dust burst at the tower's base, kicked up when the
+        // placement drop impacts. The burst is delayed by the drop duration
+        // so the dust lands exactly as the tower hits the ground.
+        const position = flatCombatPointToWorldPosition(
+          data.worldPosition.x,
+          data.worldPosition.z,
+          0.05,
+          planetRadius
+        );
+        const normal = flatFieldToSphereSurface(
+          data.worldPosition.x,
+          data.worldPosition.z,
+          planetRadius
+        ).normal;
+        setPlacements((prev) => [
+          ...prev.slice(-(MAX_ACTIVE_PLACEMENTS - 1)),
+          {
+            id: getNextId(),
+            position: [position.x, position.y, position.z],
+            quaternion: getSurfaceQuaternion(normal),
+          },
+        ]);
+      };
+
       gameEvents.on(GameEvent.ENEMY_KILLED, onEnemyKilled);
       gameEvents.on(GameEvent.ENEMY_DODGED, onEnemyDodged);
       gameEvents.on(GameEvent.PROJECTILE_HIT, onProjectileHit);
+      gameEvents.on(GameEvent.TOWER_PLACED, onTowerPlaced);
       return () => {
         gameEvents.off(GameEvent.ENEMY_KILLED, onEnemyKilled);
         gameEvents.off(GameEvent.ENEMY_DODGED, onEnemyDodged);
         gameEvents.off(GameEvent.PROJECTILE_HIT, onProjectileHit);
+        gameEvents.off(GameEvent.TOWER_PLACED, onTowerPlaced);
       };
     }, [planetRadius, t, showRewardText]);
 
@@ -167,6 +212,10 @@ export const CombatJuice = memo(
 
     const onExplosionComplete = (id: number) => {
       setExplosions((prev) => prev.filter((explosion) => explosion.id !== id));
+    };
+
+    const onPlacementComplete = (id: number) => {
+      setPlacements((prev) => prev.filter((placement) => placement.id !== id));
     };
 
     return (
@@ -189,6 +238,16 @@ export const CombatJuice = memo(
             radius={explosion.radius}
             color={explosion.color}
             onComplete={() => onExplosionComplete(explosion.id)}
+          />
+        ))}
+        {placements.map((placement) => (
+          <DustBurstFX
+            key={placement.id}
+            position={placement.position}
+            quaternion={placement.quaternion}
+            color={DUST_COLOR}
+            delay={DROP_DURATION}
+            onComplete={() => onPlacementComplete(placement.id)}
           />
         ))}
       </>

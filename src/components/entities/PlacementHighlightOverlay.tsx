@@ -13,11 +13,11 @@ import {
 } from "../../core/stores/useGameStore";
 import {
   gridSizeSelector,
+  hoveredTileSelector,
   towersSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
 import { getEffectiveTowerCombatStats } from "../../core/relayBuffs";
-import type { TileData } from "../../core/types/utils";
 import type { Tower } from "../../core/types/game";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import { DeadZoneDisc } from "./effects/DeadZoneDisc";
@@ -31,18 +31,16 @@ const PLACEMENT_OVERLAY_Y_EPSILON = 0.016;
 const PLANE_INSET = 0.98;
 const OVERLAY_OPACITY = 0.27;
 
-type PlacementHighlightOverlayProps = {
-  hoveredTile: TileData | null;
-};
-
-export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
-  memo(({ hoveredTile }) => {
+export const PlacementHighlightOverlay: FC = memo(() => {
     const selectedTowerType = useGameStore(selectedTowerTypeToPlaceSelector);
     const towerTypes = useGameStore(towerTypesSelector);
+    const pathYOffset = useGameStore(pathYOffsetSelector);
+    const tileSize = useGameStore(tileSizeSelector);
+
     const gridSize = useLevelStore(gridSizeSelector);
     const towers = useLevelStore(towersSelector);
-    const tileSize = useGameStore(tileSizeSelector);
-    const pathYOffset = useGameStore(pathYOffsetSelector);
+    const hoveredTile = useLevelStore(hoveredTileSelector);
+
     const { getTilePlacementState } = useLevelSystem();
 
     const validColor = useMemo(() => {
@@ -155,7 +153,11 @@ export const PlacementHighlightOverlay: FC<PlacementHighlightOverlayProps> =
 
       const minRange = towerTypes[selectedTowerType].minRange;
       return {
-        position: [position.x, position.y, position.z] as [number, number, number],
+        position: [position.x, position.y, position.z] as [
+          number,
+          number,
+          number,
+        ],
         quaternion,
         range,
         minRange,

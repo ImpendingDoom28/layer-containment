@@ -31,10 +31,9 @@ import { Skybox } from "../shared/Skybox";
 import { Light } from "../shared/Light";
 import { useTileOccupancyMasks } from "../../../core/hooks/utils/useTileOccupancyMasks";
 
-// The menu's tiles are purely visual; stable no-ops keep the memoized
+// The menu's tiles are purely visual; a stable no-op keeps the memoized
 // `Grid` from re-rendering every time an ambient kill updates the stores.
 const noopPlaceTower = () => undefined;
-const noopSetHoveredTile = () => undefined;
 
 const selectWeightedEnemyType = (
   enemyWeights: Record<EnemyType, number> | null
@@ -142,20 +141,11 @@ export const MainMenuScene: FC = () => {
           rock props) behind the ambient enemies. Tower placement is
           impossible in the menu, so the tiles are purely visual and get
           no-op interaction wiring. */}
-      <Grid
-        placeTower={noopPlaceTower}
-        hoveredTile={null}
-        setHoveredTile={noopSetHoveredTile}
-        occupancy={occupancy}
-      />
+      <Grid placeTower={noopPlaceTower} occupancy={occupancy} />
 
       <PlanetTileDecorations occupancy={occupancy} />
 
-      <EntitiesSystem
-        onSellTower={null}
-        hoveredTile={null}
-        selectedTower={null}
-      />
+      <EntitiesSystem onSellTower={null} selectedTower={null} />
 
       {/* Death burst on `ENEMY_KILLED`; menu kills are settled by the shared
           EnemyDeathSystem so the event fires here too. No reward float: the

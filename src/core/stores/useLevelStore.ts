@@ -21,6 +21,7 @@ import { getUpgradeStacks } from "../../utils/upgradeStacks";
 import { enemyActions } from "../ecs/actions/enemyActions";
 import { splitRequest } from "../ecs/traits/split";
 import { world } from "../ecs/world";
+import type { TileData } from "../types/utils";
 import { useGameStore } from "./useGameStore";
 
 type LevelStoreState = {
@@ -41,6 +42,7 @@ type LevelStoreState = {
   towers: Tower[];
   projectiles: Projectile[];
   isLevelConfigLoaded: boolean;
+  hoveredTile: TileData | null;
 };
 
 type LevelStoreActions = {
@@ -60,6 +62,7 @@ type LevelStoreActions = {
   ) => void;
   removeProjectile: (projectileId: number) => void;
   resetLevelState: () => void;
+  setHoveredTile: (tile: TileData | null) => void;
   initializeLevelState: (levelData: LevelConfigData, tileSize: number) => void;
 };
 
@@ -81,6 +84,7 @@ const DEFAULT_STATE: LevelStoreState = {
   towers: [],
   projectiles: [],
   isLevelConfigLoaded: false,
+  hoveredTile: null,
 };
 
 export const getMaxEntityId = (
@@ -230,6 +234,10 @@ export const useLevelStore = create<LevelStore>((set) => ({
     }));
   },
 
+  setHoveredTile: (tile) => {
+    set({ hoveredTile: tile });
+  },
+
   removeProjectile: (projectileId: number) => {
     set((state) => ({
       projectiles: state.projectiles.filter((p) => p.id !== projectileId),
@@ -275,11 +283,12 @@ export const isLevelConfigLoadedSelector = (state: LevelStore) =>
   state.isLevelConfigLoaded;
 export const spendMoneySelector = (state: LevelStore) => state.spendMoney;
 export const addMoneySelector = (state: LevelStore) => state.addMoney;
-export const incrementEnemiesKilledSelector = (state: LevelStore) =>
-  state.incrementEnemiesKilled;
 export const setTowersSelector = (state: LevelStore) => state.setTowers;
 export const updateTowerSelector = (state: LevelStore) => state.updateTower;
 export const setProjectilesSelector = (state: LevelStore) =>
   state.setProjectiles;
 export const resetLevelStateSelector = (state: LevelStore) =>
   state.resetLevelState;
+export const hoveredTileSelector = (state: LevelStore) => state.hoveredTile;
+export const setHoveredTileSelector = (state: LevelStore) =>
+  state.setHoveredTile;

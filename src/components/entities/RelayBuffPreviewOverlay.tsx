@@ -12,11 +12,11 @@ import {
 } from "../../core/stores/useGameStore";
 import {
   gridSizeSelector,
+  hoveredTileSelector,
   towersSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
 import type { Tower } from "../../core/types/game";
-import type { TileData } from "../../core/types/utils";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import {
   flatFieldToSphereOverlayPlanePose,
@@ -132,16 +132,18 @@ const buildRelayNeighborOverlayItems = ({
 
 type RelayBuffPreviewOverlayProps = {
   selectedTower: Tower | null;
-  hoveredTile: TileData | null;
 };
 
 export const RelayBuffPreviewOverlay: FC<RelayBuffPreviewOverlayProps> = memo(
-  ({ selectedTower, hoveredTile }) => {
+  ({ selectedTower }) => {
     const selectedTowerType = useGameStore(selectedTowerTypeToPlaceSelector);
+    const pathYOffset = useGameStore(pathYOffsetSelector);
+    const tileSize = useGameStore(tileSizeSelector);
+
     const gridSize = useLevelStore(gridSizeSelector);
     const towers = useLevelStore(towersSelector);
-    const tileSize = useGameStore(tileSizeSelector);
-    const pathYOffset = useGameStore(pathYOffsetSelector);
+    const hoveredTile = useLevelStore(hoveredTileSelector);
+
     const { getTilePlacementState } = useLevelSystem();
 
     const hoveredTilePlacementState =

@@ -19,11 +19,14 @@ import {
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import {
   pathYOffsetSelector,
+  selectedTowerTypeToPlaceSelector,
   tileSizeSelector,
   useGameStore,
 } from "../../core/stores/useGameStore";
 import {
   gridSizeSelector,
+  hoveredTileSelector,
+  setHoveredTileSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
 import { hashGrid2D } from "../../core/tileGridHash";
@@ -43,29 +46,26 @@ type TileProps = {
   gridZ: number;
   isWater: boolean;
   isOnPath: boolean;
-  isHovered: boolean;
   canPlace: boolean;
   onClick: () => void;
-  onHover?: (gridX: number, gridZ: number) => void;
-  onHoverEnd?: () => void;
 };
 
 export const Tile: FC<TileProps> = memo(
-  ({
-    gridX,
-    gridZ,
-    isWater,
-    isOnPath,
-    isHovered,
-    canPlace,
-    onClick,
-    onHover,
-    onHoverEnd,
-  }) => {
+  ({ gridX, gridZ, isWater, isOnPath, canPlace, onClick }) => {
     const tileSize = useGameStore(tileSizeSelector);
-    const gridSize = useLevelStore(gridSizeSelector);
     const pathYOffset = useGameStore(pathYOffsetSelector);
+    const selectedTowerToPlace = useGameStore(selectedTowerTypeToPlaceSelector);
+
+    const gridSize = useLevelStore(gridSizeSelector);
+    const hoveredTile = useLevelStore(hoveredTileSelector);
+    const setHoveredTile = useLevelStore(setHoveredTileSelector);
+
     const waterClock = useWaterClock();
+
+    const isHovered =
+      hoveredTile?.gridX === gridX &&
+      hoveredTile.gridZ === gridZ &&
+      selectedTowerToPlace !== null;
 
     const placementHoverKey = useMemo<PlacementHoverKey>(() => {
       if (!isHovered) return "idle";
@@ -235,21 +235,18 @@ export const Tile: FC<TileProps> = memo(
       [material]
     );
 
-    const onInnerPointerOver = useCallback(
+    const onPointerOver = useCallback(
       (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
-        onHover?.(gridX, gridZ);
+        setHoveredTile({ gridX, gridZ });
       },
-      [onHover, gridX, gridZ]
+      [gridX, gridZ]
     );
 
-    const onInnerPointerOut = useCallback(
-      (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        onHoverEnd?.();
-      },
-      [onHoverEnd]
-    );
+    const onPointerOut = useCallback((e: ThreeEvent<PointerEvent>) => {
+      e.stopPropagation();
+      setHoveredTile(null);
+    }, []);
 
     const onInnerClick = useCallback(
       (e: ThreeEvent<MouseEvent>) => {
@@ -268,8 +265,8 @@ export const Tile: FC<TileProps> = memo(
         castShadow
         receiveShadow
         onClick={onInnerClick}
-        onPointerOver={onInnerPointerOver}
-        onPointerOut={onInnerPointerOut}
+        onPointerOver={onPointerOver}
+        onPointerOut={onPointerOut}
       >
         <boxGeometry args={TILE_POSITION} />
       </mesh>

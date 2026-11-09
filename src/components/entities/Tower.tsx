@@ -44,6 +44,7 @@ import {
   useFrustumCulling,
 } from "../../core/hooks/useFrustumCulling";
 import { useReducedMotion } from "../../core/hooks/useReducedMotion";
+import { useGameSessionRuntimeOptional } from "../systems/GameSessionSystem";
 
 const baseMaterial = new MeshStandardMaterial({ color: "#4b5563" });
 const basePreviewMaterial = new MeshStandardMaterial({
@@ -67,6 +68,12 @@ type TowerProps = {
   onClick?: () => void;
   isPreview?: boolean;
   isInvalidPlacement?: boolean;
+  /**
+   * Play the placement drop on mount (default: every non-preview tower). Off
+   * for scene towers that are already deployed (the main menu) — they appear
+   * at rest and must not animate a drop.
+   */
+  playPlacementFX?: boolean;
   /** Range ring and combat (when set, includes relay adjacency buffs). */
   effectiveRange?: number;
   /**
@@ -84,10 +91,17 @@ export const Tower: FC<TowerProps> = memo(
     isSelected = false,
     isPreview = false,
     isInvalidPlacement = false,
+    playPlacementFX,
     effectiveRange,
     onTurretNode,
   }) => {
     syncSharedMaterials();
+    // Optional: scenes without a game session (the static testing-level
+    // showcase) have no combat system to gate, so the deploy mark is skipped.
+    const sessionRuntime = useGameSessionRuntimeOptional();
+    const markTowerDeploying = sessionRuntime
+      ? sessionRuntime.markTowerDeploying
+      : undefined;
     const towerBaseRadius = useGameStore(towerBaseRadiusSelector);
     const towerHeight = useGameStore(towerHeightSelector);
     const gridSize = useLevelStore(gridSizeSelector);
@@ -132,10 +146,11 @@ export const Tower: FC<TowerProps> = memo(
       dropGroupInstanceRef.current = group;
       setDropGroup(group);
     }, []);
-    // The placement drop plays once, on mount of a real (non-preview) tower;
-    // `false` when it has settled (or is skipped for the preview tower).
+    // The placement drop plays once, on mount of a real (non-preview) tower
+    // that is actually deploying (`playPlacementFX` off for scene towers such
+    // as the main menu, which appear at rest); `false` when it has settled.
     const [isDropping, setIsDropping] = useState(
-      () => !isPreview && tower != null
+      () => !isPreview && tower != null && playPlacementFX !== false
     );
 
     useLayoutEffect(() => {
@@ -159,6 +174,19 @@ export const Tower: FC<TowerProps> = memo(
         }
       };
     }, []);
+
+    // Keep the combat system from firing (or tracking) while the tower is still
+    // mid-deploy: it marks the tower deploying on mount and clears it once the
+    // drop settles (or immediately if there is no drop to play). A layout
+    // effect (not a passive one) so the mark lands during the placement
+    // commit, before the next frame's combat tick — a freshly placed tower
+    // can never fire on its first frame, still up in the air.
+    const towerId = tower?.id;
+    useLayoutEffect(() => {
+      if (!isDropping || towerId == null || !markTowerDeploying) return;
+      markTowerDeploying(towerId, true);
+      return () => markTowerDeploying(towerId, false);
+    }, [isDropping, towerId, markTowerDeploying]);
 
     // Report the model's rotating turret node to the system (it swings it
     // toward the target in its per-frame update) and register the tower with

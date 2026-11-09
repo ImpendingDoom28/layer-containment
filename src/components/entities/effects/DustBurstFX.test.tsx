@@ -175,6 +175,44 @@ describe("DustBurstFX", () => {
     }
   });
 
+  it("keeps the dust clear of the tower base (ring inner edge + puffs stay outside)", async () => {
+    const { renderer } = await createHarness();
+    try {
+      const ring = findRing(renderer);
+      const puffs = findPuffs(renderer);
+
+      const BASE_RADIUS = 0.3; // the default `baseRadius`
+      const RING_INNER_FRACTION = 0.92; // matches the shared thin-band ring
+      const PUFF_HALF_SIZE = 0.16 / 2; // the puff's soft edge (half its size)
+
+      // Sample the whole burst (from impact through completion) and verify the
+      // dust never overlaps the model: the ring's inner edge sits on the base
+      // radius and each puff's soft edge stays outside it.
+      const sample = async (rawTime: number) => {
+        await advanceFrame(renderer, rawTime);
+        if (ring.scale.x > 1e-3) {
+          expect(ring.scale.x * RING_INNER_FRACTION).toBeGreaterThanOrEqual(
+            BASE_RADIUS - 1e-6
+          );
+        }
+        for (const puff of puffs) {
+          if (!puff.visible) continue;
+          const radius = Math.hypot(puff.position.x, puff.position.z);
+          expect(radius - PUFF_HALF_SIZE).toBeGreaterThanOrEqual(
+            BASE_RADIUS - 1e-6
+          );
+        }
+      };
+      // Impact (delay) → end of the burst.
+      await sample(DELAY - 0.05); // before impact: nothing visible
+      await sample(DELAY); // just as the dust kicks up
+      await sample(DELAY + DURATION / 2); // mid-burst
+      await sample(DELAY + DURATION - 0.05); // near the end
+    } finally {
+      renderer.unmount();
+    }
+  });
+
   it("settles the burst back to rest and hides it when done", async () => {
     const { renderer } = await createHarness();
     try {

@@ -38,6 +38,9 @@ export type GameSessionController = GameSession & {
   /** True while the tower has a live target (the sim is driving its turret
    *  node's yaw), so idle-animation passes leave the yaw alone. */
   hasTowerTarget: (towerId: number) => boolean;
+  /** Marks a tower while its placement drop is still in flight (the sim keeps
+   *  it from firing mid-deploy); `deploying` false clears it when settled. */
+  markTowerDeploying: (towerId: number, deploying: boolean) => void;
 };
 
 export type GameSessionDependencies = {

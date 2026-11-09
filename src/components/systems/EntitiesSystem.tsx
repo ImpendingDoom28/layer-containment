@@ -31,10 +31,15 @@ import { useGameSessionRuntime } from "./GameSessionSystem";
 type EntitiesSystemProps = {
   onSellTower: ((towerId: number) => void) | null;
   selectedTower: TowerInstance | null;
+  /**
+   * Whether placed towers play the placement drop on mount (default: yes).
+   * Off for scenes whose towers are already deployed (the main menu).
+   */
+  playPlacementFX?: boolean;
 };
 
 export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
-  ({ onSellTower, selectedTower }) => {
+  ({ onSellTower, selectedTower, playPlacementFX }) => {
     const enemyEntities = useQuery(IsEnemy);
     const { InstancedProjectiles } = useGameSessionRuntime();
     const selectedTowerTypeToPlace = useGameStore(
@@ -116,6 +121,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
           selectedTower={selectedTower}
           selectedTowerType={selectedTowerTypeToPlace}
           hoveredTilePlacementState={hoveredTilePlacementState}
+          playPlacementFX={playPlacementFX}
         />
 
         <EffectSystem />

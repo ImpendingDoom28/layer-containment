@@ -416,3 +416,21 @@ describe("createTowerCombatSystem turret aim", () => {
     expect(shot.startZ).toBeCloseTo(expected.z, 5);
   });
 });
+
+describe("createTowerCombatSystem deploy gate", () => {
+  it("does not fire or track while a tower is deploying, and resumes when it settles", () => {
+    enemyActions(testWorld).spawnEnemy(makeEnemy(1));
+
+    // A freshly placed tower is marked deploying (its drop is in flight).
+    combat.markTowerDeploying(tower.id, true);
+    tick(1);
+    expect(fireProjectile).not.toHaveBeenCalled();
+    // And it is inert: the sim is not tracking a target for it.
+    expect(combat.hasTowerTarget(tower.id)).toBe(false);
+
+    // The drop settles: the gate clears and the tower can fire again.
+    combat.markTowerDeploying(tower.id, false);
+    tick(2);
+    expect(fireProjectile).toHaveBeenCalledTimes(1);
+  });
+});

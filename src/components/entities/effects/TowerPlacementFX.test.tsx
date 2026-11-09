@@ -89,17 +89,18 @@ describe("TowerPlacementFX", () => {
     }
   });
 
-  it("squashes the drop group on impact before it rebounds to rest", async () => {
+  it("squashes the drop group once on impact (the hard push), no rebound", async () => {
     const { renderer, dropGroup } = await createHarness();
     try {
-      // Just after the drop ends (into the impact window) the body is
-      // compressed (the hard push).
+      // Mid-settle the body is compressed (the hard push) and at the ground.
       await advanceFrame(renderer, 0);
-      await advanceFrame(renderer, DROP_DURATION + 0.02);
+      await advanceFrame(renderer, DROP_DURATION + 0.15);
       expect(dropGroup.position.y).toBeCloseTo(0, 3);
       expect(dropGroup.scale.y).toBeLessThan(1);
+      // Heavy machinery: it never springs back past rest height.
+      expect(dropGroup.scale.y).toBeGreaterThan(1 - 0.2 - 1e-6);
 
-      // By the end of the impact it has rebounded back to full height.
+      // By the end of the impact it is back at full height.
       await advanceFrame(renderer, DROP_DURATION + 0.3);
       expect(dropGroup.scale.y).toBeCloseTo(1, 6);
     } finally {

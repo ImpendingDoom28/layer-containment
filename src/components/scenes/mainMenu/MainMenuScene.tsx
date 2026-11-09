@@ -145,7 +145,13 @@ export const MainMenuScene: FC = () => {
 
       <PlanetTileDecorations occupancy={occupancy} />
 
-      <EntitiesSystem onSellTower={null} selectedTower={null} />
+      {/* The menu's towers are already deployed (ambient), not placed, so they
+          appear at rest — no placement drop. */}
+      <EntitiesSystem
+        onSellTower={null}
+        selectedTower={null}
+        playPlacementFX={false}
+      />
 
       {/* Death burst on `ENEMY_KILLED`; menu kills are settled by the shared
           EnemyDeathSystem so the event fires here too. No reward float: the

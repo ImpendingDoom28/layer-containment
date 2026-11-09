@@ -32,20 +32,31 @@ import { useReducedMotion } from "../../../core/hooks/useReducedMotion";
 // by mutation (the burst freezes with the world on pause), so a placement
 // costs no React state beyond mounting/unmounting this short-lived component.
 const DUST_DURATION = 0.45;
-// How far the settling ring spreads (a touch past the tower base).
+// The settling ring spreads to a fixed radius (a touch past the base).
 const RING_RADIUS = 0.75;
 const RING_OPACITY = 0.25;
-// The outward puffs: count, how far they travel, how high they rise, and their
-// rest size.
+// The ring's inner edge as a fraction of its outer radius (matches the shared
+// thin-band geometry): the band sits just outside the base, never under it.
+const RING_INNER_FRACTION = 0.92;
+// The outward puffs: count, how far they travel from their spawn edge, how
+// high they rise, and their rest size. They spawn just outside the tower's
+// base radius (never on the model), so the dust reads as being kicked up
+// around the impact rather than through the tower.
 const PUFF_COUNT = 6;
 const PUFF_TRAVEL = 0.45;
 const PUFF_RISE = 0.14;
 const PUFF_SIZE = 0.16;
 const PUFF_OPACITY = 0.55;
+// How far outside the base the puffs spawn: a visible gap so the dust kicks up
+// around the impact without covering the tower.
+const PUFF_START_OFFSET = 0.25;
 
-// One shared unit-radius ring geometry (local XZ plane) for every dust burst's
-// settling ring; each burst scales it out, so they reuse the same buffers.
-const sharedRingGeometry = new RingGeometry(0.55, 1, 32);
+// One shared thin-band ring geometry (local XZ plane) for every dust burst's
+// settling ring: a narrow annulus that hugs just outside the tower's base and
+// sweeps outward (it never spreads under the model, so it reads as dust kicked
+// up around the impact, not a disc through the tower). Each burst scales it out
+// to its final radius, reusing the same buffers.
+const sharedRingGeometry = new RingGeometry(0.92, 1, 32);
 
 // One shared radial-gradient puff (white core fading to transparent) for every
 // dust puff; tinted per burst. Lazily created so importing this module in a
@@ -79,6 +90,12 @@ type DustBurstFXProps = {
   quaternion: Quaternion;
   /** Tints the puffs and ring (a neutral dust colour). */
   color: string;
+  /**
+   * The tower's base radius: the ring and puffs start just outside it so the
+   * dust never overlaps the model (dust kicks up around the impact, not
+   * through the tower).
+   */
+  baseRadius?: number;
   /** The settle duration once the burst begins (after the delay). */
   duration?: number;
   /** Seconds to wait (invisible) before the burst begins — timed to the drop's impact. */
@@ -91,6 +108,7 @@ export const DustBurstFX: FC<DustBurstFXProps> = memo(
     position,
     quaternion,
     color,
+    baseRadius = 0.3,
     duration = DUST_DURATION,
     delay = 0,
     onComplete,
@@ -174,25 +192,33 @@ export const DustBurstFX: FC<DustBurstFXProps> = memo(
       const progress = Math.min((elapsed - delay) / duration, 1);
       const ease = easeOutCubic(progress);
 
+      // The ring is a thin annulus whose inner edge sits exactly on the base
+      // radius (never under the model) and sweeps out to a fixed radius.
+      const ringInnerEdge = baseRadius;
+      const ringStart = ringInnerEdge / RING_INNER_FRACTION;
+      const ringRadius = ringStart + (RING_RADIUS - ringStart) * ease;
       if (reducedMotion) {
         // No motion: a brief static fade of the ring only.
         if (ringRef.current) {
-          ringRef.current.scale.setScalar(Math.max(RING_RADIUS * ease, 1e-4));
+          ringRef.current.scale.setScalar(Math.max(ringRadius, 1e-4));
           ringMaterial.opacity = (1 - progress) * RING_OPACITY;
         }
       } else {
         if (ringRef.current) {
-          ringRef.current.scale.setScalar(Math.max(RING_RADIUS * ease, 1e-4));
+          ringRef.current.scale.setScalar(Math.max(ringRadius, 1e-4));
           ringMaterial.opacity = (1 - progress) * RING_OPACITY;
         }
         puffRefs.current.forEach((puff, index) => {
           if (!puff) return;
           const angle = (index / PUFF_COUNT) * Math.PI * 2;
+          // Puffs spawn a clear gap outside the base radius, so they never
+          // cover the model, and travel outward from there.
+          const radius = baseRadius + PUFF_START_OFFSET + ease * PUFF_TRAVEL;
           puff.visible = true;
           puff.position.set(
-            Math.cos(angle) * ease * PUFF_TRAVEL,
+            Math.cos(angle) * radius,
             ease * PUFF_RISE,
-            Math.sin(angle) * ease * PUFF_TRAVEL
+            Math.sin(angle) * radius
           );
           puff.scale.setScalar(PUFF_SIZE * (0.6 + 0.8 * ease));
         });

@@ -55,6 +55,7 @@ type PlacementDust = {
   id: number;
   position: [number, number, number];
   quaternion: Quaternion;
+  baseRadius: number;
 };
 
 type CombatJuiceProps = {
@@ -190,6 +191,7 @@ export const CombatJuice = memo(
             id: getNextId(),
             position: [position.x, position.y, position.z],
             quaternion: getSurfaceQuaternion(normal),
+            baseRadius: useGameStore.getState().towerBaseRadius,
           },
         ]);
       };

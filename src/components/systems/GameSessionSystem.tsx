@@ -29,6 +29,7 @@ type GameSessionRuntimeContextValue = {
   fireProjectile: GameSessionRuntime["fireProjectile"];
   registerTurretNode: (towerId: number, node: Object3D | null) => void;
   hasTowerTarget: (towerId: number) => boolean;
+  markTowerDeploying: (towerId: number, deploying: boolean) => void;
 };
 
 const GameSessionRuntimeContext =
@@ -43,6 +44,13 @@ export const useGameSessionRuntime = (): GameSessionRuntimeContextValue => {
   }
   return value;
 };
+
+// The scene-less variant: scenes that render a `Tower` without a game session
+// (the static testing-level showcase) get `null` instead of an error, so the
+// tower simply skips session-backed behaviour (the deploy gate).
+export const useGameSessionRuntimeOptional =
+  (): GameSessionRuntimeContextValue | null =>
+    useContext(GameSessionRuntimeContext);
 
 type GameSessionSystemProps = {
   session: GameSessionController;
@@ -104,14 +112,22 @@ export const GameSessionSystem: FC<GameSessionSystemProps> = ({
 
   const registerTurretNode = session.registerTurretNode;
   const hasTowerTarget = session.hasTowerTarget;
+  const markTowerDeploying = session.markTowerDeploying;
   const value = useMemo<GameSessionRuntimeContextValue>(
     () => ({
       InstancedProjectiles,
       fireProjectile,
       registerTurretNode,
       hasTowerTarget,
+      markTowerDeploying,
     }),
-    [InstancedProjectiles, fireProjectile, registerTurretNode, hasTowerTarget]
+    [
+      InstancedProjectiles,
+      fireProjectile,
+      registerTurretNode,
+      hasTowerTarget,
+      markTowerDeploying,
+    ]
   );
 
   return (

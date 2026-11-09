@@ -13,18 +13,12 @@ const DROP_HEIGHT_FACTOR = 3.5;
 // The drop itself: short, so the deploy reads as a snap, not a slow fall.
 export const DROP_DURATION = 0.3;
 // Impact: the hard push. The body starts at rest height (a smooth landing, no
-// pop), squashes down to a fraction of its height, stretches back past full
-// height (the springy rebound), and settles at rest — a classic squash-and-
-// stretch settle on the pause-aware clock.
-const IMPACT_DURATION = 0.28;
-// The damped oscillation: how fast it rings (osc) and how quickly it dies out
-// (damp). Tuned so the squash lands within ~30 ms of impact, the stretch
-// rebounds by ~70 ms, and it is settled by the end of the window.
-const IMPACT_OSC = 16;
-const IMPACT_DAMP = 4.5;
-// The squash-and-stretch amplitude of the damped oscillation (drives the
-// body to ~0.7× height at its deepest dip, then rebounds a touch past full).
-const IMPACT_SQUASH_AMPLITUDE = 0.45;
+// pop), compresses as the mass settles, and returns to rest with a single
+// eased compress-and-release — heavy machinery, no bounce, no overshoot.
+const IMPACT_DURATION = 0.3;
+// How deep the body compresses at the middle of the settle (a fraction of its
+// height): the "hard push" without springing back like a toy.
+const IMPACT_SQUASH_DEPTH = 0.2;
 
 // The whole drop from release to settle.
 const TOTAL_DURATION = DROP_DURATION + IMPACT_DURATION;
@@ -37,14 +31,16 @@ const REST_SCALE_Y = 1;
 // ground) — the "mechanism releasing" feel of the deploy.
 const easeInQuad = (p: number): number => p * p;
 
-// The impact settle: a damped sine that starts at rest (no pop at the impact
-// frame), squashes down, rebounds past full height (the springy stretch), and
-// settles exactly at rest by the end of the window.
-const impactScaleY = (p: number): number =>
-  REST_SCALE_Y -
-  IMPACT_SQUASH_AMPLITUDE *
-    Math.sin(p * IMPACT_OSC) *
-    Math.exp(-p * IMPACT_DAMP);
+// The impact settle: starts at rest, sinks to a single compression in the
+// middle, and returns to rest — no overshoot, no rebound (heavy machinery).
+// `sin(pi * p)` is 0 at both ends and 1 in the middle; a smoothstep on it
+// keeps the motion flat at the extremes so the mass sits down and comes to
+// rest rather than snapping through the dip.
+const impactScaleY = (p: number): number => {
+  const s = Math.sin(Math.PI * p);
+  const eased = s * s * (3 - 2 * s);
+  return REST_SCALE_Y - IMPACT_SQUASH_DEPTH * eased;
+};
 
 /**
  * The drop height for a tower of the given base radius: a fixed multiple of
@@ -87,8 +83,8 @@ export const createTowerPlacementRig = (
  *
  * - `0 → DROP_DURATION`: the tower falls from `dropHeight` to `0` on an
  *   ease-in curve (slow start, accelerating into the ground).
- *   `DROP_DURATION → TOTAL`: the impact — the body squashes down (the hard
- *   push) and rebounds with a damped oscillation, settling at rest.
+ *   `DROP_DURATION → TOTAL`: the impact — the body compresses (the hard push)
+ *   and returns to rest with a single eased compress-and-release.
  *
  * `reducedMotion` snaps straight to the landed pose. Returns `true` exactly on
  * the frame the drop settles (and `false` before and after), so a caller can

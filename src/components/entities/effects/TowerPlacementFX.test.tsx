@@ -113,17 +113,20 @@ describe("TowerPlacementFX", () => {
     try {
       // Stamp the drop's start at t = 0 (unpaused).
       await advanceFrame(renderer, 0);
+      // Advance mid-fall while the world is clearly still playing, so the
+      // drop has genuinely started falling before we ever pause (this keeps the
+      // test independent of which frame the pause segment lands on).
+      await advanceFrame(renderer, 0.15);
+      const midFallY = dropGroup.position.y;
+      expect(midFallY).toBeGreaterThan(0);
+      expect(midFallY).toBeLessThan(DROP_HEIGHT);
 
-      // Pause the world; the pause clock's segment begins on this next frame
-      // (the first frame the clock sees movement stopped).
+      // Pause the world; the pause clock's segment begins on the next frame.
       await ReactThreeTestRenderer.act(async () => {
         useGameStore.setState({ gameStatus: "paused" });
       });
-      await advanceFrame(renderer, 0.1);
+      await advanceFrame(renderer, 0.2);
       const frozenY = dropGroup.position.y;
-      // The drop is mid-fall, not yet at rest.
-      expect(frozenY).toBeGreaterThan(0);
-      expect(frozenY).toBeLessThan(DROP_HEIGHT);
 
       // The simulation clock is frozen, so the drop holds its pose even though
       // raw time keeps advancing (the tiny last-ulp difference is floating-

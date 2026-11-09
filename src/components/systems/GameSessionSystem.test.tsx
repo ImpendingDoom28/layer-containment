@@ -1,4 +1,7 @@
 import ReactThreeTestRenderer from "@react-three/test-renderer";
+import { useFrame } from "@react-three/fiber";
+import { type FC } from "react";
+import { type Clock } from "three";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WorldProvider } from "koota/react";
 
@@ -82,5 +85,86 @@ describe("GameSessionSystem", () => {
     }
 
     expect(disconnectRuntime).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps simulation time continuous across a hidden-tab gap", async () => {
+    // Regression: while the tab is hidden, requestAnimationFrame is
+    // suspended and the background ticker is off, so no frame runs. The
+    // pause segment must still be recorded (from the store-driven flag,
+    // not a frame), or the wall-driven clock resumes with the whole hidden
+    // duration baked into simulation time and the wave queue spawns in a
+    // burst.
+    const clockHolder: { current: Clock | null } = { current: null };
+    const ClockCapture: FC = () => {
+      useFrame((state) => {
+        clockHolder.current = state.clock;
+      });
+      return null;
+    };
+
+    const { session } = createSession();
+    // "Pause when tab hidden" must be on: it is the setting that makes
+    // `isPageVisible` feed into `shouldStopMovement`.
+    useSettingsStore.getState().setPauseWhenTabHidden(true);
+    const renderer = await ReactThreeTestRenderer.create(
+      <WorldProvider world={testWorld}>
+        <EntityIdProvider>
+          <SimulationClockProvider>
+            <ClockCapture />
+            <GameSessionSystem session={session}>
+              <group />
+            </GameSessionSystem>
+          </SimulationClockProvider>
+        </EntityIdProvider>
+      </WorldProvider>
+    );
+
+    try {
+      // The game has been running, visible, for 10s of wall time. The first
+      // frame captures the clock; the second establishes the anchor (the
+      // last frame's clock time) before the tab hides.
+      await ReactThreeTestRenderer.act(async () => {
+        await renderer.advanceFrames(1, 0.016);
+      });
+      expect(clockHolder.current).not.toBeNull();
+      const clock = clockHolder.current as Clock;
+      clock.elapsedTime = 10;
+      await ReactThreeTestRenderer.act(async () => {
+        await renderer.advanceFrames(1, 0.016);
+      });
+
+      // The tab hides. The store update (not a frame) is what the fix
+      // observes: the pause segment is begun at the last frame's clock time
+      // (10) even though no frame runs while hidden.
+      await ReactThreeTestRenderer.act(async () => {
+        useGameStore.getState().setIsPageVisible(false);
+      });
+      // No frames run while hidden: no advanceFrames here.
+
+      // The tab returns 30s later. The THREE clock is wall-driven and never
+      // stopped, so the next frame reports the full wall time (40), not the
+      // frozen value. The pause segment is closed at that first frame's clock
+      // time, folding the whole hidden gap into one pause segment.
+      clock.elapsedTime = 40;
+      await ReactThreeTestRenderer.act(async () => {
+        useGameStore.getState().setIsPageVisible(true);
+      });
+      await ReactThreeTestRenderer.act(async () => {
+        await renderer.advanceFrames(1, 0.016);
+      });
+
+      // Without the fix the 30s hidden gap leaks into simulation time (40
+      // instead of 10) and the wave queue spawns in a burst. The effective
+      // time must be the 10s frozen at hide, not the 40s wall time.
+      expect(session.tick).toHaveBeenLastCalledWith({
+        deltaSeconds: expect.closeTo(0.016, 3),
+        simulationTimeSeconds: expect.closeTo(10, 3),
+        canResolveGameplay: true,
+      });
+    } finally {
+      await ReactThreeTestRenderer.act(async () => {
+        renderer.unmount();
+      });
+    }
   });
 });

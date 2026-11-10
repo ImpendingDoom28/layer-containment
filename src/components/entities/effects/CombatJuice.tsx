@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Quaternion } from "three";
 
 import { useGameStore } from "../../../core/stores/useGameStore";
@@ -19,6 +19,8 @@ import { useTranslationInCanvas } from "../../../core/i18n/useTranslationInCanva
 import { Effect } from "./Effect";
 import { FloatingTexts, type FloatingTextsHandle } from "./FloatingTexts";
 import { RocketExplosionFX } from "./RocketExplosionFX";
+import { DustBurstFX, DustBurstPrewarm } from "./DustBurstFX";
+import { DROP_DURATION } from "./towerPlacementRig";
 
 const MAX_ACTIVE_BURSTS = 8;
 const BURST_DURATION = 0.5;
@@ -26,11 +28,18 @@ const BURST_DURATION = 0.5;
 // overlapping rockets is the real-world ceiling; cap the live explosion list
 // just in case several land on the same frame.
 const MAX_ACTIVE_EXPLOSIONS = 6;
+// A player places towers one at a time; a handful of overlapping dust bursts
+// is the real-world ceiling, so cap the live list just in case.
+const MAX_ACTIVE_PLACEMENTS = 8;
 const REWARD_TEXT_HEIGHT = 0.45;
 // Matches the missing-out upgrade indicator color (public/configs/game.json).
 const DODGE_TEXT_COLOR = "#38bdf8";
+// The dust a placed tower kicks up uses the colour of the tiles it lands on
+// (the scene land base), so the burst reads as the ground being kicked up
+// rather than a foreign puff of sand.
+const DUST_COLOR_TOKEN = "scene-gray-700" as const;
 
-type DeathBurst = {
+type Burst = {
   id: number;
   position: [number, number, number];
   color: string;
@@ -44,26 +53,37 @@ type RocketExplosion = {
   color: string;
 };
 
+type PlacementDust = {
+  id: number;
+  position: [number, number, number];
+  quaternion: Quaternion;
+  baseRadius: number;
+};
+
 type CombatJuiceProps = {
   /**
-   * Show the gold reward float on kills. Off in the main menu, which has no
-   * gold display — the death burst still plays.
+   * Show the gold reward floats (kill rewards and the sell refund). Off in
+   * the main menu, which has no gold display — the death burst still plays.
    */
   showRewardText?: boolean;
 };
 
 /**
  * Subscribes to combat game events and renders their juice: gold reward floats
- * (camera-facing sprites), a small burst when an enemy dies, and — on a BRL
- * rocket impact — a ground-blast area of effect (a fireball plus a ring that
- * expands to the projectile's blast radius). Event payload positions are
- * flat-field coordinates, mapped onto the planet surface here.
+ * (camera-facing sprites — kill rewards and the sell refund), a small burst
+ * when an enemy dies or a tower is sold, and — on a BRL rocket impact — a
+ * ground-blast area of effect (a fireball plus a ring that expands to the
+ * projectile's blast radius). It also kicks up a small dust burst at the base
+ * of each freshly placed tower, timed to land as the placement drop impacts.
+ * Event payload positions are flat-field coordinates, mapped onto the planet
+ * surface here.
  */
 export const CombatJuice = memo(
   ({ showRewardText = true }: CombatJuiceProps) => {
     const floatingTextsRef = useRef<FloatingTextsHandle>(null);
-    const [bursts, setBursts] = useState<DeathBurst[]>([]);
+    const [bursts, setBursts] = useState<Burst[]>([]);
     const [explosions, setExplosions] = useState<RocketExplosion[]>([]);
+    const [placements, setPlacements] = useState<PlacementDust[]>([]);
     const { getNextId } = useNextId();
 
     const gridSize = useLevelStore((state) => state.gridSize);
@@ -71,6 +91,9 @@ export const CombatJuice = memo(
     const planetRadius = getPlanetRadius(gridSize, tileSize);
     const reducedMotion = useReducedMotion();
     const t = useTranslationInCanvas();
+    // The dust is the colour of the tiles (the scene land base), read once from
+    // the theme so it stays in sync if the palette changes.
+    const dustColor = useMemo(() => getCssColorValue(DUST_COLOR_TOKEN), []);
 
     useEffect(() => {
       const onEnemyKilled = (data: {
@@ -99,6 +122,33 @@ export const CombatJuice = memo(
             id: getNextId(),
             position: [position.x, position.y, position.z],
             color: data.color,
+          },
+        ]);
+      };
+
+      const onTowerSold = (data: {
+        sellPrice: number;
+        worldPosition: { x: number; y: number; z: number };
+      }) => {
+        const position = flatCombatPointToWorldPosition(
+          data.worldPosition.x,
+          data.worldPosition.z,
+          0.15,
+          planetRadius
+        );
+        if (showRewardText && data.sellPrice > 0) {
+          floatingTextsRef.current?.spawn(
+            t("rewardText", { amount: data.sellPrice }),
+            [position.x, position.y + REWARD_TEXT_HEIGHT, position.z],
+            getCssColorValue("scene-hp-high")
+          );
+        }
+        setBursts((prev) => [
+          ...prev.slice(-(MAX_ACTIVE_BURSTS - 1)),
+          {
+            id: getNextId(),
+            position: [position.x, position.y, position.z],
+            color: getCssColorValue("scene-hp-high"),
           },
         ]);
       };
@@ -151,13 +201,45 @@ export const CombatJuice = memo(
         ]);
       };
 
+      const onTowerPlaced = (data: {
+        worldPosition: { x: number; y: number; z: number };
+      }) => {
+        // A small dust burst at the tower's base, kicked up when the
+        // placement drop impacts. The burst is delayed by the drop duration
+        // so the dust lands exactly as the tower hits the ground.
+        const position = flatCombatPointToWorldPosition(
+          data.worldPosition.x,
+          data.worldPosition.z,
+          0.05,
+          planetRadius
+        );
+        const normal = flatFieldToSphereSurface(
+          data.worldPosition.x,
+          data.worldPosition.z,
+          planetRadius
+        ).normal;
+        setPlacements((prev) => [
+          ...prev.slice(-(MAX_ACTIVE_PLACEMENTS - 1)),
+          {
+            id: getNextId(),
+            position: [position.x, position.y, position.z],
+            quaternion: getSurfaceQuaternion(normal),
+            baseRadius: useGameStore.getState().towerBaseRadius,
+          },
+        ]);
+      };
+
       gameEvents.on(GameEvent.ENEMY_KILLED, onEnemyKilled);
       gameEvents.on(GameEvent.ENEMY_DODGED, onEnemyDodged);
       gameEvents.on(GameEvent.PROJECTILE_HIT, onProjectileHit);
+      gameEvents.on(GameEvent.TOWER_PLACED, onTowerPlaced);
+      gameEvents.on(GameEvent.TOWER_SOLD, onTowerSold);
       return () => {
         gameEvents.off(GameEvent.ENEMY_KILLED, onEnemyKilled);
         gameEvents.off(GameEvent.ENEMY_DODGED, onEnemyDodged);
         gameEvents.off(GameEvent.PROJECTILE_HIT, onProjectileHit);
+        gameEvents.off(GameEvent.TOWER_PLACED, onTowerPlaced);
+        gameEvents.off(GameEvent.TOWER_SOLD, onTowerSold);
       };
     }, [planetRadius, t, showRewardText]);
 
@@ -169,8 +251,13 @@ export const CombatJuice = memo(
       setExplosions((prev) => prev.filter((explosion) => explosion.id !== id));
     };
 
+    const onPlacementComplete = (id: number) => {
+      setPlacements((prev) => prev.filter((placement) => placement.id !== id));
+    };
+
     return (
       <>
+        <DustBurstPrewarm />
         <FloatingTexts ref={floatingTextsRef} />
         {bursts.map((burst) => (
           <Effect
@@ -189,6 +276,20 @@ export const CombatJuice = memo(
             radius={explosion.radius}
             color={explosion.color}
             onComplete={() => onExplosionComplete(explosion.id)}
+          />
+        ))}
+        {placements.map((placement) => (
+          <DustBurstFX
+            key={placement.id}
+            position={placement.position}
+            quaternion={placement.quaternion}
+            color={dustColor}
+            baseRadius={placement.baseRadius}
+            // Under reduced motion the tower lands instantly (no drop), so the
+            // dust must not wait out the drop duration — it appears with the
+            // impact.
+            delay={reducedMotion ? 0 : DROP_DURATION}
+            onComplete={() => onPlacementComplete(placement.id)}
           />
         ))}
       </>

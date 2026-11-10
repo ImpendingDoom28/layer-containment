@@ -30,6 +30,8 @@ type TowerSystemProps = {
   hoveredTile: TileData | null;
   hoveredTilePlacementState: TilePlacementState | null;
   selectedTowerType: TowerType | null;
+  /** Whether placed towers play the placement drop on mount (default: yes). */
+  playPlacementFX?: boolean;
 };
 
 // Pure render layer for the towers. Turret aiming and firing live in the game
@@ -46,6 +48,7 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
     hoveredTile,
     selectedTowerType,
     hoveredTilePlacementState,
+    playPlacementFX,
   }) => {
     const { registerTurretNode, hasTowerTarget } = useGameSessionRuntime();
 
@@ -122,6 +125,7 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
                 isSelected={selectedTower?.id === tower.id}
                 onClick={() => onTowerClick?.(tower)}
                 onTurretNode={onTurretNode}
+                playPlacementFX={playPlacementFX}
               />
             );
           })}

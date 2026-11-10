@@ -16,12 +16,17 @@ export type TowerTargeting =
 /**
  * Payload of the `UI_ACTION_DENIED` event. `elementId` names the HUD element
  * (its `data-hud-animation-id` attribute) that should play the denial shake;
- * omitted when the denied action has no targetable element.
+ * omitted when the denied action has no targetable element. `worldPosition`
+ * is the flat-field (x, z, 0) point of the rejected action — set for a
+ * `blocked_tile` placement denial, where the scene plays the red "X" ripple
+ * on the blocked tile; omitted when there is no on-field position (the
+ * unaffordable case denies on the shop row, not on a tile).
  */
 export type UiActionDeniedData = {
   reason: "insufficient_funds" | "blocked_tile";
   towerType: TowerType;
   elementId?: string;
+  worldPosition?: { x: number; z: number };
 };
 
 // Enemy types

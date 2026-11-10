@@ -20,10 +20,11 @@ import {
   gridOffsetSelector,
   gridSizeSelector,
   isLevelConfigLoadedSelector,
+  levelLoadErrorSelector,
   moneySelector,
   pathWaypointsSelector,
   resetLevelStateSelector,
-  setProjectilesSelector,
+  retryLevelLoadSelector,
   setTowersSelector,
   spendMoneySelector,
   towersSelector,
@@ -34,12 +35,11 @@ import {
   resetLevelEnemyUpgradesSelector,
   useUpgradeStore,
 } from "../stores/useUpgradeStore";
-import { useWaveStore } from "../stores/useWaveStore";
+import { setNextWaveReadySelector, useWaveStore } from "../stores/useWaveStore";
 import {
   Enemy,
   EnemyType,
   EnemyUpgradeId,
-  Projectile,
   Tower,
   TowerType,
 } from "../types/game";
@@ -54,6 +54,8 @@ import { statsActions } from "../ecs/actions/statsActions";
 import { spawnLevelEnemy } from "../ecs/spawnLevelEnemy";
 
 export const useLevelSystem = () => {
+  const setNextWaveReady = useWaveStore(setNextWaveReadySelector);
+
   const buildings = useLevelStore(buildingsSelector);
   const waters = useLevelStore(watersSelector);
   const canyons = useLevelStore(canyonsSelector);
@@ -62,7 +64,6 @@ export const useLevelSystem = () => {
   const setTowers = useLevelStore(setTowersSelector);
   const resetLevelState = useLevelStore(resetLevelStateSelector);
   const towers = useLevelStore(towersSelector);
-  const setProjectiles = useLevelStore(setProjectilesSelector);
   const pathWaypoints = useLevelStore(pathWaypointsSelector);
   const currentWave = useLevelStore(currentWaveSelector);
   const money = useLevelStore(moneySelector);
@@ -70,6 +71,8 @@ export const useLevelSystem = () => {
   const spendMoney = useLevelStore(spendMoneySelector);
   const addMoney = useLevelStore(addMoneySelector);
   const isLevelConfigLoaded = useLevelStore(isLevelConfigLoadedSelector);
+  const levelLoadError = useLevelStore(levelLoadErrorSelector);
+  const retryLevelLoad = useLevelStore(retryLevelLoadSelector);
 
   const towerTypes = useGameStore(towerTypesSelector);
   const tileSize = useGameStore(tileSizeSelector);
@@ -82,6 +85,7 @@ export const useLevelSystem = () => {
   );
   const pathWidth = useGameStore(pathWidthSelector);
   const towerHeight = useGameStore(towerHeightSelector);
+
   const resetLevelEnemyUpgrades = useUpgradeStore(
     resetLevelEnemyUpgradesSelector
   );
@@ -134,6 +138,15 @@ export const useLevelSystem = () => {
           reason: denyReason,
           towerType,
           elementId: towerShopRowElementId(towerType),
+          // The scene plays the blocked-tile ripple only when the rejected
+          // action points at an on-field tile.
+          worldPosition:
+            denyReason === "blocked_tile"
+              ? {
+                  x: tileToWorldCoordinate(gridX, gridSize, tileSize),
+                  z: tileToWorldCoordinate(gridZ, gridSize, tileSize),
+                }
+              : undefined,
         });
         return false;
       }
@@ -207,6 +220,7 @@ export const useLevelSystem = () => {
       gameEvents.emit(GameEvent.TOWER_SOLD, {
         towerId,
         towerType: tower.type,
+        sellPrice,
         worldPosition: {
           x: tower.x,
           y: emitterY,
@@ -233,40 +247,20 @@ export const useLevelSystem = () => {
     [world, getNextEnemyId]
   );
 
-  const addProjectile = useCallback(
-    (projectile: Omit<Projectile, "id">): Projectile => {
-      const newProjectile: Projectile = {
-        ...projectile,
-        id: getNextProjectileId(),
-      };
-      setProjectiles((prev) => [...prev, newProjectile]);
-      return newProjectile;
-    },
-    [getNextProjectileId, setProjectiles]
-  );
-
-  const updateProjectile = useCallback(
-    (projectileId: number, updates: Partial<Projectile>) => {
-      setProjectiles((prev) =>
-        prev.map((p) => (p.id === projectileId ? { ...p, ...updates } : p))
-      );
-    },
-    [setProjectiles]
-  );
-
   const resetState = useCallback(() => {
     resetLevelState();
     getNextTowerId(true);
     getNextEnemyId(true);
     getNextProjectileId(true);
     resetLevelEnemyUpgrades();
-    useWaveStore.getState().setNextWaveReady(true);
+    setNextWaveReady(true);
   }, [
     resetLevelState,
     getNextTowerId,
     getNextEnemyId,
     getNextProjectileId,
     resetLevelEnemyUpgrades,
+    setNextWaveReady,
   ]);
 
   return {
@@ -276,15 +270,14 @@ export const useLevelSystem = () => {
 
     addEnemy,
 
-    addProjectile,
-    updateProjectile,
-
     resetState,
 
     money,
     enemiesKilled,
     currentWave,
     isLevelConfigLoaded,
+    levelLoadError,
+    retryLevelLoad,
     getTilePlacementState,
   };
 };

@@ -6,8 +6,10 @@ import type { EnemyType } from "../../../core/types/game";
 import { LevelSystem } from "../../systems/LevelSystem";
 import {
   canyonsSelector,
+  enemyWeightsSelector,
   gridOffsetSelector,
   gridSizeSelector,
+  pathWaypointsSelector,
   useLevelStore,
   watersSelector,
 } from "../../../core/stores/useLevelStore";
@@ -67,18 +69,18 @@ export const MainMenuScene: FC = () => {
   // config-loading side effect is still required for `addEnemy` and the
   // level to initialize.
   useGameSystem();
-  const levelSystem = useLevelSystem();
+  const { addEnemy } = useLevelSystem();
 
   const enemyTypes = useGameStore(enemyTypesSelector);
   const tileSize = useGameStore(tileSizeSelector);
   const pathWidth = useGameStore(pathWidthSelector);
 
-  const { pathWaypoints, enemyWeights } = useLevelStore();
+  const pathWaypoints = useLevelStore(pathWaypointsSelector);
   const gridSize = useLevelStore(gridSizeSelector);
   const gridOffset = useLevelStore(gridOffsetSelector);
   const waters = useLevelStore(watersSelector);
   const canyons = useLevelStore(canyonsSelector);
-  const { addEnemy } = levelSystem;
+  const enemyWeights = useLevelStore(enemyWeightsSelector);
   const { getLivingEnemyCount } = useActions(enemyActions);
 
   const occupancy = useTileOccupancyMasks({
@@ -150,7 +152,13 @@ export const MainMenuScene: FC = () => {
 
       <PlanetTileDecorations occupancy={occupancy} />
 
-      <EntitiesSystem onSellTower={null} selectedTower={null} />
+      {/* The menu's towers are already deployed (ambient), not placed, so they
+          appear at rest — no placement drop. */}
+      <EntitiesSystem
+        onSellTower={null}
+        selectedTower={null}
+        playPlacementFX={false}
+      />
 
       {/* Death burst on `ENEMY_KILLED`; menu kills are settled by the shared
           EnemyDeathSystem so the event fires here too. No reward float: the

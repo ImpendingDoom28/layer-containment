@@ -27,7 +27,14 @@
  * Nothing in this folder is imported by the default `index.html` entry, so
  * the normal `vite build` never bundles the stress-test code.
  */
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Stats } from "@react-three/drei";
 import { useActions, useWorld, WorldProvider } from "koota/react";
@@ -41,7 +48,10 @@ import { worldBaseActions } from "../../src/core/ecs/actions/baseActions";
 import { isBase } from "../../src/core/ecs/traits/base";
 import { HealthInfo } from "../../src/core/ecs/traits/health";
 import { enemyActions } from "../../src/core/ecs/actions/enemyActions";
-import { EntityIdProvider, useEntityIds } from "../../src/core/contexts/EntityIdContext";
+import {
+  EntityIdProvider,
+  useEntityIds,
+} from "../../src/core/contexts/EntityIdContext";
 import { SimulationClockProvider } from "../../src/core/contexts/SimulationClockContext";
 import { WaterClockProvider } from "../../src/core/contexts/WaterClockContext";
 import { world } from "../../src/core/ecs/world";
@@ -460,7 +470,7 @@ const StressTestGame = () => {
       const valid = await settleModelStatuses(
         towerModelUrls,
         MODEL_SETTLE_EXTRA_MS,
-        MODEL_SETTLE_POLL_MS,
+        MODEL_SETTLE_POLL_MS
       );
       if (!active) return;
       setAreModelsReady(true);
@@ -473,8 +483,8 @@ const StressTestGame = () => {
     };
   }, [towerTypes]);
 
-  const gameSystem = useGameSystem();
-  const levelSystem = useLevelSystem();
+  const { gameStatus, isGameConfigLoaded, selectedTower } = useGameSystem();
+  const { sellTower, isLevelConfigLoaded } = useLevelSystem();
 
   const world = useWorld();
   const entityIds = useEntityIds();
@@ -494,10 +504,6 @@ const StressTestGame = () => {
   const onPlaceTowerNoop = useCallback(() => {
     /* stress level is fully pre-built; placement is disabled */
   }, []);
-
-  const { gameStatus, isGameConfigLoaded, selectedTower } = gameSystem;
-
-  const { sellTower, isLevelConfigLoaded } = levelSystem;
 
   const beginRun = useCallback(() => {
     // startRun clears the run state and spawns the base with the level's own
@@ -617,10 +623,7 @@ const StressTestGame = () => {
               className="top-[calc(100%-48px)]! bottom-0! left-20!"
             />
             <Stats showPanel={2} className="top-[calc(100%-48px)]! left-40!" />
-            <StressAutoDriver
-              startWave={session.startWave}
-              restart={restart}
-            />
+            <StressAutoDriver startWave={session.startWave} restart={restart} />
           </Suspense>
         )}
       </Canvas>

@@ -1,5 +1,130 @@
 #!/usr/bin/env sh
-# commitlint auto-ignores git-generated messages (merge/revert/squash) via
-# its default ignore rules and `commitlint.config.mjs`, so this just lints
-# the message being committed.
-npm run lint:commit "$1"
+# commit-msg: lint the commit message with commitlint (via `npm run lint:commit`).
+#
+# commitlint auto-ignores git-generated messages (merge/revert/squash) via its
+# default ignore rules and `commitlint.config.mjs`.
+#
+# Husky runs this script with `sh -e`, so every failing command must be guarded
+# with `if`/`|| true`; otherwise the script would abort before it can report
+# *why* the commit was rejected. The full diagnosis is appended to
+# `logs/commit-msg.log` (gitignored) and a summary is printed on stderr.
+#
+# Node version: commitlint v21 requires node >= 22.12 (newer syntax in its
+# dependencies). Git hooks do not inherit the shell's nvm auto-use, so if the
+# node on PATH is too old (e.g. an nvm default), this script switches to a
+# newer nvm-installed node automatically (preferring the .nvmrc version).
+
+set -u
+
+MSG_FILE=${1-}
+LOG_FILE="logs/commit-msg.log"
+mkdir -p logs 2>/dev/null || true
+
+# Best-effort logging: never let a logging failure abort the hook.
+log() {
+  {
+    printf '[commit-msg %s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S' 2>/dev/null)" "$1" >>"$LOG_FILE" 2>/dev/null \
+      || printf '[commit-msg] %s\n' "$1" >>.husky/commit-msg.log 2>/dev/null \
+      || true
+  }
+}
+
+# True when $1 is a node binary that satisfies commitlint's >=22.12 requirement.
+node_ok() {
+  "$1" -e "const [maj,min]=process.versions.node.split('.').map(Number); process.exit(maj>22||(maj===22&&min>=12)?0:1)" 2>/dev/null
+}
+
+CURRENT_NODE=$(command -v node 2>/dev/null || echo missing)
+
+if [ "$CURRENT_NODE" != "missing" ] && ! node_ok "$CURRENT_NODE"; then
+  # Current node is too old: find a newer nvm-installed one (prefer .nvmrc).
+  NVM_DIR=$HOME/.nvm/versions/node
+  WANT=""
+  if [ -f .nvmrc ]; then
+    WANT=$(head -n 1 .nvmrc 2>/dev/null | tr -d ' \t\r')
+  fi
+  SWITCHED=""
+  for CAND in $WANT $(ls "$NVM_DIR" 2>/dev/null | sort -rV); do
+    [ -n "$CAND" ] || continue
+    if node_ok "$NVM_DIR/$CAND/bin/node"; then
+      SWITCHED="$CAND"
+      break
+    fi
+  done
+  if [ -n "$SWITCHED" ]; then
+    export PATH="$NVM_DIR/$SWITCHED/bin:$PATH"
+    log "NODE: current node ($CURRENT_NODE) is too old for commitlint (>=22.12 required); switched to nvm $SWITCHED"
+    echo "husky - commit-msg: node $( "$CURRENT_NODE" --version 2>/dev/null || echo '?') is too old for commitlint (>=22.12); using nvm $SWITCHED."
+  else
+    log "NODE ERROR: current node ($CURRENT_NODE) is too old for commitlint (>=22.12) and no newer nvm node is installed"
+    echo "husky - commit-msg: node is too old for commitlint (>=22.12 required) and no newer nvm-installed node was found." >&2
+    echo "husky - commit-msg: install one, e.g. 'nvm install $( [ -n "$WANT" ] && printf '%s' "$WANT" || echo 22 )' — or fix your shell's default: 'nvm alias default $( [ -n "$WANT" ] && printf '%s' "$WANT" || echo 22 )'." >&2
+  fi
+fi
+
+{
+  echo "================ commit-msg hook run ===================="
+  echo "time:       $(date '+%Y-%m-%d %H:%M:%S %z' 2>/dev/null)"
+  echo "worktree:   $(git rev-parse --show-toplevel 2>/dev/null || echo '?')"
+  echo "branch:     $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+  echo "message:    $MSG_FILE"
+  echo "node:       $(command -v node 2>/dev/null || echo MISSING) ($(node --version 2>/dev/null || echo ?))"
+  echo "npm:        $(command -v npm 2>/dev/null || echo MISSING)"
+  echo "commitlint: $(command -v commitlint 2>/dev/null || echo MISSING)"
+} >>"$LOG_FILE" 2>/dev/null || true
+
+if [ -z "$MSG_FILE" ]; then
+  log "ERROR: git passed no message file argument (expected \$1 = .git/COMMIT_EDITMSG)"
+  echo "husky - commit-msg: git passed no message file path; cannot lint." >&2
+  exit 1
+fi
+
+if [ ! -f "$MSG_FILE" ]; then
+  log "ERROR: message file '$MSG_FILE' does not exist in $(pwd)"
+  echo "husky - commit-msg: message file not found: $MSG_FILE (cwd: $(pwd))" >&2
+  echo "husky - commit-msg: full log: $LOG_FILE" >&2
+  exit 1
+fi
+
+# Preview of the message being linted (first 4 lines).
+head -n 4 "$MSG_FILE" 2>/dev/null | sed 's/^/[commit-msg] message: /' >>"$LOG_FILE" 2>/dev/null || true
+
+CODE=0
+LINT_OUTPUT=$(npm run lint:commit "$MSG_FILE" 2>&1) || CODE=$?
+
+if [ -n "$LINT_OUTPUT" ]; then
+  printf '%s\n' "$LINT_OUTPUT" | sed 's/^/[commit-msg] raw: /' >>"$LOG_FILE" 2>/dev/null || true
+fi
+log "exit code: $CODE"
+
+if [ "$CODE" -ne 0 ]; then
+  # Show the full output so the real reason is visible at commit time.
+  printf '%s\n' "$LINT_OUTPUT" >&2
+  echo "" >&2
+
+  if printf '%s\n' "$LINT_OUTPUT" | grep -q "command not found"; then
+    log "HINT: 'commitlint' was not found on PATH — node_modules is probably missing in this worktree/clone."
+    echo "husky - commit-msg: 'commitlint' was not found on PATH." >&2
+    echo "husky - commit-msg: run 'npm install' in this worktree/clone (the .husky/_ shim and node_modules/.bin are created by the 'prepare' script)." >&2
+  elif printf '%s\n' "$LINT_OUTPUT" | grep -q "Missing script"; then
+    log "HINT: package.json is missing the 'lint:commit' script."
+    echo "husky - commit-msg: package.json is missing the 'lint:commit' script." >&2
+  elif printf '%s\n' "$LINT_OUTPUT" | grep -qE "SyntaxError|Invalid regular expression|Invalid (expression|ref)"; then
+    log "HINT: commitlint crashed with a SyntaxError — the node running it is probably too old for this commitlint version."
+    echo "husky - commit-msg: commitlint crashed (SyntaxError) — the node running it is probably too old for this commitlint version (needs >=22.12)." >&2
+    echo "husky - commit-msg: install a newer node and set it as the nvm default: 'nvm install $( [ -f .nvmrc ] && head -n1 .nvmrc | tr -d ' \t\r' || echo 22 )' and 'nvm alias default $( [ -f .nvmrc ] && head -n1 .nvmrc | tr -d ' \t\r' || echo 22 )'." >&2
+  else
+    RULES=$(printf '%s\n' "$LINT_OUTPUT" | sed -n 's/^✖[[:space:]]*//p' | head -n 10) || true
+    if [ -n "$RULES" ]; then
+      printf '%s\n' "$RULES" | sed 's/^/[commit-msg] rejected rule: /' >>"$LOG_FILE" 2>/dev/null || true
+      echo "husky - commit-msg: commitlint rejected the message (rule violations above)." >&2
+      echo "husky - commit-msg: expected format 'type(scope): subject', e.g. 'feat(towers): add slow tower'." >&2
+    else
+      log "NOTE: commitlint exited $CODE without rule violations — likely a crash or environment problem; see the raw output in $LOG_FILE"
+      echo "husky - commit-msg: commitlint failed without rule output (exit code $CODE) — likely an environment or crash problem." >&2
+      echo "husky - commit-msg: full diagnosis: $LOG_FILE" >&2
+    fi
+  fi
+fi
+
+exit "$CODE"

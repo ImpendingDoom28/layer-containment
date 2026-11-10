@@ -57,24 +57,20 @@ describe("buildCanyonBridgePaths", () => {
     expect(buildCanyonBridgePaths(paths, [], GRID, TILE)).toBe(paths);
   });
 
-  it("elevates canyon tiles to the bridge height and ramps the neighbors", () => {
+  it("keeps the bridge span flush with the ground (no elevation)", () => {
     // Path runs down column 9; a 3-tile canyon at gridZ 8..10 (gridX 9).
     const path = column(9, 4, 12); // gridZ 4..15
     const canyons = [canyon(9, 8), canyon(9, 9), canyon(9, 10)];
     const [result] = buildCanyonBridgePaths([path], canyons, GRID, TILE);
 
-    // The run tiles sit at the bridge elevation...
+    // The run tiles sit flush at the bridge level (ground)...
     expect(result[8 - 4].y).toBe(BRIDGE_ELEVATION);
     expect(result[9 - 4].y).toBe(BRIDGE_ELEVATION);
     expect(result[10 - 4].y).toBe(BRIDGE_ELEVATION);
 
-    // ...the single tile on each side of the run is the midpoint ramp.
-    expect(result[7 - 4].y).toBe(BRIDGE_ELEVATION / 2);
-    expect(result[11 - 4].y).toBe(BRIDGE_ELEVATION / 2);
-
-    // ...and everything else stays flat.
-    expect(result[0].y).toBe(0);
-    expect(result[11].y).toBe(0);
+    // ...and so does the rest of the path — crossing the canyon no longer
+    // raises the walkway, so the whole span is at ground level.
+    expect(result.every((point) => point.y === BRIDGE_ELEVATION)).toBe(true);
   });
 
   it("preserves path shape and length when bridging", () => {

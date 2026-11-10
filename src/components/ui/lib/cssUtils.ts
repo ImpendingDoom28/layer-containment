@@ -29,7 +29,7 @@ const colorTokenMap = {
   "scene-canyon-rim": "--scene-canyon-rim",
   "scene-bridge-deck": "--scene-bridge-deck",
   "scene-bridge-rail": "--scene-bridge-rail",
-  "scene-bridge-pier": "--scene-bridge-pier",
+  "scene-bridge-strut": "--scene-bridge-strut",
 
   "editor-tool-select": "--editor-tool-select",
   "editor-tool-place-building": "--editor-tool-place-building",

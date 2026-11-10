@@ -6,13 +6,13 @@ import {
 import { flatFieldToSphereSurface } from "./planetSurfaceMapping";
 
 /**
- * How high (above the ground surface) a bridge deck sits over a canyon. This
- * is the path `y` on the bridge; the visible deck top is
- * `BRIDGE_ELEVATION + pathYOffset` (see `Path.tsx`). The basin floor sits
- * `CANON_BASIN_DEPTH` below the surface, so the deck clears the basin with
- * `BRIDGE_ELEVATION + CANON_BASIN_DEPTH` of vertical room.
+ * How high (above the ground surface) a bridge deck sits over a canyon. Kept
+ * at 0: the walkway is flush with the path on either side of the canyon (it
+ * lines up with the path entering and leaving it), and the basin floor below
+ * sits `CANON_BASIN_DEPTH` below the deck. The visible deck top is
+ * `BRIDGE_ELEVATION + pathYOffset` (see `Path.tsx`).
  */
-export const BRIDGE_ELEVATION = 1.6;
+export const BRIDGE_ELEVATION = 0;
 
 /**
  * Per-tile canyon occupancy as a flat bitmask (1 = canyon, 0 = free), indexed
@@ -100,20 +100,19 @@ const samplePathToTilePoints = (
 };
 
 /**
- * Bake a bridge elevation into every path that crosses a canyon.
+ * Bake the bridge (ground level) into every path that crosses a canyon.
  *
  * The level store's `pathWaypoints` is the single source of truth for the
  * enemy movement system (`position.y = waypoint.y`), tower aiming
  * (`targetPathPos.y`), and the path strip render (`yBase + pathYOffset`), so
- * elevating the waypoints here makes enemies ride the bridge, towers aim at
- * the bridge, and the deck render at the bridge height — all consistent, with
- * no per-entity changes.
+ * keeping the waypoints at the bridge level here makes enemies, towers, and
+ * the deck render stay consistent with no per-entity changes.
  *
- * Each path is re-sampled per tile (orthogonal paths, so shape/length are
- * preserved). Tiles inside a canyon run sit at `BRIDGE_ELEVATION`; the single
- * tile on either side of a run is a midpoint ramp, giving a short 2-tile
- * approach instead of a vertical wall. Returns the input unchanged when the
- * level has no canyons.
+ * The bridge is flush with the ground (`BRIDGE_ELEVATION` is 0), so the path
+ * over the canyon simply stays at ground level. Each path is re-sampled per
+ * tile (orthogonal paths, so shape/length are preserved) to match the bridge
+ * span's per-tile footprint. Returns the input unchanged when the level has
+ * no canyons.
  */
 export const buildCanyonBridgePaths = (
   pathWaypoints: PathWaypoint[][],
@@ -136,29 +135,13 @@ export const buildCanyonBridgePaths = (
     const isCanyon = points.map(
       (p) => mask[p.gridZ * gridSize + p.gridX] === 1
     );
-    // Orthogonal levels are flat (y = 0); the bridge adds elevation on top.
-    const elevation: number[] = points.map((_, i) =>
-      isCanyon[i] ? BRIDGE_ELEVATION : 0
-    );
-
-    for (let i = 0; i < points.length; i++) {
-      if (
-        isCanyon[i] &&
-        i > 0 &&
-        !isCanyon[i - 1]
-      ) {
-        elevation[i - 1] = (elevation[i - 1] + BRIDGE_ELEVATION) / 2;
-      }
-      if (
-        isCanyon[i] &&
-        i < points.length - 1 &&
-        !isCanyon[i + 1]
-      ) {
-        elevation[i + 1] = (elevation[i + 1] + BRIDGE_ELEVATION) / 2;
-      }
-    }
-
-    return points.map((p, i) => ({ x: p.x, y: elevation[i], z: p.z }));
+    return points.map((p, i) => ({
+      x: p.x,
+      // The bridge is flush with the ground, so tiles on the canyon span sit
+      // at BRIDGE_ELEVATION (0) and everything else stays at ground level.
+      y: isCanyon[i] ? BRIDGE_ELEVATION : 0,
+      z: p.z,
+    }));
   });
 };
 

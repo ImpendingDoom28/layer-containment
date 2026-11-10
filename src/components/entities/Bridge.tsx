@@ -43,18 +43,21 @@ type BridgeProps = {
   /** Draw the decking planks too. The game scene lets the path strip act as
       the deck, so it omits this; the editor (flat path) draws its own. */
   renderDeck?: boolean;
-  /** The canyon's world bbox, so the anchor piers drop to the basin floor
-      instead of the surface. Absent (flat terrain, e.g. the editor) piers
+  /** The canyon's world bbox, so the support struts brace the basin walls
+      instead of the surface. Absent (flat terrain, e.g. the editor) struts
       drop to the surface. */
   canyonBBox?: CanyonWorldBBox | null;
 };
 
 // The raised walkway the user chose: a timber deck with a top rail on each
-// side (posts connecting rail to deck) and stone anchor piers at the two ends
-// of the span, dropping from the deck to the canyon floor.
+// side (posts connecting rail to deck) and diagonal support struts at the two
+// ends of the span, leaning down toward the canyon's cliff walls.
 const RAIL_HEIGHT = 0.22;
-const PIER_SIZE = 0.14;
+const STRUT_SIZE = 0.17;
+// How far past the deck edge each strut's foot reaches toward the wall.
+const STRUT_LEAN = 0.6;
 const UNIT = new Vector3(1, 1, 1);
+const UP = new Vector3(0, 1, 0);
 
 export const Bridge: FC<BridgeProps> = memo(
   ({
@@ -88,8 +91,8 @@ export const Bridge: FC<BridgeProps> = memo(
           roughness: 0.8,
           metalness: 0.08,
         }),
-        pier: new MeshStandardMaterial({
-          color: getCssColorValue("scene-bridge-pier"),
+        strut: new MeshStandardMaterial({
+          color: getCssColorValue("scene-bridge-strut"),
           roughness: 0.9,
           metalness: 0.05,
         }),
@@ -101,7 +104,7 @@ export const Bridge: FC<BridgeProps> = memo(
       const deck: BufferGeometry[] = [];
       const rail: BufferGeometry[] = [];
       const post: BufferGeometry[] = [];
-      const pier: BufferGeometry[] = [];
+      const strut: BufferGeometry[] = [];
 
       const bake = (
         size: [number, number, number],
@@ -154,21 +157,52 @@ export const Bridge: FC<BridgeProps> = memo(
           }
         }
 
-        // Anchor piers at the two ends of the span, dropping to the basin
-        // floor (or the surface on flat terrain).
+        // Diagonal support struts at the two ends of the span, leaning from the
+        // deck inboard down and outward onto the canyon's cliff wall, like a
+        // bridge resting on the rim (on flat terrain there is no wall, so they
+        // just drop to the surface).
         if (tile.isRunStart || tile.isRunEnd) {
-          const px = tile.isRunStart ? -half * 0.85 : half * 0.85;
-          const pierLocal = new Vector3(px, 0, 0).applyQuaternion(quaternion);
-          const pierWorldX = surface.x + pierLocal.x;
-          const pierWorldZ = surface.z + pierLocal.z;
-          const floorY = canyonBBox
-            ? sampleBasinFloorY(pierWorldX, pierWorldZ, canyonBBox, radius)
-            : surface.y;
-          const pierHeight = Math.max(deckTop - floorY, 0.2);
-          const pierCenterY = (deckTop + floorY) / 2;
-          pier.push(
-            bake([PIER_SIZE, pierHeight, PIER_SIZE], new Vector3(px, pierCenterY, 0), quaternion, surface)
-          );
+          const sign = tile.isRunStart ? -1 : 1; // toward the cliff wall
+          for (const side of [1, -1]) {
+            const topLocal = new Vector3(
+              sign * half * 0.3,
+              deckTop - 0.02,
+              side * railOffset
+            );
+            const footLocal = new Vector3(
+              sign * (half + (canyonBBox ? STRUT_LEAN : 0)),
+              0,
+              side * railOffset
+            );
+            const topWorld = surface
+              .clone()
+              .add(topLocal.applyQuaternion(quaternion));
+            const footWorld = surface
+              .clone()
+              .add(footLocal.applyQuaternion(quaternion));
+            if (canyonBBox) {
+              // Follow the basin's bowl down: the foot lands on the bank
+              // (it braces the wall, not the floor).
+              footWorld.y = Math.min(
+                footWorld.y,
+                sampleBasinFloorY(footWorld.x, footWorld.z, canyonBBox, radius)
+              );
+            }
+            const vec = new Vector3().subVectors(footWorld, topWorld);
+            const length = Math.max(vec.length(), 0.2);
+            const quat =
+              vec.lengthSq() > 1e-8
+                ? new Quaternion().setFromUnitVectors(UP, vec.normalize())
+                : new Quaternion();
+            const center = new Vector3()
+              .addVectors(topWorld, footWorld)
+              .multiplyScalar(0.5);
+            strut.push(
+              new BoxGeometry(STRUT_SIZE, length, STRUT_SIZE).applyMatrix4(
+                new Matrix4().compose(center, quat, UNIT)
+              )
+            );
+          }
         }
       }
 
@@ -182,7 +216,7 @@ export const Bridge: FC<BridgeProps> = memo(
         deck: merge(deck),
         rail: merge(rail),
         post: merge(post),
-        pier: merge(pier),
+        strut: merge(strut),
       };
     }, [tiles, radius, tileSize, pathWidth, deckTop, half, railOffset, renderDeck, canyonBBox]);
 
@@ -218,8 +252,8 @@ export const Bridge: FC<BridgeProps> = memo(
         {merged.post && (
           <mesh geometry={merged.post} material={materials.rail} castShadow />
         )}
-        {merged.pier && (
-          <mesh geometry={merged.pier} material={materials.pier} castShadow receiveShadow />
+        {merged.strut && (
+          <mesh geometry={merged.strut} material={materials.strut} castShadow receiveShadow />
         )}
       </group>
     );

@@ -12,6 +12,7 @@ import { useLevelStore } from "../stores/useLevelStore";
 import type { Tower, TowerConfig, TowerType } from "../types/game";
 import { gameEvents } from "../../utils/eventEmitter";
 import { GameEvent } from "../types/enums/events";
+import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import type { LevelSystem } from "./useLevelSystem";
 import { useLevelSystem } from "./useLevelSystem";
 
@@ -108,11 +109,37 @@ describe("useLevelSystem.placeTower denial feedback", () => {
       const ok = system.placeTower(3, 3, "basic");
 
       expect(ok).toBe(false);
-      expect(deniedSpy).toHaveBeenCalledWith({
-        reason: "blocked_tile",
-        towerType: "basic",
-        elementId: "tower-shop-row-basic",
-      });
+      expect(deniedSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reason: "blocked_tile",
+          towerType: "basic",
+          elementId: "tower-shop-row-basic",
+        })
+      );
+    } finally {
+      renderer.unmount();
+    }
+  });
+
+  it("carries the blocked tile's world position for the ripple", async () => {
+    useLevelStore.setState({
+      towers: [makeTower(1, 3, 3)],
+    });
+
+    const renderer = await renderSystem();
+    try {
+      const ok = system.placeTower(3, 3, "basic");
+
+      expect(ok).toBe(false);
+      expect(deniedSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reason: "blocked_tile",
+          worldPosition: {
+            x: tileToWorldCoordinate(3, 8, 1),
+            z: tileToWorldCoordinate(3, 8, 1),
+          },
+        })
+      );
     } finally {
       renderer.unmount();
     }
@@ -131,6 +158,9 @@ describe("useLevelSystem.placeTower denial feedback", () => {
         towerType: "basic",
         elementId: "tower-shop-row-basic",
       });
+      // No on-field position for an unaffordable denial: the ripple only
+      // plays for blocked tiles.
+      expect(deniedSpy.mock.calls[0]?.[0]?.worldPosition).toBeUndefined();
     } finally {
       renderer.unmount();
     }

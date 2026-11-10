@@ -489,8 +489,7 @@ const writeArcSegments = (
   headX: number,
   headY: number,
   headZ: number,
-  time: number,
-  flash: number
+  time: number
 ): number => {
   let mainSegOffset = 0;
   let branchSlot = 0;
@@ -546,7 +545,7 @@ const writeArcSegments = (
       // The wobble tapers to zero at both ends, so the leg stays anchored to
       // its struck enemies no matter how it crackles.
       const taper = Math.sin(t * Math.PI);
-      const wobble = ARC_WOBBLE * taper * flash;
+      const wobble = ARC_WOBBLE * taper;
       const ox = (rand() - 0.5) * 2 * wobble;
       const oy = (rand() - 0.5) * 2 * wobble * 0.45;
       const oz = (rand() - 0.5) * 2 * wobble;
@@ -589,7 +588,10 @@ const writeArcSegments = (
       let bx = vx[base];
       let by = vy[base];
       let bz = vz[base];
-      const branchBase = ARC_MAIN_SEGMENTS + branchSlot * ARC_BRANCH_SEGMENTS;
+      // The branch slots sit right after this leg's main slots (one
+      // contiguous block per leg: 8 main + 3 branch), so `written` below is
+      // the exact slot extent of the current chain of legs.
+      const branchBase = mainSegOffset;
       for (let s = 0; s < ARC_BRANCH_SEGMENTS; s += 1) {
         const nx = bx + bdx * stepLen * (1 - s * 0.15);
         const ny = by + bdy * stepLen * (1 - s * 0.15);
@@ -603,6 +605,7 @@ const writeArcSegments = (
         bx = nx; by = ny; bz = nz;
       }
       branchSlot += 1;
+      mainSegOffset += ARC_BRANCH_SEGMENTS;
     }
   };
 
@@ -617,11 +620,12 @@ const writeArcSegments = (
     }
   }
 
-  // A leg uses fewer slots than the maximum chain (up to 4 legs), and the
-  // geometry's instanceCount would still draw every slot — zero the unwritten
-  // ones so a slot cannot leak the previous occupant's geometry (a ghost leg
-  // drawn at the old arc's positions).
-  const written = mainSegOffset + branchSlot * ARC_BRANCH_SEGMENTS;
+  // The slots form one contiguous run (each leg: 8 main + 3 branch), so
+  // `mainSegOffset` is the exact extent written this frame. A chain of
+  // fewer legs leaves the rest of the buffer — zero it so no slot can leak
+  // the previous occupant's geometry (a ghost leg drawn at the old arc's
+  // positions), and return the extent for the geometry's instanceCount.
+  const written = mainSegOffset;
   for (let i = written; i < ARC_TOTAL_SEGMENTS; i += 1) {
     const c = item.core[i];
     c.x1 = 0; c.y1 = 0; c.z1 = 0;
@@ -644,7 +648,8 @@ const syncArcBuffers = (
   item: ChainArcPoolItem,
   coreGeometry: THREE.InstancedBufferGeometry | null,
   glowGeometry: THREE.InstancedBufferGeometry | null,
-  writtenSegments: number
+  writtenSegments: number,
+  brightness = 1
 ): void => {
   // LineSegments2 draws every instance of its geometry — cap the instance
   // count to the slots actually written this frame (the current chain of
@@ -679,14 +684,17 @@ const syncArcBuffers = (
     const branchDim = 0.3;
     for (let i = 0; i < segments.length; i += 1) {
       const seg = segments[i];
-      const isBranch = i >= ARC_MAIN_SEGMENTS;
+      // Per-leg slot block: 8 main segments (a brightening gradient toward
+      // the leg's end) then 3 branch segments (the dimmest).
+      const inLeg = i % (ARC_LEG_SEGMENTS + ARC_BRANCH_SEGMENTS);
+      const isBranch = inLeg >= ARC_LEG_SEGMENTS;
       const mix = isBranch
         ? branchDim
         : legRootDim +
-          (1 - legRootDim) * ((i % ARC_LEG_SEGMENTS) + 1) / ARC_LEG_SEGMENTS;
-      const r = item.color.r * mix;
-      const g = item.color.g * mix;
-      const b = item.color.b * mix;
+          (1 - legRootDim) * (inLeg + 1) / ARC_LEG_SEGMENTS;
+      const r = item.color.r * mix * brightness;
+      const g = item.color.g * mix * brightness;
+      const b = item.color.b * mix * brightness;
       const bo = 6 * i;
       posArr[bo] = seg.x1;
       posArr[bo + 1] = seg.y1;
@@ -729,7 +737,7 @@ const updateChainArc = (
   // projectile's body, not decoration), but the per-frame jitter is held to a
   // fixed, per-arc seed so the bolt reads as a still line instead of crackling.
   const jitterTime = reducedMotion ? index * 7.13 + 1.7 : time;
-  const written = writeArcSegments(item, headX, headY, headZ, jitterTime, 1);
+  const written = writeArcSegments(item, headX, headY, headZ, jitterTime);
   syncArcBuffers(
     item,
     pool.coreGeometries[index],
@@ -754,6 +762,14 @@ const advanceChainArcLeg = (
   if (!pool || index < 0 || !pool.used.has(index)) return;
   const item = pool.items[index];
   if (item.legCount >= ARC_MAX_LEGS) return;
+  // The hop destination (the enemy just struck) finalizes the current leg:
+  // it keeps rendering at full length from its start to that enemy from
+  // now on (a completed leg drawn to its zero end would vanish).
+  const current = item.legs[item.legIndex];
+  current.endX = x;
+  current.endY = y;
+  current.endZ = z;
+  current.completed = true;
   const leg = item.legs[item.legCount];
   leg.startX = x;
   leg.startY = y;
@@ -798,12 +814,16 @@ const updateChainArcFinalFlash = (
     1 + 1.2 * (item.finalFlash / ARC_FINAL_FLASH_FRAMES);
   if (item.finalFlash > 0) item.finalFlash -= 1;
   const jitterTime = reducedMotion ? index * 7.13 + 1.7 : time;
-  const written = writeArcSegments(item, headX, headY, headZ, jitterTime, flash);
+  const written = writeArcSegments(item, headX, headY, headZ, jitterTime);
+  // The end flash brightens the whole channel (a brightness boost on the
+  // per-vertex colors) without making it wiggle harder: the wobble amplitude
+  // stays constant, so the flash is visible even with reduced motion on.
   syncArcBuffers(
     item,
     pool.coreGeometries[index],
     pool.glowGeometries[index],
-    written
+    written,
+    flash
   );
 };
 
@@ -1202,8 +1222,22 @@ const stepNonBeamProjectile = (
   if (projectile.visualPool === "bolt" && projectile.finalFlash) {
     projectile.finalFlashAge += 1;
     const finalTarget = enemiesById.get(projectile.targetId);
+    // While the final target is alive the flash follows its live position;
+    // if it dies (or is already gone) the flash simply holds at the bolt's
+    // strike pose until the existing expiration removes it — no early kill.
     if (!finalTarget || finalTarget.health <= 0) {
-      toRemove.push(projectile.id);
+      updateChainArcFinalFlash(
+        ctx.arcPool,
+        projectile.arcIndex,
+        projectile.currentX,
+        projectile.currentY,
+        projectile.currentZ,
+        ctx.currentTime,
+        ctx.reducedMotion
+      );
+      if (projectile.finalFlashAge > ARC_FINAL_FLASH_FRAMES) {
+        toRemove.push(projectile.id);
+      }
       return;
     }
     const finalGridSize = useLevelStore.getState().gridSize;
@@ -1587,6 +1621,11 @@ type InstancedProjectilesReturn = {
   getActiveProjectiles: () => PooledProjectile[];
   /** Pool stats of the trail streaks, or null when trails are disabled. */
   getTrailPoolStats: () => InstancedPoolStats | null;
+  /** The chain-arc pool's per-slot core + glow geometries (test support). */
+  getArcGeometries: () => Array<{
+    core: LineSegmentsGeometry;
+    glow: LineSegmentsGeometry;
+  }>;
 };
 
 export const useInstancedProjectiles = (
@@ -2134,6 +2173,11 @@ export const useInstancedProjectiles = (
     clearAllProjectiles,
     getActiveProjectiles,
     getTrailPoolStats,
+    getArcGeometries: () =>
+      chainArcPool.items.map((_, index) => ({
+        core: chainArcPool.coreGeometries[index],
+        glow: chainArcPool.glowGeometries[index],
+      })),
   };
 };
 

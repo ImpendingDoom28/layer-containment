@@ -22,7 +22,6 @@ import {
   moneySelector,
   pathWaypointsSelector,
   resetLevelStateSelector,
-  setProjectilesSelector,
   setTowersSelector,
   spendMoneySelector,
   towersSelector,
@@ -33,12 +32,11 @@ import {
   resetLevelEnemyUpgradesSelector,
   useUpgradeStore,
 } from "../stores/useUpgradeStore";
-import { useWaveStore } from "../stores/useWaveStore";
+import { setNextWaveReadySelector, useWaveStore } from "../stores/useWaveStore";
 import {
   Enemy,
   EnemyType,
   EnemyUpgradeId,
-  Projectile,
   Tower,
   TowerType,
 } from "../types/game";
@@ -53,6 +51,8 @@ import { statsActions } from "../ecs/actions/statsActions";
 import { spawnLevelEnemy } from "../ecs/spawnLevelEnemy";
 
 export const useLevelSystem = () => {
+  const setNextWaveReady = useWaveStore(setNextWaveReadySelector);
+
   const buildings = useLevelStore(buildingsSelector);
   const waters = useLevelStore(watersSelector);
   const gridOffset = useLevelStore(gridOffsetSelector);
@@ -60,7 +60,6 @@ export const useLevelSystem = () => {
   const setTowers = useLevelStore(setTowersSelector);
   const resetLevelState = useLevelStore(resetLevelStateSelector);
   const towers = useLevelStore(towersSelector);
-  const setProjectiles = useLevelStore(setProjectilesSelector);
   const pathWaypoints = useLevelStore(pathWaypointsSelector);
   const currentWave = useLevelStore(currentWaveSelector);
   const money = useLevelStore(moneySelector);
@@ -80,6 +79,7 @@ export const useLevelSystem = () => {
   );
   const pathWidth = useGameStore(pathWidthSelector);
   const towerHeight = useGameStore(towerHeightSelector);
+
   const resetLevelEnemyUpgrades = useUpgradeStore(
     resetLevelEnemyUpgradesSelector
   );
@@ -231,40 +231,20 @@ export const useLevelSystem = () => {
     [world, getNextEnemyId]
   );
 
-  const addProjectile = useCallback(
-    (projectile: Omit<Projectile, "id">): Projectile => {
-      const newProjectile: Projectile = {
-        ...projectile,
-        id: getNextProjectileId(),
-      };
-      setProjectiles((prev) => [...prev, newProjectile]);
-      return newProjectile;
-    },
-    [getNextProjectileId, setProjectiles]
-  );
-
-  const updateProjectile = useCallback(
-    (projectileId: number, updates: Partial<Projectile>) => {
-      setProjectiles((prev) =>
-        prev.map((p) => (p.id === projectileId ? { ...p, ...updates } : p))
-      );
-    },
-    [setProjectiles]
-  );
-
   const resetState = useCallback(() => {
     resetLevelState();
     getNextTowerId(true);
     getNextEnemyId(true);
     getNextProjectileId(true);
     resetLevelEnemyUpgrades();
-    useWaveStore.getState().setNextWaveReady(true);
+    setNextWaveReady(true);
   }, [
     resetLevelState,
     getNextTowerId,
     getNextEnemyId,
     getNextProjectileId,
     resetLevelEnemyUpgrades,
+    setNextWaveReady,
   ]);
 
   return {
@@ -273,9 +253,6 @@ export const useLevelSystem = () => {
     sellTower,
 
     addEnemy,
-
-    addProjectile,
-    updateProjectile,
 
     resetState,
 

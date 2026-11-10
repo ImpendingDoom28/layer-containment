@@ -3,7 +3,6 @@ import { create } from "zustand";
 import type {
   BossConfig,
   Building,
-  Enemy,
   EnemyType,
   PathWaypoint,
   Projectile,
@@ -57,9 +56,6 @@ type LevelStoreActions = {
   setBuildings: (buildings: Building[]) => void;
   setTowers: (towers: Tower[] | ((prev: Tower[]) => Tower[])) => void;
   updateTower: (towerId: number, updates: Partial<Tower>) => void;
-  setProjectiles: (
-    projectiles: Projectile[] | ((prev: Projectile[]) => Projectile[])
-  ) => void;
   removeProjectile: (projectileId: number) => void;
   resetLevelState: () => void;
   setHoveredTile: (tile: TileData | null) => void;
@@ -92,20 +88,6 @@ export const getMaxEntityId = (
 ): number =>
   entities.reduce((currentMax, entity) => Math.max(currentMax, entity.id), 0);
 
-const buildLevelConfigEnemies = (
-  levelData: LevelConfigData,
-  enemyTypes: NonNullable<
-    ReturnType<typeof useGameStore.getState>["enemyTypes"]
-  >
-): Enemy[] =>
-  levelData.enemies.map((enemy) => ({
-    ...enemyTypes[enemy.type],
-    ...enemy,
-    pathIndex: enemy.pathIndex ?? 0,
-    maxHealth: enemy.health,
-    upgradeStacks: enemy.upgradeStacks ?? getUpgradeStacks(enemy.upgrades),
-  }));
-
 export const useLevelStore = create<LevelStore>((set) => ({
   ...DEFAULT_STATE,
 
@@ -116,52 +98,71 @@ export const useLevelStore = create<LevelStore>((set) => ({
 
     if (!towerTypes || !enemyTypes || !enemyUpgrades) return;
 
-    const gridOffset = getLevelGridOffset(levelData.gridSize, tileSize);
+    const {
+      gridSize,
+      pathWaypoints,
+      enemies,
+      towers,
+      buildings,
+      waters,
+      startingMoney,
+      waveConfigs,
+      boss,
+      projectiles,
+      enemyWeights,
+    } = levelData;
+
+    const gridOffset = getLevelGridOffset(gridSize, tileSize);
     const actions = enemyActions(world);
 
     actions.clearAllEnemies();
+
     // The waypoints must be in the store before any enemy spawns: spawnEnemy
     // derives each enemy's initial facing (the direction along the path) from
     // them.
-    set({ pathWaypoints: levelData.pathWaypoints });
-    for (const enemy of buildLevelConfigEnemies(levelData, enemyTypes)) {
+    set({ pathWaypoints });
+
+    const levelEnemies = enemies.map((enemy) => ({
+      ...enemyTypes[enemy.type],
+      ...enemy,
+      pathIndex: enemy.pathIndex ?? 0,
+      maxHealth: enemy.health,
+      upgradeStacks: enemy.upgradeStacks ?? getUpgradeStacks(enemy.upgrades),
+    }));
+    for (const enemy of levelEnemies) {
       actions.spawnEnemy(enemy);
     }
 
     // Only used if we have defined towers in the level config
-    const towers = levelData.towers.map((tower) => ({
+    const levelTowers = towers.map((tower) => ({
       lastFireTime: 0,
       ...towerTypes[tower.type],
       ...tower,
     }));
 
-    const buildings = levelData.buildings.map((building) =>
-      withRecalculatedBuildingCoordinates(
-        building,
-        levelData.gridSize,
-        tileSize
-      )
+    const levelBuildings = buildings.map((building) =>
+      withRecalculatedBuildingCoordinates(building, gridSize, tileSize)
     );
 
-    const waters = levelData.waters.map((water) =>
+    const levelWaters = waters.map((water) =>
       withRecalculatedWaterCoordinates(water, levelData.gridSize, tileSize)
     );
 
     set({
-      money: levelData.startingMoney,
-      enemiesKilled: 0,
-      gridSize: levelData.gridSize,
-      waters,
-      pathWaypoints: levelData.pathWaypoints,
-      totalWaves: levelData.waveConfigs.length,
-      waveConfigs: levelData.waveConfigs,
-      boss: levelData.boss ?? null,
-      buildings,
-      towers,
-      projectiles: levelData.projectiles,
-      enemyWeights: levelData.enemyWeights as Record<EnemyType, number>,
-      gridOffset,
       isLevelConfigLoaded: true,
+      enemiesKilled: 0,
+      money: startingMoney,
+      gridOffset,
+      gridSize,
+      pathWaypoints,
+      waveConfigs,
+      projectiles,
+      waters: levelWaters,
+      buildings: levelBuildings,
+      towers: levelTowers,
+      totalWaves: waveConfigs.length,
+      boss: boss ?? null,
+      enemyWeights: enemyWeights as Record<EnemyType, number>,
     });
   },
 
@@ -216,15 +217,6 @@ export const useLevelStore = create<LevelStore>((set) => ({
       towers: state.towers.map((tower) =>
         tower.id === towerId ? { ...tower, ...updates } : tower
       ),
-    }));
-  },
-
-  setProjectiles: (projectiles) => {
-    set((state) => ({
-      projectiles:
-        typeof projectiles === "function"
-          ? projectiles(state.projectiles)
-          : projectiles,
     }));
   },
 
@@ -285,10 +277,9 @@ export const spendMoneySelector = (state: LevelStore) => state.spendMoney;
 export const addMoneySelector = (state: LevelStore) => state.addMoney;
 export const setTowersSelector = (state: LevelStore) => state.setTowers;
 export const updateTowerSelector = (state: LevelStore) => state.updateTower;
-export const setProjectilesSelector = (state: LevelStore) =>
-  state.setProjectiles;
 export const resetLevelStateSelector = (state: LevelStore) =>
   state.resetLevelState;
 export const hoveredTileSelector = (state: LevelStore) => state.hoveredTile;
 export const setHoveredTileSelector = (state: LevelStore) =>
   state.setHoveredTile;
+export const enemyWeightsSelector = (state: LevelStore) => state.enemyWeights;

@@ -21,6 +21,12 @@ export const GameEvent = {
    * the stronger, red-tinted micro camera punch can kick toward it.
    */
   BASE_DAMAGE_TAKEN: "base_damage_taken",
+  /**
+   * The player's money changed (a gain or a spend). The HUD eases the money
+   * number toward the new value and flashes the money card (gold on a gain,
+   * red on a spend).
+   */
+  MONEY_CHANGED: "money_changed",
   WAVE_STARTED: "wave_started",
   GAME_OVER: "game_over",
   GAME_WON: "game_won",

@@ -329,7 +329,6 @@ export const GamePage: FC<GamePageProps> = ({
                 <HUDTowerShop money={money} />
 
                 <HUDGameStats
-                  money={money}
                   health={baseHealth}
                   currentWave={currentWave}
                   remainingEnemies={remainingEnemies}

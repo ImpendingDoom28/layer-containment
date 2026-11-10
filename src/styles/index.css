@@ -342,6 +342,12 @@
   .animate-boss-wave-banner {
     animation: none;
   }
+
+  /* The money-card flash is a motion effect: under reduced motion the
+     number still updates (the hook snaps) but the card does not flash. */
+  .money-card-flash.is-flashing {
+    animation: none;
+  }
 }
 
 /*
@@ -428,6 +434,60 @@
     rgba(239, 68, 68, 0) 55%,
     rgba(239, 68, 68, 0.55) 100%
   );
+}
+
+/*
+ * Money-card feedback (see HUDMoneyCard): a pill of light behind the money
+ * number that flashes on every change — gold when money increases, red when
+ * it is spent. The overlay is invisible at rest (opacity 0) and only the
+ * flash animation reveals it, so the resting layout is untouched. The color
+ * is picked by `data-money-flash`; the glow spreads slightly (scale) and
+ * eases back to rest over ~600ms. Pure DOM — no 3D cost.
+ */
+.money-card-flash {
+  position: absolute;
+  inset: -4px -7px;
+  z-index: -1;
+  border-radius: 9999px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.money-card-flash[data-money-flash="increase"] {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(251, 191, 36, 0.55) 0%,
+    rgba(251, 191, 36, 0.22) 55%,
+    rgba(251, 191, 36, 0) 100%
+  );
+}
+
+.money-card-flash[data-money-flash="decrease"] {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(239, 68, 68, 0.5) 0%,
+    rgba(239, 68, 68, 0.2) 55%,
+    rgba(239, 68, 68, 0) 100%
+  );
+}
+
+.money-card-flash.is-flashing {
+  animation: money-card-flash 600ms ease-out;
+}
+
+@keyframes money-card-flash {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.15);
+  }
 }
 
 body {

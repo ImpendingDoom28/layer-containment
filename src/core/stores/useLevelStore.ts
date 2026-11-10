@@ -17,6 +17,8 @@ import {
   withRecalculatedWaterCoordinates,
 } from "../../utils/levelEditor";
 import { getUpgradeStacks } from "../../utils/upgradeStacks";
+import { gameEvents } from "../../utils/eventEmitter";
+import { GameEvent } from "../types/enums/events";
 import { enemyActions } from "../ecs/actions/enemyActions";
 import { splitRequest } from "../ecs/traits/split";
 import { world } from "../ecs/world";
@@ -175,7 +177,13 @@ export const useLevelStore = create<LevelStore>((set) => ({
   },
 
   addMoney: (amount: number) => {
-    set((state) => ({ money: state.money + amount }));
+    if (amount <= 0) return;
+    const money = useLevelStore.getState().money + amount;
+    set({ money });
+    gameEvents.emit(GameEvent.MONEY_CHANGED, {
+      amount: money,
+      direction: "increase",
+    });
   },
 
   incrementEnemiesKilled: () => {
@@ -183,11 +191,13 @@ export const useLevelStore = create<LevelStore>((set) => ({
   },
 
   spendMoney: (amount: number) => {
-    set((state) => {
-      if (state.money >= amount) {
-        return { money: state.money - amount };
-      }
-      return state;
+    const current = useLevelStore.getState().money;
+    if (current < amount || amount <= 0) return;
+    const money = current - amount;
+    set({ money });
+    gameEvents.emit(GameEvent.MONEY_CHANGED, {
+      amount: money,
+      direction: "decrease",
     });
   },
 

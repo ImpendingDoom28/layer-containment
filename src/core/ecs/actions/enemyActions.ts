@@ -113,6 +113,8 @@ const enemyToLocomotion = (enemyData: Enemy): EnemyLocomotionData => {
     bobFrequency: spec.bobFrequency,
     breathAmplitude: spec.breathAmplitude,
     breathFrequency: spec.breathFrequency,
+    walkAmplitude: spec.walkAmplitude,
+    walkFrequency: spec.walkFrequency,
     deathPreburstSeconds: spec.deathPreburstSeconds,
   };
 };

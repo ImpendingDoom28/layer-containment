@@ -183,6 +183,10 @@ export const Enemy: FC<EnemyProps> = memo(
     // body). `hitMarkerRef` is the current marker node; a hit toggles its
     // `visible` and the decay below drives the shared `flashMaterial` opacity.
     const hitMarkerRef = useRef<Object3D | null>(null);
+    const bodyModelRef = useRef<Object3D | null>(null);
+    const onEnemyModelReady = useCallback((object: Object3D | null) => {
+      bodyModelRef.current = object;
+    }, []);
     const healthTierRef = useRef<HealthTier>("high");
     const hasTriggeredSpawnEffect = useRef(false);
     const [isSlowed, setIsSlowed] = useState(false);
@@ -426,7 +430,7 @@ export const Enemy: FC<EnemyProps> = memo(
             per-model support. EnemyLocomotion animates the whole body (model
             or fallback alike) from the entity's locomotion trait. */}
         <group position={[0, size / 2, 0]}>
-          <EnemyLocomotion entity={entity}>
+          <EnemyLocomotion entity={entity} modelRef={bodyModelRef}>
             <HitFlash
               markerRef={hitMarkerRef}
               flashMaterial={flashMaterial}
@@ -434,6 +438,7 @@ export const Enemy: FC<EnemyProps> = memo(
                 <EnemyModel
                   type={snapshot.type}
                   size={size}
+                  onModelReady={onEnemyModelReady}
                   fallback={
                     <mesh
                       castShadow

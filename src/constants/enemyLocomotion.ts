@@ -7,7 +7,12 @@ import type { EnemyType } from "../core/types/game";
 // knows about enemy types or models. All animations are driven on the
 // pause-aware simulation clock, so they freeze with the game and speed up
 // with the time scale. Durations are in simulation seconds, frequencies in
-// rad/s, amplitudes in world units or scale units.
+// rad/s, amplitudes in world units, scale units, or radians.
+
+// Biped enemies (troop, R&H drone): alternating leg swings around the
+// model's hip pivots.
+export const WALK_AMPLITUDE = 0.55;
+export const WALK_FREQUENCY = 9.5;
 
 // Wraith (fast): the drone hovers, bobbing vertically as it travels.
 export const WRAITH_BOB_AMPLITUDE_RATIO = 0.12; // of the body radius
@@ -33,6 +38,8 @@ export type EnemyLocomotionSpec = {
   bobFrequency: number;
   breathAmplitude: number;
   breathFrequency: number;
+  walkAmplitude: number;
+  walkFrequency: number;
   deathPreburstSeconds: number;
 };
 
@@ -41,12 +48,25 @@ const NO_LOCOMOTION: EnemyLocomotionSpec = {
   bobFrequency: 0,
   breathAmplitude: 0,
   breathFrequency: 0,
+  walkAmplitude: 0,
+  walkFrequency: 0,
   deathPreburstSeconds: 0,
 };
 
+const WALK: Partial<EnemyLocomotionSpec> = {
+  walkAmplitude: WALK_AMPLITUDE,
+  walkFrequency: WALK_FREQUENCY,
+};
+
 export const ENEMY_LOCOMOTION: Record<EnemyType, EnemyLocomotionSpec> = {
-  basic: NO_LOCOMOTION,
-  medic: NO_LOCOMOTION,
+  basic: {
+    ...NO_LOCOMOTION,
+    ...WALK,
+  },
+  medic: {
+    ...NO_LOCOMOTION,
+    ...WALK,
+  },
   tank: NO_LOCOMOTION,
   fast: {
     ...NO_LOCOMOTION,

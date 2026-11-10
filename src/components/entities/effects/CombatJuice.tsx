@@ -39,7 +39,7 @@ const DODGE_TEXT_COLOR = "#38bdf8";
 // rather than a foreign puff of sand.
 const DUST_COLOR_TOKEN = "scene-gray-700" as const;
 
-type DeathBurst = {
+type Burst = {
   id: number;
   position: [number, number, number];
   color: string;
@@ -62,25 +62,26 @@ type PlacementDust = {
 
 type CombatJuiceProps = {
   /**
-   * Show the gold reward float on kills. Off in the main menu, which has no
-   * gold display — the death burst still plays.
+   * Show the gold reward floats (kill rewards and the sell refund). Off in
+   * the main menu, which has no gold display — the death burst still plays.
    */
   showRewardText?: boolean;
 };
 
 /**
  * Subscribes to combat game events and renders their juice: gold reward floats
- * (camera-facing sprites), a small burst when an enemy dies, — on a BRL rocket
- * impact — a ground-blast area of effect (a fireball plus a ring that expands
- * to the projectile's blast radius), and — when a tower is placed — a small
- * dust burst kicked up at its base, timed to land as the placement drop
- * impacts. Event payload positions are flat-field coordinates, mapped onto the
- * planet surface here.
+ * (camera-facing sprites — kill rewards and the sell refund), a small burst
+ * when an enemy dies or a tower is sold, and — on a BRL rocket impact — a
+ * ground-blast area of effect (a fireball plus a ring that expands to the
+ * projectile's blast radius). It also kicks up a small dust burst at the base
+ * of each freshly placed tower, timed to land as the placement drop impacts.
+ * Event payload positions are flat-field coordinates, mapped onto the planet
+ * surface here.
  */
 export const CombatJuice = memo(
   ({ showRewardText = true }: CombatJuiceProps) => {
     const floatingTextsRef = useRef<FloatingTextsHandle>(null);
-    const [bursts, setBursts] = useState<DeathBurst[]>([]);
+    const [bursts, setBursts] = useState<Burst[]>([]);
     const [explosions, setExplosions] = useState<RocketExplosion[]>([]);
     const [placements, setPlacements] = useState<PlacementDust[]>([]);
     const { getNextId } = useNextId();
@@ -121,6 +122,33 @@ export const CombatJuice = memo(
             id: getNextId(),
             position: [position.x, position.y, position.z],
             color: data.color,
+          },
+        ]);
+      };
+
+      const onTowerSold = (data: {
+        sellPrice: number;
+        worldPosition: { x: number; y: number; z: number };
+      }) => {
+        const position = flatCombatPointToWorldPosition(
+          data.worldPosition.x,
+          data.worldPosition.z,
+          0.15,
+          planetRadius
+        );
+        if (showRewardText && data.sellPrice > 0) {
+          floatingTextsRef.current?.spawn(
+            t("rewardText", { amount: data.sellPrice }),
+            [position.x, position.y + REWARD_TEXT_HEIGHT, position.z],
+            getCssColorValue("scene-hp-high")
+          );
+        }
+        setBursts((prev) => [
+          ...prev.slice(-(MAX_ACTIVE_BURSTS - 1)),
+          {
+            id: getNextId(),
+            position: [position.x, position.y, position.z],
+            color: getCssColorValue("scene-hp-high"),
           },
         ]);
       };
@@ -205,11 +233,13 @@ export const CombatJuice = memo(
       gameEvents.on(GameEvent.ENEMY_DODGED, onEnemyDodged);
       gameEvents.on(GameEvent.PROJECTILE_HIT, onProjectileHit);
       gameEvents.on(GameEvent.TOWER_PLACED, onTowerPlaced);
+      gameEvents.on(GameEvent.TOWER_SOLD, onTowerSold);
       return () => {
         gameEvents.off(GameEvent.ENEMY_KILLED, onEnemyKilled);
         gameEvents.off(GameEvent.ENEMY_DODGED, onEnemyDodged);
         gameEvents.off(GameEvent.PROJECTILE_HIT, onProjectileHit);
         gameEvents.off(GameEvent.TOWER_PLACED, onTowerPlaced);
+        gameEvents.off(GameEvent.TOWER_SOLD, onTowerSold);
       };
     }, [planetRadius, t, showRewardText]);
 

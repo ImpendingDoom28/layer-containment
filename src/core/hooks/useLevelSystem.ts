@@ -19,9 +19,11 @@ import {
   gridOffsetSelector,
   gridSizeSelector,
   isLevelConfigLoadedSelector,
+  levelLoadErrorSelector,
   moneySelector,
   pathWaypointsSelector,
   resetLevelStateSelector,
+  retryLevelLoadSelector,
   setTowersSelector,
   spendMoneySelector,
   towersSelector,
@@ -67,6 +69,8 @@ export const useLevelSystem = () => {
   const spendMoney = useLevelStore(spendMoneySelector);
   const addMoney = useLevelStore(addMoneySelector);
   const isLevelConfigLoaded = useLevelStore(isLevelConfigLoadedSelector);
+  const levelLoadError = useLevelStore(levelLoadErrorSelector);
+  const retryLevelLoad = useLevelStore(retryLevelLoadSelector);
 
   const towerTypes = useGameStore(towerTypesSelector);
   const tileSize = useGameStore(tileSizeSelector);
@@ -260,6 +264,8 @@ export const useLevelSystem = () => {
     enemiesKilled,
     currentWave,
     isLevelConfigLoaded,
+    levelLoadError,
+    retryLevelLoad,
     getTilePlacementState,
   };
 };

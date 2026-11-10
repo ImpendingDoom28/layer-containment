@@ -82,6 +82,10 @@ export const en = {
     loadingEditor: "Loading editor...",
     loadingModels: "Loading models...",
     preparingGraphics: "Preparing graphics...",
+    levelLoadFailed: "Level failed to load",
+    levelLoadFailedHint:
+      "The level configuration could not be loaded. Check your connection and try again.",
+    retry: "Retry",
   },
   towerShop: {
     title: "Tower Shop",

@@ -92,6 +92,10 @@ const ruValues = {
     loadingEditor: "Загрузка редактора…",
     loadingModels: "Загрузка моделей…",
     preparingGraphics: "Инициализация графики…",
+    levelLoadFailed: "Не удалось загрузить уровень",
+    levelLoadFailedHint:
+      "Не удалось загрузить конфигурацию уровня. Проверьте соединение и повторите попытку.",
+    retry: "Повторить",
   },
   towerShop: {
     title: "Магазин башен",

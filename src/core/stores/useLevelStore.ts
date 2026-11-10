@@ -41,6 +41,10 @@ type LevelStoreState = {
   towers: Tower[];
   projectiles: Projectile[];
   isLevelConfigLoaded: boolean;
+  /** Set when loading the level config failed; the UI shows an error with a retry. */
+  levelLoadError: string | null;
+  /** Bumped on retry to restart a failed level load. */
+  levelLoadRetryToken: number;
   hoveredTile: TileData | null;
 };
 
@@ -59,6 +63,8 @@ type LevelStoreActions = {
   removeProjectile: (projectileId: number) => void;
   resetLevelState: () => void;
   setHoveredTile: (tile: TileData | null) => void;
+  setLevelLoadError: (error: string | null) => void;
+  retryLevelLoad: () => void;
   initializeLevelState: (levelData: LevelConfigData, tileSize: number) => void;
 };
 
@@ -80,6 +86,8 @@ const DEFAULT_STATE: LevelStoreState = {
   towers: [],
   projectiles: [],
   isLevelConfigLoaded: false,
+  levelLoadError: null,
+  levelLoadRetryToken: 0,
   hoveredTile: null,
 };
 
@@ -230,6 +238,20 @@ export const useLevelStore = create<LevelStore>((set) => ({
     set({ hoveredTile: tile });
   },
 
+  setLevelLoadError: (error) => {
+    set({ levelLoadError: error });
+  },
+
+  retryLevelLoad: () => {
+    // Clearing the error re-arms the level system's load effect (it skips
+    // when `levelLoadError` is set); the token bump covers the edge case of
+    // retrying while the previous attempt is still in flight.
+    set((state) => ({
+      levelLoadError: null,
+      levelLoadRetryToken: state.levelLoadRetryToken + 1,
+    }));
+  },
+
   removeProjectile: (projectileId: number) => {
     set((state) => ({
       projectiles: state.projectiles.filter((p) => p.id !== projectileId),
@@ -273,6 +295,12 @@ export const moneySelector = (state: LevelStore) => state.money;
 export const enemiesKilledSelector = (state: LevelStore) => state.enemiesKilled;
 export const isLevelConfigLoadedSelector = (state: LevelStore) =>
   state.isLevelConfigLoaded;
+export const levelLoadErrorSelector = (state: LevelStore) => state.levelLoadError;
+export const levelLoadRetryTokenSelector = (state: LevelStore) =>
+  state.levelLoadRetryToken;
+export const setLevelLoadErrorSelector = (state: LevelStore) =>
+  state.setLevelLoadError;
+export const retryLevelLoadSelector = (state: LevelStore) => state.retryLevelLoad;
 export const spendMoneySelector = (state: LevelStore) => state.spendMoney;
 export const addMoneySelector = (state: LevelStore) => state.addMoney;
 export const setTowersSelector = (state: LevelStore) => state.setTowers;

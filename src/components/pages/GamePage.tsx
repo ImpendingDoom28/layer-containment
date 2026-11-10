@@ -21,6 +21,7 @@ import { HUDPauseOverlay } from "../hud/HUDPauseOverlay";
 import { HUDBaseDamageFlash } from "../hud/HUDBaseDamageFlash";
 import { HUDMobileControls } from "../hud/HUDMobileControls";
 import { HUDLoading } from "../hud/HUDLoading";
+import { HUDLevelLoadError } from "../hud/HUDLevelLoadError";
 import { KeyboardHandlingSystem } from "../systems/KeyboardHandlingSystem";
 import { PostFX } from "../scenes/shared/PostFX";
 import { ShaderReadyGate } from "../systems/ShaderReadyGate";
@@ -112,6 +113,8 @@ export const GamePage: FC<GamePageProps> = ({
     sellTower,
     currentWave,
     isLevelConfigLoaded,
+    levelLoadError,
+    retryLevelLoad,
   } = useLevelSystem();
   const { showUpgradePanel, onEnemyUpgradePick } = useUpgradesSystem();
 
@@ -230,6 +233,14 @@ export const GamePage: FC<GamePageProps> = ({
           closing={isClosingLoading}
           onExited={handleLoadingExited}
         />
+      )}
+
+      {/* A failed level load leaves `isLevelConfigLoaded` false forever, so the
+          loading screen would never resolve; surface the error with a retry
+          instead. Shader compilation is preserved: the gate below still mounts
+          (and re-compiles on a successful load) as soon as the level loads. */}
+      {levelLoadError && !isLevelConfigLoaded && (
+        <HUDLevelLoadError message={levelLoadError} onRetry={retryLevelLoad} />
       )}
 
       <Canvas

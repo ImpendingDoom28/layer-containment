@@ -14,10 +14,9 @@ import { useSimulationClock } from "../../../core/contexts/SimulationClockContex
 import { useReducedMotion } from "../../../core/hooks/useReducedMotion";
 import { getCssColorValue } from "../../ui/lib/cssUtils";
 
-const RIPPLE_DURATION = 0.5;
-// The plane (and the ring's outer edge) sweeps out to a little over one
-// tile: enough room for the ring to carry the X beyond the tile edge without
-// touching the neighbouring tiles' hover tints.
+const X_EFFECT_DURATION = 0.5;
+// The plane spans a little over one tile, giving the X room to sit clearly
+// over the tile without touching the neighbouring tiles.
 const PLANE_RADIUS_FRACTION = 1.3;
 // The X is two diagonal strokes spanning this fraction of a tile.
 const X_SPAN_FRACTION = 0.5;
@@ -25,19 +24,10 @@ const X_SPAN_FRACTION = 0.5;
 const X_STROKE_FRACTION = 0.22;
 // The X's peak opacity (additive-blended, so ~1 reads as a bright red).
 const X_OPACITY = 0.95;
-// The ring's peak opacity (a faint ripple of displaced air — the ground
-// shows through).
-const RING_OPACITY = 0.5;
-// The progress window over which the X dissolves after the ring passes it.
-const X_FADE_START = 0.3;
-const X_FADE_END = 0.9;
-// The ring band's width (fraction of the plane radius) and its fade as it
-// spreads.
-const RING_BAND = 0.12;
-const RING_FADE_POWER = 1.5;
-// The ripple's start radius (fraction of the plane radius) — it begins at
-// the tile centre, not at zero, so the first frame already reads as a ring.
-const RING_START_FRACTION = 0.2;
+// The X fades in over the first part of the effect and out over the last,
+// holding a steady, fully-visible X in between.
+const X_FADE_IN_END = 0.15;
+const X_FADE_OUT_START = 0.55;
 // Reduced motion: the static pose is held this long (simulation time) before
 // fading out, so the effect still finishes and unmounts.
 const REDUCED_MOTION_HOLD_SEC = 0.8;
@@ -52,12 +42,10 @@ void main() {
 `;
 
 // A unit disc in local space, oriented to the surface normal by the group.
-// One shader draws both layers of the effect from `uProgress` (0 → 1):
-// - the ripple: a band whose centre sweeps out from the tile centre (0.2 of
-//   the plane radius) to the plane's edge, fading as it expands — the "outward
-//   once" propagation;
-// - the X: two rounded diagonal strokes (capsules) stamped over the tile,
-//   bright at the start and dissolving as the ring sweeps past it.
+// The X is two rounded diagonal strokes (capsules) stamped over the tile —
+// the only thing drawn. `uProgress` (0 → 1) fades it in over the first part
+// of the effect and out over the last, holding a steady, fully-visible X in
+// between.
 const FRAGMENT_SHADER = /* glsl */ `
 uniform float uProgress;
 uniform float uRadius;
@@ -79,27 +67,20 @@ void main() {
   // Local plane units: [-1, 1] across the plane, i.e. |p| * uRadius in world.
   vec2 p = (vUv - 0.5) * 2.0;
 
-  // Ripple: ease-out sweep out to the edge, fading as it spreads.
-  float ease = 1.0 - pow(1.0 - uProgress, 3.0);
-  float ringRadius = mix(${RING_START_FRACTION}, 1.0, ease);
-  float ringBand = 1.0 - smoothstep(0.0, ${RING_BAND}, abs(length(p) - ringRadius));
-  float ringAlpha = ringBand * pow(1.0 - uProgress, ${RING_FADE_POWER}) * ${RING_OPACITY};
-
   // X: two diagonal capsules in world units, round caps at the stroke ends.
   vec2 w = p * uRadius;
   float a = uSpan * 0.5;
   float d1 = sdSegment(w, vec2(-a, -a), vec2(a, a));
   float d2 = sdSegment(w, vec2(-a, a), vec2(a, -a));
   float xMask = 1.0 - smoothstep(uStroke * 0.4, uStroke * 0.6, min(d1, d2));
-  // The X holds while the ring is close, then dissolves as it sweeps past.
-  float xFade = 1.0 - smoothstep(${X_FADE_START}, ${X_FADE_END}, uProgress);
-  float xAlpha = xMask * xFade * ${X_OPACITY};
 
-  float alpha = max(ringAlpha, xAlpha) * uOpacity;
+  // Fade in, hold, fade out — the X is fully visible through the middle of
+  // the effect (the moment the player reads "this tile is blocked").
+  float fadeIn = smoothstep(0.0, ${X_FADE_IN_END}, uProgress);
+  float fadeOut = 1.0 - smoothstep(${X_FADE_OUT_START}, 1.0, uProgress);
+  float alpha = xMask * min(fadeIn, fadeOut) * ${X_OPACITY} * uOpacity;
   if (alpha < 0.003) discard;
-  // The X shifts from the scene's red toward a deeper red as it dissolves.
-  vec3 color = mix(uColor, uColor * vec3(0.6, 0.15, 0.2), uProgress);
-  gl_FragColor = vec4(color, alpha);
+  gl_FragColor = vec4(uColor, alpha);
 }
 `;
 
@@ -122,17 +103,17 @@ type DeniedPlacementRippleFXProps = {
 
 /**
  * One-shot "why is this blocked" feedback on a denied tower placement: a
- * bright red "X" stamped over the blocked tile, with a ripple band that
- * propagates outward from it once and dissipates. Played alongside the
- * existing camera/HUD denial shake and noise cue.
+ * bright red "X" stamped over the blocked tile, floating high enough to clear
+ * whatever occupies it (tower, building, path, or water) so it always reads.
+ * Played alongside the existing camera/HUD denial shake and noise cue.
  *
- * The ring and the X are one additive shader plane (a unit disc, laid on the
- * planet surface over the tile), animated in `useFrame` on the pause-aware
+ * The X is one additive shader plane (a unit disc, laid on the planet surface
+ * above the tile's top surface), animated in `useFrame` on the pause-aware
  * simulation clock — the effect freezes with the world on pause. The plane is
  * raycast-disabled and mounted only for the ~0.5 s of the effect, so it costs
- * nothing while idle. Under `prefers-reduced-motion` it holds a static
- * mid-dissolve pose (the X still shows why the tile is blocked, nothing
- * animates), then fades out and finishes like the animated version.
+ * nothing while idle. Under `prefers-reduced-motion` it holds a static pose
+ * (the X still shows why the tile is blocked, nothing animates), then fades
+ * out and finishes like the animated version.
  */
 export const DeniedPlacementRippleFX: FC<DeniedPlacementRippleFXProps> = memo(
   ({ position, quaternion, tileSize, onComplete }) => {
@@ -202,7 +183,7 @@ export const DeniedPlacementRippleFX: FC<DeniedPlacementRippleFXProps> = memo(
         return;
       }
 
-      const progress = Math.min(elapsed / RIPPLE_DURATION, 1);
+      const progress = Math.min(elapsed / X_EFFECT_DURATION, 1);
 
       material.uniforms["uProgress"].value = progress;
       material.uniforms["uOpacity"].value = 1;

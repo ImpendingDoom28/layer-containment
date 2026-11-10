@@ -122,6 +122,15 @@ export const useLevelSystem = () => {
           reason: denyReason,
           towerType,
           elementId: towerShopRowElementId(towerType),
+          // The scene plays the blocked-tile ripple only when the rejected
+          // action points at an on-field tile.
+          worldPosition:
+            denyReason === "blocked_tile"
+              ? {
+                  x: tileToWorldCoordinate(gridX, gridSize, tileSize),
+                  z: tileToWorldCoordinate(gridZ, gridSize, tileSize),
+                }
+              : undefined,
         });
         return false;
       }

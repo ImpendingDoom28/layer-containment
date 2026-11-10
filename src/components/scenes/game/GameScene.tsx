@@ -2,6 +2,7 @@ import { AudioListenerSync } from "@webgamedevkit/audio-engine/r3f";
 
 import { Grid } from "../../entities/Grid";
 import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
+import { PlacementDenialRipple } from "../../entities/PlacementDenialRipple";
 import { PlacementHighlightOverlay } from "../../entities/PlacementHighlightOverlay";
 import { RelayBuffPreviewOverlay } from "../../entities/RelayBuffPreviewOverlay";
 import { Path } from "../../entities/Path";
@@ -85,6 +86,8 @@ export const GameScene: React.FC<GameSceneProps> = ({
       <PlanetTileDecorations occupancy={occupancy} />
 
       <PlacementHighlightOverlay />
+
+      <PlacementDenialRipple />
 
       <RelayBuffPreviewOverlay selectedTower={selectedTower} />
 

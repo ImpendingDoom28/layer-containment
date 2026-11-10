@@ -49,4 +49,19 @@ describe("HorizonFog", () => {
       renderer.unmount();
     }
   });
+
+  it("honors a custom far range (used by the asset showcase scene)", async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <HorizonFog far={240} />
+    );
+
+    try {
+      const fog = (renderer.scene.instance as Scene).fog as Fog;
+      expect(fog.isFog).toBe(true);
+      expect(fog.near).toBe(6);
+      expect(fog.far).toBe(240);
+    } finally {
+      renderer.unmount();
+    }
+  });
 });

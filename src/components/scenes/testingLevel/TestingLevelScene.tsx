@@ -37,6 +37,12 @@ import { SimulationClockProvider } from "../../../core/contexts/SimulationClockC
 // the memoized `Grid` from re-rendering on unrelated store updates.
 const noopPlaceTower = () => undefined;
 
+// The orbit camera can zoom out to `maxDistance` (see `TestingLevelCamera`),
+// so a board corner can sit ~84 units from it. This keeps that corner below
+// ~35% fog (the asset showcase stays inspectable at full zoom-out) while the
+// planet rim (128-195 units from the camera) still melts into the sky.
+const SHOWCASE_FOG_FAR = 240;
+
 // Reinforcements showcase portals: the level's own `Path` portal always renders
 // at tier 0 (no reinforcements picked for the run), so the upgrade's visual is
 // shown here instead — one portal per tier (1-3), spaced by one tile on the
@@ -88,7 +94,7 @@ export const TestingLevelScene: FC = () => {
       <Skybox />
       <Light />
       <Ground />
-      <HorizonFog />
+      <HorizonFog far={SHOWCASE_FOG_FAR} />
 
       <TestingLevelCamera />
 

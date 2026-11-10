@@ -88,6 +88,10 @@ export type TowerCombatSystem = {
   /** The render layer registers each turret's model node so the muzzle origin can
    *  be read from its world matrix; `null` unregisters (unmount / fallback). */
   registerTurretNode: (towerId: number, node: Object3D | null) => void;
+  /** The render layer marks a tower while its placement drop is still in flight
+   *  (a deployed tower does not fire mid-drop); the entry clears when the drop
+   *  settles. */
+  markTowerDeploying: (towerId: number, deploying: boolean) => void;
 };
 
 export const createTowerCombatSystem = (
@@ -107,6 +111,10 @@ export const createTowerCombatSystem = (
   // when the cached target dies, leaves range, or loses line of sight.
   const cachedTargets = new Map<number, Enemy | null>();
   const repickTimes = new Map<number, number>();
+  // Towers whose placement drop is still in flight: a freshly deployed tower
+  // does not fire (or track) until the drop has settled. The render layer
+  // marks them on mount and clears them when the drop completes.
+  const deployingTowers = new Set<number>();
   const _muzzleLocal = new Vector3();
   const _muzzleWorld = new Vector3();
   let cachedTowers: Tower[] | null = null;
@@ -125,6 +133,7 @@ export const createTowerCombatSystem = (
     muzzleOffsetsCursor.clear();
     cachedTargets.clear();
     repickTimes.clear();
+    deployingTowers.clear();
     cachedTowers = null;
     cachedBuildings = null;
     cachedPaths = null;
@@ -141,6 +150,14 @@ export const createTowerCombatSystem = (
       turretNodes.set(towerId, node);
     } else {
       turretNodes.delete(towerId);
+    }
+  };
+
+  const markTowerDeploying = (towerId: number, deploying: boolean) => {
+    if (deploying) {
+      deployingTowers.add(towerId);
+    } else {
+      deployingTowers.delete(towerId);
     }
   };
 
@@ -176,6 +193,9 @@ export const createTowerCombatSystem = (
     for (const id of repickTimes.keys()) {
       if (!towerIds.has(id)) repickTimes.delete(id);
     }
+    for (const id of deployingTowers) {
+      if (!towerIds.has(id)) deployingTowers.delete(id);
+    }
 
     if (cachedBuildings !== buildings || cachedPaths !== pathWaypoints) {
       cachedBuildings = buildings;
@@ -210,6 +230,11 @@ export const createTowerCombatSystem = (
 
     towers.forEach((tower) => {
       if (tower.type === "relay") return;
+
+      // A tower mid-deploy (its placement drop still in flight) does not fire
+      // or track — the mass has not finished settling, so it stays inert until
+      // the drop completes.
+      if (deployingTowers.has(tower.id)) return;
 
       const towerConfig = towerTypes?.[tower.type];
       if (!towerConfig) return;
@@ -484,5 +509,12 @@ export const createTowerCombatSystem = (
     });
   };
 
-  return { tick, reset, getTurretYaw, hasTowerTarget, registerTurretNode };
+  return {
+    tick,
+    reset,
+    getTurretYaw,
+    hasTowerTarget,
+    registerTurretNode,
+    markTowerDeploying,
+  };
 };

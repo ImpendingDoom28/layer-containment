@@ -1,6 +1,15 @@
 import { FC, useEffect, useLayoutEffect, useRef } from "react";
 
-import { getMaxEntityId, useLevelStore } from "../../core/stores/useLevelStore";
+import {
+  getMaxEntityId,
+  initializeLevelStateSelector,
+  isLevelConfigLoadedSelector,
+  levelLoadErrorSelector,
+  levelLoadRetryTokenSelector,
+  resetLevelStateSelector,
+  setLevelLoadErrorSelector,
+  useLevelStore,
+} from "../../core/stores/useLevelStore";
 import {
   type LevelConfigFiles,
   loadLevelConfigFile,
@@ -12,14 +21,12 @@ export const LevelSystem: FC<{ levelName?: LevelConfigFiles }> = ({
   levelName,
 }) => {
   const tileSize = useGameStore(tileSizeSelector);
-  const {
-    initializeLevelState,
-    isLevelConfigLoaded,
-    levelLoadError,
-    levelLoadRetryToken,
-    resetLevelState,
-    setLevelLoadError,
-  } = useLevelStore();
+  const initializeLevelState = useLevelStore(initializeLevelStateSelector);
+  const isLevelConfigLoaded = useLevelStore(isLevelConfigLoadedSelector);
+  const levelLoadError = useLevelStore(levelLoadErrorSelector);
+  const levelLoadRetryToken = useLevelStore(levelLoadRetryTokenSelector);
+  const resetLevelState = useLevelStore(resetLevelStateSelector);
+  const setLevelLoadError = useLevelStore(setLevelLoadErrorSelector);
   const { ensureEnemyIdAtLeast } = useEntityIds();
   const loadGenerationRef = useRef(0);
 

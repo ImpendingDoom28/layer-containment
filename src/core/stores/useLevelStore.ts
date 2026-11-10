@@ -279,6 +279,8 @@ export const totalWavesSelector = (state: LevelStore) => state.totalWaves;
 export const waveConfigsSelector = (state: LevelStore) => state.waveConfigs;
 export const bossSelector = (state: LevelStore) => state.boss;
 export const buildingsSelector = (state: LevelStore) => state.buildings;
+export const initializeLevelStateSelector = (state: LevelStore) =>
+  state.initializeLevelState;
 export const setGridSizeSelector = (state: LevelStore) => state.setGridSize;
 export const setPathWaypointsSelector = (state: LevelStore) =>
   state.setPathWaypoints;

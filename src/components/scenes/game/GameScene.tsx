@@ -28,6 +28,7 @@ import {
 } from "../../../core/stores/useGameStore";
 import { useTileOccupancyMasks } from "../../../core/hooks/utils/useTileOccupancyMasks";
 import { Ground } from "../shared/Ground";
+import { HorizonFog } from "../shared/HorizonFog";
 import { Light } from "../shared/Light";
 import { Skybox } from "../shared/Skybox";
 
@@ -67,6 +68,7 @@ export const GameScene: React.FC<GameSceneProps> = ({
       <Skybox />
       <Light />
       <Ground />
+      <HorizonFog />
 
       <GameCamera
         movementSpeed={10}

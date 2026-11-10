@@ -28,6 +28,7 @@ vi.mock("../../systems/EntitiesSystem", () => ({
 vi.mock("../shared/Skybox", () => ({ Skybox: () => null }));
 vi.mock("../shared/Light", () => ({ Light: () => null }));
 vi.mock("../shared/Ground", () => ({ Ground: () => null }));
+vi.mock("../shared/HorizonFog", () => ({ HorizonFog: () => null }));
 vi.mock("../../entities/Path", () => ({ Path: () => null }));
 vi.mock("../../entities/Grid", () => ({ Grid: () => null }));
 vi.mock("../../entities/PlanetTileDecorations", () => ({

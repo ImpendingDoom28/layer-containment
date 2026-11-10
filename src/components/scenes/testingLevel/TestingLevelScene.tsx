@@ -12,6 +12,7 @@ import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
 import { StaticProjectiles } from "../../entities/StaticProjectiles";
 import { TestingLevelCamera } from "./TestingLevelCamera";
 import { Ground } from "../shared/Ground";
+import { HorizonFog } from "../shared/HorizonFog";
 import { Skybox } from "../shared/Skybox";
 import { Light } from "../shared/Light";
 import {
@@ -87,6 +88,7 @@ export const TestingLevelScene: FC = () => {
       <Skybox />
       <Light />
       <Ground />
+      <HorizonFog />
 
       <TestingLevelCamera />
 

@@ -29,6 +29,7 @@ import { CombatJuice } from "../../entities/effects/CombatJuice";
 import { MainMenuCamera } from "./MainMenuCamera";
 import { MAIN_MENU_ENEMY_SPAWN_CONFIG } from "./constants";
 import { Ground } from "../shared/Ground";
+import { HorizonFog } from "../shared/HorizonFog";
 import { Skybox } from "../shared/Skybox";
 import { Light } from "../shared/Light";
 import { useTileOccupancyMasks } from "../../../core/hooks/utils/useTileOccupancyMasks";
@@ -131,6 +132,7 @@ export const MainMenuScene: FC = () => {
       <Skybox />
       <Light />
       <Ground />
+      <HorizonFog />
 
       <MainMenuCamera />
 

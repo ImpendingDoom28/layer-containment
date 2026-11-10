@@ -3,13 +3,18 @@ import { useCallback, useMemo } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 
 import { Bridge } from "../../entities/Bridge";
-import { EndBuilding } from "../../entities/EndBuilding";
+import { CanyonBasin } from "../../entities/CanyonBasin";
+import { Path } from "../../entities/Path";
 import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
-import { Portal } from "../../entities/Portal";
 import { Water } from "../../entities/Water";
-import { BRIDGE_ELEVATION, getBridgeTiles } from "../../../utils/canyonBridges";
+import {
+  BRIDGE_ELEVATION,
+  getCanyonWorldBBox,
+  getBridgeTiles,
+} from "../../../utils/canyonBridges";
 import { Light } from "../shared/Light";
 import { Skybox } from "../shared/Skybox";
+import { Ground } from "../shared/Ground";
 import {
   pathYOffsetSelector,
   tileSizeSelector,
@@ -17,20 +22,21 @@ import {
   useGameStore,
 } from "../../../core/stores/useGameStore";
 import { useLevelEditorStore } from "../../../core/stores/useLevelEditorStore";
-import {
-  getEndBuildingYaw,
-  getPathRenderSegments,
-  getPathSegmentYaw,
-} from "../../../utils/pathUtils";
 import { getTilePlacementState } from "../../../utils/tilePlacement";
 import {
+  flatFieldToSphereSurface,
+  getPlanetRadius,
+  getSurfaceQuaternion,
+} from "../../../utils/planetSurfaceMapping";
+import {
   getLevelGridOffset,
+  tileToWorldCoordinate,
   withRecalculatedWaterCoordinates,
 } from "../../../utils/levelEditor";
 import { useTileOccupancyMasks } from "../../../core/hooks/utils/useTileOccupancyMasks";
 import { getCssColorValue } from "../../ui/lib/cssUtils";
 import { LevelEditorCamera } from "./LevelEditorCamera";
-import { LevelEditorTerrainTile } from "./LevelEditorTerrainTile";
+import { EditorSphereTile } from "./EditorSphereTile";
 
 const BUILDING_OUTLINE_SCALE = 1.06;
 
@@ -94,6 +100,25 @@ export const LevelEditorScene = () => {
     [draftLevel.pathWaypoints, draftLevel.canyons, draftLevel.gridSize, tileSize]
   );
 
+  // The canyon's world bbox drives the basin (carved bowl + the cut in the
+  // ground sphere), the canyon tiles' floor position, and the bridge struts.
+  const canyonBBox = useMemo(
+    () =>
+      draftLevel.canyons.length === 0
+        ? null
+        : getCanyonWorldBBox(
+            draftLevel.canyons,
+            draftLevel.gridSize,
+            tileSize
+          ),
+    [draftLevel.canyons, draftLevel.gridSize, tileSize]
+  );
+
+  const radius = useMemo(
+    () => getPlanetRadius(draftLevel.gridSize, tileSize),
+    [draftLevel.gridSize, tileSize]
+  );
+
   const tiles = useMemo(() => {
     const tileEntries: Array<{ gridX: number; gridZ: number }> = [];
 
@@ -130,23 +155,12 @@ export const LevelEditorScene = () => {
       <Light />
       <LevelEditorCamera gridSize={draftLevel.gridSize} tileSize={tileSize} />
 
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, -0.1, 0]}
-        receiveShadow
-      >
-        <planeGeometry
-          args={[
-            draftLevel.gridSize * tileSize,
-            draftLevel.gridSize * tileSize,
-          ]}
-        />
-        <meshStandardMaterial
-          color={
-            draftLevel.groundColor ?? getCssColorValue("editor-default-ground")
-          }
-        />
-      </mesh>
+      {/* The board sits on the planet sphere, just like the game, so the canyon
+          shows its real depth: the ground sphere is cut at the basin and the
+          carved bowl (walls + floor) fills the hole. The tiles, path, bridge,
+          water and buildings are all placed on the sphere surface. */}
+      <Ground gridSize={draftLevel.gridSize} canyons={draftLevel.canyons} />
+      <CanyonBasin canyons={draftLevel.canyons} gridSize={draftLevel.gridSize} />
 
       <group>
         {tiles.map(({ gridX, gridZ }) => {
@@ -181,7 +195,7 @@ export const LevelEditorScene = () => {
             draftLevel.tileColor ?? getCssColorValue("editor-default-tile");
 
           return (
-            <LevelEditorTerrainTile
+            <EditorSphereTile
               key={`${gridX}-${gridZ}`}
               gridX={gridX}
               gridZ={gridZ}
@@ -192,6 +206,7 @@ export const LevelEditorScene = () => {
               isHovered={isHovered}
               canHighlightEditorAction={canHighlightEditorAction}
               activeTool={activeTool}
+              canyonBBox={canyonBBox}
               onTileClick={() => onTileClick(gridX, gridZ)}
               onTileHover={() => onTileHover(gridX, gridZ)}
               onTileHoverEnd={onTileHoverEnd}
@@ -200,60 +215,36 @@ export const LevelEditorScene = () => {
         })}
       </group>
 
-      <PlanetTileDecorations occupancy={occupancy} />
+      <PlanetTileDecorations
+        occupancy={occupancy}
+        gridSize={draftLevel.gridSize}
+      />
 
+      {/* The path strip, baked on the sphere exactly as the game renders it
+          (same component), so what the editor draws is what the game runs.
+          The editor draws its own selectable waypoint markers on top; the
+          spawn portal and end building come from the game, so the editor
+          suppresses them here. */}
+      {draftLevel.pathWaypoints.map((_, pathIndex) => (
+        <Path
+          key={`editor-path-strip-${pathIndex}`}
+          pathIndex={pathIndex}
+          pathWaypoints={draftLevel.pathWaypoints}
+          gridSize={draftLevel.gridSize}
+          showEndpoints={false}
+        />
+      ))}
+
+      {/* Selectable waypoint markers, placed on the sphere surface. */}
       <group>
         {draftLevel.pathWaypoints.map((path, pathIndex) => {
           const isSelectedPath =
             selectedPathIndex === pathIndex ||
             (selected?.type === "path" && selected.pathIndex === pathIndex) ||
             (selected?.type === "waypoint" && selected.pathIndex === pathIndex);
-          const segments = getPathRenderSegments(path);
 
           return (
             <group key={`editor-path-${pathIndex}`}>
-              {segments.map((segment) => {
-                const segmentKey = [
-                  segment.start.x,
-                  segment.start.z,
-                  segment.end.x,
-                  segment.end.z,
-                ].join(":");
-
-                return (
-                  <group key={`editor-path-${pathIndex}-segment-${segmentKey}`}>
-                    <mesh
-                      position={[segment.centerX, 0.03, segment.centerZ]}
-                      rotation={[0, segment.yaw, 0]}
-                    >
-                      <boxGeometry args={[segment.length, 0.025, pathWidth]} />
-                      <meshStandardMaterial
-                        color={
-                          isSelectedPath
-                            ? getCssColorValue("editor-path-active")
-                            : getCssColorValue("scene-gray-500")
-                        }
-                      />
-                    </mesh>
-                    <mesh
-                      position={[segment.centerX, 0.02, segment.centerZ]}
-                      rotation={[0, segment.yaw, 0]}
-                    >
-                      <boxGeometry
-                        args={[segment.length, 0.01, pathWidth + 0.06]}
-                      />
-                      <meshStandardMaterial
-                        color={
-                          isSelectedPath
-                            ? getCssColorValue("editor-path-active-border")
-                            : getCssColorValue("scene-gray-600")
-                        }
-                      />
-                    </mesh>
-                  </group>
-                );
-              })}
-
               {path.map((waypoint, waypointIndex) => {
                 const isSelectedWaypoint =
                   selected?.type === "waypoint" &&
@@ -266,11 +257,21 @@ export const LevelEditorScene = () => {
                   isEdgeWaypoint,
                   isSelectedPath
                 );
+                const { surfacePoint, normal } = flatFieldToSphereSurface(
+                  waypoint.x,
+                  waypoint.z,
+                  radius
+                );
+                const position = surfacePoint.clone().addScaledVector(
+                  normal,
+                  0.18
+                );
 
                 return (
                   <mesh
                     key={`editor-path-${pathIndex}-waypoint-${waypointIndex}`}
-                    position={[waypoint.x, 0.18, waypoint.z]}
+                    position={position}
+                    quaternion={getSurfaceQuaternion(normal)}
                     onClick={(event: ThreeEvent<MouseEvent>) => {
                       event.stopPropagation();
                       selectWaypoint(pathIndex, waypointIndex);
@@ -287,34 +288,6 @@ export const LevelEditorScene = () => {
                   </mesh>
                 );
               })}
-
-              {path[0] ? (
-                <Portal
-                  position={[path[0].x, path[0].y + 0.2, path[0].z]}
-                  pathYaw={
-                    path.length >= 2
-                      ? getPathSegmentYaw(
-                          path[1].x - path[0].x,
-                          path[1].z - path[0].z
-                        )
-                      : 0
-                  }
-                />
-              ) : null}
-
-              {path.length > 1 ? (
-                <EndBuilding
-                  position={[
-                    path[path.length - 1].x,
-                    path[path.length - 1].y,
-                    path[path.length - 1].z,
-                  ]}
-                  pathYaw={getEndBuildingYaw(
-                    path[path.length - 2].x - path[path.length - 1].x,
-                    path[path.length - 2].z - path[path.length - 1].z
-                  )}
-                />
-              ) : null}
             </group>
           );
         })}
@@ -331,6 +304,7 @@ export const LevelEditorScene = () => {
               pathWidth={pathWidth}
               tileSize={tileSize}
               gridSize={draftLevel.gridSize}
+              canyonBBox={canyonBBox}
               renderDeck
             />
           )
@@ -338,16 +312,34 @@ export const LevelEditorScene = () => {
       </group>
 
       <group>
-        {draftLevel.waters.map((water) => (
-          <Water
-            key={water.id}
-            water={withRecalculatedWaterCoordinates(
-              water,
-              draftLevel.gridSize,
-              tileSize
-            )}
-          />
-        ))}
+        {draftLevel.waters.map((water) => {
+          const worldX = tileToWorldCoordinate(
+            water.gridX,
+            draftLevel.gridSize,
+            tileSize
+          );
+          const worldZ = tileToWorldCoordinate(
+            water.gridZ,
+            draftLevel.gridSize,
+            tileSize
+          );
+          const surface = flatFieldToSphereSurface(worldX, worldZ, radius);
+          const position = surface.surfacePoint
+            .clone()
+            .addScaledVector(surface.normal, 0.02);
+          return (
+            <Water
+              key={water.id}
+              water={withRecalculatedWaterCoordinates(
+                water,
+                draftLevel.gridSize,
+                tileSize
+              )}
+              position={position.toArray() as [number, number, number]}
+              quaternion={getSurfaceQuaternion(surface.normal)}
+            />
+          );
+        })}
       </group>
 
       <group>
@@ -355,11 +347,20 @@ export const LevelEditorScene = () => {
           const isSelectedBuilding =
             selected?.type === "building" && selected.id === building.id;
           const yPosition = building.height / 2;
+          const surface = flatFieldToSphereSurface(
+            building.x,
+            building.z,
+            radius
+          );
+          const position = surface.surfacePoint
+            .clone()
+            .addScaledVector(surface.normal, 0.02);
 
           return (
             <group
               key={building.id}
-              position={[building.x, 0, building.z]}
+              position={position}
+              quaternion={getSurfaceQuaternion(surface.normal)}
               onClick={(event: ThreeEvent<MouseEvent>) => {
                 event.stopPropagation();
                 selectBuilding(building.id);

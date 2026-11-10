@@ -29,6 +29,7 @@ import {
   levelEnemyUpgradeStackSelector,
   useUpgradeStore,
 } from "../../core/stores/useUpgradeStore";
+import type { PathWaypoint } from "../../core/types/game";
 import { countUpgradePicks } from "../../utils/enemyUpgradeTierEffects";
 import {
   flatFieldToSphereSurface,
@@ -46,6 +47,14 @@ const UNIT_SCALE = new Vector3(1, 1, 1);
 
 type PathProps = {
   pathIndex: number;
+  /** The board's paths; defaults to the published level. The editor passes its
+      draft paths so the rendered strip follows the level being built. */
+  pathWaypoints?: PathWaypoint[][];
+  /** The board size; defaults to the published level. */
+  gridSize?: number;
+  /** Whether to render the spawn portal and end building. The game renders
+      them; the editor draws its own selectable markers, so it passes false. */
+  showEndpoints?: boolean;
 };
 
 type SphereStripMesh = {
@@ -60,9 +69,17 @@ type MergedPathMesh = {
   material: MeshStandardMaterial;
 };
 
-export const Path: FC<PathProps> = memo(({ pathIndex }) => {
-  const pathWaypoints = useLevelStore(pathWaypointsSelector);
-  const gridSize = useLevelStore(gridSizeSelector);
+export const Path: FC<PathProps> = memo(
+  ({
+    pathIndex,
+    pathWaypoints: pathWaypointsProp,
+    gridSize: gridSizeProp,
+    showEndpoints = true,
+  }) => {
+    const storePathWaypoints = useLevelStore(pathWaypointsSelector);
+    const storeGridSize = useLevelStore(gridSizeSelector);
+    const pathWaypoints = pathWaypointsProp ?? storePathWaypoints;
+    const gridSize = gridSizeProp ?? storeGridSize;
   const tileSize = useGameStore(tileSizeSelector);
   const pathYOffset = useGameStore(pathYOffsetSelector);
   const pathWidth = useGameStore(pathWidthSelector);
@@ -302,7 +319,7 @@ export const Path: FC<PathProps> = memo(({ pathIndex }) => {
           receiveShadow
         />
       ))}
-      {portalProps && (
+      {showEndpoints && portalProps && (
         <Portal
           position={portalProps.position}
           quaternion={portalProps.quaternion}
@@ -311,7 +328,7 @@ export const Path: FC<PathProps> = memo(({ pathIndex }) => {
         />
       )}
 
-      {endBuildingProps && (
+      {showEndpoints && endBuildingProps && (
         <EndBuilding
           position={endBuildingProps.position}
           quaternion={endBuildingProps.quaternion}
@@ -321,6 +338,7 @@ export const Path: FC<PathProps> = memo(({ pathIndex }) => {
       <GUINextWavePreview pathIndex={pathIndex} />
     </group>
   );
-});
+  }
+);
 
 Path.displayName = "Path";

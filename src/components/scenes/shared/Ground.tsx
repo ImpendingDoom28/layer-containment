@@ -27,6 +27,7 @@ import {
 } from "../../../utils/canyonBridges";
 import { freezeSubtree } from "../../../utils/freezeSubtree";
 import { getCssColorValue } from "../../ui/lib/cssUtils";
+import type { CanyonConfig } from "../../../core/types/game";
 
 const SPHERE_WIDTH_SEGMENTS = 100;
 const SPHERE_HEIGHT_SEGMENTS = 100;
@@ -239,10 +240,22 @@ export const cutSphereAtCanyon = (
   return geometry;
 };
 
-export const Ground: FC = memo(() => {
-  const gridSize = useLevelStore(gridSizeSelector);
-  const canyons = useLevelStore(canyonsSelector);
-  const tileSize = useGameStore(tileSizeSelector);
+export type GroundProps = {
+  /** The board size; defaults to the published level. The editor passes its
+      draft grid so the sphere matches the level being built. */
+  gridSize?: number;
+  /** The canyon cells that cut the basin hole in the sphere; defaults to the
+      published level. */
+  canyons?: CanyonConfig[];
+};
+
+export const Ground: FC<GroundProps> = memo(
+  ({ gridSize: gridSizeProp, canyons: canyonsProp }: GroundProps) => {
+    const storeGridSize = useLevelStore(gridSizeSelector);
+    const storeCanyons = useLevelStore(canyonsSelector);
+    const tileSize = useGameStore(tileSizeSelector);
+    const gridSize = gridSizeProp ?? storeGridSize;
+    const canyons = canyonsProp ?? storeCanyons;
 
   const radius = getPlanetRadius(gridSize, tileSize);
 
@@ -304,6 +317,7 @@ export const Ground: FC = memo(() => {
       receiveShadow
     />
   );
-});
+  }
+);
 
 Ground.displayName = "Ground";

@@ -26,6 +26,7 @@ import {
 } from "../../utils/canyonBridges";
 import { freezeSubtree } from "../../utils/freezeSubtree";
 import { getCssColorValue } from "../ui/lib/cssUtils";
+import type { CanyonConfig } from "../../core/types/game";
 
 // Vertex grid resolution of the bowl: the floor is a smooth curve, so it needs
 // enough vertices to round (a handful of quads could only tilt like a tile).
@@ -144,10 +145,21 @@ const buildGeometry = (
  * neighboring land tiles (which sit flush over it), so the cap's rim and the
  * tiles share no coplanar band and the seam shows no gap and no z-fighting.
  */
-export const CanyonBasin: FC = memo(() => {
-  const canyons = useLevelStore(canyonsSelector);
-  const gridSize = useLevelStore(gridSizeSelector);
-  const tileSize = useGameStore(tileSizeSelector);
+export type CanyonBasinProps = {
+  /** The canyon cells; defaults to the published level. The editor passes its
+      draft canyons so the bowl follows the level being built. */
+  canyons?: CanyonConfig[];
+  /** The board size; defaults to the published level. */
+  gridSize?: number;
+};
+
+export const CanyonBasin: FC<CanyonBasinProps> = memo(
+  ({ canyons: canyonsProp, gridSize: gridSizeProp }: CanyonBasinProps) => {
+    const storeCanyons = useLevelStore(canyonsSelector);
+    const storeGridSize = useLevelStore(gridSizeSelector);
+    const canyons = canyonsProp ?? storeCanyons;
+    const gridSize = gridSizeProp ?? storeGridSize;
+    const tileSize = useGameStore(tileSizeSelector);
 
   const radius = getPlanetRadius(gridSize, tileSize);
 
@@ -236,6 +248,7 @@ export const CanyonBasin: FC = memo(() => {
       />
     </>
   );
-});
+  }
+);
 
 CanyonBasin.displayName = "CanyonBasin";

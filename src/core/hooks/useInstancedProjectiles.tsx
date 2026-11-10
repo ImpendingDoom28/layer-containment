@@ -67,12 +67,6 @@ const ARC_FINAL_FLASH_FRAMES = 8;
 // direction (the glow leads the strike point and washes over the enemy the
 // arc is about to hit).
 const CHAIN_LIGHT_HEAD_LEAD = 0.25;
-// The chain bolt's slow drift ("arc lightning"): the bolt chases a point that
-// lags the enemy by this many world units along its own travel direction, so
-// it creeps after its target instead of zipping to it in an instant. The
-// existing hit threshold (plus this lag) keeps the strike distance sane: the
-// bolt never sits more than the lag away from a living target.
-const CHAIN_LAG = 0.4;
 // The small light the bolt carries with it: it rides the bolt's head and
 // projects the tower's color onto nearby enemies (a real PointLight that
 // washes over the models it passes). The falloff is tuned so the glow reaches
@@ -497,7 +491,7 @@ const writeArcSegments = (
   headZ: number,
   time: number,
   flash: number
-): void => {
+): number => {
   let mainSegOffset = 0;
   let branchSlot = 0;
 
@@ -622,6 +616,21 @@ const writeArcSegments = (
       writeLeg(leg, headX, headY, headZ, i * 131 + 7);
     }
   }
+
+  // A leg uses fewer slots than the maximum chain (up to 4 legs), and the
+  // geometry's instanceCount would still draw every slot — zero the unwritten
+  // ones so a slot cannot leak the previous occupant's geometry (a ghost leg
+  // drawn at the old arc's positions).
+  const written = mainSegOffset + branchSlot * ARC_BRANCH_SEGMENTS;
+  for (let i = written; i < ARC_TOTAL_SEGMENTS; i += 1) {
+    const c = item.core[i];
+    c.x1 = 0; c.y1 = 0; c.z1 = 0;
+    c.x2 = 0; c.y2 = 0; c.z2 = 0;
+    const g = item.glow[i];
+    g.x1 = 0; g.y1 = 0; g.z1 = 0;
+    g.x2 = 0; g.y2 = 0; g.z2 = 0;
+  }
+  return written;
 };
 
 /**
@@ -634,8 +643,14 @@ const writeArcSegments = (
 const syncArcBuffers = (
   item: ChainArcPoolItem,
   coreGeometry: THREE.InstancedBufferGeometry | null,
-  glowGeometry: THREE.InstancedBufferGeometry | null
+  glowGeometry: THREE.InstancedBufferGeometry | null,
+  writtenSegments: number
 ): void => {
+  // LineSegments2 draws every instance of its geometry — cap the instance
+  // count to the slots actually written this frame (the current chain of
+  // legs), so the rest of the buffer (zeroed by the writer) is never drawn.
+  if (coreGeometry) coreGeometry.instanceCount = writtenSegments;
+  if (glowGeometry) glowGeometry.instanceCount = writtenSegments;
   const write = (
     geometry: THREE.InstancedBufferGeometry | null,
     segments: ChainArcSegment[]
@@ -714,11 +729,12 @@ const updateChainArc = (
   // projectile's body, not decoration), but the per-frame jitter is held to a
   // fixed, per-arc seed so the bolt reads as a still line instead of crackling.
   const jitterTime = reducedMotion ? index * 7.13 + 1.7 : time;
-  writeArcSegments(item, headX, headY, headZ, jitterTime, 1);
+  const written = writeArcSegments(item, headX, headY, headZ, jitterTime, 1);
   syncArcBuffers(
     item,
     pool.coreGeometries[index],
-    pool.glowGeometries[index]
+    pool.glowGeometries[index],
+    written
   );
 };
 
@@ -782,11 +798,12 @@ const updateChainArcFinalFlash = (
     1 + 1.2 * (item.finalFlash / ARC_FINAL_FLASH_FRAMES);
   if (item.finalFlash > 0) item.finalFlash -= 1;
   const jitterTime = reducedMotion ? index * 7.13 + 1.7 : time;
-  writeArcSegments(item, headX, headY, headZ, jitterTime, flash);
+  const written = writeArcSegments(item, headX, headY, headZ, jitterTime, flash);
   syncArcBuffers(
     item,
     pool.coreGeometries[index],
-    pool.glowGeometries[index]
+    pool.glowGeometries[index],
+    written
   );
 };
 
@@ -1054,13 +1071,12 @@ type NonBeamStepContext = {
 };
 
 /**
- * Arc-lightning chase for chain bolts: the bolt keeps a CHAIN_LAG gap between
- * itself and its target, re-aiming every frame at the *current* target world
- * position. It therefore creeps after a moving enemy at its own (slow)
- * projectile speed instead of zipping to where the enemy was when it fired —
- * the "arc" that shoots a slowly drifting bolt at the enemy. The gap bounds
- * the strike distance: the bolt can never sit more than CHAIN_LAG beyond the
- * hit threshold from a living target, so every strike lands cleanly.
+ * Arc-lightning chase for chain bolts: the bolt re-aims every frame at the
+ * *current* target world position and closes in at its full (slow)
+ * projectile speed, clamped to land exactly on the enemy — so it creeps
+ * after a moving enemy instead of zipping to where the enemy was when it
+ * fired, at a constant speed from the tower all the way through the chain
+ * (no keep-a-gap stop that would make the bolt pulse between hops).
  */
 const stepChainBoltHoming = (
   projectile: PooledProjectile,
@@ -1069,7 +1085,6 @@ const stepChainBoltHoming = (
   const {
     delta,
     enemiesById,
-    hitThreshold,
     toRemove,
   } = ctx;
 
@@ -1105,34 +1120,22 @@ const stepChainBoltHoming = (
   const dz = scratchTargetWorld.z - projectile.currentZ;
   const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
   if (distance > 1e-6) {
-    // The kept gap is clamped below the hit threshold (a small enemy has a
-    // small threshold), so the bolt always ends up inside it.
-    const gap = Math.min(CHAIN_LAG, hitThreshold * 0.75);
-    // Re-aim every frame toward the gap point, so the bolt closes in at its
-    // own speed (the slow `projectileSpeed` from the tower config).
+    // The bolt keeps its full speed the whole way (the slow `projectileSpeed`
+    // from the tower config) and the step is clamped to the target, so the
+    // head lands exactly on the enemy: the hit settles on that same frame
+    // (see the step below) and the chain continues from there. No
+    // keep-a-gap stop between enemies — that pause plus the follow-up jump
+    // onto the struck enemy read as the bolt pulsing speed with every hop.
     const closeBy = projectile.speed * delta;
-    if (closeBy >= distance) {
-      // The frame's step reaches the target: park exactly on it and let the
-      // distance-threshold check settle the hit below.
-      projectile.currentX = scratchTargetWorld.x;
-      projectile.currentY = scratchTargetWorld.y;
-      projectile.currentZ = scratchTargetWorld.z;
-      projectile.velocityX = (dx / distance) * projectile.speed;
-      projectile.velocityY = (dy / distance) * projectile.speed;
-      projectile.velocityZ = (dz / distance) * projectile.speed;
-    } else {
-      // Keep the gap: stop short of the target.
-      const travel = Math.max(0, Math.min(distance - gap, closeBy));
-      const s = travel / distance;
-      projectile.currentX += dx * s;
-      projectile.currentY += dy * s;
-      projectile.currentZ += dz * s;
-      // Store the real velocity (speed along the aim), not the frame
-      // displacement.
-      projectile.velocityX = (dx / distance) * projectile.speed;
-      projectile.velocityY = (dy / distance) * projectile.speed;
-      projectile.velocityZ = (dz / distance) * projectile.speed;
-    }
+    const s = Math.min(1, closeBy / distance);
+    projectile.currentX += dx * s;
+    projectile.currentY += dy * s;
+    projectile.currentZ += dz * s;
+    // Store the real velocity (speed along the aim), not the frame
+    // displacement.
+    projectile.velocityX = (dx / distance) * projectile.speed;
+    projectile.velocityY = (dy / distance) * projectile.speed;
+    projectile.velocityZ = (dz / distance) * projectile.speed;
   }
 
   applyChainBoltPose(projectile, ctx);
@@ -1242,7 +1245,7 @@ const stepNonBeamProjectile = (
     // Arc lightning: the bolt chases its target instead of flying the
     // launch-time vector, so a moving enemy is actually hit (the old
     // straight-line flight would pass it by). The chase re-aims at the
-    // target's live world position every frame and keeps a CHAIN_LAG gap.
+    // target's live world position every frame and closes in at full speed.
     stepChainBoltHoming(projectile, ctx);
 
     // Crack the arc channel: re-roll the jittered legs from the muzzle to the

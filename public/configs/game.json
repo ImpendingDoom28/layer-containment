@@ -213,7 +213,7 @@
       "minRange": 2.5,
       "model": {
         "node": "Tower_AOE_ROOT",
-        "url": "assets/models/tower_aoe.glb"
+        "url": "assets/models/tower_aoe.glb?v=2"
       },
       "muzzle": {
         "muzzle": null,
@@ -243,7 +243,7 @@
       "id": "basic",
       "model": {
         "node": "Tower_Basic_ROOT",
-        "url": "assets/models/tower_basic.glb"
+        "url": "assets/models/tower_basic.glb?v=2"
       },
       "muzzle": {
         "muzzle": {
@@ -274,7 +274,7 @@
       "maxChainHops": 3,
       "model": {
         "node": "Tower_Chain_ROOT",
-        "url": "assets/models/tower_chain.glb"
+        "url": "assets/models/tower_chain.glb?v=2"
       },
       "muzzle": {
         "muzzle": {
@@ -304,7 +304,7 @@
       "maxPierce": 5,
       "model": {
         "node": "Tower_Laser_ROOT",
-        "url": "assets/models/tower_laser.glb"
+        "url": "assets/models/tower_laser.glb?v=2"
       },
       "muzzle": {
         "muzzle": {
@@ -333,7 +333,7 @@
       "id": "relay",
       "model": {
         "node": "Tower_Relay_ROOT",
-        "url": "assets/models/tower_relay.glb"
+        "url": "assets/models/tower_relay.glb?v=2"
       },
       "idleNode": "Pulse_Array",
       "muzzle": {
@@ -360,7 +360,7 @@
       "id": "slow",
       "model": {
         "node": "Tower_Slow_ROOT",
-        "url": "assets/models/tower_slow.glb"
+        "url": "assets/models/tower_slow.glb?v=2"
       },
       "muzzle": {
         "muzzle": {

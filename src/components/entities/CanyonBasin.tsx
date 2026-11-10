@@ -92,7 +92,7 @@ const buildPerimeter = (bbox: CanyonWorldBBox): Array<[number, number]> => {
 // a quad from the basin floor (full depth) up to the planet surface — the
 // visible side of the bowl. Winding (from a CCW-perimeter, above) is outward;
 // the material is DoubleSide so the inner face (seen from the floor) renders.
-const buildSkirt = (
+export const buildSkirt = (
   bbox: CanyonWorldBBox,
   radius: number
 ): { positions: number[]; indices: number[] } => {
@@ -106,7 +106,9 @@ const buildSkirt = (
     const bottom = positions.length / 3;
     positions.push(x, floorY, z); // bottom (on the floor)
     positions.push(x, surfacePoint.y, z); // top (at the surface)
-    const nextBottom = positions.length / 3;
+    // Wrap the last sample back to the first so the wall closes into a loop
+    // (the final edge segment is covered by the wrapping quad).
+    const nextBottom = ((i + 1) % perimeter.length) * 2;
     const a = bottom;
     const b = bottom + 1; // top of current
     const c = nextBottom;

@@ -35,7 +35,9 @@ const SPHERE_HEIGHT_SEGMENTS = 100;
  * The sphere is only ever cut where a basin needs to be: the pole-cap fan
  * (the first `widthSegments` triangles — the pole vertex plus the first
  * ring, the only triangles over the board) is clipped against the basin cap
- * rectangle and the carved bowl (see `CanyonBasin`) fills the hole. The rest
+ * rectangle, keeping only the portion OUTSIDE the cap — the ground over the
+ * basin is cut away and the carved bowl (see `CanyonBasin`) fills the hole.
+ * The rest
  * of the sphere is untouched. The clip rectangle is the basin cap's span
  * (`getBasinCapBBox`), so the hole's rim and the cap's rim share one edge:
  * the cap's rim band (under the neighboring land tiles) covers the fan's
@@ -44,71 +46,84 @@ const SPHERE_HEIGHT_SEGMENTS = 100;
  */
 type CutPoint = { x: number; y: number; z: number };
 
-type Bound = { axis: "x" | "z"; value: number };
+type HalfPlane = { axis: "x" | "z"; keepMin: boolean; value: number };
 
-const clipConvex = (
-  poly: CutPoint[],
-  minX: number,
-  maxX: number,
-  minZ: number,
-  maxZ: number
-): CutPoint[] => {
-  const bounds: Bound[] = [
-    { axis: "x", value: minX },
-    { axis: "x", value: maxX },
-    { axis: "z", value: minZ },
-    { axis: "z", value: maxZ },
-  ];
-  const inside = (p: CutPoint) =>
-    p.x >= minX && p.x <= maxX && p.z >= minZ && p.z <= maxZ;
-  // The t along the prev→cur segment where it crosses a bound, or null.
-  const crossT = (prev: CutPoint, cur: CutPoint, bound: Bound): number | null => {
-    const a = prev[bound.axis] - bound.value;
-    const b = cur[bound.axis] - bound.value;
-    if (a * b >= 0) return null;
-    return (bound.value - prev[bound.axis]) / (cur[bound.axis] - prev[bound.axis]);
-  };
-  // The exact boundary point of a segment leaving (min t — the first
-  // constraint violated) or entering (max t — the last constraint satisfied)
-  // the rectangle.
-  const boundaryPoint = (
-    prev: CutPoint,
-    cur: CutPoint,
-    exiting: boolean
-  ): CutPoint | null => {
-    const ts = bounds
-      .map((bound) => crossT(prev, cur, bound))
-      .filter((t): t is number => t !== null);
-    if (ts.length === 0) return null;
-    const t = exiting ? Math.min(...ts) : Math.max(...ts);
+// Sutherland–Hodgman clip of a convex polygon against one axis-aligned
+// half-plane. `keepMin` keeps the `axis <= value` side, otherwise the
+// `axis >= value` side. Output preserves the input's winding.
+const clipHalfPlane = (poly: CutPoint[], plane: HalfPlane): CutPoint[] => {
+  if (poly.length === 0) return [];
+  const inside = (pt: CutPoint) =>
+    plane.keepMin
+      ? pt[plane.axis] <= plane.value
+      : pt[plane.axis] >= plane.value;
+  // The exact point where the prev→cur segment crosses the half-plane.
+  const cross = (prev: CutPoint, cur: CutPoint): CutPoint => {
+    const a = prev[plane.axis] - plane.value;
+    const b = cur[plane.axis] - plane.value;
+    const t = a / (a - b);
     return {
       x: prev.x + t * (cur.x - prev.x),
       y: prev.y + t * (cur.y - prev.y),
       z: prev.z + t * (cur.z - prev.z),
     };
   };
-
   const out: CutPoint[] = [];
   for (let i = 0; i < poly.length; i++) {
     const cur = poly[i];
     const prev = poly[(i + poly.length - 1) % poly.length];
     const curIn = inside(cur);
     const prevIn = inside(prev);
-    if (prevIn && curIn) {
+    if (curIn) {
+      if (!prevIn) out.push(cross(prev, cur));
       out.push(cur);
     } else if (prevIn) {
-      const pt = boundaryPoint(prev, cur, true);
-      if (pt) out.push(pt);
-    } else if (curIn) {
-      const pt = boundaryPoint(prev, cur, false);
-      if (pt) out.push(pt);
-      out.push(cur);
+      out.push(cross(prev, cur));
     }
   }
   return out;
 };
 
-const cutSphereAtCanyon = (
+const clipRegion = (poly: CutPoint[], planes: HalfPlane[]): CutPoint[] =>
+  planes.reduce((acc, plane) => clipHalfPlane(acc, plane), poly);
+
+// Twice the signed xz-area of a polygon; ~0 for degenerate (coincident)
+// results of a clip where a corner lands exactly on the cap boundary.
+const polygonArea2 = (poly: CutPoint[]): number => {
+  let area = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % poly.length];
+    area += a.x * b.z - b.x * a.z;
+  }
+  return area;
+};
+
+// The outside of the cap rectangle, partitioned into four disjoint, convex
+// half-plane regions (each is the intersection of a few half-planes). Their
+// union is exactly `outside the cap` — the ground we keep — while the cap
+// interior (the basin hole) is dropped.
+const outsideRegionPlanes = (
+  minX: number,
+  maxX: number,
+  minZ: number,
+  maxZ: number
+): HalfPlane[][] => [
+  [{ axis: "x", keepMin: true, value: minX }], // left of the cap
+  [{ axis: "x", keepMin: false, value: maxX }], // right of the cap
+  [
+    { axis: "z", keepMin: true, value: minZ }, // bottom band
+    { axis: "x", keepMin: false, value: minX },
+    { axis: "x", keepMin: true, value: maxX },
+  ],
+  [
+    { axis: "z", keepMin: false, value: maxZ }, // top band
+    { axis: "x", keepMin: false, value: minX },
+    { axis: "x", keepMin: true, value: maxX },
+  ],
+];
+
+export const cutSphereAtCanyon = (
   source: SphereGeometry,
   minX: number,
   maxX: number,
@@ -162,35 +177,40 @@ const cutSphereAtCanyon = (
       z: position.getZ(r1),
     };
 
-    const poly: CutPoint[] = clipConvex([p, q0, q1], minX, maxX, minZ, maxZ);
-    if (poly.length < 3) continue;
+    // The outside of the cap is not convex, so clip the triangle against each
+    // of the four convex outside regions and keep every non-empty result; a
+    // triangle wholly inside the cap contributes nothing (the hole).
+    for (const planes of outsideRegionPlanes(minX, maxX, minZ, maxZ)) {
+      const poly = clipRegion([p, q0, q1], planes);
+      if (poly.length < 3 || Math.abs(polygonArea2(poly)) < 1e-9) continue;
 
-    // Reuse the fan's existing vertices for points that coincide with the
-    // pole or a ring endpoint — no duplicate coincident vertices.
-    const used = new Set<number>();
-    const vertexFor = (pt: CutPoint): number => {
-      for (const v of [r0, r1, pole]) {
-        if (used.has(v)) continue;
-        const same =
-          Math.abs(pt.x - position.getX(v)) < 1e-6 &&
-          Math.abs(pt.y - position.getY(v)) < 1e-6 &&
-          Math.abs(pt.z - position.getZ(v)) < 1e-6;
-        if (same) {
-          used.add(v);
-          return v;
+      // Reuse the fan's existing vertices for points that coincide with the
+      // pole or a ring endpoint — no duplicate coincident vertices.
+      const used = new Set<number>();
+      const vertexFor = (pt: CutPoint): number => {
+        for (const v of [r0, r1, pole]) {
+          if (used.has(v)) continue;
+          const same =
+            Math.abs(pt.x - position.getX(v)) < 1e-6 &&
+            Math.abs(pt.y - position.getY(v)) < 1e-6 &&
+            Math.abs(pt.z - position.getZ(v)) < 1e-6;
+          if (same) {
+            used.add(v);
+            return v;
+          }
         }
-      }
-      return nextVertex(pt);
-    };
+        return nextVertex(pt);
+      };
 
-    // Fan-triangulate the clipped polygon (convex) from its first vertex.
-    const ids = poly.map(vertexFor);
-    for (let i = 1; i < ids.length - 1; i++) {
-      const a = ids[0];
-      const b = ids[i];
-      const c = ids[i + 1];
-      if (a === b || b === c || a === c) continue;
-      index.push(a, b, c);
+      // Fan-triangulate the clipped polygon (convex) from its first vertex.
+      const ids = poly.map(vertexFor);
+      for (let i = 1; i < ids.length - 1; i++) {
+        const a = ids[0];
+        const b = ids[i];
+        const c = ids[i + 1];
+        if (a === b || b === c || a === c) continue;
+        index.push(a, b, c);
+      }
     }
   }
 

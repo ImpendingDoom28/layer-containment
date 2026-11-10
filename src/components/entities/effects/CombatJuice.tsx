@@ -19,7 +19,7 @@ import { useTranslationInCanvas } from "../../../core/i18n/useTranslationInCanva
 import { Effect } from "./Effect";
 import { FloatingTexts, type FloatingTextsHandle } from "./FloatingTexts";
 import { RocketExplosionFX } from "./RocketExplosionFX";
-import { DustBurstFX } from "./DustBurstFX";
+import { DustBurstFX, DustBurstPrewarm } from "./DustBurstFX";
 import { DROP_DURATION } from "./towerPlacementRig";
 
 const MAX_ACTIVE_BURSTS = 8;
@@ -227,6 +227,7 @@ export const CombatJuice = memo(
 
     return (
       <>
+        <DustBurstPrewarm />
         <FloatingTexts ref={floatingTextsRef} />
         {bursts.map((burst) => (
           <Effect

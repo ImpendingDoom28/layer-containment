@@ -72,6 +72,67 @@ const sharedRingGeometry = new RingGeometry(0.92, 1, 32);
 // smooth blob. The per-shard non-uniform scale makes the chunks irregular.
 const sharedShardGeometry = new TetrahedronGeometry(1);
 
+// The dust uses two material programs no other scene object compiles (a
+// flat-shaded, transparent MeshStandardMaterial for the shards and an
+// additive, double-sided MeshBasicMaterial for the ring). A burst only mounts
+// at a placement, so without this stand-in the first placement would pay a
+// one-time shader-compile stall on its impact frame. These hidden stand-ins
+// keep both programs in the scene at all times, so the scene's ShaderReadyGate
+// (gl.compileAsync walks the full graph, including hidden objects) compiles
+// them during the loading screen and the first placement renders hitch-free.
+// The materials are app-lifetime singletons (never disposed) like the rubble
+// fallback; their colour is irrelevant to the compiled program.
+let prewarmRingMaterial: MeshBasicMaterial | null = null;
+const getPrewarmRingMaterial = (): MeshBasicMaterial => {
+  if (!prewarmRingMaterial) {
+    prewarmRingMaterial = new MeshBasicMaterial({
+      color: "#808080",
+      transparent: true,
+      opacity: 0,
+      blending: AdditiveBlending,
+      depthWrite: false,
+      side: DoubleSide,
+    });
+  }
+  return prewarmRingMaterial;
+};
+
+let prewarmShardMaterial: MeshStandardMaterial | null = null;
+const getPrewarmShardMaterial = (): MeshStandardMaterial => {
+  if (!prewarmShardMaterial) {
+    prewarmShardMaterial = new MeshStandardMaterial({
+      color: "#808080",
+      roughness: 0.9,
+      metalness: 0,
+      flatShading: true,
+      transparent: true,
+      opacity: 0,
+    });
+  }
+  return prewarmShardMaterial;
+};
+
+// A hidden group (never drawn) that keeps the dust's two material programs
+// mounted for the whole scene so they are precompiled at load, not on the
+// first burst's frame.
+export const DustBurstPrewarm: FC = () => (
+  <group visible={false}>
+    <mesh
+      geometry={sharedRingGeometry}
+      material={getPrewarmRingMaterial()}
+      rotation={[-Math.PI / 2, 0, 0]}
+      raycast={() => null}
+    />
+    <mesh
+      geometry={sharedShardGeometry}
+      material={getPrewarmShardMaterial()}
+      raycast={() => null}
+    />
+  </group>
+);
+
+DustBurstPrewarm.displayName = "DustBurstPrewarm";
+
 // Deterministic per-shard variation (angle, rise, size, spin, tint) so every
 // burst looks the same on every frame without per-frame random draws —
 // Math.random would re-roll the values every render and pop the debris.

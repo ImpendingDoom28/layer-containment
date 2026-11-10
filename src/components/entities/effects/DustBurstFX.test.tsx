@@ -6,7 +6,7 @@ import { Quaternion, Vector3 } from "three";
 import { SimulationClockProvider } from "../../../core/contexts/SimulationClockContext";
 import { useGameStore } from "../../../core/stores/useGameStore";
 import { useSettingsStore } from "../../../core/stores/useSettingsStore";
-import { DustBurstFX } from "./DustBurstFX";
+import { DustBurstFX, DustBurstPrewarm } from "./DustBurstFX";
 
 // IS_REACT_ACT_ENVIRONMENT is not typed on globalThis
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,6 +63,8 @@ const createHarness = async (props: {
   const renderer = await ReactThreeTestRenderer.create(
     <SimulationClockProvider>
       <ClockCapture />
+      {/* CombatJuice mounts the prewarm stand-in next to every burst. */}
+      <DustBurstPrewarm />
       <DustBurstFX
         position={[1, 2, 3]}
         quaternion={QUAT}
@@ -83,20 +85,21 @@ const advanceFrame = async (renderer: Renderer, rawTime: number) => {
   });
 };
 
+// The burst group is the only visible group; the prewarm stand-in is hidden.
 const findGroup = (renderer: Renderer): SceneObject => {
   const scene = renderer.scene.instance as unknown as SceneObject;
-  const found = scene.children.find((c) => c.type === "Group");
+  const found = scene.children.find((c) => c.type === "Group" && c.visible);
   expect(found).toBeDefined();
   return found!;
 };
 
-// The settling ring is the only additive mesh; the debris shards are lit
-// (standard, normal-blended) meshes. Distinguish by `material.blending`
-// (THREE.AdditiveBlending === 2, THREE.NormalBlending === 1).
+// Scope to the burst group so the prewarm's hidden stand-in meshes (same
+// geometries, same material programs) are never picked up: the settling ring
+// is the group's additive mesh (THREE.AdditiveBlending === 2) and the debris
+// shards are its lit meshes (THREE.NormalBlending === 1).
 const findRing = (renderer: Renderer): SceneObject => {
-  const scene = renderer.scene.instance as unknown as SceneObject;
   const found: SceneObject[] = [];
-  scene.traverse?.((o) => {
+  findGroup(renderer).traverse?.((o) => {
     if (o.type === "Mesh" && o.material.blending === 2) found.push(o);
   });
   expect(found.length).toBe(1);
@@ -104,9 +107,8 @@ const findRing = (renderer: Renderer): SceneObject => {
 };
 
 const findShards = (renderer: Renderer): SceneObject[] => {
-  const scene = renderer.scene.instance as unknown as SceneObject;
   const found: SceneObject[] = [];
-  scene.traverse?.((o) => {
+  findGroup(renderer).traverse?.((o) => {
     if (o.type === "Mesh" && o.material.blending === 1) found.push(o);
   });
   expect(found.length).toBeGreaterThan(0);
@@ -268,6 +270,37 @@ describe("DustBurstFX", () => {
       // No further completions after it has already fired.
       await advanceFrame(renderer, 5);
       expect(completed).toBe(1);
+    } finally {
+      renderer.unmount();
+    }
+  });
+
+  it("mounts a hidden prewarm stand-in carrying both dust material programs", async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <SimulationClockProvider>
+        <DustBurstPrewarm />
+      </SimulationClockProvider>
+    );
+    try {
+      const scene = renderer.scene.instance as unknown as SceneObject;
+      // The stand-in is a hidden group, so nothing is drawn for it — but its
+      // meshes are in the graph for the scene's ShaderReadyGate to compile.
+      const group = scene.children.find((c) => c.type === "Group");
+      expect(group).toBeDefined();
+      expect(group!.visible).toBe(false);
+
+      // One additive ring program and one lit shard program, both compiled at
+      // load (the prewarm's job) — the first placement then renders without a
+      // shader-compile stall.
+      let additiveMeshes = 0;
+      let litMeshes = 0;
+      scene.traverse?.((o) => {
+        if (o.type !== "Mesh") return;
+        if (o.material.blending === 2) additiveMeshes += 1;
+        if (o.material.blending === 1) litMeshes += 1;
+      });
+      expect(additiveMeshes).toBe(1);
+      expect(litMeshes).toBe(1);
     } finally {
       renderer.unmount();
     }

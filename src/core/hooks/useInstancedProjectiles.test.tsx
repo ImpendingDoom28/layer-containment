@@ -213,7 +213,7 @@ describe("useInstancedProjectiles trails", () => {
     }
   });
 
-  it("does not allocate a trail slot for beams but does for chain bolts", async () => {
+  it("does not allocate a trail slot for beams or chain bolts", async () => {
     const renderer = await createRenderer();
     try {
       enemyActions(world).spawnEnemy(baseEnemy());
@@ -221,10 +221,10 @@ describe("useInstancedProjectiles trails", () => {
       fireAtEnemy({ projectileType: "beam" });
       expect(api!.getTrailPoolStats()!.inUse).toBe(0);
 
-      // The arc bolt creeps toward its target at its own (slow) speed and
-      // carries a trail streak, so it holds a trail slot while in flight.
+      // The arc bolt's own flickering lightning channel is its motion visual,
+      // so it carries no separate trail streak (a solid sphere or rocket would).
       fireAtEnemy({ projectileType: "chain" });
-      expect(api!.getTrailPoolStats()!.inUse).toBe(1);
+      expect(api!.getTrailPoolStats()!.inUse).toBe(0);
     } finally {
       await renderer.unmount();
     }

@@ -3,9 +3,7 @@ import { Enemy } from "../entities/Enemy";
 import { useQuery } from "koota/react";
 import { IsEnemy } from "../../core/ecs/traits/enemy";
 
-type EnemySystemProps = {};
-
-export const EnemySystem: React.FC<EnemySystemProps> = memo(() => {
+export const EnemySystem: React.FC = memo(() => {
   const enemyEntities = useQuery(IsEnemy);
 
   return (

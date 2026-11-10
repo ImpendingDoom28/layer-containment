@@ -268,6 +268,56 @@ describe("useInstancedProjectiles trails", () => {
       // separation needs ~9 more frames before it is inside the threshold.
       await advance(10);
       expect(onHit).toHaveBeenCalledTimes(1);
+      // The head reached the last (only) enemy: the chain is done, so the
+      // bolt holds its end flash — the whole channel brightens — and vanishes
+      // a few frames later instead of being removed on the strike frame.
+      await advance(9);
+      expect(onHit).toHaveBeenCalledTimes(1);
+      expect(api!.getActiveProjectiles()).toHaveLength(0);
+    } finally {
+      await renderer.unmount();
+    }
+  });
+
+  it("propagates a chain bolt through its targets and vanishes after the end flash", async () => {
+    const renderer = await createRenderer();
+    try {
+      useLevelStore.getState().setGridSize(10, 1);
+      useLevelStore.getState().setPathWaypoints([
+        [{ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }],
+      ]);
+      useGameStore.setState({ tileSize: 1 });
+
+      enemyActions(world).spawnEnemy({
+        ...baseEnemy(),
+        x: 30,
+        z: 0,
+        pathProgress: 10,
+      });
+      enemyActions(world).spawnEnemy({
+        ...baseEnemy(),
+        id: 2,
+        x: 40,
+        z: 0,
+        pathProgress: 10,
+      });
+
+      fireAtEnemy({
+        projectileType: "chain",
+        speed: 7,
+        damage: 10,
+        chainAdditionalHits: [{ enemyId: 2, damage: 7 }],
+      });
+
+      // The head propagates tower → first enemy → second enemy: both strikes
+      // land in order (the damage is unchanged: 10, then the hop's 7).
+      await advance(25);
+      expect(onHit).toHaveBeenCalledTimes(2);
+
+      // The head reached the last enemy in the chain: the bolt holds its end
+      // flash a few frames, then vanishes.
+      await advance(12);
+      expect(onHit).toHaveBeenCalledTimes(2);
       expect(api!.getActiveProjectiles()).toHaveLength(0);
     } finally {
       await renderer.unmount();

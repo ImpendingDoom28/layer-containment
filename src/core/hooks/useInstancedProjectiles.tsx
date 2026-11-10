@@ -44,15 +44,25 @@ import { refreshEnemyRegistry } from "../ecs/selectors/enemySnapshots";
 // enemy) to the bolt's head. The channel's jitter is re-rolled every
 // simulation frame, so the lightning crackles and re-jumps as it creeps, and
 // each chain hop re-anchors the tail on the struck enemy, reading as a jump.
-const ARC_MAIN_SEGMENTS = 14;
-const ARC_BRANCH_COUNT = 2;
+// The arc channel is a chain of *legs*: one per struck enemy (tower → e1,
+// e1 → e2, …), each a jagged segment that grows as the bolt's head propagates
+// from enemy to enemy. The legs are drawn with per-leg vertex counts, so the
+// pool's per-arc buffers are sized for the worst case (tower + every hop).
+const ARC_LEG_SEGMENTS = 8;
+const ARC_MAX_LEGS = 4; // tower → primary + up to 3 hops
 const ARC_BRANCH_SEGMENTS = 3;
-const ARC_TOTAL_SEGMENTS =
-  ARC_MAIN_SEGMENTS + ARC_BRANCH_COUNT * ARC_BRANCH_SEGMENTS;
+const ARC_BRANCHES_PER_LEG = 1;
+const ARC_MAIN_SEGMENTS = ARC_LEG_SEGMENTS * ARC_MAX_LEGS;
+const ARC_BRANCH_COUNT = ARC_BRANCHES_PER_LEG * ARC_MAX_LEGS; // 1 fork per leg
+const ARC_BRANCH_SEGMENT_TOTAL = ARC_BRANCH_COUNT * ARC_BRANCH_SEGMENTS;
+const ARC_TOTAL_SEGMENTS = ARC_MAIN_SEGMENTS + ARC_BRANCH_SEGMENT_TOTAL;
 // The fixed arc pool is sized for a heavy chain volley: each in-flight bolt
 // holds one arc, and the fire rate (2s) keeps the concurrent count well under
 // this even when several chain towers volley together.
 const CHAIN_ARC_POOL_SIZE = 8;
+// The end flash: when the head reaches the last enemy in the chain, the whole
+// channel holds one bright flash (the "final crack") before the bolt vanishes.
+const ARC_FINAL_FLASH_FRAMES = 8;
 // The carried light rides a small lead ahead of the bolt head along the travel
 // direction (the glow leads the strike point and washes over the enemy the
 // arc is about to hit).
@@ -266,21 +276,31 @@ type ChainArcSegment = {
   z2: number;
 };
 
+type ChainArcLeg = {
+  startX: number;
+  startY: number;
+  startZ: number;
+  endX: number;
+  endY: number;
+  endZ: number;
+  /** True once the leg's head has reached its end (the struck enemy). */
+  completed: boolean;
+};
+
 type ChainArcPoolItem = {
   root: THREE.Object3D;
   core: ChainArcSegment[];
   glow: ChainArcSegment[];
   color: THREE.Color;
-  /** True on the frame after a tail re-anchor, so the arc flicks wide once. */
-  hopFlash: number;
-  /** The arc channel's tail: the muzzle, or the enemy struck on the last hop. */
-  sourceX: number;
-  sourceY: number;
-  sourceZ: number;
-  /** The arc channel's head: the bolt's live world position. */
-  headX: number;
-  headY: number;
-  headZ: number;
+  /** The chain's legs, in order: the first leg starts at the muzzle; every
+   *  subsequent leg starts where the previous one ended (the struck enemy). */
+  legs: ChainArcLeg[];
+  /** Number of legs written into `legs` so far (grows per hop). */
+  legCount: number;
+  /** Index of the leg the bolt's head is currently propagating along. */
+  legIndex: number;
+  /** Frames remaining of the end flash; 0 while the bolt is propagating. */
+  finalFlash: number;
 };
 
 /**
@@ -303,21 +323,20 @@ type ChainArcPool = {
   releaseAll: () => void;
 };
 
-const ARC_CORE_WIDTH = 0.05;
-const ARC_GLOW_WIDTH = 0.13;
+const ARC_CORE_WIDTH = 0.045;
+const ARC_GLOW_WIDTH = 0.11;
 const ARC_CORE_OPACITY = 0.95;
-const ARC_GLOW_OPACITY = 0.22;
+const ARC_GLOW_OPACITY = 0.2;
 // How often (in sim frames) the channel's jitter is re-rolled: high enough to
 // read as live crackle, low enough that it is not pure noise at 60 fps.
 const ARC_FLICKER_HZ = 24;
-// The main channel's wobble amplitude (world units) around its straight
-// centerline, scaled down toward the channel's ends.
-const ARC_WOBBLE = 0.09;
+// The per-leg wobble amplitude (world units) around each leg's straight
+// centerline, scaled down toward the leg's ends.
+const ARC_WOBBLE = 0.07;
 const ARC_TAIL_LIFT = 0.04;
-const ARC_BRANCH_STEP_MIN = 0.07;
-const ARC_BRANCH_STEP_MAX = 0.16;
-const ARC_BRANCH_UPLIFT = 0.18;
-const ARC_HOP_FLASH_FRAMES = 6;
+const ARC_BRANCH_STEP_MIN = 0.06;
+const ARC_BRANCH_STEP_MAX = 0.13;
+const ARC_BRANCH_UPLIFT = 0.14;
 
 const createChainArcPool = (
   size: number,
@@ -401,9 +420,14 @@ const createChainArcPool = (
         x1: 0, y1: 0, z1: 0, x2: 0, y2: 0, z2: 0,
       })),
       color: new THREE.Color(defaultColor),
-      hopFlash: 0,
-      sourceX: 0, sourceY: 0, sourceZ: 0,
-      headX: 0, headY: 0, headZ: 0,
+      legs: Array.from({ length: ARC_MAX_LEGS }, () => ({
+        startX: 0, startY: 0, startZ: 0,
+        endX: 0, endY: 0, endZ: 0,
+        completed: false,
+      })),
+      legCount: 0,
+      legIndex: 0,
+      finalFlash: 0,
     });
   }
 
@@ -433,7 +457,9 @@ const createChainArcPool = (
       used.add(index);
       const item = items[index];
       item.color.set(color);
-      item.hopFlash = 0;
+      item.legCount = 0;
+      item.legIndex = 0;
+      item.finalFlash = 0;
       item.root.visible = true;
       item.root.position.set(0, 0, 0);
       item.root.scale.set(1, 1, 1);
@@ -456,131 +482,154 @@ const createChainArcPool = (
 };
 
 /**
- * Re-rolls the arc's endpoints: the channel runs from `source` (the muzzle,
- * or the enemy struck on the last hop) to `head` (the bolt's head), with a
- * per-frame jitter that makes the lightning crackle. Side branches peel off
- * random main-channel vertices and wander outward a short way — the "tree"
- * silhouette of a real bolt. Both the core and the glow pass receive the same
- * endpoints (the glow is drawn wider and dimmer). The frame index drives a
- * deterministic pseudo-random sequence so every segment shares one wobble
- * state per re-roll.
+ * Re-rolls the arc's endpoints: the channel is a chain of legs (tower → e1,
+ * e1 → e2, …). Completed legs run their full length; the active leg grows
+ * from its start to the bolt's live head. Each leg gets its own per-frame
+ * jitter (seeded by leg index, so a completed leg crackles independently),
+ * and one side branch per leg peels off its middle and wanders outward — the
+ * "tree" silhouette of a real bolt. Both the core and the glow pass receive
+ * the same endpoints (the glow is drawn wider and dimmer).
  */
 const writeArcSegments = (
   item: ChainArcPoolItem,
-  time: number
+  headX: number,
+  headY: number,
+  headZ: number,
+  time: number,
+  flash: number
 ): void => {
-  const { sourceX, sourceY, sourceZ, headX, headY, headZ } = item;
-  const dx = headX - sourceX;
-  const dy = headY - sourceY;
-  const dz = headZ - sourceZ;
-  const length = Math.hypot(dx, dy, dz) || 1;
-  const dirX = dx / length;
-  const dirY = dy / length;
-  const dirZ = dz / length;
+  let mainSegOffset = 0;
+  let branchSlot = 0;
 
-  // Two orthonormal vectors perpendicular to the travel direction for the
-  // wobble: the cross product with the up axis (a horizontal perpendicular)
-  // and its cross with the travel direction, falling back to a fixed axis
-  // when the channel runs vertically.
-  let px = -dirZ;
-  let py = 0;
-  let pz = dirX;
-  const pLen = Math.hypot(px, py, pz);
-  if (pLen > 1e-6) {
-    px /= pLen; py /= pLen; pz /= pLen;
-  } else {
-    px = 1; py = 0; pz = 0;
-  }
-  const qx = dirY * pz - dirZ * py;
-  const qy = dirZ * px - dirX * pz;
-  const qz = dirX * py - dirY * px;
+  const writeLeg = (
+    leg: ChainArcLeg,
+    endX: number,
+    endY: number,
+    endZ: number,
+    seedSalt: number
+  ): void => {
+    const dx = endX - leg.startX;
+    const dy = endY - leg.startY;
+    const dz = endZ - leg.startZ;
+    const length = Math.hypot(dx, dy, dz) || 1;
+    const dirX = dx / length;
+    const dirY = dy / length;
+    const dirZ = dz / length;
 
-  let seed = (Math.floor(time * ARC_FLICKER_HZ) * 2654435761) >>> 0;
-  if (seed === 0) seed = 0x9e3779b9;
-  const rand = (): number => {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    return seed / 4294967296;
-  };
+    // Two orthonormal vectors perpendicular to the travel direction for the
+    // wobble: the cross product with the up axis (a horizontal perpendicular)
+    // and its cross with the travel direction, falling back to a fixed axis
+    // when the leg runs vertically.
+    let px = -dirZ;
+    let py = 0;
+    let pz = dirX;
+    const pLen = Math.hypot(px, py, pz);
+    if (pLen > 1e-6) {
+      px /= pLen; py /= pLen; pz /= pLen;
+    } else {
+      px = 1; py = 0; pz = 0;
+    }
+    const qx = dirY * pz - dirZ * py;
+    const qy = dirZ * px - dirX * pz;
+    const qz = dirX * py - dirY * px;
 
-  // A hop right after the tail re-anchored: flick the wobble wide once so the
-  // jump reads as a snap of the arc, then let it settle back to normal.
-  const flash = item.hopFlash > 0 ? 1 + 0.6 * (item.hopFlash / ARC_HOP_FLASH_FRAMES) : 1;
-  if (item.hopFlash > 0) item.hopFlash -= 1;
+    // Per-leg jitter: the base seed keeps the leg's crackle stable across
+    // frames at a given flicker tick, and the salt keeps each leg's wobble
+    // independent of the others.
+    let seed = (Math.floor(time * ARC_FLICKER_HZ) * 2654435761 + seedSalt * 40503) >>> 0;
+    if (seed === 0) seed = 0x9e3779b9;
+    const rand = (): number => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
 
-  const vertexCount = ARC_MAIN_SEGMENTS + 1;
-  const vx = new Array<number>(vertexCount);
-  const vy = new Array<number>(vertexCount);
-  const vz = new Array<number>(vertexCount);
-  for (let i = 0; i < vertexCount; i += 1) {
-    const t = i / ARC_MAIN_SEGMENTS;
-    // The wobble tapers to zero at both ends, so the channel stays anchored
-    // to its source and head no matter how it crackles.
-    const taper = Math.sin(t * Math.PI);
-    const wobble = ARC_WOBBLE * taper * flash;
-    const ox = (rand() - 0.5) * 2 * wobble;
-    const oy = (rand() - 0.5) * 2 * wobble * 0.45;
-    const oz = (rand() - 0.5) * 2 * wobble;
-    vx[i] = sourceX + dx * t + px * ox + qx * oz;
-    vy[i] = sourceY + dy * t + py * oy + qy * oz + (i === 0 ? ARC_TAIL_LIFT : 0);
-    vz[i] = sourceZ + dz * t + pz * ox + qz * oz;
-  }
-  // The head is snapped exactly onto the bolt head so the strike point is
-  // always the channel's tip.
-  vx[vertexCount - 1] = headX;
-  vy[vertexCount - 1] = headY;
-  vz[vertexCount - 1] = headZ;
+    const vertexCount = ARC_LEG_SEGMENTS + 1;
+    const vx = new Array<number>(vertexCount);
+    const vy = new Array<number>(vertexCount);
+    const vz = new Array<number>(vertexCount);
+    for (let i = 0; i < vertexCount; i += 1) {
+      const t = i / ARC_LEG_SEGMENTS;
+      // The wobble tapers to zero at both ends, so the leg stays anchored to
+      // its struck enemies no matter how it crackles.
+      const taper = Math.sin(t * Math.PI);
+      const wobble = ARC_WOBBLE * taper * flash;
+      const ox = (rand() - 0.5) * 2 * wobble;
+      const oy = (rand() - 0.5) * 2 * wobble * 0.45;
+      const oz = (rand() - 0.5) * 2 * wobble;
+      vx[i] = leg.startX + dx * t + px * ox + qx * oz;
+      vy[i] = leg.startY + dy * t + py * oy + qy * oz + (i === 0 ? ARC_TAIL_LIFT : 0);
+      vz[i] = leg.startZ + dz * t + pz * ox + qz * oz;
+    }
+    // The leg's end is snapped exactly (the struck enemy, or the bolt head),
+    // so the strike point is always the channel's tip.
+    vx[vertexCount - 1] = endX;
+    vy[vertexCount - 1] = endY;
+    vz[vertexCount - 1] = endZ;
 
-  for (let i = 0; i < ARC_MAIN_SEGMENTS; i += 1) {
-    const seg = item.core[i];
-    seg.x1 = vx[i]; seg.y1 = vy[i]; seg.z1 = vz[i];
-    seg.x2 = vx[i + 1]; seg.y2 = vy[i + 1]; seg.z2 = vz[i + 1];
-    const g = item.glow[i];
-    g.x1 = seg.x1; g.y1 = seg.y1; g.z1 = seg.z1;
-    g.x2 = seg.x2; g.y2 = seg.y2; g.z2 = seg.z2;
-  }
-
-  // Side branches: peel off random main vertices and step outward along a
-  // mostly-perpendicular (and slightly upward) direction that re-jitters per
-  // frame, so the little forks flicker like real lightning.
-  const branchStart = ARC_MAIN_SEGMENTS;
-  for (let b = 0; b < ARC_BRANCH_COUNT; b += 1) {
-    const base = 1 + Math.floor(rand() * (ARC_MAIN_SEGMENTS - 1));
-    let bdx =
-      px * (rand() - 0.5) * 2 + qx * (rand() - 0.5) * 2 + dirX * 0.1;
-    let bdy =
-      py * (rand() - 0.5) * 2 + qy * (rand() - 0.5) * 2 + ARC_BRANCH_UPLIFT;
-    let bdz =
-      pz * (rand() - 0.5) * 2 + qz * (rand() - 0.5) * 2 + dirZ * 0.1;
-    const bLen = Math.hypot(bdx, bdy, bdz) || 1;
-    bdx /= bLen; bdy /= bLen; bdz /= bLen;
-    const stepLen =
-      (ARC_BRANCH_STEP_MIN +
-        rand() * (ARC_BRANCH_STEP_MAX - ARC_BRANCH_STEP_MIN)) *
-      flash;
-    let bx = vx[base];
-    let by = vy[base];
-    let bz = vz[base];
-    for (let s = 0; s < ARC_BRANCH_SEGMENTS; s += 1) {
-      const idx = branchStart + b * ARC_BRANCH_SEGMENTS + s;
-      const nx = bx + bdx * stepLen * (1 - s * 0.15);
-      const ny = by + bdy * stepLen * (1 - s * 0.15);
-      const nz = bz + bdz * stepLen * (1 - s * 0.15);
-      const seg = item.core[idx];
-      seg.x1 = bx; seg.y1 = by; seg.z1 = bz;
-      seg.x2 = nx; seg.y2 = ny; seg.z2 = nz;
-      const g = item.glow[idx];
+    for (let i = 0; i < ARC_LEG_SEGMENTS; i += 1) {
+      const seg = item.core[mainSegOffset + i];
+      seg.x1 = vx[i]; seg.y1 = vy[i]; seg.z1 = vz[i];
+      seg.x2 = vx[i + 1]; seg.y2 = vy[i + 1]; seg.z2 = vz[i + 1];
+      const g = item.glow[mainSegOffset + i];
       g.x1 = seg.x1; g.y1 = seg.y1; g.z1 = seg.z1;
       g.x2 = seg.x2; g.y2 = seg.y2; g.z2 = seg.z2;
-      bx = nx; by = ny; bz = nz;
+    }
+    mainSegOffset += ARC_LEG_SEGMENTS;
+
+    // One side branch: peel off a mid-leg vertex and step outward along a
+    // mostly-perpendicular (and slightly upward) direction that re-jitters
+    // per frame, so the little forks flicker like real lightning.
+    if (branchSlot < ARC_BRANCH_COUNT) {
+      const base = 2 + Math.floor(rand() * (ARC_LEG_SEGMENTS - 3));
+      let bdx =
+        px * (rand() - 0.5) * 2 + qx * (rand() - 0.5) * 2 + dirX * 0.1;
+      let bdy =
+        py * (rand() - 0.5) * 2 + qy * (rand() - 0.5) * 2 + ARC_BRANCH_UPLIFT;
+      let bdz =
+        pz * (rand() - 0.5) * 2 + qz * (rand() - 0.5) * 2 + dirZ * 0.1;
+      const bLen = Math.hypot(bdx, bdy, bdz) || 1;
+      bdx /= bLen; bdy /= bLen; bdz /= bLen;
+      const stepLen =
+        ARC_BRANCH_STEP_MIN +
+        rand() * (ARC_BRANCH_STEP_MAX - ARC_BRANCH_STEP_MIN);
+      let bx = vx[base];
+      let by = vy[base];
+      let bz = vz[base];
+      const branchBase = ARC_MAIN_SEGMENTS + branchSlot * ARC_BRANCH_SEGMENTS;
+      for (let s = 0; s < ARC_BRANCH_SEGMENTS; s += 1) {
+        const nx = bx + bdx * stepLen * (1 - s * 0.15);
+        const ny = by + bdy * stepLen * (1 - s * 0.15);
+        const nz = bz + bdz * stepLen * (1 - s * 0.15);
+        const seg = item.core[branchBase + s];
+        seg.x1 = bx; seg.y1 = by; seg.z1 = bz;
+        seg.x2 = nx; seg.y2 = ny; seg.z2 = nz;
+        const g = item.glow[branchBase + s];
+        g.x1 = seg.x1; g.y1 = seg.y1; g.z1 = seg.z1;
+        g.x2 = seg.x2; g.y2 = seg.y2; g.z2 = seg.z2;
+        bx = nx; by = ny; bz = nz;
+      }
+      branchSlot += 1;
+    }
+  };
+
+  for (let i = 0; i < item.legCount; i += 1) {
+    const leg = item.legs[i];
+    if (i < item.legIndex) {
+      // Completed legs run their full length, to the enemy they struck.
+      writeLeg(leg, leg.endX, leg.endY, leg.endZ, i * 131 + 7);
+    } else {
+      // The active leg grows from its start to the bolt's live head.
+      writeLeg(leg, headX, headY, headZ, i * 131 + 7);
     }
   }
 };
 
 /**
  * Pushes an arc's segments into the LineSegmentsGeometries' instance buffers
- * (positions and per-segment colors), marking them for upload. Colors run
- * from the dimmer source color at the tail to the full bolt color at the
- * head, so the channel reads as a hot tip trailing a faded root.
+ * (positions and per-segment colors), marking them for upload. Each leg
+ * fades from a dim root (the struck enemy) to the full bolt color at its end
+ * (the next enemy / head), so the chain reads as a string of bright strike
+ * points; side branches are the dimmest.
  */
 const syncArcBuffers = (
   item: ChainArcPoolItem,
@@ -611,11 +660,15 @@ const syncArcBuffers = (
     // half to its own 3 slots (the shared buffer, not two separate arrays).
     const posArr = start.array as Float32Array;
     const colArr = cStart.array as Float32Array;
-    const tailDim = 0.35;
+    const legRootDim = 0.45;
+    const branchDim = 0.3;
     for (let i = 0; i < segments.length; i += 1) {
       const seg = segments[i];
-      const t = (i + 1) / ARC_TOTAL_SEGMENTS;
-      const mix = tailDim + (1 - tailDim) * t;
+      const isBranch = i >= ARC_MAIN_SEGMENTS;
+      const mix = isBranch
+        ? branchDim
+        : legRootDim +
+          (1 - legRootDim) * ((i % ARC_LEG_SEGMENTS) + 1) / ARC_LEG_SEGMENTS;
       const r = item.color.r * mix;
       const g = item.color.g * mix;
       const b = item.color.b * mix;
@@ -643,12 +696,15 @@ const syncArcBuffers = (
 };
 
 /**
- * Per-frame arc update: re-roll the jittered endpoints from the stored
- * tail/head pose and upload them into the geometry buffers.
+ * Per-frame arc update: re-roll the jittered endpoints for every leg up to the
+ * bolt's live head and upload them into the geometry buffers.
  */
 const updateChainArc = (
   pool: ChainArcPool | null,
   index: number,
+  headX: number,
+  headY: number,
+  headZ: number,
   time: number,
   reducedMotion: boolean
 ): void => {
@@ -658,7 +714,7 @@ const updateChainArc = (
   // projectile's body, not decoration), but the per-frame jitter is held to a
   // fixed, per-arc seed so the bolt reads as a still line instead of crackling.
   const jitterTime = reducedMotion ? index * 7.13 + 1.7 : time;
-  writeArcSegments(item, jitterTime);
+  writeArcSegments(item, headX, headY, headZ, jitterTime, 1);
   syncArcBuffers(
     item,
     pool.coreGeometries[index],
@@ -666,8 +722,13 @@ const updateChainArc = (
   );
 };
 
-/** Re-anchor the arc's tail on a chain hop and flag the flick. */
-const reanchorChainArcTail = (
+/**
+ * Extend the chain by one leg: the new leg starts where the bolt sits (the
+ * enemy just struck) and will run to the next target. Capped at the pool's
+ * leg budget; a chain longer than the budget simply stops adding legs (the
+ * last struck enemy stays the channel's end).
+ */
+const advanceChainArcLeg = (
   pool: ChainArcPool | null,
   index: number,
   x: number,
@@ -676,25 +737,85 @@ const reanchorChainArcTail = (
 ): void => {
   if (!pool || index < 0 || !pool.used.has(index)) return;
   const item = pool.items[index];
-  item.sourceX = x;
-  item.sourceY = y;
-  item.sourceZ = z;
-  item.hopFlash = ARC_HOP_FLASH_FRAMES;
+  if (item.legCount >= ARC_MAX_LEGS) return;
+  const leg = item.legs[item.legCount];
+  leg.startX = x;
+  leg.startY = y;
+  leg.startZ = z;
+  leg.endX = x;
+  leg.endY = y;
+  leg.endZ = z;
+  leg.completed = false;
+  item.legCount += 1;
+  item.legIndex = item.legCount - 1;
+};
+
+/** Final flash: the head reached the last enemy; the whole channel brightens. */
+const beginArcFinalFlash = (
+  pool: ChainArcPool | null,
+  index: number
+): void => {
+  if (!pool || index < 0 || !pool.used.has(index)) return;
+  const item = pool.items[index];
+  item.finalFlash = ARC_FINAL_FLASH_FRAMES;
+};
+
+/**
+ * Per-frame arc update used while the bolt is held at its final strike (the
+ * end flash): the whole channel is written with a decaying brightness boost.
+ * The head is passed explicitly (the final struck enemy's world position)
+ * because the active leg's stored `end` still points at its start — the leg
+ * only ever grows toward a *live* head while propagating.
+ */
+const updateChainArcFinalFlash = (
+  pool: ChainArcPool | null,
+  index: number,
+  headX: number,
+  headY: number,
+  headZ: number,
+  time: number,
+  reducedMotion: boolean
+): void => {
+  if (!pool || index < 0 || !pool.used.has(index)) return;
+  const item = pool.items[index];
+  const flash =
+    1 + 1.2 * (item.finalFlash / ARC_FINAL_FLASH_FRAMES);
+  if (item.finalFlash > 0) item.finalFlash -= 1;
+  const jitterTime = reducedMotion ? index * 7.13 + 1.7 : time;
+  writeArcSegments(item, headX, headY, headZ, jitterTime, flash);
+  syncArcBuffers(
+    item,
+    pool.coreGeometries[index],
+    pool.glowGeometries[index]
+  );
+};
+
+/**
+ * Pose for the end flash: the carried light is parked on the final struck
+ * enemy (no travel direction — it just glows there).
+ */
+const applyChainBoltFinalPose = (
+  projectile: PooledProjectile,
+  ctx: NonBeamStepContext,
+  x: number,
+  y: number,
+  z: number
+): void => {
+  ctx.lightPool?.setLightPose(
+    projectile.lightIndex,
+    x,
+    y,
+    z,
+    tempDirection.set(0, 0, 0)
+  );
 };
 
 const applyChainBoltPose = (
   projectile: PooledProjectile,
   ctx: NonBeamStepContext
 ): void => {
-  const item =
-    projectile.arcIndex >= 0 && ctx.arcPool
-      ? ctx.arcPool.items[projectile.arcIndex]
-      : null;
-  if (item) {
-    item.headX = projectile.currentX;
-    item.headY = projectile.currentY;
-    item.headZ = projectile.currentZ;
-  }
+  // The arc's head is the bolt's live world position, read directly from the
+  // projectile by `updateChainArc` on every step — no stored head to mirror.
   const speed = Math.hypot(
     projectile.velocityX,
     projectile.velocityY,
@@ -745,6 +866,16 @@ type PooledProjectile = Projectile & {
    * settled exactly once instead of being lost to overshoot or cleanup.
    */
   pendingHit: boolean;
+  /**
+   * Chain bolts only: set when the head reaches the last enemy in the chain —
+   * the bolt stops, the whole channel holds a short bright end flash, and it
+   * is removed when the flash plays out (damage is already settled, so the
+   * flash is pure visual).
+   */
+  finalFlash: boolean;
+  /** Frames the end flash has already played (drives the flash for headless
+   *  bolts, which have no arc slot to read the flash state from). */
+  finalFlashAge: number;
   /** Remaining chain hops (primary target is separate); only used for chain bolts. */
   chainQueue?: ChainAdditionalHit[];
   /**
@@ -835,9 +966,10 @@ const tryContinueChainBoltAfterHit = (
     scratchNextWorld.y,
     scratchNextWorld.z
   );
-  // The bolt now rides the next enemy: re-anchor the arc's tail on the enemy
-  // just struck so the channel visibly re-jumps, and pose the carried light.
-  reanchorChainArcTail(
+  // The bolt now rides the next enemy: extend the chain with a new leg that
+  // starts on the enemy just struck, so the channel visibly propagates from
+  // one enemy to the next.
+  advanceChainArcLeg(
     ctx.arcPool,
     projectile.arcIndex,
     projectile.currentX,
@@ -845,15 +977,6 @@ const tryContinueChainBoltAfterHit = (
     projectile.currentZ
   );
   applyChainBoltPose(projectile, ctx);
-  // Re-roll the channel on this same frame so the hop reads as an instant
-  // re-jump (tail and head meet on the struck enemy, then the flick carries
-  // the new channel to the next target).
-  updateChainArc(
-    ctx.arcPool,
-    projectile.arcIndex,
-    ctx.currentTime,
-    ctx.reducedMotion
-  );
   return true;
 };
 
@@ -949,6 +1072,10 @@ const stepChainBoltHoming = (
     hitThreshold,
     toRemove,
   } = ctx;
+
+  // The head reached the last enemy in the chain: no more travel — the bolt
+  // holds its end flash (handled by the caller) until it is removed.
+  if (projectile.finalFlash) return;
 
   const targetEnemy = enemiesById.get(projectile.targetId);
   if (!targetEnemy || targetEnemy.health <= 0) {
@@ -1050,7 +1177,64 @@ const stepNonBeamProjectile = (
       return;
     }
 
+    if (projectile.visualPool === "bolt") {
+      // Final strike settled while paused: hold the end flash (same as the
+      // live path) before the bolt vanishes.
+      beginArcFinalFlash(ctx.arcPool, projectile.arcIndex);
+      applyChainBoltFinalPose(projectile, ctx, projectile.currentX, projectile.currentY, projectile.currentZ);
+      updateChainArcFinalFlash(ctx.arcPool, projectile.arcIndex, projectile.currentX, projectile.currentY, projectile.currentZ, ctx.currentTime, ctx.reducedMotion);
+      projectile.pendingHit = false;
+      projectile.finalFlash = true;
+      return;
+    }
+
     toRemove.push(projectile.id);
+    return;
+  }
+
+  // Chain bolts whose head reached the last enemy in the chain: held at the
+  // final strike — no movement, no range expiry — the whole channel holds its
+  // end flash and the bolt vanishes when the flash plays out (damage is
+  // already settled, so the flash is pure visual).
+  if (projectile.visualPool === "bolt" && projectile.finalFlash) {
+    projectile.finalFlashAge += 1;
+    const finalTarget = enemiesById.get(projectile.targetId);
+    if (!finalTarget || finalTarget.health <= 0) {
+      toRemove.push(projectile.id);
+      return;
+    }
+    const finalGridSize = useLevelStore.getState().gridSize;
+    const finalPathWaypoints = useLevelStore.getState().pathWaypoints;
+    const { tileSize: finalTileSize } = useGameStore.getState();
+    const finalPlanetRadius = getPlanetRadius(finalGridSize, finalTileSize);
+    const finalPath = getPositionAlongMultiplePaths(
+      finalPathWaypoints,
+      finalTarget.pathIndex,
+      finalTarget.pathProgress
+    );
+    flatCombatPointToWorldPosition(
+      finalTarget.x,
+      finalTarget.z,
+      finalPath.y + finalTarget.size,
+      finalPlanetRadius,
+      scratchTargetWorld
+    );
+    updateChainArcFinalFlash(
+      ctx.arcPool,
+      projectile.arcIndex,
+      scratchTargetWorld.x,
+      scratchTargetWorld.y,
+      scratchTargetWorld.z,
+      ctx.currentTime,
+      ctx.reducedMotion
+    );
+    const item =
+      ctx.arcPool && projectile.arcIndex >= 0
+        ? ctx.arcPool.items[projectile.arcIndex]
+        : null;
+    if (!item || item.finalFlash <= 0 || projectile.finalFlashAge > ARC_FINAL_FLASH_FRAMES) {
+      toRemove.push(projectile.id);
+    }
     return;
   }
 
@@ -1061,11 +1245,15 @@ const stepNonBeamProjectile = (
     // target's live world position every frame and keeps a CHAIN_LAG gap.
     stepChainBoltHoming(projectile, ctx);
 
-    // Crack the arc channel: re-roll the jittered endpoints from the bolt's
-    // fresh head pose (the tail is the muzzle, or the last struck enemy).
+    // Crack the arc channel: re-roll the jittered legs from the muzzle to the
+    // bolt's fresh head (the chain of struck enemies is kept as completed
+    // legs, the active leg grows behind the head).
     updateChainArc(
       ctx.arcPool,
       projectile.arcIndex,
+      projectile.currentX,
+      projectile.currentY,
+      projectile.currentZ,
       ctx.currentTime,
       ctx.reducedMotion
     );
@@ -1110,7 +1298,27 @@ const stepNonBeamProjectile = (
         return;
       }
 
-      toRemove.push(projectile.id);
+      // The head reached the last enemy in the chain: settle the end flash —
+      // the whole channel brightens, the light parks on the final enemy, and
+      // the bolt vanishes when the flash plays out.
+      beginArcFinalFlash(ctx.arcPool, projectile.arcIndex);
+      applyChainBoltFinalPose(
+        projectile,
+        ctx,
+        projectile.currentX,
+        projectile.currentY,
+        projectile.currentZ
+      );
+      updateChainArcFinalFlash(
+        ctx.arcPool,
+        projectile.arcIndex,
+        scratchTargetWorld.x,
+        scratchTargetWorld.y,
+        scratchTargetWorld.z,
+        ctx.currentTime,
+        ctx.reducedMotion
+      );
+      projectile.finalFlash = true;
       return;
     }
 
@@ -1700,6 +1908,8 @@ export const useInstancedProjectiles = (
         beamElapsedTime: 0,
         beamProcessed: false,
         pendingHit: false,
+        finalFlash: false,
+        finalFlashAge: 0,
         chainQueue:
           visualPool === "bolt"
             ? [...(params.chainAdditionalHits ?? [])]
@@ -1723,16 +1933,20 @@ export const useInstancedProjectiles = (
 
         pool?.setTransform(index, tempPosition, tempQuaternion, tempScale);
       } else if (visualPool === "bolt") {
-        // The arc channel starts at the muzzle; the head is the bolt itself.
+        // The arc channel starts as a single leg from the muzzle; the head is
+        // the bolt itself, and each struck enemy extends the chain by one
+        // more leg (the channel visibly propagates enemy to enemy).
         if (arcIndex >= 0) {
           const item = chainArcPool.items[arcIndex];
-          item.sourceX = params.startX;
-          item.sourceY = params.startY;
-          item.sourceZ = params.startZ;
-          item.headX = params.startX;
-          item.headY = params.startY;
-          item.headZ = params.startZ;
-          item.hopFlash = ARC_HOP_FLASH_FRAMES;
+          const leg = item.legs[0];
+          leg.startX = params.startX;
+          leg.startY = params.startY;
+          leg.startZ = params.startZ;
+          leg.endX = params.startX;
+          leg.endY = params.startY;
+          leg.endZ = params.startZ;
+          item.legCount = 1;
+          item.legIndex = 0;
         }
         const speed0 = Math.hypot(velocityX, velocityY, velocityZ);
         if (speed0 > 1e-6) {

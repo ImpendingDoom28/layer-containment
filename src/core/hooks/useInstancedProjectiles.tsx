@@ -44,9 +44,9 @@ import { refreshEnemyRegistry } from "../ecs/selectors/enemySnapshots";
 // enemy) to the bolt's head. The channel's jitter is re-rolled every
 // simulation frame, so the lightning crackles and re-jumps as it creeps, and
 // each chain hop re-anchors the tail on the struck enemy, reading as a jump.
-const ARC_MAIN_SEGMENTS = 18;
-const ARC_BRANCH_COUNT = 4;
-const ARC_BRANCH_SEGMENTS = 4;
+const ARC_MAIN_SEGMENTS = 14;
+const ARC_BRANCH_COUNT = 2;
+const ARC_BRANCH_SEGMENTS = 3;
 const ARC_TOTAL_SEGMENTS =
   ARC_MAIN_SEGMENTS + ARC_BRANCH_COUNT * ARC_BRANCH_SEGMENTS;
 // The fixed arc pool is sized for a heavy chain volley: each in-flight bolt
@@ -303,20 +303,20 @@ type ChainArcPool = {
   releaseAll: () => void;
 };
 
-const ARC_CORE_WIDTH = 0.055;
-const ARC_GLOW_WIDTH = 0.18;
+const ARC_CORE_WIDTH = 0.05;
+const ARC_GLOW_WIDTH = 0.13;
 const ARC_CORE_OPACITY = 0.95;
-const ARC_GLOW_OPACITY = 0.26;
+const ARC_GLOW_OPACITY = 0.22;
 // How often (in sim frames) the channel's jitter is re-rolled: high enough to
 // read as live crackle, low enough that it is not pure noise at 60 fps.
 const ARC_FLICKER_HZ = 24;
 // The main channel's wobble amplitude (world units) around its straight
 // centerline, scaled down toward the channel's ends.
-const ARC_WOBBLE = 0.16;
+const ARC_WOBBLE = 0.09;
 const ARC_TAIL_LIFT = 0.04;
-const ARC_BRANCH_STEP_MIN = 0.1;
-const ARC_BRANCH_STEP_MAX = 0.24;
-const ARC_BRANCH_UPLIFT = 0.3;
+const ARC_BRANCH_STEP_MIN = 0.07;
+const ARC_BRANCH_STEP_MAX = 0.16;
+const ARC_BRANCH_UPLIFT = 0.18;
 const ARC_HOP_FLASH_FRAMES = 6;
 
 const createChainArcPool = (

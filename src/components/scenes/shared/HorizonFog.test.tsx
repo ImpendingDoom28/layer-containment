@@ -39,9 +39,10 @@ describe("HorizonFog", () => {
     try {
       const fog = (renderer.scene.instance as Scene).fog as Fog;
       expect(fog.isFog).toBe(true);
-      // Tuned so the board stays clear while the planet's far rim melts out.
-      expect(fog.near).toBe(15);
-      expect(fog.far).toBe(60);
+      // Tuned so the fog reads as a haze from the default gameplay view while
+      // the planet's far rim melts into the sky.
+      expect(fog.near).toBe(6);
+      expect(fog.far).toBe(40);
       // The fog melts the planet into the same near-black the sky already is.
       expect(fog.color.getStyle()).toBe(new Color("#0a0a0f").getStyle());
     } finally {

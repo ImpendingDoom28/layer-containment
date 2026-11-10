@@ -14,8 +14,8 @@ import {
   MeshBasicMaterial,
   MeshStandardMaterial,
   Quaternion,
+  IcosahedronGeometry,
   RingGeometry,
-  TetrahedronGeometry,
   type Group,
   type Mesh,
 } from "three";
@@ -38,22 +38,30 @@ const RING_OPACITY = 0.25;
 // The ring's inner edge as a fraction of its outer radius (matches the shared
 // thin-band geometry): the band sits just outside the base, never under it.
 const RING_INNER_FRACTION = 0.92;
-// The outward shards: count, how far they travel from their spawn edge, how
-// high they rise, and their size range. They spawn just outside the tower's
-// base radius (never on the model), so the dust reads as ground being kicked
-// up around the impact rather than through the tower.
+// The outward shards: how many pop out of each burst. Their motion is
+// randomized per burst (direction, travel distance, rise, spin, size, tint) so
+// no two placements look alike — a fixed, symmetric scatter reads as a
+// predictable spray. They spawn just outside the tower's base radius (never
+// on the model), so the dust reads as ground being kicked up around the
+// impact rather than through the tower.
 const SHARD_COUNT = 9;
-const SHARD_TRAVEL = 0.45;
-const SHARD_RISE = 0.14;
+// The travel distance of a shard, randomized between these bounds (world
+// units from its spawn edge).
+const SHARD_TRAVEL_MIN = 0.28;
+const SHARD_TRAVEL_MAX = 0.62;
+// How high a shard rises, randomized between these bounds.
+const SHARD_RISE_MIN = 0.06;
+const SHARD_RISE_MAX = 0.16;
+// A shard's radius, randomized between these bounds.
 const SHARD_SIZE_MIN = 0.04;
 const SHARD_SIZE_MAX = 0.09;
 // How far outside the base the shards spawn: a visible gap so the dust kicks
 // up around the impact without covering the tower.
 const SHARD_START_OFFSET = 0.25;
-// How fast each shard tumbles (radians per second of burst), varied per shard
-// so the debris never looks identical or spinning in sync.
-const SHARD_SPIN_BASE = 5;
-const SHARD_SPIN_SPREAD = 5;
+// How fast each shard tumbles (radians per second of burst), randomized per
+// shard so the debris never looks identical or spinning in sync.
+const SHARD_SPIN_MIN = 2.5;
+const SHARD_SPIN_MAX = 7.5;
 // The shards are tinted around the dust colour with this amount of
 // lightness variation (a darker and a lighter tone) so each reads as a
 // separate piece of ground, not one flat grey smear.
@@ -66,11 +74,12 @@ const SHARD_TINT_JITTER = 0.16;
 // to its final radius, reusing the same buffers.
 const sharedRingGeometry = new RingGeometry(0.92, 1, 32);
 
-// One shared low-poly shard geometry (a faceted tetrahedron) for every dust
-// shard. Flat shading (set per material) gives each face a hard edge, so the
-// scene lights catch the facets and read as chunks of ground rather than one
-// smooth blob. The per-shard non-uniform scale makes the chunks irregular.
-const sharedShardGeometry = new TetrahedronGeometry(1);
+// One shared low-poly shard geometry (a geodesic sphere) for every dust
+// shard: the "orthodox" pebble/rock shape. Flat shading (set per material)
+// gives each face a hard edge, so the scene lights catch the facets and the
+// chunks read as little stones kicked up by the impact rather than smooth
+// blobs or jagged shards.
+const sharedShardGeometry = new IcosahedronGeometry(1, 0);
 
 // The dust uses two material programs no other scene object compiles (a
 // flat-shaded, transparent MeshStandardMaterial for the shards and an
@@ -133,11 +142,17 @@ export const DustBurstPrewarm: FC = () => (
 
 DustBurstPrewarm.displayName = "DustBurstPrewarm";
 
-// Deterministic per-shard variation (angle, rise, size, spin, tint) so every
-// burst looks the same on every frame without per-frame random draws —
-// Math.random would re-roll the values every render and pop the debris.
+// A random value in [min, max).
+const rand = (min: number, max: number): number =>
+  min + Math.random() * (max - min);
+
+// Per-burst randomized shard variation (direction, travel, rise, size, spin,
+// tint) so no two placements look alike. This runs once per burst mount (the
+// component's useMemo is keyed on the stable colour), so the random roll is
+// taken exactly once per placement — never re-rolled per frame.
 type ShardSeed = {
   angle: number;
+  travel: number;
   rise: number;
   scale: number;
   spin: number;
@@ -149,18 +164,18 @@ const makeShardSeeds = (color: string): ShardSeed[] => {
   const base = new Color(color);
   const seeds: ShardSeed[] = [];
   for (let i = 0; i < SHARD_COUNT; i++) {
-    const t = i / SHARD_COUNT;
     // A signed lightness offset (±SHARD_TINT_JITTER) so the shards vary
     // between a darker and a lighter tone of the dust colour.
-    const tintJitter = SHARD_TINT_JITTER * ((((i * 37) % 10) / 10) - 0.5) * 2;
+    const tintJitter = SHARD_TINT_JITTER * (Math.random() - 0.5) * 2;
     seeds.push({
-      // Evenly spaced around the base with a per-shard angular offset so the
-      // debris scatters instead of reading as a ring of points.
-      angle: t * Math.PI * 2 + ((i * 13) % 7) * 0.13,
-      rise: 0.5 + 0.5 * (((i * 53) % 10) / 10),
-      scale: SHARD_SIZE_MIN + (SHARD_SIZE_MAX - SHARD_SIZE_MIN) * (((i * 29) % 10) / 10),
-      spin: SHARD_SPIN_BASE + SHARD_SPIN_SPREAD * (((i * 41) % 10) / 10),
-      phase: (i * 0.7) % (Math.PI * 2),
+      // A random direction around the base, so the debris scatters in all
+      // directions rather than an even ring of points.
+      angle: rand(0, Math.PI * 2),
+      travel: rand(SHARD_TRAVEL_MIN, SHARD_TRAVEL_MAX),
+      rise: rand(SHARD_RISE_MIN, SHARD_RISE_MAX),
+      scale: rand(SHARD_SIZE_MIN, SHARD_SIZE_MAX),
+      spin: rand(SHARD_SPIN_MIN, SHARD_SPIN_MAX),
+      phase: rand(0, Math.PI * 2),
       tint: base.clone().offsetHSL(0, 0, tintJitter),
     });
   }
@@ -302,12 +317,14 @@ export const DustBurstFX: FC<DustBurstFXProps> = memo(
           if (!shard) return;
           const seed = seeds[index];
           // Shards spawn a clear gap outside the base radius, so they never
-          // cover the model, and travel outward from there.
-          const radius = baseRadius + SHARD_START_OFFSET + ease * SHARD_TRAVEL;
+          // cover the model, and travel outward from there — each with its own
+          // random direction and distance, so no two bursts spray alike.
+          const radius =
+            baseRadius + SHARD_START_OFFSET + ease * seed.travel;
           shard.visible = true;
           shard.position.set(
             Math.cos(seed.angle) * radius,
-            ease * SHARD_RISE * seed.rise,
+            ease * seed.rise,
             Math.sin(seed.angle) * radius
           );
           // Tumble as the debris tumbles (a per-shard spin, phase-seeded).

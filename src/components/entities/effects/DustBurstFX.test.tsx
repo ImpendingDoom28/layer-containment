@@ -199,8 +199,8 @@ describe("DustBurstFX", () => {
 
       const BASE_RADIUS = 0.3; // the default `baseRadius`
       const RING_INNER_FRACTION = 0.92; // matches the shared thin-band ring
-      // The largest shard's bounding radius (the tetrahedron's circumscribed
-      // sphere radius, 1, scaled to the shard's max size and grown by the kick).
+      // The largest shard's bounding radius (the geodesic sphere's radius, 1,
+      // scaled to the shard's max size and grown by the kick).
       const SHARD_MAX_RADIUS = 0.09 * (0.5 + 0.8) * 1.3;
 
       // Sample the whole burst (from impact through completion) and verify the

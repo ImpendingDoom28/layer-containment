@@ -195,6 +195,7 @@ export const useLevelSystem = () => {
       gameEvents.emit(GameEvent.TOWER_SOLD, {
         towerId,
         towerType: tower.type,
+        sellPrice,
         worldPosition: {
           x: tower.x,
           y: emitterY,

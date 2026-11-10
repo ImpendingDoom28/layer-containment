@@ -294,8 +294,8 @@ type ChainArcPoolItem = {
  */
 type ChainArcPool = {
   items: ChainArcPoolItem[];
-  coreGeometries: (THREE.InstancedBufferGeometry | null)[];
-  glowGeometries: (THREE.InstancedBufferGeometry | null)[];
+  coreGeometries: LineSegmentsGeometry[];
+  glowGeometries: LineSegmentsGeometry[];
   free: number[];
   used: Set<number>;
   acquire: (color: string) => number;
@@ -324,10 +324,15 @@ const createChainArcPool = (
   defaultColor: string
 ): ChainArcPool => {
   const emptyGeometry = (segments: number): LineSegmentsGeometry => {
-    const zeros = new Float32Array(segments * 6);
+    // `setPositions`/`setColors` wrap a passed Float32Array without copying,
+    // so the two must be distinct arrays — otherwise the position and color
+    // buffers are the same memory and every color write clobbers the
+    // endpoints (the whole arc collapses to a point near the origin).
+    const positions = new Float32Array(segments * 6);
+    const colors = new Float32Array(segments * 6);
     const geometry = new LineSegmentsGeometry();
-    geometry.setPositions(zeros);
-    geometry.setColors(zeros);
+    geometry.setPositions(positions);
+    geometry.setColors(colors);
     // The arcs wander everywhere on the board, so keep them out of the
     // frustum culling entirely.
     geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e5);
@@ -361,11 +366,22 @@ const createChainArcPool = (
   });
   // LineMaterial samples the world space, so no resolution uniform is needed.
   // (worldUnits: true is the default; set explicitly for clarity.)
-  const coreGeometry = emptyGeometry(ARC_TOTAL_SEGMENTS);
-  const glowGeometry = emptyGeometry(ARC_TOTAL_SEGMENTS);
+  // Each arc owns its own core + glow geometry (a pair of small
+  // instanced-interleaved buffers). They cannot be shared: `LineSegments2`
+  // draws every instance of a geometry, so a shared geometry would render all
+  // arcs as the same 34 segments (whichever was written last) and a fresh,
+  // still-zero-length arc would collapse the whole shared line to nothing —
+  // while the independent `PointLight` kept following. Per-arc geometries also
+  // carry each arc's own per-vertex color.
+  const coreGeometries: LineSegmentsGeometry[] = [];
+  const glowGeometries: LineSegmentsGeometry[] = [];
 
   const items: ChainArcPoolItem[] = [];
   for (let i = 0; i < size; i += 1) {
+    const coreGeometry = emptyGeometry(ARC_TOTAL_SEGMENTS);
+    const glowGeometry = emptyGeometry(ARC_TOTAL_SEGMENTS);
+    coreGeometries.push(coreGeometry);
+    glowGeometries.push(glowGeometry);
     const root = new THREE.Object3D();
     root.position.set(0, -10000, 0);
     root.scale.set(0, 0, 0);
@@ -407,8 +423,8 @@ const createChainArcPool = (
 
   return {
     items,
-    coreGeometries: [coreGeometry],
-    glowGeometries: [glowGeometry],
+    coreGeometries,
+    glowGeometries,
     free,
     used,
     acquire: (color) => {
@@ -589,10 +605,12 @@ const syncArcBuffers = (
       | THREE.InterleavedBufferAttribute
       | undefined;
     if (!start || !end || !cStart || !cEnd) return;
-    const startArr = start.array as Float32Array;
-    const endArr = end.array as Float32Array;
-    const cStartArr = cStart.array as Float32Array;
-    const cEndArr = cEnd.array as Float32Array;
+    // instanceStart (offset 0) and instanceEnd (offset 3) share one
+    // stride-6 interleaved buffer, so the per-segment layout is
+    // [startX, startY, startZ, endX, endY, endZ] in a single array. Write each
+    // half to its own 3 slots (the shared buffer, not two separate arrays).
+    const posArr = start.array as Float32Array;
+    const colArr = cStart.array as Float32Array;
     const tailDim = 0.35;
     for (let i = 0; i < segments.length; i += 1) {
       const seg = segments[i];
@@ -602,21 +620,18 @@ const syncArcBuffers = (
       const g = item.color.g * mix;
       const b = item.color.b * mix;
       const bo = 6 * i;
-      startArr[bo] = seg.x1;
-      startArr[bo + 1] = seg.y1;
-      startArr[bo + 2] = seg.z1;
-      endArr[bo] = seg.x2;
-      endArr[bo + 1] = seg.y2;
-      endArr[bo + 2] = seg.z2;
-      cStartArr[bo] = r;
-      cStartArr[bo + 1] = g;
-      cStartArr[bo + 2] = b;
-      cEndArr[bo] = r;
-      cEndArr[bo + 1] = g;
-      cEndArr[bo + 2] = b;
-      cStartArr[bo + 3] = r;
-      cStartArr[bo + 4] = g;
-      cStartArr[bo + 5] = b;
+      posArr[bo] = seg.x1;
+      posArr[bo + 1] = seg.y1;
+      posArr[bo + 2] = seg.z1;
+      posArr[bo + 3] = seg.x2;
+      posArr[bo + 4] = seg.y2;
+      posArr[bo + 5] = seg.z2;
+      colArr[bo] = r;
+      colArr[bo + 1] = g;
+      colArr[bo + 2] = b;
+      colArr[bo + 3] = r;
+      colArr[bo + 4] = g;
+      colArr[bo + 5] = b;
     }
     start.needsUpdate = true;
     end.needsUpdate = true;
@@ -644,7 +659,11 @@ const updateChainArc = (
   // fixed, per-arc seed so the bolt reads as a still line instead of crackling.
   const jitterTime = reducedMotion ? index * 7.13 + 1.7 : time;
   writeArcSegments(item, jitterTime);
-  syncArcBuffers(item, pool.coreGeometries[0], pool.glowGeometries[0]);
+  syncArcBuffers(
+    item,
+    pool.coreGeometries[index],
+    pool.glowGeometries[index]
+  );
 };
 
 /** Re-anchor the arc's tail on a chain hop and flag the flick. */
@@ -1437,9 +1456,11 @@ export const useInstancedProjectiles = (
 
   // The jagged lightning arcs the chain bolts ride: a fixed pool of paired
   // fat-line objects (bright core + wide additive glow) whose endpoints are
-  // re-rolled every frame. The shared geometry and materials are created once
-  // and never disposed until unmount; idle arcs are parked off-board at zero
-  // scale so the pool's draw and shader-program count stay constant.
+  // re-rolled every frame. Each arc owns its small core + glow geometry (they
+  // cannot be shared — a shared geometry renders all arcs identically); the
+  // two LineMaterials are shared. Geometries and materials live until unmount;
+  // idle arcs are hidden (visible=false) so they cost no draw calls and the
+  // pool's shader-program count stays constant.
   const chainArcPool = useMemo(
     () => createChainArcPool(CHAIN_ARC_POOL_SIZE, defaultColor),
     [defaultColor]

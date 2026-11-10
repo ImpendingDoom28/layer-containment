@@ -20,7 +20,10 @@ import type {
   GameSessionController,
   GameSessionRuntime,
 } from "../../core/session/types";
-import { useGameStore } from "../../core/stores/useGameStore";
+import {
+  projectileSizeSelector,
+  useGameStore,
+} from "../../core/stores/useGameStore";
 import { useSettingsStore } from "../../core/stores/useSettingsStore";
 import { clampFrameDelta } from "../../utils/gameDelta";
 
@@ -61,6 +64,7 @@ export const GameSessionSystem: FC<GameSessionSystemProps> = ({
   session,
   children,
 }) => {
+  const projectileSize = useGameStore(projectileSizeSelector);
   const { getSimulationTime, getTimeScale } = useSimulationClock();
   const enemyActions = useEnemyActions();
   const { onProjectileHit, onProjectileRemove } =
@@ -73,7 +77,7 @@ export const GameSessionSystem: FC<GameSessionSystemProps> = ({
   } = useInstancedProjectiles({
     maxProjectiles: 500,
     maxBeams: 50,
-    projectileSize: 0.1,
+    projectileSize,
     onHit: onProjectileHit,
     onRemove: onProjectileRemove,
   });

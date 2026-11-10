@@ -13,3 +13,5 @@ export const useWaveStore = create<WaveStore>((set) => ({
 }));
 
 export const nextWaveReadySelector = (state: WaveStore) => state.nextWaveReady;
+export const setNextWaveReadySelector = (state: WaveStore) =>
+  state.setNextWaveReady;

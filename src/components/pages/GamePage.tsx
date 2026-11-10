@@ -1,11 +1,10 @@
 import { FC, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useWorld } from "koota/react";
+import { Stats } from "@react-three/drei";
+import { Canvas } from "@react-three/fiber";
 
 import { cn } from "../ui/lib/twUtils";
-import { Canvas } from "@react-three/fiber";
-import { Stats } from "@react-three/drei";
-import { useWorld } from "koota/react";
-
 import { GameScene } from "../scenes/game/GameScene";
 import { MainMenuScene } from "../scenes/mainMenu/MainMenuScene";
 import { HUDTowerShop } from "../hud/HUDTowerShop";
@@ -22,6 +21,7 @@ import { HUDPauseOverlay } from "../hud/HUDPauseOverlay";
 import { HUDBaseDamageFlash } from "../hud/HUDBaseDamageFlash";
 import { HUDMobileControls } from "../hud/HUDMobileControls";
 import { HUDLoading } from "../hud/HUDLoading";
+import { HUDLevelLoadError } from "../hud/HUDLevelLoadError";
 import { KeyboardHandlingSystem } from "../systems/KeyboardHandlingSystem";
 import { PostFX } from "../scenes/shared/PostFX";
 import { ShaderReadyGate } from "../systems/ShaderReadyGate";
@@ -96,10 +96,29 @@ export const GamePage: FC<GamePageProps> = ({
     };
   }, [towerTypes]);
 
-  const gameSystem = useGameSystem();
-  const levelSystem = useLevelSystem();
+  const {
+    shouldDisableControls,
+    gameStatus,
+    selectedTower,
+    openGameMenu,
+    closeGameMenu,
+    shouldLockCamera,
+    debug,
+    isGameConfigLoaded,
+  } = useGameSystem();
+  const {
+    money,
+    enemiesKilled,
+    placeTower,
+    sellTower,
+    currentWave,
+    isLevelConfigLoaded,
+    levelLoadError,
+    retryLevelLoad,
+  } = useLevelSystem();
+  const { showUpgradePanel, onEnemyUpgradePick } = useUpgradesSystem();
+
   const baseHealth = useBaseHealth();
-  const upgradesSystem = useUpgradesSystem();
   const world = useWorld();
   const entityIds = useEntityIds();
   const session = useMemo(
@@ -112,27 +131,6 @@ export const GamePage: FC<GamePageProps> = ({
   // drops the stale load instead.
   useEffect(() => session.dispose, [session]);
 
-  const {
-    shouldDisableControls,
-    gameStatus,
-    selectedTower,
-    openGameMenu,
-    closeGameMenu,
-    shouldLockCamera,
-    debug,
-    isGameConfigLoaded,
-  } = gameSystem;
-
-  const {
-    money,
-    enemiesKilled,
-    placeTower,
-    sellTower,
-    currentWave,
-    isLevelConfigLoaded,
-  } = levelSystem;
-
-  const { showUpgradePanel, onEnemyUpgradePick } = upgradesSystem;
   const gameMenuClose = useHeldClose();
 
   const { getRemainingEnemiesInWave, startWave } = session;
@@ -190,14 +188,11 @@ export const GamePage: FC<GamePageProps> = ({
   }, []);
 
   const shaderGateKey = useMemo(() => {
-    if (!isGameConfigLoaded) {
+    if (!isGameConfigLoaded || !isLevelConfigLoaded) {
       return null;
     }
     if (isMenu) {
       return "menu";
-    }
-    if (!isLevelConfigLoaded) {
-      return null;
     }
     return `game-${activePlayableLevel}`;
   }, [activePlayableLevel, isGameConfigLoaded, isLevelConfigLoaded, isMenu]);
@@ -238,6 +233,14 @@ export const GamePage: FC<GamePageProps> = ({
           closing={isClosingLoading}
           onExited={handleLoadingExited}
         />
+      )}
+
+      {/* A failed level load leaves `isLevelConfigLoaded` false forever, so the
+          loading screen would never resolve; surface the error with a retry
+          instead. Shader compilation is preserved: the gate below still mounts
+          (and re-compiles on a successful load) as soon as the level loads. */}
+      {levelLoadError && !isLevelConfigLoaded && (
+        <HUDLevelLoadError message={levelLoadError} onRetry={retryLevelLoad} />
       )}
 
       <Canvas

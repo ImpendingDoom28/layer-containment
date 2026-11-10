@@ -5,8 +5,10 @@ import { useActions } from "koota/react";
 import type { EnemyType } from "../../../core/types/game";
 import { LevelSystem } from "../../systems/LevelSystem";
 import {
+  enemyWeightsSelector,
   gridOffsetSelector,
   gridSizeSelector,
+  pathWaypointsSelector,
   useLevelStore,
   watersSelector,
 } from "../../../core/stores/useLevelStore";
@@ -66,17 +68,17 @@ export const MainMenuScene: FC = () => {
   // config-loading side effect is still required for `addEnemy` and the
   // level to initialize.
   useGameSystem();
-  const levelSystem = useLevelSystem();
+  const { addEnemy } = useLevelSystem();
 
   const enemyTypes = useGameStore(enemyTypesSelector);
   const tileSize = useGameStore(tileSizeSelector);
   const pathWidth = useGameStore(pathWidthSelector);
 
-  const { pathWaypoints, enemyWeights } = useLevelStore();
+  const pathWaypoints = useLevelStore(pathWaypointsSelector);
   const gridSize = useLevelStore(gridSizeSelector);
   const gridOffset = useLevelStore(gridOffsetSelector);
   const waters = useLevelStore(watersSelector);
-  const { addEnemy } = levelSystem;
+  const enemyWeights = useLevelStore(enemyWeightsSelector);
   const { getLivingEnemyCount } = useActions(enemyActions);
 
   const occupancy = useTileOccupancyMasks({

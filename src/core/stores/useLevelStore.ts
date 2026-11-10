@@ -3,7 +3,6 @@ import { create } from "zustand";
 import type {
   BossConfig,
   Building,
-  Enemy,
   EnemyType,
   PathWaypoint,
   Projectile,
@@ -42,6 +41,10 @@ type LevelStoreState = {
   towers: Tower[];
   projectiles: Projectile[];
   isLevelConfigLoaded: boolean;
+  /** Set when loading the level config failed; the UI shows an error with a retry. */
+  levelLoadError: string | null;
+  /** Bumped on retry to restart a failed level load. */
+  levelLoadRetryToken: number;
   hoveredTile: TileData | null;
 };
 
@@ -57,12 +60,11 @@ type LevelStoreActions = {
   setBuildings: (buildings: Building[]) => void;
   setTowers: (towers: Tower[] | ((prev: Tower[]) => Tower[])) => void;
   updateTower: (towerId: number, updates: Partial<Tower>) => void;
-  setProjectiles: (
-    projectiles: Projectile[] | ((prev: Projectile[]) => Projectile[])
-  ) => void;
   removeProjectile: (projectileId: number) => void;
   resetLevelState: () => void;
   setHoveredTile: (tile: TileData | null) => void;
+  setLevelLoadError: (error: string | null) => void;
+  retryLevelLoad: () => void;
   initializeLevelState: (levelData: LevelConfigData, tileSize: number) => void;
 };
 
@@ -84,6 +86,8 @@ const DEFAULT_STATE: LevelStoreState = {
   towers: [],
   projectiles: [],
   isLevelConfigLoaded: false,
+  levelLoadError: null,
+  levelLoadRetryToken: 0,
   hoveredTile: null,
 };
 
@@ -91,20 +95,6 @@ export const getMaxEntityId = (
   entities: ReadonlyArray<{ id: number }>
 ): number =>
   entities.reduce((currentMax, entity) => Math.max(currentMax, entity.id), 0);
-
-const buildLevelConfigEnemies = (
-  levelData: LevelConfigData,
-  enemyTypes: NonNullable<
-    ReturnType<typeof useGameStore.getState>["enemyTypes"]
-  >
-): Enemy[] =>
-  levelData.enemies.map((enemy) => ({
-    ...enemyTypes[enemy.type],
-    ...enemy,
-    pathIndex: enemy.pathIndex ?? 0,
-    maxHealth: enemy.health,
-    upgradeStacks: enemy.upgradeStacks ?? getUpgradeStacks(enemy.upgrades),
-  }));
 
 export const useLevelStore = create<LevelStore>((set) => ({
   ...DEFAULT_STATE,
@@ -116,52 +106,71 @@ export const useLevelStore = create<LevelStore>((set) => ({
 
     if (!towerTypes || !enemyTypes || !enemyUpgrades) return;
 
-    const gridOffset = getLevelGridOffset(levelData.gridSize, tileSize);
+    const {
+      gridSize,
+      pathWaypoints,
+      enemies,
+      towers,
+      buildings,
+      waters,
+      startingMoney,
+      waveConfigs,
+      boss,
+      projectiles,
+      enemyWeights,
+    } = levelData;
+
+    const gridOffset = getLevelGridOffset(gridSize, tileSize);
     const actions = enemyActions(world);
 
     actions.clearAllEnemies();
+
     // The waypoints must be in the store before any enemy spawns: spawnEnemy
     // derives each enemy's initial facing (the direction along the path) from
     // them.
-    set({ pathWaypoints: levelData.pathWaypoints });
-    for (const enemy of buildLevelConfigEnemies(levelData, enemyTypes)) {
+    set({ pathWaypoints });
+
+    const levelEnemies = enemies.map((enemy) => ({
+      ...enemyTypes[enemy.type],
+      ...enemy,
+      pathIndex: enemy.pathIndex ?? 0,
+      maxHealth: enemy.health,
+      upgradeStacks: enemy.upgradeStacks ?? getUpgradeStacks(enemy.upgrades),
+    }));
+    for (const enemy of levelEnemies) {
       actions.spawnEnemy(enemy);
     }
 
     // Only used if we have defined towers in the level config
-    const towers = levelData.towers.map((tower) => ({
+    const levelTowers = towers.map((tower) => ({
       lastFireTime: 0,
       ...towerTypes[tower.type],
       ...tower,
     }));
 
-    const buildings = levelData.buildings.map((building) =>
-      withRecalculatedBuildingCoordinates(
-        building,
-        levelData.gridSize,
-        tileSize
-      )
+    const levelBuildings = buildings.map((building) =>
+      withRecalculatedBuildingCoordinates(building, gridSize, tileSize)
     );
 
-    const waters = levelData.waters.map((water) =>
+    const levelWaters = waters.map((water) =>
       withRecalculatedWaterCoordinates(water, levelData.gridSize, tileSize)
     );
 
     set({
-      money: levelData.startingMoney,
-      enemiesKilled: 0,
-      gridSize: levelData.gridSize,
-      waters,
-      pathWaypoints: levelData.pathWaypoints,
-      totalWaves: levelData.waveConfigs.length,
-      waveConfigs: levelData.waveConfigs,
-      boss: levelData.boss ?? null,
-      buildings,
-      towers,
-      projectiles: levelData.projectiles,
-      enemyWeights: levelData.enemyWeights as Record<EnemyType, number>,
-      gridOffset,
       isLevelConfigLoaded: true,
+      enemiesKilled: 0,
+      money: startingMoney,
+      gridOffset,
+      gridSize,
+      pathWaypoints,
+      waveConfigs,
+      projectiles,
+      waters: levelWaters,
+      buildings: levelBuildings,
+      towers: levelTowers,
+      totalWaves: waveConfigs.length,
+      boss: boss ?? null,
+      enemyWeights: enemyWeights as Record<EnemyType, number>,
     });
   },
 
@@ -219,15 +228,6 @@ export const useLevelStore = create<LevelStore>((set) => ({
     }));
   },
 
-  setProjectiles: (projectiles) => {
-    set((state) => ({
-      projectiles:
-        typeof projectiles === "function"
-          ? projectiles(state.projectiles)
-          : projectiles,
-    }));
-  },
-
   setCurrentWave: (wave) => {
     set((state) => ({
       currentWave: typeof wave === "function" ? wave(state.currentWave) : wave,
@@ -236,6 +236,20 @@ export const useLevelStore = create<LevelStore>((set) => ({
 
   setHoveredTile: (tile) => {
     set({ hoveredTile: tile });
+  },
+
+  setLevelLoadError: (error) => {
+    set({ levelLoadError: error });
+  },
+
+  retryLevelLoad: () => {
+    // Clearing the error re-arms the level system's load effect (it skips
+    // when `levelLoadError` is set); the token bump covers the edge case of
+    // retrying while the previous attempt is still in flight.
+    set((state) => ({
+      levelLoadError: null,
+      levelLoadRetryToken: state.levelLoadRetryToken + 1,
+    }));
   },
 
   removeProjectile: (projectileId: number) => {
@@ -265,6 +279,8 @@ export const totalWavesSelector = (state: LevelStore) => state.totalWaves;
 export const waveConfigsSelector = (state: LevelStore) => state.waveConfigs;
 export const bossSelector = (state: LevelStore) => state.boss;
 export const buildingsSelector = (state: LevelStore) => state.buildings;
+export const initializeLevelStateSelector = (state: LevelStore) =>
+  state.initializeLevelState;
 export const setGridSizeSelector = (state: LevelStore) => state.setGridSize;
 export const setPathWaypointsSelector = (state: LevelStore) =>
   state.setPathWaypoints;
@@ -281,14 +297,19 @@ export const moneySelector = (state: LevelStore) => state.money;
 export const enemiesKilledSelector = (state: LevelStore) => state.enemiesKilled;
 export const isLevelConfigLoadedSelector = (state: LevelStore) =>
   state.isLevelConfigLoaded;
+export const levelLoadErrorSelector = (state: LevelStore) => state.levelLoadError;
+export const levelLoadRetryTokenSelector = (state: LevelStore) =>
+  state.levelLoadRetryToken;
+export const setLevelLoadErrorSelector = (state: LevelStore) =>
+  state.setLevelLoadError;
+export const retryLevelLoadSelector = (state: LevelStore) => state.retryLevelLoad;
 export const spendMoneySelector = (state: LevelStore) => state.spendMoney;
 export const addMoneySelector = (state: LevelStore) => state.addMoney;
 export const setTowersSelector = (state: LevelStore) => state.setTowers;
 export const updateTowerSelector = (state: LevelStore) => state.updateTower;
-export const setProjectilesSelector = (state: LevelStore) =>
-  state.setProjectiles;
 export const resetLevelStateSelector = (state: LevelStore) =>
   state.resetLevelState;
 export const hoveredTileSelector = (state: LevelStore) => state.hoveredTile;
 export const setHoveredTileSelector = (state: LevelStore) =>
   state.setHoveredTile;
+export const enemyWeightsSelector = (state: LevelStore) => state.enemyWeights;

@@ -1,6 +1,15 @@
 import { FC, useEffect, useLayoutEffect, useRef } from "react";
 
-import { getMaxEntityId, useLevelStore } from "../../core/stores/useLevelStore";
+import {
+  getMaxEntityId,
+  initializeLevelStateSelector,
+  isLevelConfigLoadedSelector,
+  levelLoadErrorSelector,
+  levelLoadRetryTokenSelector,
+  resetLevelStateSelector,
+  setLevelLoadErrorSelector,
+  useLevelStore,
+} from "../../core/stores/useLevelStore";
 import {
   type LevelConfigFiles,
   loadLevelConfigFile,
@@ -12,8 +21,12 @@ export const LevelSystem: FC<{ levelName?: LevelConfigFiles }> = ({
   levelName,
 }) => {
   const tileSize = useGameStore(tileSizeSelector);
-  const { initializeLevelState, isLevelConfigLoaded, resetLevelState } =
-    useLevelStore();
+  const initializeLevelState = useLevelStore(initializeLevelStateSelector);
+  const isLevelConfigLoaded = useLevelStore(isLevelConfigLoadedSelector);
+  const levelLoadError = useLevelStore(levelLoadErrorSelector);
+  const levelLoadRetryToken = useLevelStore(levelLoadRetryTokenSelector);
+  const resetLevelState = useLevelStore(resetLevelStateSelector);
+  const setLevelLoadError = useLevelStore(setLevelLoadErrorSelector);
   const { ensureEnemyIdAtLeast } = useEntityIds();
   const loadGenerationRef = useRef(0);
 
@@ -25,7 +38,10 @@ export const LevelSystem: FC<{ levelName?: LevelConfigFiles }> = ({
   }, [levelName, resetLevelState]);
 
   useEffect(() => {
-    if (!levelName || isLevelConfigLoaded || tileSize <= 0) return;
+    // A failed load records `levelLoadError`, which the UI surfaces with a
+    // retry; the effect re-arms when the error is cleared.
+    if (!levelName || isLevelConfigLoaded || levelLoadError || tileSize <= 0)
+      return;
 
     const generation = loadGenerationRef.current;
     let cancelled = false;
@@ -39,7 +55,10 @@ export const LevelSystem: FC<{ levelName?: LevelConfigFiles }> = ({
         ensureEnemyIdAtLeast(getMaxEntityId(levelData.enemies) + 1);
       } catch (error) {
         if (cancelled || generation !== loadGenerationRef.current) return;
+        const message =
+          error instanceof Error ? error.message : String(error);
         console.error(`Failed to initialize level "${levelName}".`, error);
+        setLevelLoadError(message);
       }
     };
 
@@ -53,9 +72,12 @@ export const LevelSystem: FC<{ levelName?: LevelConfigFiles }> = ({
     };
   }, [
     ensureEnemyIdAtLeast,
-    isLevelConfigLoaded,
     initializeLevelState,
+    isLevelConfigLoaded,
+    levelLoadError,
+    levelLoadRetryToken,
     levelName,
+    setLevelLoadError,
     tileSize,
   ]);
 

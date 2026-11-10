@@ -1,9 +1,7 @@
 import { FC, memo, useCallback, useMemo } from "react";
-import { useQuery } from "koota/react";
 
 import { TowerSystem } from "./TowerSystem";
 import { Building } from "../entities/Building";
-import { Enemy } from "../entities/Enemy";
 import {
   buildingsSelector,
   gridOffsetSelector,
@@ -15,7 +13,7 @@ import {
 } from "../../core/stores/useLevelStore";
 import type { Tower as TowerInstance, Tower } from "../../core/types/game";
 import type { TilePlacementState } from "../../utils/tilePlacement";
-import { getTilePlacementState as getSharedTilePlacementState } from "../../utils/tilePlacement";
+import { getTilePlacementState } from "../../utils/tilePlacement";
 import { EffectSystem } from "./EffectSystem";
 import {
   pathWidthSelector,
@@ -25,8 +23,8 @@ import {
   tileSizeSelector,
   useGameStore,
 } from "../../core/stores/useGameStore";
-import { IsEnemy } from "../../core/ecs/traits/enemy";
 import { useGameSessionRuntime } from "./GameSessionSystem";
+import { EnemySystem } from "./EnemySystem";
 
 type EntitiesSystemProps = {
   onSellTower: ((towerId: number) => void) | null;
@@ -40,7 +38,6 @@ type EntitiesSystemProps = {
 
 export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
   ({ onSellTower, selectedTower, playPlacementFX }) => {
-    const enemyEntities = useQuery(IsEnemy);
     const { InstancedProjectiles } = useGameSessionRuntime();
     const selectedTowerTypeToPlace = useGameStore(
       selectedTowerTypeToPlaceSelector
@@ -59,20 +56,11 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
     const pathWaypoints = useLevelStore(pathWaypointsSelector);
     const hoveredTile = useLevelStore(hoveredTileSelector);
 
-    const getTilePlacementState = useCallback(
-      (gridX: number, gridZ: number) =>
-        getSharedTilePlacementState({
-          gridX,
-          gridZ,
-          towers,
-          buildings,
-          waters,
-          gridOffset,
-          tileSize,
-          pathWaypoints,
-          pathWidth,
-        }),
-      [
+    const hoveredTilePlacementState = useMemo<TilePlacementState | null>(() => {
+      if (!hoveredTile) return null;
+      return getTilePlacementState({
+        gridX: hoveredTile.gridX,
+        gridZ: hoveredTile.gridZ,
         towers,
         buildings,
         waters,
@@ -80,13 +68,18 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
         tileSize,
         pathWaypoints,
         pathWidth,
-      ]
-    );
-
-    const hoveredTilePlacementState = useMemo<TilePlacementState | null>(() => {
-      if (!hoveredTile) return null;
-      return getTilePlacementState(hoveredTile.gridX, hoveredTile.gridZ);
-    }, [getTilePlacementState, hoveredTile]);
+      });
+    }, [
+      hoveredTile?.gridX,
+      hoveredTile?.gridZ,
+      towers,
+      buildings,
+      waters,
+      gridOffset,
+      tileSize,
+      pathWaypoints,
+      pathWidth,
+    ]);
 
     const onTowerClick = useCallback(
       (tower: Tower) => {
@@ -106,11 +99,7 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
           <Building key={building.id} building={building} />
         ))}
 
-        <group name="enemies">
-          {enemyEntities.map((entity) => (
-            <Enemy key={entity} entity={entity} />
-          ))}
-        </group>
+        <EnemySystem />
 
         {InstancedProjectiles}
 

@@ -14,6 +14,7 @@ import type {
 } from "../../../core/types/game";
 import { EntitiesSystem } from "../../systems/EntitiesSystem";
 import { CombatJuice } from "../../entities/effects/CombatJuice";
+import { CometStrike } from "../../entities/effects/CometStrike";
 import {
   gridOffsetSelector,
   gridSizeSelector,
@@ -94,6 +95,12 @@ export const GameScene: React.FC<GameSceneProps> = ({
       <EntitiesSystem onSellTower={onSellTower} selectedTower={selectedTower} />
 
       <CombatJuice />
+
+      {/* The level-load comet strike: a comet strikes each spawn portal's
+          tile on level load, and the portal grows out of the scorch as it
+          lands. The orchestrator also arms the portals' reveal in the level
+          store, so they stay hidden while the comet flies. */}
+      <CometStrike />
     </>
   );
 };

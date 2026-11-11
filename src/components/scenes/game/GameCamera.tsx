@@ -28,6 +28,8 @@ import {
 import {
   CAMERA_PUNCH_BASE_DAMAGE_AMPLITUDE,
   CAMERA_PUNCH_BASE_DAMAGE_DURATION_MS,
+  CAMERA_PUNCH_COMET_IMPACT_AMPLITUDE,
+  CAMERA_PUNCH_COMET_IMPACT_DURATION_MS,
   CAMERA_PUNCH_EXPLOSION_AMPLITUDE,
   CAMERA_PUNCH_EXPLOSION_DURATION_MS,
   CAMERA_PUNCH_ORIGIN,
@@ -198,6 +200,16 @@ export const GameCamera = ({
       );
     };
 
+    const onCometImpact = (data: {
+      worldPosition?: { x: number; z: number };
+    }) => {
+      startPunch(
+        CAMERA_PUNCH_COMET_IMPACT_AMPLITUDE,
+        CAMERA_PUNCH_COMET_IMPACT_DURATION_MS,
+        flatToWorld(data)
+      );
+    };
+
     const unsubscribeExplosion = gameEvents.on(
       GameEvent.PROJECTILE_EXPLOSION,
       onExplosion
@@ -206,9 +218,14 @@ export const GameCamera = ({
       GameEvent.BASE_DAMAGE_TAKEN,
       onBaseDamage
     );
+    const unsubscribeCometImpact = gameEvents.on(
+      GameEvent.COMET_IMPACT,
+      onCometImpact
+    );
     return () => {
       unsubscribeExplosion();
       unsubscribeBaseDamage();
+      unsubscribeCometImpact();
       punchRef.current = createIdlePunch();
       camera.position.sub(punchOffsetRef.current);
       punchOffsetRef.current.set(0, 0, 0);

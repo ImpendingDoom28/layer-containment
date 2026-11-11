@@ -24,12 +24,16 @@ type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 // value `useFrame` readers observe in the real app.
 let sceneClock: { elapsedTime: number };
 
-const PortalHarness = () => {
+const PortalHarness = ({
+  entry,
+}: {
+  entry?: { run: number; phase: "armed" | "revealed" } | null;
+} = {}) => {
   const clock = useThree((s) => s.clock) as unknown as { elapsedTime: number };
   sceneClock = clock;
   return (
     <SimulationClockProvider>
-      <Portal position={[0, 0.5, 0]} />
+      <Portal position={[0, 0.5, 0]} entry={entry} />
     </SimulationClockProvider>
   );
 };
@@ -71,6 +75,18 @@ const setupStores = () => {
   useSettingsStore.setState({ pauseWhenTabHidden: false });
 };
 
+const getPortalGroup = (renderer: Renderer): { visible: boolean; scale: { x: number; y: number; z: number } } => {
+  const scene = renderer.scene.instance as unknown as {
+    traverse: (fn: (o: { type: string; visible: boolean; scale: { x: number; y: number; z: number } }) => void) => void;
+  };
+  const found: { visible: boolean; scale: { x: number; y: number; z: number } }[] = [];
+  scene.traverse((o) => {
+    if (o.type === "Group") found.push(o);
+  });
+  expect(found.length).toBe(1);
+  return found[0];
+};
+
 describe("Portal pause behaviour", () => {
   it("keeps animating while playing", async () => {
     setupStores();
@@ -107,6 +123,72 @@ describe("Portal pause behaviour", () => {
       // simulation clock is frozen, so it stays constant.
       for (let i = 0; i < 10; i++) await advanceFrame(renderer);
       expect(ring.rotation.y).toBeCloseTo(frozenRotation, 5);
+    } finally {
+      await renderer.unmount();
+    }
+  });
+});
+
+describe("Portal comet reveal (entry)", () => {
+  it("sits at rest (visible, full scale) without an entry", async () => {
+    setupStores();
+    const renderer = await ReactThreeTestRenderer.create(<PortalHarness />);
+
+    try {
+      const group = getPortalGroup(renderer);
+      expect(group.visible).toBe(true);
+      expect(group.scale.x).toBeCloseTo(1, 5);
+
+      // At rest the portal keeps its idle animation: the outer ring rotates.
+      for (let i = 0; i < 10; i++) await advanceFrame(renderer);
+      expect(getOuterRing(renderer).rotation.y).toBeGreaterThan(0);
+    } finally {
+      await renderer.unmount();
+    }
+  });
+
+  it("is hidden while the comet is in flight (phase `armed`)", async () => {
+    setupStores();
+    const renderer = await ReactThreeTestRenderer.create(
+      <PortalHarness entry={{ run: 1, phase: "armed" }} />
+    );
+
+    try {
+      // Hidden on the first render (before any frame) and through the flight.
+      expect(getPortalGroup(renderer).visible).toBe(false);
+      for (let i = 0; i < 10; i++) await advanceFrame(renderer);
+      expect(getPortalGroup(renderer).visible).toBe(false);
+    } finally {
+      await renderer.unmount();
+    }
+  });
+
+  it("grows out of the scorch once the comet strikes (phase `revealed`)", async () => {
+    setupStores();
+    const renderer = await ReactThreeTestRenderer.create(
+      <PortalHarness entry={{ run: 1, phase: "revealed" }} />
+    );
+
+    try {
+      // The reveal starts from a collapsed pose (squashed against the
+      // surface) and eases out to the rest pose over ENTRY_DURATION. The
+      // scale is applied in useFrame, so establish the start pose on the first
+      // frame: with the reveal clock at 0 the portal is squashed flat.
+      await advanceFrame(renderer);
+      const startScale = getPortalGroup(renderer).scale.x;
+      expect(startScale).toBeLessThan(0.55);
+
+      // Partway through the reveal the portal has grown partway to full
+      // scale and is visible.
+      for (let i = 0; i < 15; i++) await advanceFrame(renderer); // ~0.24s
+      const midScale = getPortalGroup(renderer).scale.x;
+      expect(getPortalGroup(renderer).visible).toBe(true);
+      expect(midScale).toBeGreaterThan(startScale);
+      expect(midScale).toBeLessThan(0.99);
+
+      // After the reveal window the portal is at its rest scale.
+      for (let i = 0; i < 80; i++) await advanceFrame(renderer); // ~1.5s total
+      expect(getPortalGroup(renderer).scale.x).toBeCloseTo(1, 2);
     } finally {
       await renderer.unmount();
     }

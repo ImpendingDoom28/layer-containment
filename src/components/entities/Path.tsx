@@ -15,7 +15,9 @@ import { freezeSubtree } from "../../utils/freezeSubtree";
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import { GUINextWavePreview } from "../gui/GUINextWavePreview";
 import {
+  cometRevealSelector,
   gridSizeSelector,
+  levelEnterRunSelector,
   pathWaypointsSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
@@ -63,6 +65,8 @@ type MergedPathMesh = {
 export const Path: FC<PathProps> = memo(({ pathIndex }) => {
   const pathWaypoints = useLevelStore(pathWaypointsSelector);
   const gridSize = useLevelStore(gridSizeSelector);
+  const cometReveal = useLevelStore(cometRevealSelector);
+  const levelEnterRun = useLevelStore(levelEnterRunSelector);
   const tileSize = useGameStore(tileSizeSelector);
   const pathYOffset = useGameStore(pathYOffsetSelector);
   const pathWidth = useGameStore(pathWidthSelector);
@@ -308,6 +312,16 @@ export const Path: FC<PathProps> = memo(({ pathIndex }) => {
           quaternion={portalProps.quaternion}
           surfaceNormal={portalProps.surfaceNormal}
           reinforcementsTier={reinforcementsTier}
+          // The comet's reveal for this level load: the portal is hidden
+          // while the comet flies (`armed`) and grows out of the scorch once
+          // it strikes (`revealed`). The reveal only applies while it belongs
+          // to the current load (`run` matches the level's id), so a stale
+          // reveal left behind by a previous scene is ignored.
+          entry={
+            cometReveal !== null && cometReveal.run === levelEnterRun
+              ? { run: cometReveal.run, phase: cometReveal.phase }
+              : null
+          }
         />
       )}
 

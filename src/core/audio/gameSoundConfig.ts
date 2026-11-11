@@ -73,6 +73,16 @@ export const SOUND_CONFIGS = defineSoundConfigs(
       category: "sfx",
       spatial: false,
     },
+    [GameEvent.LEVEL_ENTERED]: {
+      category: "sfx",
+      spatial: false,
+    },
+    // Visual-only camera punch on the comet impact (the whoosh already spans
+    // into the strike); registered so the `GameEvent` map stays complete.
+    [GameEvent.COMET_IMPACT]: {
+      category: "sfx",
+      spatial: false,
+    },
     [GameEvent.WAVE_STARTED]: {
       category: "sfx",
     },
@@ -165,6 +175,15 @@ export type AudioEventDataMap = {
     worldPosition?: WorldPosition;
   };
   money_changed: MoneyChangedData;
+  level_entered: {
+    run: number;
+    portalPositions: { x: number; z: number }[];
+  };
+  // The flat-field position of the comet's impact point (the spawn portal the
+  // camera punch kicks toward).
+  comet_impact: {
+    worldPosition: { x: number; z: number };
+  };
   wave_started: {
     waveNumber: number;
     worldPosition: WorldPosition;

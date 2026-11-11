@@ -17,5 +17,11 @@ export const CAMERA_PUNCH_EXPLOSION_AMPLITUDE = 0.05;
 export const CAMERA_PUNCH_BASE_DAMAGE_DURATION_MS = 220;
 export const CAMERA_PUNCH_BASE_DAMAGE_AMPLITUDE = 0.07;
 
+// The level-load comet strike: a longer, softer kick than an explosion (the
+// impact is a broad strike, not a point blast), aimed at the spawn portal's
+// scorch.
+export const CAMERA_PUNCH_COMET_IMPACT_DURATION_MS = 200;
+export const CAMERA_PUNCH_COMET_IMPACT_AMPLITUDE = 0.06;
+
 /** Fallback world position for punches without a hit location (the field center). */
 export const CAMERA_PUNCH_ORIGIN = { x: 0, y: 0, z: 0 } as const;

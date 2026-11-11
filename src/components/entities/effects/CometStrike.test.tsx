@@ -53,6 +53,8 @@ const levelData: LevelConfigData = {
   enemyWeights: null,
 };
 
+const fxCount = () => fxProps.length;
+
 describe("CometStrike", () => {
   beforeEach(() => {
     fxProps.length = 0;
@@ -70,72 +72,110 @@ describe("CometStrike", () => {
     });
   });
 
-  it("replays the strike when the level was loaded before the scene mounted (catch-up)", async () => {
+  it("re-arms the strike when the level was loaded before the scene mounted", async () => {
     // The game flow: `startRun` initializes the level (emitting `LEVEL_ENTERED`)
-    // *before* this scene mounts, so the subscription misses the event. The
-    // level store retains the load id, and the orchestrator reads it on mount.
+    // *before* this scene mounts, so the subscription misses the event. On
+    // mount the reveal for the current run is `null` (never armed), so the
+    // catch-up arms it.
     useLevelStore.getState().initializeLevelState(levelData, 1);
     const run = useLevelStore.getState().levelEnterRun;
-    expect(useLevelStore.getState().cometReveal).toBe(null); // not armed yet
+    // Never armed yet: the event fired before any scene was subscribed.
+    useLevelStore.getState().setCometReveal(null);
+    const before = fxCount();
 
     const renderer = await ReactThreeTestRenderer.create(<CometStrike />);
     try {
-      // On mount, the catch-up arms the reveal, mounts one FX per portal, and
-      // consumes the retained load id (so it does not replay on a remount).
+      // On mount, the catch-up arms the reveal and mounts one FX per portal.
       expect(useLevelStore.getState().cometReveal).toEqual({
         run,
         phase: "armed",
       });
-      expect(useLevelStore.getState().unseenLevelEnterRun).toBe(null);
-      expect(fxProps.length).toBe(2);
+      expect(fxCount()).toBe(before + 2);
 
       // A strike landing flips the reveal to `revealed` (the portals grow out
       // of the rock) — the same lockstep the event path relies on.
-      fxProps[0].onImpact?.();
+      fxProps[before].onImpact?.();
       expect(useLevelStore.getState().cometReveal).toEqual({
         run,
         phase: "revealed",
       });
     } finally {
-      renderer.unmount();
+      await renderer.unmount();
     }
   });
 
-  it("plays the strike when the level loads while the scene is mounted (event path)", async () => {
-    const renderer = await ReactThreeTestRenderer.create(<CometStrike />);
+  it("restores an in-flight strike when the scene remounts before impact", async () => {
+    // React StrictMode's simulated unmount (dev) tears the FX down without a
+    // level reset, leaving the reveal `armed` for the current run — the portal
+    // is hidden. On remount the catch-up must re-arm the strike (not skip it),
+    // or the portal stays hidden indefinitely.
+    useLevelStore.getState().initializeLevelState(levelData, 1);
+    const run = useLevelStore.getState().levelEnterRun;
+
+    const first = await ReactThreeTestRenderer.create(<CometStrike />);
+    expect(useLevelStore.getState().cometReveal).toEqual({
+      run,
+      phase: "armed",
+    });
+    await first.unmount(); // tears the FX down; the reveal stays `armed`
+    expect(useLevelStore.getState().cometReveal).toEqual({
+      run,
+      phase: "armed",
+    });
+
+    const before = fxCount();
+    const second = await ReactThreeTestRenderer.create(<CometStrike />);
     try {
-      expect(fxProps.length).toBe(0); // nothing loaded yet
-      // The menu flow: the scene is mounted, then the level loads, so
-      // `LEVEL_ENTERED` fires while the subscription exists.
-      await ReactThreeTestRenderer.act(async () => {
-        useLevelStore.getState().initializeLevelState(levelData, 1);
-      });
-      const run = useLevelStore.getState().levelEnterRun;
+      // Re-armed: the FX is mounted again and the reveal still arms this run.
+      expect(fxCount()).toBe(before + 2);
       expect(useLevelStore.getState().cometReveal).toEqual({
         run,
         phase: "armed",
       });
-      expect(fxProps.length).toBe(2);
     } finally {
-      renderer.unmount();
+      await second.unmount();
     }
   });
 
-  it("does not replay a stale load after a reset (gridSize guard)", async () => {
-    // A level was loaded (e.g. the menu's ambient level) and no scene consumed
-    // it, then a reset clears the level (gridSize → 0). The retained load id is
-    // now stale and must not arm a strike.
+  it("does not replay the strike after it has completed", async () => {
+    // The level is loaded (run N) and its strike has already completed (the
+    // reveal is `revealed` for run N). Mounting must not arm the same run
+    // again, or the portals would hide a second time. The completed state is
+    // set directly on the store (not via the `LEVEL_ENTERED` emit) so the
+    // assertion is isolated from any cross-test subscription.
+    useLevelStore.getState().initializeLevelState(levelData, 1);
+    const run = useLevelStore.getState().levelEnterRun;
+    useLevelStore.getState().setCometReveal({ run, phase: "revealed" });
+
+    const before = fxCount();
+    const renderer = await ReactThreeTestRenderer.create(<CometStrike />);
+    try {
+      // No replay: the completed reveal for the current run is left alone.
+      expect(fxCount()).toBe(before);
+      expect(useLevelStore.getState().cometReveal).toEqual({
+        run,
+        phase: "revealed",
+      });
+    } finally {
+      await renderer.unmount();
+    }
+  });
+
+  it("does not arm a stale reveal from a previous level after a reset", async () => {
+    // A level was loaded (e.g. the menu's ambient level), then a reset clears
+    // the store (gridSize → 0). Mounting must not arm a strike for the stale
+    // level (its reveal, if any, has a different run id and is already inert).
     useLevelStore.getState().initializeLevelState(levelData, 1);
     useLevelStore.getState().resetLevelState();
-    expect(useLevelStore.getState().unseenLevelEnterRun).not.toBeNull();
     expect(useLevelStore.getState().gridSize).toBe(0);
 
+    const before = fxCount();
     const renderer = await ReactThreeTestRenderer.create(<CometStrike />);
     try {
       expect(useLevelStore.getState().cometReveal).toBe(null);
-      expect(fxProps.length).toBe(0);
+      expect(fxCount()).toBe(before);
     } finally {
-      renderer.unmount();
+      await renderer.unmount();
     }
   });
 });

@@ -145,30 +145,29 @@ export const CometStrike: FC = () => {
     };
   }, [playStrikes]);
 
-  // The game flow loads the level *before* this scene mounts (`startRun`
-  // initializes the level, then the scene mounts on `gameStatus` "playing"),
-  // so the `LEVEL_ENTERED` event fires before the subscription above exists.
-  // The level store retains the last load id no scene has consumed
-  // (`unseenLevelEnterRun`); if it still points at the current load when this
-  // scene mounts, replay the strike once. The `gridSize` guard keeps it from
-  // firing after a level reset (the store is cleared to `gridSize` 0, which
-  // also means the retained id is a stale one, e.g. the menu's level, not the
-  // game's).
+  // The game flow can load the level *before* this scene mounts (`startRun`
+  // initializes the level while the store is reset, then the scene mounts on
+  // `gameStatus` "playing"), so the `LEVEL_ENTERED` event can fire before the
+  // subscription above exists and be missed — or be received by the outgoing
+  // scene (the one being replaced), which arms the reveal and then unmounts
+  // with no FX. Either way this scene mounts with the current run's strike not
+  // yet playing. Re-arm it on mount unless it has already completed: a `null`
+  // or `armed` reveal (or one for a different run) means the current run's
+  // strike is not in flight here, so play it; a `revealed` reveal for the
+  // current run means it already landed, so do not replay it. The `gridSize`
+  // guard covers the menu → game transition: `startRun` resets the level
+  // before the scene mounts, so the game scene always mounts with `gridSize`
+  // 0 and never arms a stale (menu) reveal.
   useEffect(() => {
-    const {
-      levelEnterRun,
-      gridSize,
-      pathWaypoints,
-      unseenLevelEnterRun,
-    } = useLevelStore.getState();
-    if (
-      unseenLevelEnterRun === null ||
-      unseenLevelEnterRun !== levelEnterRun ||
-      gridSize <= 0
-    ) {
+    const { levelEnterRun, gridSize, pathWaypoints, cometReveal } =
+      useLevelStore.getState();
+    const currentRunDone =
+      cometReveal !== null &&
+      cometReveal.run === levelEnterRun &&
+      cometReveal.phase === "revealed";
+    if (gridSize <= 0 || currentRunDone) {
       return;
     }
-    useLevelStore.getState().setUnseenLevelEnterRun(null);
     playStrikes(
       levelEnterRun,
       pathWaypoints

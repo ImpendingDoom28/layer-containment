@@ -7,7 +7,7 @@ import type {
   LevelEditorTool,
   LevelEditorValidationIssue,
 } from "../types/editor";
-import type { EnemyType, PathWaypoint, WaveConfig } from "../types/game";
+import type { CanyonConfig, EnemyType, PathWaypoint, WaveConfig } from "../types/game";
 import type { TileData } from "../types/utils";
 import { getTilePlacementState } from "../../utils/tilePlacement";
 import { findBridgeCrossings } from "../../utils/canyonBridges";
@@ -175,6 +175,24 @@ const ensurePathExists = (
   nextPaths[pathIndex] = [];
   return nextPaths;
 };
+
+/**
+ * True when `nextPaths` introduces a bridge crossing absent from
+ * `previousPaths` — two paths crossing the same canyon tile at a right angle
+ * would draw overlapping bridge decks (overlapping rails). Reuses the
+ * validator's `findBridgeCrossings`, so every path-mutating editor action
+ * (drawing, moving an endpoint, dragging a waypoint) blocks the same case the
+ * publish check rejects.
+ */
+const introducesBridgeCrossing = (
+  previousPaths: PathWaypoint[][],
+  nextPaths: PathWaypoint[][],
+  canyons: CanyonConfig[],
+  gridSize: number,
+  tileSize: number
+): boolean =>
+  findBridgeCrossings(nextPaths, canyons, gridSize, tileSize).length >
+  findBridgeCrossings(previousPaths, canyons, gridSize, tileSize).length;
 
 const createBuildingDefaults = (
   gridX: number,
@@ -577,6 +595,18 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
         }
       );
 
+      if (
+        introducesBridgeCrossing(
+          state.draftLevel.pathWaypoints,
+          nextPaths,
+          state.draftLevel.canyons,
+          state.draftLevel.gridSize,
+          tileSize
+        )
+      ) {
+        return state;
+      }
+
       return {
         draftLevel: {
           ...state.draftLevel,
@@ -883,30 +913,18 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
           return state;
         }
 
-        // Two paths crossing the same canyon tile at a right angle each draw
-        // a bridge deck (with rails) over it, so the decks would overlap.
-        // Adding a segment that crosses another path's bridge — even when the
-        // crossing is mid-segment, not on the new waypoint — is blocked. This
-        // reuses the validator's `findBridgeCrossings`, so the editor can
-        // never produce a level the publish check would reject (a collinear
-        // merge over the canyon shares one deck and stays allowed).
         const nextPaths = ensuredPaths.map((path, pathIndex) =>
           pathIndex === selectedPathIndex ? [...path, nextWaypoint] : path
         );
-        const introducesBridgeCrossing =
-          findBridgeCrossings(
+        if (
+          introducesBridgeCrossing(
+            ensuredPaths,
             nextPaths,
             draftLevel.canyons,
             draftLevel.gridSize,
             tileSize
-          ).length >
-          findBridgeCrossings(
-            ensuredPaths,
-            draftLevel.canyons,
-            draftLevel.gridSize,
-            tileSize
-          ).length;
-        if (introducesBridgeCrossing) {
+          )
+        ) {
           return state;
         }
 
@@ -934,6 +952,18 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
           pathIndex === selectedPathIndex ? nextPath : path
         );
 
+        if (
+          introducesBridgeCrossing(
+            ensuredPaths,
+            nextPaths,
+            draftLevel.canyons,
+            draftLevel.gridSize,
+            tileSize
+          )
+        ) {
+          return state;
+        }
+
         return {
           draftLevel: {
             ...draftLevel,
@@ -959,6 +989,18 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
         const nextPaths = ensuredPaths.map((path, pathIndex) =>
           pathIndex === selectedPathIndex ? nextPath : path
         );
+
+        if (
+          introducesBridgeCrossing(
+            ensuredPaths,
+            nextPaths,
+            draftLevel.canyons,
+            draftLevel.gridSize,
+            tileSize
+          )
+        ) {
+          return state;
+        }
 
         return {
           draftLevel: {

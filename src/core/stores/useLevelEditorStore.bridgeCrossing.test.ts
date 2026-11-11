@@ -95,4 +95,40 @@ describe("useLevelEditorStore: bridge crossing rule", () => {
     store().handleTileAction({ gridX: 6, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
     expect(store().draftLevel.pathWaypoints[1]).toEqual([wp(2, 5), wp(6, 5)]);
   });
+
+  it("blocks dragging a waypoint so its segment crosses a bridge", () => {
+    store().loadDraftLevel(CROSSING_LEVEL, TILE_SIZE);
+    startPath(1, { gridX: 2, gridZ: 5 });
+    store().handleTileAction({ gridX: 4, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
+    expect(store().draftLevel.pathWaypoints[1]).toEqual([wp(2, 5), wp(4, 5)]);
+    // Drag path 1's last waypoint from (4,5) to (6,5): the new segment
+    // crosses path 0's bridge at (5,5).
+    store().selectWaypoint(1, 1);
+    store().updateSelectedWaypoint({ gridX: 6, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
+    expect(store().draftLevel.pathWaypoints[1]).toEqual([wp(2, 5), wp(4, 5)]);
+  });
+
+  it("blocks moving the spawn endpoint across a bridge", () => {
+    store().loadDraftLevel(CROSSING_LEVEL, TILE_SIZE);
+    startPath(1, { gridX: 2, gridZ: 5 });
+    store().handleTileAction({ gridX: 4, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
+    // Move path 1's spawn from (2,5) to (6,5): the segment (6,5)->(4,5)
+    // crosses path 0's bridge at (5,5).
+    store().setActiveTool("setSpawn");
+    store().selectPath(1);
+    store().handleTileAction({ gridX: 6, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
+    expect(store().draftLevel.pathWaypoints[1]).toEqual([wp(2, 5), wp(4, 5)]);
+  });
+
+  it("blocks moving the base endpoint across a bridge", () => {
+    store().loadDraftLevel(CROSSING_LEVEL, TILE_SIZE);
+    startPath(1, { gridX: 2, gridZ: 5 });
+    store().handleTileAction({ gridX: 4, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
+    // Move path 1's base from (4,5) to (6,5): the segment (2,5)->(6,5)
+    // crosses path 0's bridge at (5,5).
+    store().setActiveTool("setBase");
+    store().selectPath(1);
+    store().handleTileAction({ gridX: 6, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
+    expect(store().draftLevel.pathWaypoints[1]).toEqual([wp(2, 5), wp(4, 5)]);
+  });
 });

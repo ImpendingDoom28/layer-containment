@@ -443,11 +443,15 @@
  * flash animation reveals it, so the resting layout is untouched. The color
  * is picked by `data-money-flash`; the glow spreads slightly (scale) and
  * eases back to rest over ~600ms. Pure DOM — no 3D cost.
+ *
+ * The pill must paint above the card/strip background, so it uses z-index 0
+ * (a negative z would sink it behind that background and the glow would be
+ * invisible); the number itself sits at z-index 1 above the pill.
  */
 .money-card-flash {
   position: absolute;
   inset: -4px -7px;
-  z-index: -1;
+  z-index: 0;
   border-radius: 9999px;
   opacity: 0;
   pointer-events: none;

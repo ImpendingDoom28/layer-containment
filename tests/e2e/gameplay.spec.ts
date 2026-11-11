@@ -47,6 +47,13 @@ test("places a basic tower and starts the first wave", async ({ page }) => {
     page.getByRole("button", { name: "Cancel Selection" })
   ).toBeHidden();
 
+  // Building the tower spends money, so the money card flashes red on the
+  // MONEY_CHANGED decrease (and settles once the ~600ms flash finishes).
+  const flash = page.getByTestId("money-card-flash");
+  await expect(flash).toHaveClass(/is-flashing/);
+  await expect(flash).toHaveAttribute("data-money-flash", "decrease");
+  await expect(flash).not.toHaveClass(/is-flashing/);
+
   await page.getByRole("button", { name: "Start next wave" }).click();
 
   await expect(page.getByText("Not Started")).toBeHidden();

@@ -80,7 +80,10 @@ export const HUDMoneyCard: FC<HUDMoneyCardProps> = ({
         data-money-flash="increase"
         className="money-card-flash"
       />
-      <UIMoney money={displayed} variant={variant} iconSize={iconSize} />
+      {/* Above the flash pill (z-index 0) so the glow stays behind the number. */}
+      <span className="relative z-[1] inline-flex items-center">
+        <UIMoney money={displayed} variant={variant} iconSize={iconSize} />
+      </span>
     </div>
   );
 };

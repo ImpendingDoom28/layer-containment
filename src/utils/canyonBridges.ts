@@ -1,8 +1,5 @@
 import type { CanyonConfig, PathWaypoint } from "../core/types/game";
-import {
-  tileToWorldCoordinate,
-  waypointToTile,
-} from "./levelEditor";
+import { tileToWorldCoordinate, waypointToTile } from "./levelEditor";
 import { flatFieldToSphereSurface } from "./planetSurfaceMapping";
 
 /**
@@ -143,6 +140,109 @@ export const buildCanyonBridgePaths = (
       z: p.z,
     }));
   });
+};
+
+/**
+ * A canyon tile a path's bridge span runs over, with the direction of the
+ * path segment crossing it (axis-aligned: (±1, 0) or (0, ±1)).
+ */
+export type BridgeTileSpan = {
+  gridX: number;
+  gridZ: number;
+  dirX: number;
+  dirZ: number;
+};
+
+/**
+ * The canyon tiles a path crosses, in path order — the tiles the path's
+ * bridge span runs over, each tagged with the direction the path crosses
+ * it (the direction of the segment entering the tile; the first tile of the
+ * path uses its outgoing segment). Used by the renderer (`getBridgeTiles`)
+ * and by validation (two paths crossing the same canyon tile at different
+ * angles would draw two overlapping bridge decks, so that is rejected).
+ */
+export const pathCanyonTiles = (
+  path: PathWaypoint[],
+  canyons: CanyonConfig[],
+  gridSize: number,
+  tileSize: number
+): BridgeTileSpan[] => {
+  if (path.length < 2) return [];
+  const mask = buildCanyonMask(canyons, gridSize);
+  const points = samplePathToTilePoints(path, gridSize, tileSize);
+  const out: BridgeTileSpan[] = [];
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i];
+    if (mask[p.gridZ * gridSize + p.gridX] !== 1) continue;
+    const other = i > 0 ? points[i - 1] : points[i + 1];
+    if (!other) continue;
+    out.push({
+      gridX: p.gridX,
+      gridZ: p.gridZ,
+      dirX: Math.sign(p.gridX - other.gridX),
+      dirZ: Math.sign(p.gridZ - other.gridZ),
+    });
+  }
+  return out;
+};
+
+/**
+ * Two bridge spans crossing the same canyon tile at different angles: one
+ * horizontal and one vertical. Collinear spans (same or opposite direction,
+ * i.e. paths merging over the canyon) share the same deck and are fine.
+ * Segment directions are axis-aligned (the editor and the level tests
+ * enforce orthogonal paths).
+ */
+export const isBridgeCrossing = (
+  a: { dirX: number; dirZ: number },
+  b: { dirX: number; dirZ: number }
+): boolean => {
+  return (a.dirX !== 0) !== (b.dirX !== 0);
+};
+
+/**
+ * Pairs of distinct paths whose bridges cross the same canyon tile at
+ * different angles (each path renders a bridge deck with rails over a canyon
+ * span, so two crossing decks would overlap). A pair is reported at most
+ * once, in path-index order, listing the shared tiles.
+ */
+export type BridgeCrossing = {
+  pathIndexA: number;
+  pathIndexB: number;
+  tiles: Array<{ gridX: number; gridZ: number }>;
+};
+
+export const findBridgeCrossings = (
+  pathWaypoints: PathWaypoint[][],
+  canyons: CanyonConfig[],
+  gridSize: number,
+  tileSize: number
+): BridgeCrossing[] => {
+  const spans = pathWaypoints.map((path) =>
+    pathCanyonTiles(path, canyons, gridSize, tileSize)
+  );
+  const crossings: BridgeCrossing[] = [];
+  for (let a = 0; a < spans.length; a++) {
+    for (let b = a + 1; b < spans.length; b++) {
+      const shared: Array<{ gridX: number; gridZ: number }> = [];
+      for (const tile of spans[a]) {
+        if (
+          spans[b].some(
+            (t) =>
+              t.gridX === tile.gridX &&
+              t.gridZ === tile.gridZ &&
+              isBridgeCrossing(tile, t)
+          )
+        ) {
+          shared.push({ gridX: tile.gridX, gridZ: tile.gridZ });
+        }
+      }
+      if (shared.length > 0) {
+        crossings.push({ pathIndexA: a, pathIndexB: b, tiles: shared });
+      }
+    }
+  }
+  return crossings;
 };
 
 /**
@@ -313,9 +413,7 @@ export const sampleBasinFloorY = (
  * cap is built, so the cap's rim lands exactly where the S-curve has eased
  * to the surface — the hole cut in the ground sphere has to match it.
  */
-export const getBasinCapBBox = (
-  bbox: CanyonWorldBBox
-): CanyonWorldBBox => ({
+export const getBasinCapBBox = (bbox: CanyonWorldBBox): CanyonWorldBBox => ({
   minX: bbox.minX - CANON_BASIN_RIM_FADE,
   maxX: bbox.maxX + CANON_BASIN_RIM_FADE,
   minZ: bbox.minZ - CANON_BASIN_RIM_FADE,

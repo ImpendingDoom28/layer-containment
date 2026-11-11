@@ -4,6 +4,7 @@ import {
 } from "../core/configs/levelConfig";
 import type { LevelEditorValidationIssue } from "../core/types/editor";
 import { MAX_GRID_SIZE, MIN_GRID_SIZE } from "./gridSizeLimits";
+import { findBridgeCrossings } from "./canyonBridges";
 import { waypointToTile } from "./levelEditor";
 
 /**
@@ -99,6 +100,28 @@ export const validateLevel = (
           message: "Waypoint cannot be on water (except over a canyon).",
         });
       }
+    });
+  });
+
+  // Two paths crossing the same canyon tile at a right angle each draw a
+  // bridge deck with rails over that tile, so the decks and fences would
+  // overlap. (A collinear merge over the canyon shares one deck and is fine.)
+  findBridgeCrossings(
+    level.pathWaypoints,
+    canyons,
+    level.gridSize,
+    tileSize
+  ).forEach((crossing) => {
+    const tiles = crossing.tiles
+      .map((tile) => `(${tile.gridX}, ${tile.gridZ})`)
+      .join(", ");
+    customIssues.push({
+      path: `pathWaypoints.${crossing.pathIndexA}`,
+      message: `Paths ${crossing.pathIndexA + 1} and ${
+        crossing.pathIndexB + 1
+      } both bridge the same canyon tile${
+        crossing.tiles.length > 1 ? "s" : ""
+      } ${tiles} — two bridges cannot share a canyon tile.`,
     });
   });
 

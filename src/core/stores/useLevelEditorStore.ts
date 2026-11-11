@@ -10,6 +10,7 @@ import type {
 import type { EnemyType, PathWaypoint, WaveConfig } from "../types/game";
 import type { TileData } from "../types/utils";
 import { getTilePlacementState } from "../../utils/tilePlacement";
+import { findBridgeCrossings } from "../../utils/canyonBridges";
 import { clampGridSize } from "../../utils/gridSizeLimits";
 import { validateLevel } from "../../utils/validateLevel";
 import {
@@ -304,10 +305,7 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
             ),
             nextGridSize
           ),
-          canyons: filterCanyonsToGrid(
-            state.draftLevel.canyons,
-            nextGridSize
-          ),
+          canyons: filterCanyonsToGrid(state.draftLevel.canyons, nextGridSize),
           buildings: state.draftLevel.buildings.map((building) =>
             withRecalculatedBuildingCoordinates(
               {
@@ -333,7 +331,7 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
       // seeds the default weight of 1.
       const nextWeights = ALL_ENEMY_TYPES.reduce(
         (acc, type) => {
-          acc[type] = existingWeights ? existingWeights[type] ?? 0 : 1;
+          acc[type] = existingWeights ? (existingWeights[type] ?? 0) : 1;
           return acc;
         },
         {} as Record<EnemyType, number>
@@ -885,9 +883,32 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
           return state;
         }
 
+        // Two paths crossing the same canyon tile at a right angle each draw
+        // a bridge deck (with rails) over it, so the decks would overlap.
+        // Adding a segment that crosses another path's bridge — even when the
+        // crossing is mid-segment, not on the new waypoint — is blocked. This
+        // reuses the validator's `findBridgeCrossings`, so the editor can
+        // never produce a level the publish check would reject (a collinear
+        // merge over the canyon shares one deck and stays allowed).
         const nextPaths = ensuredPaths.map((path, pathIndex) =>
           pathIndex === selectedPathIndex ? [...path, nextWaypoint] : path
         );
+        const introducesBridgeCrossing =
+          findBridgeCrossings(
+            nextPaths,
+            draftLevel.canyons,
+            draftLevel.gridSize,
+            tileSize
+          ).length >
+          findBridgeCrossings(
+            ensuredPaths,
+            draftLevel.canyons,
+            draftLevel.gridSize,
+            tileSize
+          ).length;
+        if (introducesBridgeCrossing) {
+          return state;
+        }
 
         return {
           draftLevel: {

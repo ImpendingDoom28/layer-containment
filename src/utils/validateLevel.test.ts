@@ -86,7 +86,8 @@ describe("validateLevel", () => {
     expect(
       issues.some(
         (issue) =>
-          issue.message === "Waypoint cannot be on water (except over a canyon)."
+          issue.message ===
+          "Waypoint cannot be on water (except over a canyon)."
       )
     ).toBe(true);
   });
@@ -115,5 +116,75 @@ describe("validateLevel", () => {
         issue.message.includes("Waypoint cannot be on water")
       )
     ).toBe(false);
+  });
+
+  it("reports two paths crossing the same canyon tile (two bridges)", () => {
+    // Grid 10, tileSize 1: world (x,z) maps to grid (x+5, z+5).
+    // Path 0 runs down column 5, path 1 runs across row 5, crossing at
+    // grid (5,5) over a canyon tile there.
+    const crossing = makeLevel({
+      pathWaypoints: [
+        [
+          { x: 0, y: 0, z: -3 }, // (5, 2)
+          { x: 0, y: 0, z: 3 }, // (5, 8)
+        ],
+        [
+          { x: -3, y: 0, z: 0 }, // (2, 5)
+          { x: 3, y: 0, z: 0 }, // (8, 5)
+        ],
+      ],
+      canyons: [{ id: 1, gridX: 5, gridZ: 5 }],
+    });
+    const issues = validateLevel(crossing, TILE_SIZE);
+    expect(
+      issues.some((issue) =>
+        issue.message.includes("two bridges cannot share a canyon tile")
+      )
+    ).toBe(true);
+  });
+
+  it("allows two paths merging over the same canyon tiles (collinear)", () => {
+    // Both paths run down column 5 and share canyon tiles (5,5) and (5,6)
+    // in the same direction — one shared deck, not a crossing.
+    const merging = makeLevel({
+      pathWaypoints: [
+        [
+          { x: 0, y: 0, z: -3 }, // (5, 2)
+          { x: 0, y: 0, z: 3 }, // (5, 8)
+        ],
+        [
+          { x: 0, y: 0, z: 0 }, // (5, 5)
+          { x: 0, y: 0, z: 3 }, // (5, 8)
+        ],
+      ],
+      canyons: [
+        { id: 1, gridX: 5, gridZ: 5 },
+        { id: 2, gridX: 5, gridZ: 6 },
+      ],
+    });
+    const issues = validateLevel(merging, TILE_SIZE);
+    expect(
+      issues.some((issue) =>
+        issue.message.includes("two bridges cannot share a canyon tile")
+      )
+    ).toBe(false);
+  });
+
+  it("allows paths crossing on ground (no canyon at the crossing tile)", () => {
+    const crossingOnGround = makeLevel({
+      pathWaypoints: [
+        [
+          { x: 0, y: 0, z: -3 }, // (5, 2)
+          { x: 0, y: 0, z: 3 }, // (5, 8)
+        ],
+        [
+          { x: -3, y: 0, z: 0 }, // (2, 5)
+          { x: 3, y: 0, z: 0 }, // (8, 5)
+        ],
+      ],
+      canyons: [],
+    });
+    const issues = validateLevel(crossingOnGround, TILE_SIZE);
+    expect(issues).toEqual([]);
   });
 });

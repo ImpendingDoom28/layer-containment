@@ -1,0 +1,98 @@
+import { afterEach, describe, expect, it } from "vitest";
+
+import type { LevelConfigData } from "../configs/levelConfig";
+import { useLevelEditorStore } from "./useLevelEditorStore";
+
+const TILE_SIZE = 1;
+const PATH_WIDTH = 0.85;
+const GRID = 10;
+
+// Grid (gx, gz) -> its tile-center world coordinate for a 10x10 grid,
+// tileSize 1: getLevelGridOffset(-5) + g + tileSize/2 = g - 4.5.
+const wp = (gx: number, gz: number) => ({
+  x: gx - GRID / 2 + TILE_SIZE / 2,
+  y: 0,
+  z: gz - GRID / 2 + TILE_SIZE / 2,
+});
+
+// Vertical path down column 5, world x = 0, z from -3 to 3.
+const CROSSING_LEVEL: LevelConfigData = {
+  name: "bridge test",
+  label: "Bridge Test",
+  description: "Two paths over a canyon.",
+  startingHealth: 20,
+  startingMoney: 100,
+  gridSize: GRID,
+  waters: [],
+  canyons: [{ id: 1, gridX: 5, gridZ: 5 }],
+  pathWaypoints: [[wp(5, 2), wp(5, 8)]],
+  waveConfigs: [
+    {
+      totalEnemies: 10,
+      enemies: [{ type: "basic", count: 10, spawnInterval: 1 }],
+    },
+  ],
+  buildings: [],
+  towers: [],
+  enemies: [],
+  projectiles: [],
+  enemyWeights: null,
+};
+
+// Like CROSSING_LEVEL but no canyon, so the ground crossing is legal.
+const GROUND_LEVEL: LevelConfigData = {
+  ...CROSSING_LEVEL,
+  canyons: [],
+  pathWaypoints: [[wp(5, 2), wp(5, 8)]],
+};
+
+const store = () => useLevelEditorStore.getState();
+
+const startPath = (
+  pathIndex: number,
+  start: { gridX: number; gridZ: number }
+) => {
+  store().setActiveTool("drawPath");
+  store().selectPath(pathIndex);
+  store().handleTileAction(start, TILE_SIZE, PATH_WIDTH);
+};
+
+afterEach(() => {
+  useLevelEditorStore.getState().resetDraftLevel();
+});
+
+describe("useLevelEditorStore: bridge crossing rule", () => {
+  it("blocks drawing a segment that crosses another path's bridge", () => {
+    store().loadDraftLevel(CROSSING_LEVEL, TILE_SIZE);
+    startPath(1, { gridX: 2, gridZ: 5 });
+    // Path 1 is now [(2,5)]; drawing to (6,5) crosses path 0's bridge at (5,5).
+    store().handleTileAction({ gridX: 6, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
+    expect(store().draftLevel.pathWaypoints[1]).toHaveLength(1);
+  });
+
+  it("blocks a straight segment that crosses the bridge mid-segment", () => {
+    store().loadDraftLevel(CROSSING_LEVEL, TILE_SIZE);
+    startPath(1, { gridX: 2, gridZ: 5 });
+    // The crossing at (5,5) is mid-segment, not on the target waypoint (6,5).
+    store().handleTileAction({ gridX: 6, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
+    expect(store().draftLevel.pathWaypoints[1]).toEqual([wp(2, 5)]);
+  });
+
+  it("allows a collinear merge over the same canyon tiles", () => {
+    store().loadDraftLevel(CROSSING_LEVEL, TILE_SIZE);
+    // Path 0 is the vertical bridge [ (5,2) -> (5,8) ]. Draw a second, new
+    // path 1 also running down column 5, sharing the canyon tile (5,5) with
+    // path 0 in the same direction — a merge over the bridge, not a crossing,
+    // so it is allowed.
+    startPath(1, { gridX: 5, gridZ: 3 });
+    store().handleTileAction({ gridX: 5, gridZ: 6 }, TILE_SIZE, PATH_WIDTH);
+    expect(store().draftLevel.pathWaypoints[1]).toEqual([wp(5, 3), wp(5, 6)]);
+  });
+
+  it("still allows a ground-level crossing (no canyon at the crossing tile)", () => {
+    store().loadDraftLevel(GROUND_LEVEL, TILE_SIZE);
+    startPath(1, { gridX: 2, gridZ: 5 });
+    store().handleTileAction({ gridX: 6, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
+    expect(store().draftLevel.pathWaypoints[1]).toEqual([wp(2, 5), wp(6, 5)]);
+  });
+});

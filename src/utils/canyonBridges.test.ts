@@ -7,9 +7,12 @@ import {
   CANON_BASIN_RIM_FADE,
   buildCanyonBridgePaths,
   buildCanyonMask,
+  findBridgeCrossings,
+  isBridgeCrossing,
   getBasinCapBBox,
   getBridgeTiles,
   getCanyonWorldBBox,
+  pathCanyonTiles,
   sampleBasinFloorY,
 } from "./canyonBridges";
 import {
@@ -118,7 +121,12 @@ describe("getBridgeTiles", () => {
 });
 
 // A rectangular block of canyon cells, gridX x0..x1 × gridZ z0..z1.
-const block = (x0: number, x1: number, z0: number, z1: number): CanyonConfig[] => {
+const block = (
+  x0: number,
+  x1: number,
+  z0: number,
+  z1: number
+): CanyonConfig[] => {
   const out: CanyonConfig[] = [];
   for (let x = x0; x <= x1; x++) {
     for (let z = z0; z <= z1; z++) {
@@ -194,7 +202,14 @@ describe("sampleBasinFloorY", () => {
 
   it("eases monotonically from the floor to the land", () => {
     // Walking out from the edge, the depth never increases.
-    const xs = [bbox.maxX, bbox.maxX + 0.25, bbox.maxX + 0.5, bbox.maxX + 0.75, bbox.maxX + CANON_BASIN_RIM_FADE, bbox.maxX + 1.5];
+    const xs = [
+      bbox.maxX,
+      bbox.maxX + 0.25,
+      bbox.maxX + 0.5,
+      bbox.maxX + 0.75,
+      bbox.maxX + CANON_BASIN_RIM_FADE,
+      bbox.maxX + 1.5,
+    ];
     const depths = xs.map((x) => depthAt(x, center.z));
     depths.forEach((d, i) => {
       if (i > 0) expect(d).toBeLessThanOrEqual(depths[i - 1] + 1e-9);
@@ -227,5 +242,91 @@ describe("sampleBasinFloorY", () => {
     expect(
       surfaceY(gapX, gapZ) - sampleBasinFloorY(gapX, gapZ, multi, RADIUS)
     ).toBeCloseTo(CANON_BASIN_DEPTH, 5);
+  });
+});
+
+describe("pathCanyonTiles", () => {
+  it("lists the canyon tiles a path crosses, with segment direction", () => {
+    const path = column(5, 2, 4); // tiles (5,2),(5,3),(5,4),(5,5)
+    expect(
+      pathCanyonTiles(path, [canyon(5, 3), canyon(5, 4)], GRID, TILE)
+    ).toEqual([
+      { gridX: 5, gridZ: 3, dirX: 0, dirZ: 1 },
+      { gridX: 5, gridZ: 4, dirX: 0, dirZ: 1 },
+    ]);
+  });
+
+  it("is empty when the path avoids every canyon", () => {
+    const path = column(5, 2, 3);
+    expect(pathCanyonTiles(path, [canyon(9, 9)], GRID, TILE)).toEqual([]);
+  });
+});
+
+describe("isBridgeCrossing", () => {
+  it("treats perpendicular spans as crossing", () => {
+    expect(isBridgeCrossing({ dirX: 1, dirZ: 0 }, { dirX: 0, dirZ: 1 })).toBe(
+      true
+    );
+    expect(isBridgeCrossing({ dirX: -1, dirZ: 0 }, { dirX: 0, dirZ: -1 })).toBe(
+      true
+    );
+  });
+
+  it("treats collinear spans (merge) as not crossing", () => {
+    expect(isBridgeCrossing({ dirX: 1, dirZ: 0 }, { dirX: 1, dirZ: 0 })).toBe(
+      false
+    );
+    expect(isBridgeCrossing({ dirX: 1, dirZ: 0 }, { dirX: -1, dirZ: 0 })).toBe(
+      false
+    );
+  });
+});
+
+describe("findBridgeCrossings", () => {
+  it("reports two paths crossing the same canyon tile at a right angle", () => {
+    const vertical = column(5, 2, 5); // down column 5, tiles z=2..6
+    const horizontal = [wp(2, 4), wp(3, 4), wp(4, 4), wp(5, 4), wp(6, 4)];
+    const crossings = findBridgeCrossings(
+      [vertical, horizontal],
+      [canyon(5, 4)],
+      GRID,
+      TILE
+    );
+    expect(crossings).toEqual([
+      {
+        pathIndexA: 0,
+        pathIndexB: 1,
+        tiles: [{ gridX: 5, gridZ: 4 }],
+      },
+    ]);
+  });
+
+  it("does not report collinear paths merging over the same canyon tiles", () => {
+    const a = column(5, 2, 5); // tiles z=2..6
+    const b = column(5, 4, 5); // tiles z=4..8, same direction
+    const crossings = findBridgeCrossings(
+      [a, b],
+      [canyon(5, 4), canyon(5, 5)],
+      GRID,
+      TILE
+    );
+    expect(crossings).toEqual([]);
+  });
+
+  it("reports no crossing when the bridges share no canyon tile", () => {
+    const a = column(5, 2, 3);
+    const b = column(6, 2, 3);
+    expect(
+      findBridgeCrossings([a, b], [canyon(5, 3), canyon(6, 3)], GRID, TILE)
+    ).toEqual([]);
+  });
+
+  it("ignores ground-level crossings (no canyon at the crossing tile)", () => {
+    const vertical = column(5, 2, 5);
+    const horizontal = [wp(2, 4), wp(6, 4)];
+    // Crossing at (5,4), but no canyon there -> not a bridge crossing.
+    expect(findBridgeCrossings([vertical, horizontal], [], GRID, TILE)).toEqual(
+      []
+    );
   });
 });

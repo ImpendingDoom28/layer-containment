@@ -10,6 +10,7 @@ import {
   waypointToTileUnclamped,
 } from "../../utils/levelEditor";
 import { MIN_GRID_SIZE } from "../../utils/gridSizeLimits";
+import { findBridgeCrossings } from "../../utils/canyonBridges";
 import { isGridTileOnPath } from "../../utils/pathUtils";
 import { parseLevelConfigData, type LevelConfigData } from "./levelConfig";
 
@@ -127,8 +128,8 @@ describe("playable level files", () => {
     it(`${id}: no duplicate or overlapping building/water tiles`, () => {
       const level = loadLevel(id);
       const tileKey = (gridX: number, gridZ: number) => `${gridX},${gridZ}`;
-      const buildingKeys = level.buildings.map(
-        (b) => tileKey(b.gridX, b.gridZ)
+      const buildingKeys = level.buildings.map((b) =>
+        tileKey(b.gridX, b.gridZ)
       );
       expect(new Set(buildingKeys).size).toBe(buildingKeys.length);
       const waterKeys = level.waters.map((w) => tileKey(w.gridX, w.gridZ));
@@ -212,6 +213,20 @@ describe("playable level files", () => {
       );
       expect(new Set(canyonKeys).size).toBe(canyonKeys.length);
     });
+
+    it(`${id}: no two paths cross the same canyon tile (overlapping bridges)`, () => {
+      const level = loadLevel(id);
+      const crossings = findBridgeCrossings(
+        level.pathWaypoints,
+        level.canyons ?? [],
+        level.gridSize,
+        TILE_SIZE
+      );
+      expect(
+        crossings,
+        `paths cross over the same canyon tile: ${JSON.stringify(crossings)}`
+      ).toEqual([]);
+    });
   }
 });
 
@@ -241,10 +256,14 @@ describe("3D asset showcase level", () => {
     const enemyTypes = new Set(level.enemies.map((e) => e.type));
     const towerTypes = new Set(level.towers.map((t) => t.type));
     for (const type of ["basic", "fast", "tank", "medic", "splitter"]) {
-      expect(enemyTypes.has(type as never), `enemy type ${type} missing`).toBe(true);
+      expect(enemyTypes.has(type as never), `enemy type ${type} missing`).toBe(
+        true
+      );
     }
     for (const type of ["basic", "slow", "brl", "laser", "relay", "chain"]) {
-      expect(towerTypes.has(type as never), `tower type ${type} missing`).toBe(true);
+      expect(towerTypes.has(type as never), `tower type ${type} missing`).toBe(
+        true
+      );
     }
   });
 
@@ -265,7 +284,9 @@ describe("3D asset showcase level", () => {
       "regenerating",
       "missingOut",
     ]) {
-      expect(upgradesShown.has(id as never), `upgrade ${id} missing`).toBe(true);
+      expect(upgradesShown.has(id as never), `upgrade ${id} missing`).toBe(
+        true
+      );
     }
     // Each upgrade id appears exactly three times (tiers 1, 2, 3).
     const count = (id: string) =>
@@ -299,7 +320,8 @@ describe("3D asset showcase level", () => {
     }
     // Enemy world coords sit one tile inside the board (offset −gridSize/2,
     // tile size 1): a 20×20 grid spans [−9.5, 10.5) per axis.
-    const worldInBounds = (v: number) => v >= -level.gridSize / 2 && v <= level.gridSize / 2 + 1;
+    const worldInBounds = (v: number) =>
+      v >= -level.gridSize / 2 && v <= level.gridSize / 2 + 1;
     for (const enemy of level.enemies) {
       expect(worldInBounds(enemy.x)).toBe(true);
       expect(worldInBounds(enemy.z)).toBe(true);

@@ -73,6 +73,16 @@ type LevelStoreState = {
    * scenes without a comet (the testing level) are never affected.
    */
   cometReveal: CometReveal | null;
+  /**
+   * The most recent `levelEnterRun` that no scene's `CometStrike` has consumed
+   * yet, or `null` when every load has been seen. A scene that mounts *after*
+   * its level was already loaded (the game flow: `startRun` initializes the
+   * level before the scene mounts) would miss the `LEVEL_ENTERED` event, so it
+   * reads this on mount and replays the strike once. Cleared by a new load
+   * (which overwrites it) and by the consuming scene; it survives
+   * `resetLevelState` so a reset-then-reload still gets a strike.
+   */
+  unseenLevelEnterRun: number | null;
   hoveredTile: TileData | null;
 };
 
@@ -92,6 +102,7 @@ type LevelStoreActions = {
   resetLevelState: () => void;
   setHoveredTile: (tile: TileData | null) => void;
   setCometReveal: (reveal: CometReveal | null) => void;
+  setUnseenLevelEnterRun: (run: number | null) => void;
   setLevelLoadError: (error: string | null) => void;
   retryLevelLoad: () => void;
   initializeLevelState: (levelData: LevelConfigData, tileSize: number) => void;
@@ -119,6 +130,7 @@ const DEFAULT_STATE: LevelStoreState = {
   levelLoadRetryToken: 0,
   levelEnterRun: 0,
   cometReveal: null,
+  unseenLevelEnterRun: null,
   hoveredTile: null,
 };
 
@@ -192,6 +204,20 @@ export const useLevelStore = create<LevelStore>((set) => ({
     // which is subscribed for the whole time the scene is mounted — plays its
     // one-shot load comet. The event carries the portals' flat-field
     // positions; the scene maps them onto the planet surface itself.
+    // Each spawn portal is a path's first waypoint; a path with no waypoints
+    // (the schema allows an empty inner array) has no portal, so skip it rather
+    // than index at `[0]`.
+    const portalPositions = pathWaypoints
+      .filter((path) => path.length > 0)
+      .map((path) => ({ x: path[0].x, z: path[0].z }));
+
+    // A fresh level load gets a unique id (the monotonic counter) and raises
+    // the `LEVEL_ENTERED` event so the scene's `CometStrike` orchestrator —
+    // which is subscribed for the whole time the scene is mounted — plays its
+    // one-shot load comet. The event carries the portals' flat-field
+    // positions; the scene maps them onto the planet surface itself. The load
+    // id is also retained as `unseenLevelEnterRun` so a scene that mounts
+    // *after* this load (the game flow) can replay the strike on mount.
     set((state) => ({
       isLevelConfigLoaded: true,
       enemiesKilled: 0,
@@ -208,14 +234,12 @@ export const useLevelStore = create<LevelStore>((set) => ({
       boss: boss ?? null,
       enemyWeights: enemyWeights as Record<EnemyType, number>,
       levelEnterRun: state.levelEnterRun + 1,
+      unseenLevelEnterRun: state.levelEnterRun + 1,
     }));
 
     gameEvents.emit(GameEvent.LEVEL_ENTERED, {
       run: useLevelStore.getState().levelEnterRun,
-      portalPositions: pathWaypoints.map((path) => ({
-        x: path[0].x,
-        z: path[0].z,
-      })),
+      portalPositions,
     });
   },
 
@@ -295,6 +319,10 @@ export const useLevelStore = create<LevelStore>((set) => ({
     set({ cometReveal: reveal });
   },
 
+  setUnseenLevelEnterRun: (run) => {
+    set({ unseenLevelEnterRun: run });
+  },
+
   setLevelLoadError: (error) => {
     set({ levelLoadError: error });
   },
@@ -327,8 +355,12 @@ export const useLevelStore = create<LevelStore>((set) => ({
       // Keep the load id monotonic across resets so every (re)load gets a
       // unique id and a restart replays the comet reveal even on the same
       // level. (`cometReveal` is already `null` in the default state, so the
-      // in-flight reveal is cleared automatically.)
+      // in-flight reveal is cleared automatically.) The pending load id is kept
+      // too: a reset that follows an already-consumed load leaves it `null`
+      // (no stale strike), while one that follows a load no scene saw still
+      // gives that load's strike a chance to play.
       levelEnterRun: state.levelEnterRun,
+      unseenLevelEnterRun: state.unseenLevelEnterRun,
     }));
   },
 }));
@@ -377,4 +409,8 @@ export const setHoveredTileSelector = (state: LevelStore) =>
 export const levelEnterRunSelector = (state: LevelStore) => state.levelEnterRun;
 export const cometRevealSelector = (state: LevelStore) => state.cometReveal;
 export const setCometRevealSelector = (state: LevelStore) => state.setCometReveal;
+export const unseenLevelEnterRunSelector = (state: LevelStore) =>
+  state.unseenLevelEnterRun;
+export const setUnseenLevelEnterRunSelector = (state: LevelStore) =>
+  state.setUnseenLevelEnterRun;
 export const enemyWeightsSelector = (state: LevelStore) => state.enemyWeights;

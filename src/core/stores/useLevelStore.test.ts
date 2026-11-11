@@ -168,4 +168,21 @@ describe("useLevelStore comet reveal", () => {
     expect(runB).toBeGreaterThan(runA);
     expect(received[1]?.run).toBe(runB);
   });
+
+  it("omits a path with no waypoints from the portal positions (no throw)", () => {
+    seedGameConfig();
+    subscribe();
+    // The level-config schema permits an empty inner array; such a path has no
+    // spawn portal, so it must be skipped rather than indexed at `[0]`.
+    const emptyPathLevel: LevelConfigData = {
+      ...levelData,
+      pathWaypoints: [[{ x: 1, y: 0, z: 2 }], []],
+    };
+
+    expect(() =>
+      useLevelStore.getState().initializeLevelState(emptyPathLevel, 1)
+    ).not.toThrow();
+    expect(received.length).toBe(1);
+    expect(received[0].portalPositions).toEqual([{ x: 1, z: 2 }]);
+  });
 });

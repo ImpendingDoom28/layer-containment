@@ -308,6 +308,15 @@ export const CometStrikeFX: FC<CometStrikeFXProps> = memo(
       const impactProgress =
         impactElapsed < 0 ? 0 : Math.min(impactElapsed / IMPACT_DURATION, 1);
 
+      // Reveal the portal the moment the strike lands, before the completion
+      // return below: a single large delta (e.g. the tab was throttled) can
+      // jump straight past the impact window, and onImpact must still fire
+      // exactly once in that case or the portal stays hidden for the run.
+      if (impactElapsed >= 0 && !impactFiredRef.current) {
+        impactFiredRef.current = true;
+        onImpact?.();
+      }
+
       if (impactProgress >= 1) {
         doneRef.current = true;
         if (headRef.current) headRef.current.visible = false;

@@ -79,45 +79,55 @@ export const CometStrike: FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    const onLevelEntered = (data: LevelEnteredData) => {
-      if (!data?.portalPositions?.length) return;
+  // Arm the reveal and mount a `CometStrikeFX` for each spawn portal of the
+  // given load. `run` is the load's unique id; `flats` are the portals'
+  // flat-field positions (mapped onto the planet surface here).
+  const playStrikes = useCallback(
+    (run: number, flats: { x: number; z: number }[]) => {
       const { gridSize } = useLevelStore.getState();
       const { tileSize } = useGameStore.getState();
-      if (gridSize <= 0 || tileSize <= 0) return;
+      if (flats.length === 0 || gridSize <= 0 || tileSize <= 0) return;
       const radius = getPlanetRadius(gridSize, tileSize);
 
       // Arm the reveal first (before the FX mounts) so the portals are
       // hidden from the very first frame of the comet's flight. A fresh load
       // also re-arms the camera-punch guard, so the next load punches again.
-      useLevelStore.getState().setCometReveal({ run: data.run, phase: "armed" });
+      useLevelStore.getState().setCometReveal({ run, phase: "armed" });
       punchEmittedRef.current = false;
 
-      const nextStrikes: Strike[] = data.portalPositions.map((flat) => {
-        const { surfacePoint, normal } = flatFieldToSphereSurface(
-          flat.x,
-          flat.z,
-          radius
-        );
-        const impact = surfacePoint.clone().addScaledVector(normal, 0.05);
-        const quaternion = getSurfaceQuaternion(normal);
-        return {
-          id: getNextId(),
-          position: [impact.x, impact.y, impact.z] as [
-            number,
-            number,
-            number
-          ],
-          quaternion: {
-            x: quaternion.x,
-            y: quaternion.y,
-            z: quaternion.z,
-            w: quaternion.w,
-          },
-          flat,
-        };
-      });
-      setStrikes(nextStrikes);
+      setStrikes(
+        flats.map((flat) => {
+          const { surfacePoint, normal } = flatFieldToSphereSurface(
+            flat.x,
+            flat.z,
+            radius
+          );
+          const impact = surfacePoint.clone().addScaledVector(normal, 0.05);
+          const quaternion = getSurfaceQuaternion(normal);
+          return {
+            id: getNextId(),
+            position: [impact.x, impact.y, impact.z] as [
+              number,
+              number,
+              number,
+            ],
+            quaternion: {
+              x: quaternion.x,
+              y: quaternion.y,
+              z: quaternion.z,
+              w: quaternion.w,
+            },
+            flat,
+          };
+        })
+      );
+    },
+    [getNextId]
+  );
+
+  useEffect(() => {
+    const onLevelEntered = (data: LevelEnteredData) => {
+      playStrikes(data.run, data.portalPositions ?? []);
     };
 
     const unsubscribe = gameEvents.on<LevelEnteredData>(
@@ -130,7 +140,39 @@ export const CometStrike: FC = () => {
       unsubscribe();
       useLevelStore.getState().setCometReveal(null);
     };
-  }, [getNextId]);
+  }, [playStrikes]);
+
+  // The game flow loads the level *before* this scene mounts (`startRun`
+  // initializes the level, then the scene mounts on `gameStatus` "playing"),
+  // so the `LEVEL_ENTERED` event fires before the subscription above exists.
+  // The level store retains the last load id no scene has consumed
+  // (`unseenLevelEnterRun`); if it still points at the current load when this
+  // scene mounts, replay the strike once. The `gridSize` guard keeps it from
+  // firing after a level reset (the store is cleared to `gridSize` 0, which
+  // also means the retained id is a stale one, e.g. the menu's level, not the
+  // game's).
+  useEffect(() => {
+    const {
+      levelEnterRun,
+      gridSize,
+      pathWaypoints,
+      unseenLevelEnterRun,
+    } = useLevelStore.getState();
+    if (
+      unseenLevelEnterRun === null ||
+      unseenLevelEnterRun !== levelEnterRun ||
+      gridSize <= 0
+    ) {
+      return;
+    }
+    useLevelStore.getState().setUnseenLevelEnterRun(null);
+    playStrikes(
+      levelEnterRun,
+      pathWaypoints
+        .filter((path) => path.length > 0)
+        .map((path) => ({ x: path[0].x, z: path[0].z }))
+    );
+  }, [playStrikes]);
 
   if (strikes.length === 0) return null;
   return (

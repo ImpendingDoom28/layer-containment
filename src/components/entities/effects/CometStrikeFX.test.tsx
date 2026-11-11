@@ -226,6 +226,34 @@ describe("CometStrikeFX", () => {
     }
   });
 
+  it("still reveals (onImpact) when a single frame jumps straight past the impact window", async () => {
+    // A large delta (e.g. the tab was throttled, then resumed) can advance the
+    // strike straight to completion in one frame, skipping the 1.2–1.7 s impact
+    // window. onImpact must still fire exactly once (or the portal stays hidden
+    // for the whole run) before the strike completes.
+    let impacts = 0;
+    let completed = 0;
+    const { renderer } = await createHarness({
+      onImpact: () => {
+        impacts += 1;
+      },
+      onComplete: () => {
+        completed += 1;
+      },
+    });
+    try {
+      await advanceTo(renderer, 0); // start
+      await advanceTo(renderer, 2.0); // jump straight past 1.7 s
+      expect(impacts).toBe(1);
+      expect(completed).toBe(1);
+      await advanceTo(renderer, 3.0);
+      expect(impacts).toBe(1);
+      expect(completed).toBe(1);
+    } finally {
+      renderer.unmount();
+    }
+  });
+
   it("skips the comet under reduced motion but still strikes and reveals", async () => {
     reduced.value = true;
     let impacts = 0;

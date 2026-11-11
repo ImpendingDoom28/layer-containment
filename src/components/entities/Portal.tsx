@@ -68,6 +68,15 @@ export const Portal: FC<PortalProps> = memo(
     // (phase `armed`) the portal is hidden and the clock is held at 0.
     const entryTimeRef = useRef(0);
     const lastRunRef = useRef(-1);
+    // The rings' accumulated rotation, one per ring. The rings spin fast
+    // while the portal opens and settle to their idle rate, so each ring's
+    // angle is advanced by `dt * currentSpeed` (integrating the changing
+    // speed) rather than `time * speed` — the latter makes the angle jump
+    // backwards when the speed changes (it shrinks as `idleBlend` rises), even
+    // though the ring keeps turning.
+    const outerRingAngleRef = useRef(0);
+    const middleRingAngleRef = useRef(0);
+    const innerRingAngleRef = useRef(0);
 
     // The portal is decorative motion, so drive it with the shared
     // pause-aware simulation clock: its rings, core pulse, and particles slow
@@ -112,26 +121,32 @@ export const Portal: FC<PortalProps> = memo(
             ? 1
             : 1 - (1 - entryProgress) ** 3
           : 1;
+      // How much of the idle (perpetual) animation is allowed: it fades in
+      // over the reveal, so the portal is calm right after the strike and
+      // picks up its perpetual motion afterward. Under reduced motion the
+      // reveal is instant, so the portal is at its resting blend too (no
+      // entrance spin). With no reveal the portal is at rest.
       const idleBlend =
-        entry && !armed
+        entry && !armed && !reducedMotion
           ? Math.max(0, Math.min((entryTimeRef.current - ENTRY_DURATION) / 0.6, 1))
           : 1;
 
-      if (outerRingRef.current) {
-        // The rings spin fast while the portal opens, then settle to their
-        // idle rate (the rate eases with the idle blend, so the angle stays
-        // continuous — the torus is symmetric, only the speed is visible).
-        outerRingRef.current.rotation.y =
-          time * (0.8 * idleBlend + 2.4 * (1 - idleBlend));
-      }
-      if (middleRingRef.current) {
-        middleRingRef.current.rotation.y =
-          -time * (1.2 * idleBlend + 3.2 * (1 - idleBlend));
-      }
-      if (innerRingRef.current) {
-        innerRingRef.current.rotation.y =
-          time * (1.5 * idleBlend + 4.0 * (1 - idleBlend));
-      }
+      // Advance each ring by its current speed this frame (see `outerRingAngleRef`
+      // and siblings): the spin-up speed eases into the idle speed as
+      // `idleBlend` rises, and integrating `dt * speed` keeps the angle
+      // monotonic through that change.
+      const outerSpeed = 0.8 * idleBlend + 2.4 * (1 - idleBlend);
+      const middleSpeed = 1.2 * idleBlend + 3.2 * (1 - idleBlend);
+      const innerSpeed = 1.5 * idleBlend + 4.0 * (1 - idleBlend);
+      outerRingAngleRef.current += dt * outerSpeed;
+      middleRingAngleRef.current += dt * middleSpeed;
+      innerRingAngleRef.current += dt * innerSpeed;
+      if (outerRingRef.current)
+        outerRingRef.current.rotation.y = outerRingAngleRef.current;
+      if (middleRingRef.current)
+        middleRingRef.current.rotation.y = -middleRingAngleRef.current;
+      if (innerRingRef.current)
+        innerRingRef.current.rotation.y = innerRingAngleRef.current;
 
       if (portalCoreRef.current) {
         const pulse = Math.sin(time * 2) * 0.1 * idleBlend + 1;

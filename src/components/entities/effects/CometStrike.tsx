@@ -134,11 +134,14 @@ export const CometStrike: FC = () => {
       GameEvent.LEVEL_ENTERED,
       onLevelEntered
     );
-    // Clear the reveal when this scene goes away (a scene transition), so a
-    // stale armed/revealed state does not leak into the next scene's portals.
+    // Do NOT clear `cometReveal` here. A reveal left by a previous scene is
+    // already harmless: `Path` only applies it when its `run` matches the
+    // level's monotonic `levelEnterRun`, and every load gets a fresh id, so a
+    // stale reveal can never match the level a new scene displays. Clearing it
+    // on unmount would also break React StrictMode's simulated unmount (it
+    // would wipe the reveal the mount-time catch-up below just armed).
     return () => {
       unsubscribe();
-      useLevelStore.getState().setCometReveal(null);
     };
   }, [playStrikes]);
 

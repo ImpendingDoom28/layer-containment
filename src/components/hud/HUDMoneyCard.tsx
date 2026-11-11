@@ -19,16 +19,17 @@ type HUDMoneyCardProps = {
 
 /**
  * The HUD money display: the number eases to its new value (~250ms ease-out,
- * pure DOM — no 3D cost) and the money itself glows briefly on every change —
- * gold on a gain, red on a spend.
+ * pure DOM — no 3D cost) and the money's own color briefly changes on every
+ * change — gold on a gain, red on a spend.
  *
- * The glow is driven by the `MONEY_CHANGED` game event (the store raises it
- * on every gain/spend), so it is view-side and never touches the simulation.
- * `is-flashing` + `data-money-flash` live on the money wrapper; the CSS
- * animates a `drop-shadow` filter on it, so the glow hugs the icon and
- * number instead of the card background. Re-triggering uses the standard
- * remove-class / force-reflow / re-add dance. Skipped under
- * `prefers-reduced-motion` (the CSS drops the animation; the hook snaps).
+ * The color change is driven by the `MONEY_CHANGED` game event (the store
+ * raises it on every gain/spend), so it is view-side and never touches the
+ * simulation. `is-flashing` + `data-money-flash` live on the money wrapper;
+ * the CSS animates a hue-rotate/saturate/brightness `filter` on it that
+ * remaps the green glyphs (icon + number) onto the target color and back.
+ * Re-triggering uses the standard remove-class / force-reflow / re-add
+ * dance. Skipped under `prefers-reduced-motion` (the CSS drops the
+ * animation; the hook snaps).
  */
 export const HUDMoneyCard: FC<HUDMoneyCardProps> = ({
   variant = "medium",

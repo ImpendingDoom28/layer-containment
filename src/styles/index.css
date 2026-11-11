@@ -344,7 +344,7 @@
   }
 
   /* The money flash is a motion effect: under reduced motion the number
-     still updates (the hook snaps) but the money does not glow. */
+     still updates (the hook snaps) but the money's color does not change. */
   .money-flash.is-flashing {
     animation: none;
   }
@@ -437,13 +437,16 @@
 }
 
 /*
- * Money flash (see HUDMoneyCard): the money itself (icon + number) glows
- * briefly on every change — gold when money increases, red when it is spent.
- * The glow is a `drop-shadow` filter on the money wrapper, so it hugs the
- * shape of the glyphs instead of lighting the card background behind them.
- * The wrapper carries `data-money-flash` (which color) and `is-flashing`
- * (the 600ms ease-out animation); at rest there is no filter and the layout
- * is untouched. Pure DOM — no 3D cost.
+ * Money flash (see HUDMoneyCard): the money's own color (icon + number,
+ * both green-400) briefly changes on every change — gold when money
+ * increases, red when it is spent — and eases back over 600 ms. The color
+ * change is a `filter` on the money wrapper (hue-rotate + saturate +
+ * brightness) solved to map the single source green (74, 222, 128) onto the
+ * target color, so the digits and the pre-rasterized icon both recolor
+ * together and anti-aliased glyph edges land on darker tones of the target
+ * color; at rest there is no filter. The wrapper carries `data-money-flash`
+ * (which color) and `is-flashing` (the running animation). Pure DOM — no 3D
+ * cost.
  */
 .money-flash[data-money-flash="increase"].is-flashing {
   animation: money-flash-gold 600ms ease-out;
@@ -455,27 +458,27 @@
 
 @keyframes money-flash-gold {
   0% {
-    filter: drop-shadow(0 0 0 rgba(251, 191, 36, 0));
+    filter: none;
   }
   30% {
-    filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.95))
-      drop-shadow(0 0 22px rgba(251, 191, 36, 0.55));
+    /* green-400 (74, 222, 128) -> gold (255, 204, 20) */
+    filter: hue-rotate(-95deg) saturate(1.6) brightness(1.2);
   }
   100% {
-    filter: drop-shadow(0 0 0 rgba(251, 191, 36, 0));
+    filter: none;
   }
 }
 
 @keyframes money-flash-red {
   0% {
-    filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0));
+    filter: none;
   }
   30% {
-    filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.9))
-      drop-shadow(0 0 22px rgba(239, 68, 68, 0.5));
+    /* green-400 (74, 222, 128) -> red (250, 116, 116) */
+    filter: hue-rotate(-138deg) saturate(2.5) brightness(0.98);
   }
   100% {
-    filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0));
+    filter: none;
   }
 }
 

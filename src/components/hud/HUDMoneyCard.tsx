@@ -19,13 +19,14 @@ type HUDMoneyCardProps = {
 
 /**
  * The HUD money display: the number eases to its new value (~250ms ease-out,
- * pure DOM — no 3D cost) and the money card flashes briefly on every change,
- * gold on a gain and red on a spend.
+ * pure DOM — no 3D cost) and the money itself glows briefly on every change —
+ * gold on a gain, red on a spend.
  *
- * The flash is driven by the `MONEY_CHANGED` game event (the store raises it
+ * The glow is driven by the `MONEY_CHANGED` game event (the store raises it
  * on every gain/spend), so it is view-side and never touches the simulation.
- * The overlay is an absolutely-positioned pill behind the number (invisible at
- * rest), so the resting layout is unchanged; re-triggering uses the standard
+ * `is-flashing` + `data-money-flash` live on the money wrapper; the CSS
+ * animates a `drop-shadow` filter on it, so the glow hugs the icon and
+ * number instead of the card background. Re-triggering uses the standard
  * remove-class / force-reflow / re-add dance. Skipped under
  * `prefers-reduced-motion` (the CSS drops the animation; the hook snaps).
  */
@@ -36,7 +37,7 @@ export const HUDMoneyCard: FC<HUDMoneyCardProps> = ({
 }) => {
   const money = useLevelStore(moneySelector);
   const displayed = useMoneyCounter(money);
-  const flashRef = useRef<HTMLDivElement | null>(null);
+  const flashRef = useRef<HTMLSpanElement | null>(null);
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -73,18 +74,14 @@ export const HUDMoneyCard: FC<HUDMoneyCardProps> = ({
   }, []);
 
   return (
-    <div className={`relative inline-flex items-center ${className ?? ""}`}>
-      <div
-        ref={flashRef}
-        data-testid="money-card-flash"
-        data-money-flash="increase"
-        className="money-card-flash"
-      />
-      {/* Above the flash pill (z-index 0) so the glow stays behind the number. */}
-      <span className="relative z-[1] inline-flex items-center">
-        <UIMoney money={displayed} variant={variant} iconSize={iconSize} />
-      </span>
-    </div>
+    <span
+      ref={flashRef}
+      data-testid="money-card-flash"
+      data-money-flash="increase"
+      className={`money-flash inline-flex items-center ${className ?? ""}`}
+    >
+      <UIMoney money={displayed} variant={variant} iconSize={iconSize} />
+    </span>
   );
 };
 

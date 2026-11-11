@@ -131,4 +131,53 @@ describe("useLevelEditorStore: bridge crossing rule", () => {
     store().handleTileAction({ gridX: 6, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
     expect(store().draftLevel.pathWaypoints[1]).toEqual([wp(2, 5), wp(4, 5)]);
   });
+
+  // The user-reported grid: two vertical paths and two horizontal paths all
+  // spanning a large multi-tile canyon basin (not a single tile). A single
+  // horizontal path crossing a vertical bridge mid-segment must be blocked,
+  // so the 2x2 grid of overlapping bridge rails cannot be built by drawing.
+  it("blocks drawing the user-reported grid over a multi-tile basin", () => {
+    const basin: LevelConfigData = {
+      ...CROSSING_LEVEL,
+      canyons: [
+        { id: 1, gridX: 4, gridZ: 4 },
+        { id: 2, gridX: 5, gridZ: 4 },
+        { id: 3, gridX: 6, gridZ: 4 },
+        { id: 4, gridX: 4, gridZ: 5 },
+        { id: 5, gridX: 5, gridZ: 5 },
+        { id: 6, gridX: 6, gridZ: 5 },
+        { id: 7, gridX: 4, gridZ: 6 },
+        { id: 8, gridX: 5, gridZ: 6 },
+        { id: 9, gridX: 6, gridZ: 6 },
+      ],
+      // Path 0: vertical bridge down column 5 over the basin.
+      pathWaypoints: [[wp(5, 2), wp(5, 8)]],
+    };
+    store().loadDraftLevel(basin, TILE_SIZE);
+
+    // Path 1: second vertical path down column 7 — parallel, no crossing.
+    startPath(1, { gridX: 7, gridZ: 2 });
+    store().handleTileAction({ gridX: 7, gridZ: 8 }, TILE_SIZE, PATH_WIDTH);
+    expect(store().draftLevel.pathWaypoints[1]).toEqual([wp(7, 2), wp(7, 8)]);
+
+    // Path 2: horizontal path crossing path 0's bridge at (5,5) — the first
+    // crossing; must be blocked outright.
+    startPath(2, { gridX: 2, gridZ: 5 });
+    store().handleTileAction({ gridX: 6, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
+    expect(store().draftLevel.pathWaypoints[2]).toHaveLength(1);
+
+    // Path 3: a horizontal path whose segment would only cross path 0's
+    // bridge at (5,6) (still inside the basin) — also blocked.
+    startPath(3, { gridX: 2, gridZ: 6 });
+    store().handleTileAction({ gridX: 6, gridZ: 6 }, TILE_SIZE, PATH_WIDTH);
+    expect(store().draftLevel.pathWaypoints[3]).toHaveLength(1);
+
+    // And a basin tile is never paintable under an existing path, so the
+    // "draw the paths first, then carve the basin underneath" route is closed
+    // as well.
+    store().setActiveTool("canyon");
+    const before = store().draftLevel.canyons.length;
+    store().handleTileAction({ gridX: 5, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
+    expect(store().draftLevel.canyons).toHaveLength(before);
+  });
 });

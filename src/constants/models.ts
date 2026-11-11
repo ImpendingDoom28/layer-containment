@@ -14,29 +14,30 @@ export type EnemyModelSpec = {
   node: string;
 };
 
+// Versioned queries on the `assets/` URLs: the PWA service worker serves
+// cached assets cache-first, so a returning install would keep loading the
+// previously-cached file after an in-place replacement. Each re-released model
+// bumps its `?v=` so the new bytes are fetched (the stress suite's model-route
+// regexes match on the path and ignore the query).
 export const ENEMY_MODELS = {
   basic: {
-    url: "assets/models/troop.glb",
+    url: "assets/models/troop.glb?v=2",
     node: "Enemy_Basic_ROOT",
   },
   fast: {
-    // Versioned query: the file replaced the previous wraith.glb in place, but
-    // the PWA service worker serves cached `assets/` URLs cache-first. A
-    // returning install would otherwise load the old file (root node
-    // `W02_Wraith_ROOT`) and, finding no `Enemy_Fast_ROOT`, render nothing.
-    url: "assets/models/wraith.glb?v=2",
+    url: "assets/models/wraith.glb?v=3",
     node: "Enemy_Fast_ROOT",
   },
   medic: {
-    url: "assets/models/medic.glb",
+    url: "assets/models/medic.glb?v=2",
     node: "Enemy_Medic_ROOT",
   },
   splitter: {
-    url: "assets/models/splitter.glb",
+    url: "assets/models/splitter.glb?v=2",
     node: "Enemy_Splitter_ROOT",
   },
   tank: {
-    url: "assets/models/tankee.glb",
+    url: "assets/models/tankee.glb?v=2",
     node: "Enemy_Tank_ROOT",
   },
 } as const satisfies Record<EnemyType, EnemyModelSpec>;
@@ -70,7 +71,7 @@ export const RUBBLE_MODELS: readonly RubbleModelSpec[] = [
 // transform is already the one the scene wants (grounded at y = 0, centered
 // on x/z), so `EndBuilding` renders it as-is (see `prepareBaseModel`).
 export const BASE_MODEL: EnemyModelSpec = {
-  url: "assets/models/player_base.glb",
+  url: "assets/models/player_base.glb?v=2",
   node: "Player_Base_ROOT",
 };
 

@@ -35,10 +35,23 @@ const COMET_FLIGHT_DURATION = 1.2;
 // direction). Long enough to read as a streak, short enough to land in ~1s.
 const COMET_START_DISTANCE = 26;
 // The comet's incoming direction, in the impact's local frame (local +Y is
-// the surface normal). It comes in low and steep — a classic sky-streak
-// angle, with a sideways lean so the flight isn't a plain line to the
-// camera.
-const COMET_INCOMING = new Vector3(0.75, 0.45, 0.5).normalize();
+// the surface normal): a steep dive with a random bearing around the sky.
+// Each strike samples its own direction, so the comets of a level appear to
+// come from different places instead of one shared sky corner.
+const COMET_DIVE_MIN = 0.35;
+const COMET_DIVE_MAX = 0.6;
+
+export const sampleCometIncoming = (out = new Vector3()): Vector3 => {
+  const up = COMET_DIVE_MIN + Math.random() * (COMET_DIVE_MAX - COMET_DIVE_MIN);
+  const horizontal = Math.sqrt(1 - up * up);
+  const bearing = Math.random() * Math.PI * 2;
+  return out.set(
+    Math.cos(bearing) * horizontal,
+    up,
+    Math.sin(bearing) * horizontal
+  );
+};
+
 // The tail: a row of additive glow sprites trailing the head (the same
 // shared radial texture the head uses), each smaller and fainter, so the
 // comet reads as a fading streak without a shader or extra geometry.
@@ -51,8 +64,8 @@ const TAIL_BASE_OPACITY = 0.5;
 // impact reads as one family of effects.
 const IMPACT_DURATION = 0.5;
 const FIREBALL_FRACTION = 0.55;
-const RIPPLE_RADIUS = 1.1;
-const RIPPLE_OPACITY = 0.16;
+const RIPPLE_RADIUS = 2.1;
+const RIPPLE_OPACITY = 0.2;
 // The hot core colour of the comet: white-hot (bloom picks it up).
 const COMET_CORE_COLOR = new Color("#fff7e0");
 const COMET_TRAIL_COLOR = new Color("#8be9fd");
@@ -90,12 +103,12 @@ const sharedRingGeometry = new RingGeometry(0.92, 1, 32);
 const sharedShardGeometry = new IcosahedronGeometry(1, 0);
 
 const SHARD_COUNT = 7;
-const SHARD_TRAVEL_MIN = 0.35;
-const SHARD_TRAVEL_MAX = 0.8;
-const SHARD_RISE_MIN = 0.1;
-const SHARD_RISE_MAX = 0.28;
-const SHARD_SIZE_MIN = 0.05;
-const SHARD_SIZE_MAX = 0.11;
+const SHARD_TRAVEL_MIN = 0.5;
+const SHARD_TRAVEL_MAX = 1.3;
+const SHARD_RISE_MIN = 0.16;
+const SHARD_RISE_MAX = 0.45;
+const SHARD_SIZE_MIN = 0.07;
+const SHARD_SIZE_MAX = 0.16;
 
 const rand = (min: number, max: number): number =>
   min + Math.random() * (max - min);
@@ -260,6 +273,11 @@ export const CometStrikeFX: FC<CometStrikeFXProps> = memo(
     );
     const seeds = useMemo(() => makeShardSeeds(), []);
 
+    // This strike's incoming direction, sampled once so the whole flight
+    // (head + tail) shares one line and the comets of a level come from
+    // different sky bearings.
+    const incoming = useMemo(() => sampleCometIncoming(), []);
+
     useLayoutEffect(
       () => () => {
         headMaterial.dispose();
@@ -347,9 +365,9 @@ export const CometStrikeFX: FC<CometStrikeFXProps> = memo(
           if (head) {
             head.visible = true;
             head.position.set(
-              COMET_INCOMING.x * distance,
-              COMET_INCOMING.y * distance,
-              COMET_INCOMING.z * distance
+              incoming.x * distance,
+              incoming.y * distance,
+              incoming.z * distance
             );
             head.scale.setScalar(0.55 + 0.3 * flightProgress);
             headMaterial.opacity = 1;
@@ -361,9 +379,9 @@ export const CometStrikeFX: FC<CometStrikeFXProps> = memo(
             const offset = (index + 1) * TAIL_SPACING;
             tail.visible = true;
             tail.position.set(
-              COMET_INCOMING.x * (distance + offset),
-              COMET_INCOMING.y * (distance + offset),
-              COMET_INCOMING.z * (distance + offset)
+              incoming.x * (distance + offset),
+              incoming.y * (distance + offset),
+              incoming.z * (distance + offset)
             );
             const fade = (TAIL_SEGMENTS - index) / TAIL_SEGMENTS;
             tail.scale.setScalar(TAIL_BASE_SCALE * fade * (0.7 + 0.3 * flightProgress));
@@ -406,7 +424,7 @@ export const CometStrikeFX: FC<CometStrikeFXProps> = memo(
         const fbEase = 1 - (1 - fb) ** 2;
         if (fireballRef.current) {
           fireballRef.current.visible = true;
-          fireballRef.current.scale.setScalar(0.5 + RIPPLE_RADIUS * 1.1 * fbEase);
+          fireballRef.current.scale.setScalar(0.5 + RIPPLE_RADIUS * 1.4 * fbEase);
           fireballMaterial.opacity = (1 - fb) * 0.95;
         }
 

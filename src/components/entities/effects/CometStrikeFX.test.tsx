@@ -6,7 +6,7 @@ import { Quaternion, Vector3 } from "three";
 import { SimulationClockProvider } from "../../../core/contexts/SimulationClockContext";
 import { useGameStore } from "../../../core/stores/useGameStore";
 import { useSettingsStore } from "../../../core/stores/useSettingsStore";
-import { CometStrikeFX } from "./CometStrikeFX";
+import { CometStrikeFX, sampleCometIncoming } from "./CometStrikeFX";
 
 // The node test environment has no `window`, so the real `useReducedMotion`
 // (guarded by `typeof window`) would always report false. Mock it with a
@@ -158,6 +158,12 @@ describe("CometStrikeFX", () => {
         sprites.some((s) => s.visible && positionMagnitude(s) > 5)
       ).toBe(true);
 
+      // The comet always descends from the sky: mid-flight its head sits
+      // above the impact's local +Y (the surface normal).
+      expect(
+        sprites.some((s) => s.visible && s.position.y > 1)
+      ).toBe(true);
+
       // No impact yet: the ripple is still collapsed (its scale, since the
       // ripple sits at the group's local origin).
       expect(findRipple(renderer).scale.x).toBeLessThanOrEqual(1e-3);
@@ -283,5 +289,20 @@ describe("CometStrikeFX", () => {
     } finally {
       renderer.unmount();
     }
+  });
+
+  it("samples a skyward incoming direction per strike", () => {
+    // Every strike's comet comes in from the sky: unit length, with a
+    // healthy upward (surface-normal) component, so the comets of a level
+    // read as falling from different places rather than one fixed corner.
+    let maxY = 0;
+    for (let i = 0; i < 50; i += 1) {
+      const dir = sampleCometIncoming();
+      expect(dir.length()).toBeCloseTo(1, 5);
+      expect(dir.y).toBeGreaterThan(0.3);
+      maxY = Math.max(maxY, dir.y);
+    }
+    // The dive angle is sampled within the window (not pinned to one value).
+    expect(maxY).toBeLessThan(0.61);
   });
 });

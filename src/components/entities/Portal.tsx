@@ -196,10 +196,6 @@ export const Portal: FC<PortalProps> = memo(
         // impact flips the phase to `revealed`.
         groupRef.current.visible = !armed;
         const idlePulse = Math.sin(time * 1.2) * 0.05 * idleBlend;
-        // The group grows out of the rock: at the start it lies squashed flat
-        // against the surface (the ring hugging the ground) and rises to its
-        // rest height over the reveal, so the portal reads as a fresh opening
-        // in the rock the comet just cracked open.
         const rise = 0.4 + 0.6 * entryEase;
         const lift = idlePulse + (rise - 1) * 0.8;
         if (surfaceNormal) {
@@ -212,9 +208,16 @@ export const Portal: FC<PortalProps> = memo(
         } else {
           groupRef.current.position.y = position[1] + lift;
         }
+        // The group grows out of the rock: at the start of the reveal it lies
+        // squashed flat against the surface (the ring hugging the ground) and
+        // rises to its rest height over the reveal, so the portal reads as a
+        // fresh opening in the rock the comet just cracked open. The vertical
+        // (surface-normal) scale eases from flattened to *exactly* full, so a
+        // settled portal is an un-squished ring rather than a squashed one.
+        const squish = 0.15 + 0.85 * entryEase;
         groupRef.current.scale.set(
           rise,
-          Math.max(rise * 0.55, 1e-3),
+          Math.max(squish, 1e-3),
           rise
         );
       }

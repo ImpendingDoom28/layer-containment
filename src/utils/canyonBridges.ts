@@ -202,10 +202,50 @@ export const isBridgeCrossing = (
   return (a.dirX !== 0) !== (b.dirX !== 0);
 };
 
+// Signed leg encoding for the half-axis a bridge connects at a canyon tile:
+// 1 = toward -x, 2 = toward +x, 3 = toward -z, 4 = toward +z. `axisOfLeg` maps
+// a leg to its axis (0 = x, 1 = z).
+const axisOfLeg = (leg: number): number => (leg <= 2 ? 0 : 1);
+
+// The signed legs a path's bridge connects at canyon tile `i`: the half-axis
+// from the tile toward the previous sampled point and toward the next. A
+// straight path yields two opposite legs on one axis (its full deck); a turn
+// yields two legs on different axes (the L the deck actually draws, see
+// `Bridge`); an endpoint yields a single leg. Using the same per-tile
+// footprint the bridge renders is what lets the check catch a perpendicular
+// path through a corner tile.
+const bridgeLegsAtTile = (points: SampledTilePoint[], i: number): number[] => {
+  const legs: number[] = [];
+  const addLeg = (other: SampledTilePoint) => {
+    const dx = Math.sign(other.x - points[i].x);
+    const dz = Math.sign(other.z - points[i].z);
+    const leg = dx < 0 ? 1 : dx > 0 ? 2 : dz < 0 ? 3 : 4;
+    if (!legs.includes(leg)) legs.push(leg);
+  };
+  const prev = points[i - 1];
+  if (prev) addLeg(prev);
+  const next = points[i + 1];
+  if (next) addLeg(next);
+  return legs;
+};
+
+// Two bridges cross at the same canyon tile when, after setting aside the
+// legs they share (a merge — those overlap rather than cross), one still runs
+// along an axis the other does not (a perpendicular pair of decks).
+const crossesAt = (a: number[], b: number[]): boolean => {
+  const remainA = a.filter((leg) => !b.includes(leg));
+  const remainB = b.filter((leg) => !a.includes(leg));
+  return remainA.some((legA) =>
+    remainB.some((legB) => axisOfLeg(legA) !== axisOfLeg(legB))
+  );
+};
+
 /**
  * Pairs of distinct paths whose bridges cross the same canyon tile at
  * different angles (each path renders a bridge deck with rails over a canyon
- * span, so two crossing decks would overlap). A pair is reported at most
+ * span, so two crossing decks would overlap). The footprint at each tile is
+ * the full set of directions the rendered deck spans there — at a corner that
+ * is both the incoming and the outgoing segment. A pair is reported at most
  * once, in path-index order, listing the shared tiles.
  */
 export type BridgeCrossing = {
@@ -220,23 +260,30 @@ export const findBridgeCrossings = (
   gridSize: number,
   tileSize: number
 ): BridgeCrossing[] => {
-  const spans = pathWaypoints.map((path) =>
-    pathCanyonTiles(path, canyons, gridSize, tileSize)
-  );
+  const mask = buildCanyonMask(canyons, gridSize);
+  // Per path: the bridge legs at each canyon tile, keyed by tile index.
+  const footprints = pathWaypoints.map((path) => {
+    const points = samplePathToTilePoints(path, gridSize, tileSize);
+    const map = new Map<number, number[]>();
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i];
+      if (mask[p.gridZ * gridSize + p.gridX] !== 1) continue;
+      map.set(p.gridZ * gridSize + p.gridX, bridgeLegsAtTile(points, i));
+    }
+    return map;
+  });
+
   const crossings: BridgeCrossing[] = [];
-  for (let a = 0; a < spans.length; a++) {
-    for (let b = a + 1; b < spans.length; b++) {
+  for (let a = 0; a < footprints.length; a++) {
+    for (let b = a + 1; b < footprints.length; b++) {
       const shared: Array<{ gridX: number; gridZ: number }> = [];
-      for (const tile of spans[a]) {
-        if (
-          spans[b].some(
-            (t) =>
-              t.gridX === tile.gridX &&
-              t.gridZ === tile.gridZ &&
-              isBridgeCrossing(tile, t)
-          )
-        ) {
-          shared.push({ gridX: tile.gridX, gridZ: tile.gridZ });
+      for (const [key, legsA] of footprints[a]) {
+        const legsB = footprints[b].get(key);
+        if (legsB && crossesAt(legsA, legsB)) {
+          shared.push({
+            gridX: key % gridSize,
+            gridZ: Math.floor(key / gridSize),
+          });
         }
       }
       if (shared.length > 0) {

@@ -357,4 +357,38 @@ describe("findBridgeCrossings", () => {
       []
     );
   });
+
+  it("flags a path that turns at a canyon tile against a perpendicular path", () => {
+    // Path A turns at (5,5): it enters horizontally from (4,5) and leaves
+    // vertically toward (5,6). The rendered bridge deck at the corner spans
+    // BOTH directions, so a straight horizontal path B through (5,5) overlaps
+    // its vertical leg — even though A's incoming direction is horizontal.
+    const turning = [wp(4, 5), wp(5, 5), wp(5, 6)];
+    const straight = [wp(2, 5), wp(5, 5), wp(8, 5)];
+    const crossings = findBridgeCrossings(
+      [turning, straight],
+      [canyon(5, 5)],
+      GRID,
+      TILE
+    );
+    expect(crossings).toEqual([
+      { pathIndexA: 0, pathIndexB: 1, tiles: [{ gridX: 5, gridZ: 5 }] },
+    ]);
+  });
+
+  it("does not flag a path that turns at a non-canyon tile against a collinear path", () => {
+    // Path a turns at (5,5), but the canyon is further down the column at
+    // (5,7),(5,8) where a runs purely vertical. The corner (both-direction)
+    // logic applies only to canyon tiles, so a and b (both vertical over the
+    // canyon) merge rather than cross.
+    const a = [wp(2, 5), wp(5, 5), wp(5, 8)]; // east to (5,5), then south
+    const b = [wp(5, 2), wp(5, 8)]; // straight down column 5
+    const crossings = findBridgeCrossings(
+      [a, b],
+      [canyon(5, 7), canyon(5, 8)],
+      GRID,
+      TILE
+    );
+    expect(crossings).toEqual([]);
+  });
 });

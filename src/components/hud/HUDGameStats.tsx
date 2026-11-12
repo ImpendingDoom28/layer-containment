@@ -14,6 +14,7 @@ import {
 } from "../../core/stores/useLevelStore";
 import {
   nextWaveReadySelector,
+  revealSettledSelector,
   useWaveStore,
 } from "../../core/stores/useWaveStore";
 import { HUDWrapper } from "./HUDWrapper";
@@ -40,6 +41,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
   const { t } = useTranslation();
   const totalWaves = useLevelStore(totalWavesSelector);
   const nextWaveReady = useWaveStore(nextWaveReadySelector);
+  const revealSettled = useWaveStore(revealSettledSelector);
 
   const isMobile = useIsMobile();
 
@@ -58,7 +60,11 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
   const waveLabel = `${currentWave} / ${totalWaves}`;
   const showEnemies =
     currentWave > 0 && currentWave <= totalWaves && remainingEnemies > 0;
-  const showStartWave = currentWave < totalWaves && nextWaveReady;
+  // While the level's comet is still in flight the wave-1 button is withheld
+  // (the portals have not settled on the ground yet); it reappears once the
+  // reveal has settled and `nextWaveReady` is set.
+  const showStartWave =
+    currentWave < totalWaves && nextWaveReady && (currentWave > 0 || revealSettled);
   const paused = gameStatus === "paused";
 
   if (isMobile) {

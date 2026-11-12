@@ -24,13 +24,13 @@ import {
   type Quaternion,
 } from "three";
 
+import {
+  COMET_FLIGHT_DURATION_S,
+  COMET_IMPACT_DURATION_S,
+} from "../../../constants/cometReveal";
 import { useSimulationClock } from "../../../core/contexts/SimulationClockContext";
 import { useReducedMotion } from "../../../core/hooks/useReducedMotion";
 
-// The comet's flight: it enters far off the surface, streaks down in a
-// shallow line, and hits the impact point with a bright flash. The descent
-// is the bulk of the effect — the strike itself is a single sharp beat.
-const COMET_FLIGHT_DURATION = 1.2;
 // How far off the surface the comet starts (world units along its incoming
 // direction). Long enough to read as a streak, short enough to land in ~1s.
 const COMET_START_DISTANCE = 26;
@@ -52,9 +52,9 @@ export const sampleCometIncoming = (out = new Vector3()): Vector3 => {
   );
 };
 
-// The tail: a row of additive glow sprites trailing the head (the same
-// shared radial texture the head uses), each smaller and fainter, so the
-// comet reads as a fading streak without a shader or extra geometry.
+// The tail: a row of additive glow sprites trailing the rocky body (the same
+// shared radial texture the impact fireball uses), each smaller and fainter,
+// so the comet reads as a fading streak without a shader or extra geometry.
 const TAIL_SEGMENTS = 5;
 const TAIL_SPACING = 0.95;
 const TAIL_BASE_SCALE = 0.42;
@@ -62,13 +62,25 @@ const TAIL_BASE_OPACITY = 0.5;
 // The impact flash: a quick additive fireball plus a faint ground ripple
 // (the same shared ring geometry family as the rocket explosion), so the
 // impact reads as one family of effects.
-const IMPACT_DURATION = 0.5;
 const FIREBALL_FRACTION = 0.55;
 const RIPPLE_RADIUS = 2.1;
 const RIPPLE_OPACITY = 0.2;
-// The hot core colour of the comet: white-hot (bloom picks it up).
-const COMET_CORE_COLOR = new Color("#fff7e0");
+// The comet body: a rocky organic chunk (a low-poly geodesic with per-vertex
+// jitter) that falls with its flame at the leading (lower) tip and the tail
+// streaming from its rear. The body is 1.5x the old streak's head.
+const COMET_BODY_RADIUS = 0.5;
+// The flame at the body's lower tip (the part of the rock that meets the
+// ground): a small white-hot core plus a larger warm glow (additive sprites,
+// the same shared radial texture the tail uses), flickering as it falls.
+const FLAME_CORE_SCALE = 0.4;
+const FLAME_GLOW_SCALE = 0.8;
+// The hot colours: the white-hot core (bloom picks it up), the warm glow, and
+// the cyan streak the tail keeps from the old comet.
 const COMET_TRAIL_COLOR = new Color("#8be9fd");
+const FLAME_CORE_COLOR = new Color("#fff3c4");
+const FLAME_GLOW_COLOR = new Color("#ff8c3a");
+const ROCK_COLOR = new Color("#6f6a61");
+const ROCK_LIT_COLOR = new Color("#a89c8c");
 const IMPACT_COLOR = new Color("#ffd9a0");
 
 // One shared radial-gradient glow (white core fading to transparent) for
@@ -101,6 +113,37 @@ const sharedRingGeometry = new RingGeometry(0.92, 1, 32);
 // One shared low-poly shard geometry (a geodesic sphere) for the impact
 // debris — the same "orthodox" pebble the dust burst uses.
 const sharedShardGeometry = new IcosahedronGeometry(1, 0);
+
+// One shared rocky, organic comet-body geometry: a low-poly geodesic with its
+// vertices jittered (deterministically, per axis) so the chunk reads as a
+// craggy stone rather than a smooth sphere. Built once, shared by every
+// strike.
+const makeRockGeometry = (): IcosahedronGeometry => {
+  const geometry = new IcosahedronGeometry(1, 1);
+  const position = geometry.attributes["position"];
+  for (let i = 0; i < position.count; i += 1) {
+    // A per-vertex radial jitter (seeded by the vertex's own coordinates, so
+    // the shape is stable across strikes and deterministic for tests).
+    const jitter =
+      0.8 +
+      0.4 *
+        Math.abs(
+          Math.sin(
+            position.getX(i) * 7.1 + position.getY(i) * 5.3 + position.getZ(i) * 9.7
+          )
+        );
+    position.setXYZ(
+      i,
+      position.getX(i) * jitter,
+      position.getY(i) * jitter,
+      position.getZ(i) * jitter
+    );
+  }
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  return geometry;
+};
+const sharedRockGeometry = makeRockGeometry();
 
 const SHARD_COUNT = 7;
 const SHARD_TRAVEL_MIN = 0.5;
@@ -138,11 +181,12 @@ type CometStrikeFXProps = {
   /** Surface normal at the impact as a quaternion (the group's local +Y). */
   quaternion: Quaternion;
   /**
-   * Called once, at the moment the comet reaches the surface (the strike),
-   * on the simulation clock — so the portal's reveal can be armed exactly
-   * when the rock is hit, not when the level loaded.
+   * Called once, at the moment the comet reaches the surface (the strike).
+   * Receives the simulation time of the impact, so the portal's reveal can be
+   * armed exactly when the rock is hit (not when the level loaded) and the
+   * wave system can hold wave 1 until the portal has settled on the ground.
    */
-  onImpact?: () => void;
+  onImpact?: (simTime: number) => void;
   /**
    * Called once the whole strike (flight + impact) has finished; the scene
    * unmounts the effect then.
@@ -168,7 +212,9 @@ export const CometStrikeFX: FC<CometStrikeFXProps> = memo(
     const reducedMotion = useReducedMotion();
 
     const groupRef = useRef<Group>(null);
-    const headRef = useRef<Sprite>(null);
+    const bodyRef = useRef<Mesh>(null);
+    const flameCoreRef = useRef<Sprite>(null);
+    const flameGlowRef = useRef<Sprite>(null);
     const tailRefs = useRef<(Sprite | null)[]>([]);
     const fireballRef = useRef<Sprite>(null);
     const rippleRef = useRef<Mesh>(null);
@@ -183,6 +229,11 @@ export const CometStrikeFX: FC<CometStrikeFXProps> = memo(
     // portal at the strike, not when the level loaded.
     const impactFiredRef = useRef(false);
 
+    // This strike's incoming direction, sampled once so the whole flight
+    // (rock + flame + tail) shares one line and the comets of a level come
+    // from different sky bearings.
+    const incoming = useMemo(() => sampleCometIncoming(), []);
+
     // Lie the group flat on the planet surface (local +Y = surface normal),
     // applied imperatively so the group's own quaternion is copied, not
     // assigned a cross-instance object to a read-only property.
@@ -190,14 +241,42 @@ export const CometStrikeFX: FC<CometStrikeFXProps> = memo(
       groupRef.current?.quaternion.copy(quaternion);
     }, [quaternion]);
 
-    // Head: one camera-facing additive sprite (the hot core); the bloom
-    // pass gives it the comet halo. The material is per-strike (it fades on
-    // its own timeline).
-    const headMaterial = useMemo(
+    // The rocky body: a lit, flat-shaded craggy chunk (the shared jittered
+    // geodesic), darker than the lit rock so the lit faces read as facets.
+    const rockMaterial = useMemo(
+      () =>
+        new MeshStandardMaterial({
+          color: ROCK_COLOR,
+          emissive: ROCK_LIT_COLOR,
+          emissiveIntensity: 0.06,
+          roughness: 0.95,
+          metalness: 0,
+          flatShading: true,
+        }),
+      []
+    );
+
+    // The flame at the body's lower tip (the part that meets the ground): a
+    // small white-hot core plus a larger warm glow, both additive sprites on
+    // the shared radial texture (bloom picks up the core). Per-strike, so
+    // they can flicker on their own timeline.
+    const flameCoreMaterial = useMemo(
       () =>
         new SpriteMaterial({
           map: getGlowTexture(),
-          color: COMET_CORE_COLOR,
+          color: FLAME_CORE_COLOR,
+          transparent: true,
+          opacity: 0,
+          blending: AdditiveBlending,
+          depthWrite: false,
+        }),
+      []
+    );
+    const flameGlowMaterial = useMemo(
+      () =>
+        new SpriteMaterial({
+          map: getGlowTexture(),
+          color: FLAME_GLOW_COLOR,
           transparent: true,
           opacity: 0,
           blending: AdditiveBlending,
@@ -273,21 +352,20 @@ export const CometStrikeFX: FC<CometStrikeFXProps> = memo(
     );
     const seeds = useMemo(() => makeShardSeeds(), []);
 
-    // This strike's incoming direction, sampled once so the whole flight
-    // (head + tail) shares one line and the comets of a level come from
-    // different sky bearings.
-    const incoming = useMemo(() => sampleCometIncoming(), []);
-
     useLayoutEffect(
       () => () => {
-        headMaterial.dispose();
+        rockMaterial.dispose();
+        flameCoreMaterial.dispose();
+        flameGlowMaterial.dispose();
         for (const material of tailMaterials) material.dispose();
         fireballMaterial.dispose();
         rippleMaterial.dispose();
         shardMaterial.dispose();
       },
       [
-        headMaterial,
+        rockMaterial,
+        flameCoreMaterial,
+        flameGlowMaterial,
         tailMaterials,
         fireballMaterial,
         rippleMaterial,
@@ -299,7 +377,9 @@ export const CometStrikeFX: FC<CometStrikeFXProps> = memo(
     // transition), so no leftover pose leaks into the next scene.
     useEffect(() => {
       return () => {
-        if (headRef.current) headRef.current.visible = false;
+        if (bodyRef.current) bodyRef.current.visible = false;
+        if (flameCoreRef.current) flameCoreRef.current.visible = false;
+        if (flameGlowRef.current) flameGlowRef.current.visible = false;
         for (const tail of tailRefs.current) {
           if (tail) tail.visible = false;
         }
@@ -319,25 +399,32 @@ export const CometStrikeFX: FC<CometStrikeFXProps> = memo(
       if (elapsed < 0) return;
 
       const flightProgress = Math.min(
-        elapsed / COMET_FLIGHT_DURATION,
+        elapsed / COMET_FLIGHT_DURATION_S,
         1
       );
-      const impactElapsed = elapsed - COMET_FLIGHT_DURATION;
+      const impactElapsed = elapsed - COMET_FLIGHT_DURATION_S;
       const impactProgress =
-        impactElapsed < 0 ? 0 : Math.min(impactElapsed / IMPACT_DURATION, 1);
+        impactElapsed < 0
+          ? 0
+          : Math.min(impactElapsed / COMET_IMPACT_DURATION_S, 1);
 
       // Reveal the portal the moment the strike lands, before the completion
       // return below: a single large delta (e.g. the tab was throttled) can
       // jump straight past the impact window, and onImpact must still fire
-      // exactly once in that case or the portal stays hidden for the run.
+      // exactly once in that case or the portal stays hidden for the run. The
+      // impact moment is deterministic (flight start + flight duration), so
+      // we report that simulation time, not the (possibly later) observing
+      // frame's time.
       if (impactElapsed >= 0 && !impactFiredRef.current) {
         impactFiredRef.current = true;
-        onImpact?.();
+        onImpact?.((startTimeRef.current ?? 0) + COMET_FLIGHT_DURATION_S);
       }
 
       if (impactProgress >= 1) {
         doneRef.current = true;
-        if (headRef.current) headRef.current.visible = false;
+        if (bodyRef.current) bodyRef.current.visible = false;
+        if (flameCoreRef.current) flameCoreRef.current.visible = false;
+        if (flameGlowRef.current) flameGlowRef.current.visible = false;
         for (const tail of tailRefs.current) {
           if (tail) tail.visible = false;
         }
@@ -352,31 +439,65 @@ export const CometStrikeFX: FC<CometStrikeFXProps> = memo(
         return;
       }
 
-      const head = headRef.current;
-
-      // --- Flight (the comet streaks in and strikes) ---
+      // --- Flight (the rock streaks in, trailing fire, and strikes) ---
+      const body = bodyRef.current;
+      const core = flameCoreRef.current;
+      const glow = flameGlowRef.current;
       if (!reducedMotion) {
         if (flightProgress < 1) {
-          // The comet flies from COMET_START_DISTANCE away along the
-          // incoming direction, easing in (it accelerates as it dives); at
-          // flightProgress 1 it is exactly at the impact point.
+          // The rock dives from COMET_START_DISTANCE away along the incoming
+          // direction, easing in (it accelerates as it falls); at
+          // flightProgress 1 it is exactly at the impact point. The flame
+          // burns at its lower (leading) tip and the tail streams from the
+          // rear.
           const ease = flightProgress ** 1.8;
           const distance = COMET_START_DISTANCE * (1 - ease);
-          if (head) {
-            head.visible = true;
-            head.position.set(
+          if (body) {
+            body.visible = true;
+            body.position.set(
               incoming.x * distance,
               incoming.y * distance,
               incoming.z * distance
             );
-            head.scale.setScalar(0.55 + 0.3 * flightProgress);
-            headMaterial.opacity = 1;
+            // A steady tumble, so the rock's facets catch the light as it
+            // falls.
+            body.rotation.set(
+              elapsed * 0.5,
+              elapsed * 0.8,
+              elapsed * 0.3
+            );
+            body.scale.setScalar(COMET_BODY_RADIUS);
           }
-          // The tail trails the head along the flight line: each segment
-          // sits a spacing behind the previous, shrinking and fading.
+          const flicker = 0.85 + 0.15 * Math.sin(elapsed * 22);
+          // The flame burns at the rock's lower tip — the point that leads
+          // the dive and meets the ground: a white-hot core with a warm glow
+          // around it, flickering as it falls.
+          if (core) {
+            core.visible = true;
+            core.position.set(
+              incoming.x * (distance - COMET_BODY_RADIUS * 0.9),
+              incoming.y * (distance - COMET_BODY_RADIUS * 0.9),
+              incoming.z * (distance - COMET_BODY_RADIUS * 0.9)
+            );
+            core.scale.setScalar(FLAME_CORE_SCALE * flicker);
+            flameCoreMaterial.opacity = 1;
+          }
+          if (glow) {
+            glow.visible = true;
+            glow.position.set(
+              incoming.x * (distance - COMET_BODY_RADIUS * 0.6),
+              incoming.y * (distance - COMET_BODY_RADIUS * 0.6),
+              incoming.z * (distance - COMET_BODY_RADIUS * 0.6)
+            );
+            glow.scale.setScalar(FLAME_GLOW_SCALE * flicker);
+            flameGlowMaterial.opacity = 0.7 * flicker;
+          }
+          // The tail streams from the rock's rear (the far side of the body
+          // from the flame): each segment sits a spacing behind the previous,
+          // shrinking and fading.
           tailRefs.current.forEach((tail, index) => {
             if (!tail) return;
-            const offset = (index + 1) * TAIL_SPACING;
+            const offset = COMET_BODY_RADIUS + (index + 1) * TAIL_SPACING;
             tail.visible = true;
             tail.position.set(
               incoming.x * (distance + offset),
@@ -384,30 +505,31 @@ export const CometStrikeFX: FC<CometStrikeFXProps> = memo(
               incoming.z * (distance + offset)
             );
             const fade = (TAIL_SEGMENTS - index) / TAIL_SEGMENTS;
-            tail.scale.setScalar(TAIL_BASE_SCALE * fade * (0.7 + 0.3 * flightProgress));
-            tailMaterials[index].opacity = TAIL_BASE_OPACITY * fade * (0.4 + 0.6 * flightProgress);
+            tail.scale.setScalar(
+              TAIL_BASE_SCALE * 1.4 * fade * (0.7 + 0.3 * flightProgress)
+            );
+            tailMaterials[index].opacity =
+              TAIL_BASE_OPACITY * 1.3 * fade * (0.4 + 0.6 * flightProgress);
           });
         } else {
-          // The instant of impact: the head flashes at the surface before
-          // dissolving into the fireball.
-          if (head) {
-            head.visible = true;
-            head.position.set(0, 0, 0);
-            head.scale.setScalar(
-              0.85 + 0.9 * Math.min(impactProgress / FIREBALL_FRACTION, 1)
-            );
-            headMaterial.opacity = Math.max(
-              1 - impactProgress / FIREBALL_FRACTION,
-              0
-            );
+          // The instant of impact: the rock holds at the surface (the fireball
+          // swallows it), the flame is extinguished, and the tail is cut off.
+          if (body) {
+            body.visible = true;
+            body.position.set(0, 0, 0);
+            body.scale.setScalar(COMET_BODY_RADIUS);
           }
+          if (core) core.visible = false;
+          if (glow) glow.visible = false;
           for (const tail of tailRefs.current) {
             if (tail) tail.visible = false;
           }
         }
       } else {
         // Reduced motion: no comet, no flight.
-        if (head) head.visible = false;
+        if (body) body.visible = false;
+        if (core) core.visible = false;
+        if (glow) glow.visible = false;
         for (const tail of tailRefs.current) {
           if (tail) tail.visible = false;
         }
@@ -415,11 +537,6 @@ export const CometStrikeFX: FC<CometStrikeFXProps> = memo(
 
       // --- Impact (fireball + ripple + debris) ---
       if (impactElapsed >= 0) {
-        // Reveal the portal at the strike (once, at the first impact frame).
-        if (!impactFiredRef.current) {
-          impactFiredRef.current = true;
-          onImpact?.();
-        }
         const fb = Math.min(impactProgress / FIREBALL_FRACTION, 1);
         const fbEase = 1 - (1 - fb) ** 2;
         if (fireballRef.current) {
@@ -460,10 +577,31 @@ export const CometStrikeFX: FC<CometStrikeFXProps> = memo(
 
     return (
       <group ref={groupRef} position={position}>
-        {/* The comet's head (a camera-facing hot core). */}
-        <sprite ref={headRef} material={headMaterial} visible={false} raycast={() => null} />
+        {/* The comet's rocky body (a craggy, flat-shaded chunk). */}
+        <mesh
+          ref={bodyRef}
+          geometry={sharedRockGeometry}
+          material={rockMaterial}
+          visible={false}
+          raycast={() => null}
+        />
 
-        {/* The comet's tail (glow sprites trailing the head). */}
+        {/* The fire at the body's lower tip (the point that meets the
+            ground): a white-hot core with a warm glow around it. */}
+        <sprite
+          ref={flameCoreRef}
+          material={flameCoreMaterial}
+          visible={false}
+          raycast={() => null}
+        />
+        <sprite
+          ref={flameGlowRef}
+          material={flameGlowMaterial}
+          visible={false}
+          raycast={() => null}
+        />
+
+        {/* The comet's tail (glow sprites trailing the rocky body). */}
         {tailMaterials.map((material, index) => (
           <sprite
             key={`comet-tail-${index}`}

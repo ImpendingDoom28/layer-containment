@@ -29,10 +29,14 @@ import { useGameStore } from "./useGameStore";
  * A comet reveal in progress for a given run: `phase` `armed` hides the
  * scene's spawn portals (the comet is still in flight); `phase` `revealed`
  * means the comet has struck and the portals grow out of the scorch.
+ * `revealedAt` is the simulation time of the first impact (set when the
+ * phase flips to `revealed`); the wave system uses it to hold wave 1 until
+ * the portals have settled on the ground.
  */
 export type CometReveal = {
   run: number;
   phase: "armed" | "revealed";
+  revealedAt?: number;
 };
 
 type LevelStoreState = {

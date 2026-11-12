@@ -75,6 +75,7 @@ export const createGameSession = ({
     getNextProjectileId(true);
     useUpgradeStore.getState().resetLevelEnemyUpgrades();
     useWaveStore.getState().setNextWaveReady(true);
+    useWaveStore.getState().setRevealSettled(true);
     worldBaseActions(world).removeBase();
 
     for (const entity of world.query(IsEffect)) {

@@ -42,7 +42,7 @@ const QUAT = new Quaternion().setFromUnitVectors(
 );
 
 const createHarness = async (props: {
-  onImpact?: () => void;
+  onImpact?: (simTime: number) => void;
   onComplete?: () => void;
 } = {}) => {
   const { onImpact, onComplete } = props;
@@ -136,8 +136,8 @@ describe("CometStrikeFX", () => {
   it("keeps the comet hidden before the first frame (the strike has not started)", async () => {
     const { renderer } = await createHarness();
     try {
-      // The JSX starts every sprite hidden; no frame has run yet, so the
-      // comet is not on screen.
+      // The JSX starts the comet's sprites (tail + flame) hidden; no frame
+      // has run yet, so the comet is not on screen.
       expect(collect(renderer, "Sprite").every((s) => !s.visible)).toBe(true);
     } finally {
       renderer.unmount();
@@ -163,6 +163,14 @@ describe("CometStrikeFX", () => {
       expect(
         sprites.some((s) => s.visible && s.position.y > 1)
       ).toBe(true);
+
+      // The comet's rocky body (a mesh, not a sprite) is also in the sky
+      // mid-flight, off the surface and above the impact's local +Y.
+      const meshes = collect(renderer, "Mesh");
+      expect(
+        meshes.some((m) => m.visible && positionMagnitude(m) > 5)
+      ).toBe(true);
+      expect(meshes.some((m) => m.visible && m.position.y > 1)).toBe(true);
 
       // No impact yet: the ripple is still collapsed (its scale, since the
       // ripple sits at the group's local origin).

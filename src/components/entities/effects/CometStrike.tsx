@@ -65,19 +65,26 @@ export const CometStrike: FC = () => {
   // flip is the once-per-load guard: only the first strike to land flips it
   // (the later strikes of the same load find it already `revealed`), so the
   // camera punch fires exactly once, aimed at the first portal's impact.
-  const revealOnImpact = useCallback((impactFlat: { x: number; z: number }) => {
-    const store = useLevelStore.getState();
-    const reveal = store.cometReveal;
-    if (reveal && reveal.phase === "armed") {
-      store.setCometReveal({ run: reveal.run, phase: "revealed" });
-      if (!punchEmittedRef.current) {
-        punchEmittedRef.current = true;
-        gameEvents.emit(GameEvent.COMET_IMPACT, {
-          worldPosition: impactFlat,
+  const revealOnImpact = useCallback(
+    (impactFlat: { x: number; z: number }, simTime: number) => {
+      const store = useLevelStore.getState();
+      const reveal = store.cometReveal;
+      if (reveal && reveal.phase === "armed") {
+        store.setCometReveal({
+          run: reveal.run,
+          phase: "revealed",
+          revealedAt: simTime,
         });
+        if (!punchEmittedRef.current) {
+          punchEmittedRef.current = true;
+          gameEvents.emit(GameEvent.COMET_IMPACT, {
+            worldPosition: impactFlat,
+          });
+        }
       }
-    }
-  }, []);
+    },
+    []
+  );
 
   // Arm the reveal and mount a `CometStrikeFX` for each spawn portal of the
   // given load. `run` is the load's unique id; `flats` are the portals'
@@ -191,7 +198,7 @@ export const CometStrike: FC = () => {
               strike.quaternion.w
             )
           }
-          onImpact={() => revealOnImpact(strike.flat)}
+          onImpact={(simTime) => revealOnImpact(strike.flat, simTime)}
           onComplete={() => finishStrike(strike.id)}
         />
       ))}

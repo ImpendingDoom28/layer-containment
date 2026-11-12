@@ -10,9 +10,9 @@ import { CometStrike } from "./CometStrike";
 // (it needs a real WebGL scene + clock). Mock it to a no-op `<group>` and
 // capture its callbacks so a test can drive the strike's lifecycle. `vi.hoisted`
 // keeps the capture array alive above the hoisted mock factory.
-const fxProps = vi.hoisted(() => [] as { onImpact?: () => void }[]);
+const fxProps = vi.hoisted(() => [] as { onImpact?: (simTime: number) => void }[]);
 vi.mock("./CometStrikeFX", () => ({
-  CometStrikeFX: (props: { onImpact?: () => void }) => {
+  CometStrikeFX: (props: { onImpact?: (simTime: number) => void }) => {
     fxProps.push(props);
     return <group />;
   },
@@ -93,11 +93,13 @@ describe("CometStrike", () => {
       expect(fxCount()).toBe(before + 2);
 
       // A strike landing flips the reveal to `revealed` (the portals grow out
-      // of the rock) — the same lockstep the event path relies on.
-      fxProps[before].onImpact?.();
+      // of the rock) and stamps the impact's simulation time, so the wave
+      // system can hold wave 1 until the portals settle.
+      fxProps[before].onImpact?.(1.2);
       expect(useLevelStore.getState().cometReveal).toEqual({
         run,
         phase: "revealed",
+        revealedAt: 1.2,
       });
     } finally {
       await renderer.unmount();

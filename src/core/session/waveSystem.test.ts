@@ -133,6 +133,7 @@ describe("createWaveSystem", () => {
     useLevelStore.getState().resetLevelState();
     useUpgradeStore.getState().resetLevelEnemyUpgrades();
     useWaveStore.getState().setNextWaveReady(true);
+    useWaveStore.getState().setRevealSettled(true);
     useGameStore.setState({
       gameStatus: "playing",
       enemyTypes: {
@@ -307,6 +308,81 @@ describe("createWaveSystem", () => {
     expect(useWaveStore.getState().nextWaveReady).toBe(true);
     waves.startWave();
     expect(useLevelStore.getState().currentWave).toBe(2);
+  });
+
+  it("does not offer or start wave 1 while the comet is still in flight", () => {
+    let nextId = 1;
+    const waves = createWaveSystem({
+      world: testWorld,
+      getNextEnemyId: () => nextId++,
+      winGame: vi.fn(),
+    });
+    const run = useLevelStore.getState().levelEnterRun;
+    // The comet is in flight (the reveal is `armed`): the portals have not
+    // been struck yet, so wave 1 must not be offered or started.
+    useLevelStore.getState().setCometReveal({ run, phase: "armed" });
+
+    tick(waves, 1);
+    expect(useWaveStore.getState().revealSettled).toBe(false);
+    // `nextWaveReady` is independent of the reveal: it stays true so the
+    // "waiting for the next wave" pause-blocking is unaffected.
+    expect(useWaveStore.getState().nextWaveReady).toBe(true);
+    waves.startWave();
+    expect(useLevelStore.getState().currentWave).toBe(0);
+  });
+
+  it("holds wave 1 until the comet reveal has settled on the ground", () => {
+    let nextId = 1;
+    const waves = createWaveSystem({
+      world: testWorld,
+      getNextEnemyId: () => nextId++,
+      winGame: vi.fn(),
+    });
+    const run = useLevelStore.getState().levelEnterRun;
+    // The comet struck at sim time 1.0. The reveal settles 1.3s after the
+    // impact (the portal's 1.0s rise + a 0.3s buffer), i.e. at sim time 2.3.
+    useLevelStore.getState().setCometReveal({
+      run,
+      phase: "revealed",
+      revealedAt: 1.0,
+    });
+
+    // Before the settle time elapses, wave 1 cannot start, though
+    // `nextWaveReady` stays true (pause-blocking is independent of the reveal).
+    tick(waves, 2.2);
+    expect(useWaveStore.getState().revealSettled).toBe(false);
+    expect(useWaveStore.getState().nextWaveReady).toBe(true);
+    waves.startWave();
+    expect(useLevelStore.getState().currentWave).toBe(0);
+
+    // Once the reveal has settled, wave 1 can start.
+    tick(waves, 2.4);
+    expect(useWaveStore.getState().revealSettled).toBe(true);
+    waves.startWave();
+    expect(useLevelStore.getState().currentWave).toBe(1);
+  });
+
+  it("treats a stale reveal from a previous level as settled", () => {
+    let nextId = 1;
+    const waves = createWaveSystem({
+      world: testWorld,
+      getNextEnemyId: () => nextId++,
+      winGame: vi.fn(),
+    });
+    // A reveal left over from an earlier level (a different run id) must not
+    // hold the current level's wave 1: it belongs to a level that is no
+    // longer loaded.
+    const run = useLevelStore.getState().levelEnterRun;
+    useLevelStore.getState().setCometReveal({
+      run: run + 1000,
+      phase: "armed",
+    });
+
+    tick(waves, 1);
+    expect(useWaveStore.getState().revealSettled).toBe(true);
+    expect(useWaveStore.getState().nextWaveReady).toBe(true);
+    waves.startWave();
+    expect(useLevelStore.getState().currentWave).toBe(1);
   });
 
   describe("upgrade gate", () => {

@@ -86,6 +86,14 @@ export const en = {
     levelLoadFailedHint:
       "The level configuration could not be loaded. Check your connection and try again.",
     retry: "Retry",
+    updating: "Updating...",
+    updateReadyTitle: "New version ready",
+    updateReadyHint:
+      "The game will restart with the new version as soon as you return to the main menu.",
+    updateFailed: "Couldn't update the game",
+    updateFailedHint:
+      "Playing the last saved version. The update will be retried the next time you open the game.",
+    dismiss: "Dismiss",
   },
   towerShop: {
     title: "Tower Shop",

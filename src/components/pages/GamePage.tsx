@@ -16,6 +16,7 @@ import { HUDGameOver } from "../hud/HUDGameOver";
 import { HUDMainMenu } from "../hud/main/HUDMainMenu";
 import { HUDGameMenu } from "../hud/HUDGameMenu";
 import { HUDControlsIntroModal } from "../hud/HUDControlsIntroModal";
+import { HUDUpdateNotice } from "../hud/HUDUpdateNotice";
 import { HUDUpgradePanel } from "../hud/HUDUpgradePanel";
 import { HUDPauseOverlay } from "../hud/HUDPauseOverlay";
 import { HUDBaseDamageFlash } from "../hud/HUDBaseDamageFlash";
@@ -45,6 +46,7 @@ import {
 import { PageWrapper } from "./PageWrapper";
 import { getAreModelsLoaded } from "../../constants/models";
 
+import { updateStatusSelector, useUpdateStore } from "../../core/pwa/useUpdateStore";
 import { getRunStats } from "../../core/ecs/selectors/runStats";
 import { SimulationClockProvider } from "../../core/contexts/SimulationClockContext";
 import {
@@ -117,6 +119,16 @@ export const GamePage: FC<GamePageProps> = ({
     retryLevelLoad,
   } = useLevelSystem();
   const { showUpgradePanel, onEnemyUpgradePick } = useUpgradesSystem();
+
+  // A fully-cached new version (the background update finished) reloads the
+  // page into it as soon as the player is back in the main menu — never
+  // mid-run, so a run in progress is never lost to an update.
+  const updateStatus = useUpdateStore(updateStatusSelector);
+  useEffect(() => {
+    if (updateStatus === "ready" && gameStatus === "menu") {
+      window.location.reload();
+    }
+  }, [updateStatus, gameStatus]);
 
   const baseHealth = useBaseHealth();
   const world = useWorld();
@@ -388,6 +400,8 @@ export const GamePage: FC<GamePageProps> = ({
         // on a defeat or the final level).
         onNextLevel={nextLevelId ? onStartNextLevel : undefined}
       />
+
+      <HUDUpdateNotice gameStatus={gameStatus} />
 
       <HUDControlsIntroModal
         open={controlsIntroOpen}

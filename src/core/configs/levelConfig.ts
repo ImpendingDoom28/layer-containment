@@ -65,12 +65,14 @@ export const waterBodyConfigSchema: z.ZodType<WaterBodyConfig> =
 /**
  * A canyon tile: a non-buildable rocky basin. Rendering (the basin, its
  * walls, and the bridge that spans it) is derived from the tile set, so the
- * JSON only needs the grid cells.
+ * JSON only needs the grid cells. Coordinates are integer grid indices — a
+ * fractional one would silently skip the mask cell while still shaping the
+ * basin bbox — so the schema rejects them at load.
  */
 export const canyonConfigSchema: z.ZodType<CanyonConfig> = z.object({
   id: z.number(),
-  gridX: z.number(),
-  gridZ: z.number(),
+  gridX: z.number().int(),
+  gridZ: z.number().int(),
 });
 
 /** Resolved water instance (e.g. after {@link withRecalculatedWaterCoordinates}). */

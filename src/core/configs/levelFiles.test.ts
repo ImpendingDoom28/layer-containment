@@ -227,7 +227,53 @@ describe("playable level files", () => {
         `paths cross over the same canyon tile: ${JSON.stringify(crossings)}`
       ).toEqual([]);
     });
+
+    it(`${id}: canyon tiles use integer grid coordinates`, () => {
+      const level = loadLevel(id);
+      for (const canyon of level.canyons ?? []) {
+        expect(Number.isInteger(canyon.gridX), `canyon ${canyon.id} gridX`).toBe(
+          true
+        );
+        expect(Number.isInteger(canyon.gridZ), `canyon ${canyon.id} gridZ`).toBe(
+          true
+        );
+      }
+    });
   }
+});
+
+// The canyon schema must reject fractional grid coordinates: a non-integer
+// index silently skips the mask cell (buildCanyonMask) while the basin bbox
+// still uses the fractional value, so the level would mis-render and the
+// validation bounds check (0 <= gridX < gridSize) would wrongly pass.
+describe("canyon coordinate schema", () => {
+  const base = loadLevel("level_4");
+
+  it("rejects a fractional canyon gridX", () => {
+    const mutated: unknown = {
+      ...base,
+      canyons: [...(base.canyons ?? []), { id: 999999, gridX: 5.5, gridZ: 3 }],
+    };
+    expect(parseLevelConfigData(mutated).success).toBe(false);
+  });
+
+  it("rejects a fractional canyon gridZ", () => {
+    const mutated: unknown = {
+      ...base,
+      canyons: [...(base.canyons ?? []), { id: 999999, gridX: 3, gridZ: 7.25 }],
+    };
+    expect(parseLevelConfigData(mutated).success).toBe(false);
+  });
+
+  it("accepts integer canyon coordinates", () => {
+    const mutated: unknown = {
+      ...base,
+      canyons: [...(base.canyons ?? []), { id: 999999, gridX: 0, gridZ: 0 }],
+    };
+    // (0,0) is not a canyon in level_4, so the no-dup/bounds rules are not
+    // triggered by the added cell — only the integer-ness is under test here.
+    expect(parseLevelConfigData(mutated).success).toBe(true);
+  });
 });
 
 // The 3D asset showcase (`/testing-level`) is not a playable level, so it sits

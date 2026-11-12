@@ -27,6 +27,23 @@ export const GameEvent = {
    * red on a spend).
    */
   MONEY_CHANGED: "money_changed",
+  /**
+   * A level's state was (re)initialized — a new run or a restart. Carries the
+   * load's unique id (`run`) and the spawn portals' flat-field positions, so
+   * the scene's `CometStrike` orchestrator can arm its one-shot load comet
+   * (the portals are hidden while it flies and grow out of the scorch when it
+   * strikes) at exactly this load. The main menu's ambient level emits the
+   * same event so its portals get the same treatment.
+   */
+  LEVEL_ENTERED: "level_entered",
+  /**
+   * A level-load comet struck the planet (the instant of impact, ~1.2 s
+   * after the level entered). Carries the flat-field impact position so the
+   * camera's micro punch kicks toward the scorch. Visual-only: the strike's
+   * whoosh (the `LEVEL_ENTERED` sound) already spans into the impact, so no
+   * extra audio plays.
+   */
+  COMET_IMPACT: "comet_impact",
   WAVE_STARTED: "wave_started",
   GAME_OVER: "game_over",
   GAME_WON: "game_won",

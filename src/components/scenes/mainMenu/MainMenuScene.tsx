@@ -26,6 +26,7 @@ import { Path } from "../../entities/Path";
 import { Grid } from "../../entities/Grid";
 import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
 import { CombatJuice } from "../../entities/effects/CombatJuice";
+import { CometStrike } from "../../entities/effects/CometStrike";
 import { MainMenuCamera } from "./MainMenuCamera";
 import { MAIN_MENU_ENEMY_SPAWN_CONFIG } from "./constants";
 import { Ground } from "../shared/Ground";
@@ -159,6 +160,11 @@ export const MainMenuScene: FC = () => {
           EnemyDeathSystem so the event fires here too. No reward float: the
           menu has no gold display. */}
       <CombatJuice showRewardText={false} />
+
+      {/* The menu loads its ambient level through the same `LevelSystem`, so
+          its spawn portals get the same level-load comet (strike, then the
+          portal grows out of the scorch). */}
+      <CometStrike />
     </>
   );
 };

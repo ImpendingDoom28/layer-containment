@@ -39,6 +39,9 @@ vi.mock("../../entities/effects/CombatJuice", () => ({
     return null;
   },
 }));
+vi.mock("../../entities/effects/CometStrike", () => ({
+  CometStrike: () => null,
+}));
 vi.mock("./MainMenuCamera", () => ({ MainMenuCamera: () => null }));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

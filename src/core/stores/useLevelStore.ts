@@ -25,6 +25,20 @@ import { world } from "../ecs/world";
 import type { TileData } from "../types/utils";
 import { useGameStore } from "./useGameStore";
 
+/**
+ * A comet reveal in progress for a given run: `phase` `armed` hides the
+ * scene's spawn portals (the comet is still in flight); `phase` `revealed`
+ * means the comet has struck and the portals grow out of the scorch.
+ * `revealedAt` is the simulation time of the first impact (set when the
+ * phase flips to `revealed`); the wave system uses it to hold wave 1 until
+ * the portals have settled on the ground.
+ */
+export type CometReveal = {
+  run: number;
+  phase: "armed" | "revealed";
+  revealedAt?: number;
+};
+
 type LevelStoreState = {
   gridSize: number;
   waters: WaterBody[];
@@ -47,6 +61,27 @@ type LevelStoreState = {
   levelLoadError: string | null;
   /** Bumped on retry to restart a failed level load. */
   levelLoadRetryToken: number;
+  /**
+   * The id of the level load currently in progress (a new run, a restart, or
+   * the main menu loading its ambient level). Monotonic — it is never reset
+   * by `resetLevelState` — so the scene's `CometStrike` orchestrator can tell
+   * a fresh load from a stale one and every load gets a unique id (a restart
+   * replays the comet reveal even on the same level).
+   */
+  levelEnterRun: number;
+  /**
+   * The in-flight (armed) or struck (revealed) comet for the current run, so
+   * the scene's spawn portals know whether to hide (armed) or reveal. `null`
+   * when no comet is active (rest). Keyed to the level's monotonic load id:
+   * the scene's `CometStrike` orchestrator arms it on each load and `Path`
+   * only applies a reveal whose `run` matches the level's id, so a stale
+   * reveal left by a previous scene can never match a new scene's level and
+   * no reset is needed on scene unmount. Also the recovery marker for the
+   * mount-time catch-up (a scene that mounts after its level was already
+   * loaded re-arms an in-flight or never-armed strike for the current run,
+   * and never re-arms one that has completed).
+   */
+  cometReveal: CometReveal | null;
   hoveredTile: TileData | null;
 };
 
@@ -65,6 +100,7 @@ type LevelStoreActions = {
   removeProjectile: (projectileId: number) => void;
   resetLevelState: () => void;
   setHoveredTile: (tile: TileData | null) => void;
+  setCometReveal: (reveal: CometReveal | null) => void;
   setLevelLoadError: (error: string | null) => void;
   retryLevelLoad: () => void;
   initializeLevelState: (levelData: LevelConfigData, tileSize: number) => void;
@@ -90,6 +126,8 @@ const DEFAULT_STATE: LevelStoreState = {
   isLevelConfigLoaded: false,
   levelLoadError: null,
   levelLoadRetryToken: 0,
+  levelEnterRun: 0,
+  cometReveal: null,
   hoveredTile: null,
 };
 
@@ -158,7 +196,27 @@ export const useLevelStore = create<LevelStore>((set) => ({
       withRecalculatedWaterCoordinates(water, levelData.gridSize, tileSize)
     );
 
-    set({
+    // A fresh level load gets a unique id (the monotonic counter) and raises
+    // the `LEVEL_ENTERED` event so the scene's `CometStrike` orchestrator —
+    // which is subscribed for the whole time the scene is mounted — plays its
+    // one-shot load comet. The event carries the portals' flat-field
+    // positions; the scene maps them onto the planet surface itself.
+    // Each spawn portal is a path's first waypoint; a path with no waypoints
+    // (the schema allows an empty inner array) has no portal, so skip it rather
+    // than index at `[0]`.
+    const portalPositions = pathWaypoints
+      .filter((path) => path.length > 0)
+      .map((path) => ({ x: path[0].x, z: path[0].z }));
+
+    // A fresh level load gets a unique id (the monotonic counter) and raises
+    // the `LEVEL_ENTERED` event so the scene's `CometStrike` orchestrator —
+    // which is subscribed for the whole time the scene is mounted — plays its
+    // one-shot load comet. The event carries the portals' flat-field
+    // positions; the scene maps them onto the planet surface itself. A scene
+    // that mounts *after* this load (the game flow) re-arms the strike on
+    // mount from `cometReveal` (a `null` or other-run armed reveal) and skips
+    // one that has already completed.
+    set((state) => ({
       isLevelConfigLoaded: true,
       enemiesKilled: 0,
       money: startingMoney,
@@ -173,6 +231,12 @@ export const useLevelStore = create<LevelStore>((set) => ({
       totalWaves: waveConfigs.length,
       boss: boss ?? null,
       enemyWeights: enemyWeights as Record<EnemyType, number>,
+      levelEnterRun: state.levelEnterRun + 1,
+    }));
+
+    gameEvents.emit(GameEvent.LEVEL_ENTERED, {
+      run: useLevelStore.getState().levelEnterRun,
+      portalPositions,
     });
   },
 
@@ -248,6 +312,10 @@ export const useLevelStore = create<LevelStore>((set) => ({
     set({ hoveredTile: tile });
   },
 
+  setCometReveal: (reveal) => {
+    set({ cometReveal: reveal });
+  },
+
   setLevelLoadError: (error) => {
     set({ levelLoadError: error });
   },
@@ -275,9 +343,15 @@ export const useLevelStore = create<LevelStore>((set) => ({
     for (const entity of world.query(splitRequest)) {
       if (entity.isAlive()) entity.destroy();
     }
-    set({
+    set((state) => ({
       ...DEFAULT_STATE,
-    });
+      // Keep the load id monotonic across resets so every (re)load gets a
+      // unique id and a restart replays the comet reveal even on the same
+      // level. (`cometReveal` is already `null` in the default state, so any
+      // in-flight reveal is cleared automatically — and its `run` no longer
+      // matches the next load, so a stale armed reveal can never leak into it.)
+      levelEnterRun: state.levelEnterRun,
+    }));
   },
 }));
 
@@ -322,4 +396,7 @@ export const resetLevelStateSelector = (state: LevelStore) =>
 export const hoveredTileSelector = (state: LevelStore) => state.hoveredTile;
 export const setHoveredTileSelector = (state: LevelStore) =>
   state.setHoveredTile;
+export const levelEnterRunSelector = (state: LevelStore) => state.levelEnterRun;
+export const cometRevealSelector = (state: LevelStore) => state.cometReveal;
+export const setCometRevealSelector = (state: LevelStore) => state.setCometReveal;
 export const enemyWeightsSelector = (state: LevelStore) => state.enemyWeights;

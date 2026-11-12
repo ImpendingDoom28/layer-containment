@@ -47,10 +47,17 @@ export const resolveGameSoundBuffer = async (
       return generatePlaceholderSound(audioContext, "tone", 0.3, 200);
     case GameEvent.PROJECTILE_HIT:
       return generatePlaceholderSound(audioContext, "click", 0.08, 1000);
-    // The micro camera punches are visual-only (no audio cue).
+    // The micro camera punches and the money HUD feedback are visual-only
+    // (no audio cue).
     case GameEvent.PROJECTILE_EXPLOSION:
     case GameEvent.BASE_DAMAGE_TAKEN:
+    case GameEvent.MONEY_CHANGED:
+    case GameEvent.COMET_IMPACT:
       return null;
+    // The comet strike's whoosh spans the whole descent, dying into the
+    // impact (matching the FX's ~1.2 s flight).
+    case GameEvent.LEVEL_ENTERED:
+      return generatePlaceholderSound(audioContext, "whoosh", 1.2, 110);
     case GameEvent.WAVE_STARTED:
       return generatePlaceholderSound(audioContext, "whoosh", 0.5, 200);
     case GameEvent.GAME_OVER:

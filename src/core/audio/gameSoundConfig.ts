@@ -8,6 +8,7 @@ import { GameEvent } from "../../core/types/enums/events";
 import type { CameraMove } from "../../core/keybindingsConstants";
 import type {
   EnemyType,
+  MoneyChangedData,
   ProjectileType,
   TowerType,
   UiActionDeniedData,
@@ -63,6 +64,22 @@ export const SOUND_CONFIGS = defineSoundConfigs(
       spatial: false,
     },
     [GameEvent.BASE_DAMAGE_TAKEN]: {
+      category: "sfx",
+      spatial: false,
+    },
+    // HUD-only money feedback (tween + card flash, no audio); registered so
+    // the `GameEvent` map is complete.
+    [GameEvent.MONEY_CHANGED]: {
+      category: "sfx",
+      spatial: false,
+    },
+    [GameEvent.LEVEL_ENTERED]: {
+      category: "sfx",
+      spatial: false,
+    },
+    // Visual-only camera punch on the comet impact (the whoosh already spans
+    // into the strike); registered so the `GameEvent` map stays complete.
+    [GameEvent.COMET_IMPACT]: {
       category: "sfx",
       spatial: false,
     },
@@ -156,6 +173,16 @@ export type AudioEventDataMap = {
   base_damage_taken: {
     amount: number;
     worldPosition?: WorldPosition;
+  };
+  money_changed: MoneyChangedData;
+  level_entered: {
+    run: number;
+    portalPositions: { x: number; z: number }[];
+  };
+  // The flat-field position of the comet's impact point (the spawn portal the
+  // camera punch kicks toward).
+  comet_impact: {
+    worldPosition: { x: number; z: number };
   };
   wave_started: {
     waveNumber: number;

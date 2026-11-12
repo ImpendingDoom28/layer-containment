@@ -87,6 +87,8 @@ const fireAtEnemy = (
     ...overrides,
   });
 
+const arcGeometries = () => api!.getArcGeometries();
+
 const advance = async (frames = 1) => {
   await ReactThreeTestRenderer.act(async () => {
     for (let index = 0; index < frames; index += 1) {
@@ -213,17 +215,188 @@ describe("useInstancedProjectiles trails", () => {
     }
   });
 
-  it("does not allocate trail slots for beams or chain bolts", async () => {
+  it("does not allocate a trail slot for beams or chain bolts", async () => {
     const renderer = await createRenderer();
     try {
       enemyActions(world).spawnEnemy(baseEnemy());
 
       fireAtEnemy({ projectileType: "beam" });
-      fireAtEnemy({ projectileType: "chain" });
       expect(api!.getTrailPoolStats()!.inUse).toBe(0);
 
-      await advance(3);
+      // The arc bolt's own flickering lightning channel is its motion visual,
+      // so it carries no separate trail streak (a solid sphere or rocket would).
+      fireAtEnemy({ projectileType: "chain" });
       expect(api!.getTrailPoolStats()!.inUse).toBe(0);
+    } finally {
+      await renderer.unmount();
+    }
+  });
+
+  it("re-aims a chain bolt at its target as it moves (arc-lightning homing)", async () => {
+    const renderer = await createRenderer();
+    try {
+      // A real (non-collapsing) field: with a zero-sized level every flat
+      // point maps to the same pole, so the target cannot be anywhere but the
+      // bolt's start.
+      useLevelStore.getState().setGridSize(10, 1);
+      useLevelStore.getState().setPathWaypoints([
+        [{ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }],
+      ]);
+      useGameStore.setState({ tileSize: 1 });
+
+      // The target starts at flat (30, 0) — ~30 world units from the bolt's
+      // launch point.
+      enemyActions(world).spawnEnemy({
+        ...baseEnemy(),
+        x: 30,
+        z: 0,
+        pathProgress: 10,
+      });
+
+      const projectile = fireAtEnemy({ projectileType: "chain", speed: 7 });
+      expect(projectile.id).toBeGreaterThan(0);
+
+      // The target escapes out of the bolt's straight flight line (z = 40)
+      // on the very first frame: with no target yet the bolt flies its
+      // launch direction, and a bolt that kept that direction would never get
+      // within the hit radius of the moved enemy.
+      enemyActions(world).updateEnemy(1, { z: 40 });
+      // The bolt re-aims at the live position every frame and closes in at
+      // full speed: the ~75-unit separation takes ~11 1-second frames.
+      await advance(11);
+      expect(onHit).toHaveBeenCalledTimes(1);
+      // The head reached the last (only) enemy: the chain is done, so the
+      // bolt holds its end flash — the whole channel brightens — and vanishes
+      // a few frames later instead of being removed on the strike frame.
+      await advance(9);
+      expect(onHit).toHaveBeenCalledTimes(1);
+      expect(api!.getActiveProjectiles()).toHaveLength(0);
+    } finally {
+      await renderer.unmount();
+    }
+  });
+
+  it("never draws the previous arc's leftover segments (no ghost legs)", async () => {
+    const renderer = await createRenderer();
+    try {
+      useLevelStore.getState().setGridSize(10, 1);
+      useLevelStore.getState().setPathWaypoints([
+        [{ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }],
+      ]);
+      useGameStore.setState({ tileSize: 1 });
+
+      // Three chained enemies ~5 units apart: the first arc grows to 3 legs
+      // (tower → e1 → e2 → e3) before its end flash.
+      enemyActions(world).spawnEnemy({
+        ...baseEnemy(),
+        x: 30,
+        z: 0,
+        pathProgress: 10,
+      });
+      enemyActions(world).spawnEnemy({
+        ...baseEnemy(),
+        id: 2,
+        x: 35,
+        z: 0,
+        pathProgress: 10,
+      });
+      enemyActions(world).spawnEnemy({
+        ...baseEnemy(),
+        id: 3,
+        x: 40,
+        z: 0,
+        pathProgress: 10,
+      });
+
+      fireAtEnemy({
+        projectileType: "chain",
+        speed: 7,
+        damage: 10,
+        chainAdditionalHits: [
+          { enemyId: 2, damage: 7 },
+          { enemyId: 3, damage: 5 },
+        ],
+      });
+      // Propagation + end flash are done: the arc slot is released.
+      await advance(25);
+      expect(onHit).toHaveBeenCalledTimes(3);
+      expect(api!.getActiveProjectiles()).toHaveLength(0);
+      const geometries = arcGeometries();
+      expect(geometries).toHaveLength(8);
+      // The last arc's slot is still capped at its 3-leg extent
+      // (3 × (8 main + 3 branch)).
+      const longSlot = geometries.findIndex(
+        (g) => g.core.instanceCount === 33
+      );
+      expect(longSlot).toBeGreaterThanOrEqual(0);
+
+      // A new 1-leg bolt reuses that slot (the free stack is LIFO). Its first
+      // frame must cap the geometry to its own extent and zero every slot
+      // the long arc left behind — otherwise the renderer would draw the old
+      // channel's segments (ghost legs).
+      fireAtEnemy({
+        projectileType: "chain",
+        speed: 7,
+        damage: 10,
+      });
+      await advance(1); // the head has not reached e1 yet
+      const active = api!.getActiveProjectiles();
+      expect(active).toHaveLength(1);
+      const slot = geometries[active[0].arcIndex];
+      expect(slot.core.instanceCount).toBe(11);
+      expect(slot.glow.instanceCount).toBe(11);
+      const arr = (slot.core.getAttribute("instanceStart") as THREE.InterleavedBufferAttribute).array as Float32Array;
+      // Sample the long arc's leftover slots (leg 2 and leg 3 ranges):
+      // they must be zero, not the old geometry.
+      for (const k of [11, 15, 20, 25, 30, 35, 40]) {
+        expect(arr[6 * k]).toBe(0);
+        expect(arr[6 * k + 5]).toBe(0);
+      }
+    } finally {
+      await renderer.unmount();
+    }
+  });
+
+  it("propagates a chain bolt through its targets and vanishes after the end flash", async () => {
+    const renderer = await createRenderer();
+    try {
+      useLevelStore.getState().setGridSize(10, 1);
+      useLevelStore.getState().setPathWaypoints([
+        [{ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }],
+      ]);
+      useGameStore.setState({ tileSize: 1 });
+
+      enemyActions(world).spawnEnemy({
+        ...baseEnemy(),
+        x: 30,
+        z: 0,
+        pathProgress: 10,
+      });
+      enemyActions(world).spawnEnemy({
+        ...baseEnemy(),
+        id: 2,
+        x: 40,
+        z: 0,
+        pathProgress: 10,
+      });
+
+      fireAtEnemy({
+        projectileType: "chain",
+        speed: 7,
+        damage: 10,
+        chainAdditionalHits: [{ enemyId: 2, damage: 7 }],
+      });
+
+      // The head propagates tower → first enemy → second enemy: both strikes
+      // land in order (the damage is unchanged: 10, then the hop's 7).
+      await advance(25);
+      expect(onHit).toHaveBeenCalledTimes(2);
+
+      // The head reached the last enemy in the chain: the bolt holds its end
+      // flash a few frames, then vanishes.
+      await advance(12);
+      expect(onHit).toHaveBeenCalledTimes(2);
+      expect(api!.getActiveProjectiles()).toHaveLength(0);
     } finally {
       await renderer.unmount();
     }

@@ -14,14 +14,14 @@ import {
 } from "../../core/stores/useLevelStore";
 import {
   nextWaveReadySelector,
+  revealSettledSelector,
   useWaveStore,
 } from "../../core/stores/useWaveStore";
 import { HUDWrapper } from "./HUDWrapper";
 import { HUDEnemyUpgrades } from "./HUDEnemyUpgrades";
-import { UIMoney } from "../ui/UIMoney";
+import { HUDMoneyCard } from "./HUDMoneyCard";
 
 type HUDGameStatsProps = {
-  money: number;
   health: number;
   currentWave: number;
   remainingEnemies: number;
@@ -31,7 +31,6 @@ type HUDGameStatsProps = {
 };
 
 export const HUDGameStats: FC<HUDGameStatsProps> = ({
-  money,
   health,
   currentWave,
   remainingEnemies,
@@ -42,6 +41,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
   const { t } = useTranslation();
   const totalWaves = useLevelStore(totalWavesSelector);
   const nextWaveReady = useWaveStore(nextWaveReadySelector);
+  const revealSettled = useWaveStore(revealSettledSelector);
 
   const isMobile = useIsMobile();
 
@@ -60,7 +60,11 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
   const waveLabel = `${currentWave} / ${totalWaves}`;
   const showEnemies =
     currentWave > 0 && currentWave <= totalWaves && remainingEnemies > 0;
-  const showStartWave = currentWave < totalWaves && nextWaveReady;
+  // While the level's comet is still in flight the wave-1 button is withheld
+  // (the portals have not settled on the ground yet); it reappears once the
+  // reveal has settled and `nextWaveReady` is set.
+  const showStartWave =
+    currentWave < totalWaves && nextWaveReady && (currentWave > 0 || revealSettled);
   const paused = gameStatus === "paused";
 
   if (isMobile) {
@@ -73,7 +77,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
           data-testid="game-stats"
           className="ui-menu-tilt ui-menu-tilt-left flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-2 gap-y-1 px-3 py-1.5"
         >
-          <UIMoney money={money} variant="medium" iconSize={14} />
+          <HUDMoneyCard variant="medium" iconSize={14} />
           <div className="flex items-center gap-1.5">
             <Icon name="HeartPulse" color={getHealthColor()} size={14} />
             <UITypography variant="medium" className={getHealthTextClass()}>
@@ -143,7 +147,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
           <UICardContent className="gap-4">
             <div className="flex flex-row items-center justify-between gap-4">
               <div className="flex items-center">
-                <UIMoney money={money} variant="h4" iconSize={20} />
+                <HUDMoneyCard variant="h4" iconSize={20} />
               </div>
               <div className="flex items-center gap-2">
                 <Icon name="HeartPulse" color={getHealthColor()} size={20} />

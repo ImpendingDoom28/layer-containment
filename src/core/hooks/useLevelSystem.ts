@@ -35,7 +35,11 @@ import {
   resetLevelEnemyUpgradesSelector,
   useUpgradeStore,
 } from "../stores/useUpgradeStore";
-import { setNextWaveReadySelector, useWaveStore } from "../stores/useWaveStore";
+import {
+  setNextWaveReadySelector,
+  setRevealSettledSelector,
+  useWaveStore,
+} from "../stores/useWaveStore";
 import {
   Enemy,
   EnemyType,
@@ -55,6 +59,7 @@ import { spawnLevelEnemy } from "../ecs/spawnLevelEnemy";
 
 export const useLevelSystem = () => {
   const setNextWaveReady = useWaveStore(setNextWaveReadySelector);
+  const setRevealSettled = useWaveStore(setRevealSettledSelector);
 
   const buildings = useLevelStore(buildingsSelector);
   const waters = useLevelStore(watersSelector);
@@ -254,6 +259,7 @@ export const useLevelSystem = () => {
     getNextProjectileId(true);
     resetLevelEnemyUpgrades();
     setNextWaveReady(true);
+    setRevealSettled(true);
   }, [
     resetLevelState,
     getNextTowerId,
@@ -261,6 +267,7 @@ export const useLevelSystem = () => {
     getNextProjectileId,
     resetLevelEnemyUpgrades,
     setNextWaveReady,
+    setRevealSettled,
   ]);
 
   return {

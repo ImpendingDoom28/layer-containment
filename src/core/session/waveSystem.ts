@@ -1,5 +1,6 @@
 import type { World } from "koota";
 
+import { PORTAL_REVEAL_DURATION_S } from "../../constants/cometReveal";
 import { bossHealthForWave, isBossWave } from "../../utils/bossHp";
 import { gameEvents } from "../../utils/eventEmitter";
 import {
@@ -15,6 +16,13 @@ import { useWaveStore } from "../stores/useWaveStore";
 import { GameEvent } from "../types/enums/events";
 import type { EnemyType, EnemyUpgradeId } from "../types/game";
 import type { SimulationFrame } from "./types";
+
+// How long (simulation seconds) after the comet's impact the spawn portals
+// are considered "still settling". The portal rises out of the scorch over
+// `PORTAL_REVEAL_DURATION_S` (see `Portal.tsx`'s `ENTRY_DURATION`); wave 1
+// must not start while that rise is in progress, so the gate holds for the
+// full rise plus a small buffer before the first wave is offered.
+const COMET_SETTLE_SECONDS = PORTAL_REVEAL_DURATION_S + 0.3;
 
 type BossSpawnStats = {
   name: string;
@@ -64,6 +72,22 @@ export const createWaveSystem = ({
 
   const getRemainingEnemyCount = () =>
     enemyActions(world).getRemainingEnemyCount();
+
+  // A reveal is "settled" (the portals have finished rising onto the ground)
+  // when: there is no reveal at all, or the reveal belongs to an earlier run
+  // (a stale reveal from a previous level), or the current run's reveal has
+  // been `revealed` for at least `COMET_SETTLE_SECONDS` of simulation time.
+  // While the comet is still in flight (`armed`) or still rising, it is not
+  // settled, so wave 1 must not start.
+  const isRevealSettled = (simulationTimeSeconds: number): boolean => {
+    const { cometReveal, levelEnterRun } = useLevelStore.getState();
+    if (cometReveal === null) return true;
+    if (cometReveal.run !== levelEnterRun) return true;
+    if (cometReveal.phase === "armed") return false;
+    const revealedAt = cometReveal.revealedAt;
+    if (revealedAt === undefined) return false;
+    return simulationTimeSeconds - revealedAt >= COMET_SETTLE_SECONDS;
+  };
 
   const reset = () => {
     spawnQueue = [];
@@ -137,6 +161,28 @@ export const createWaveSystem = ({
   const startWave = () => {
     const { currentWave, totalWaves, pathWaypoints } = useLevelStore.getState();
     if (currentWave >= totalWaves) return;
+    // Hold wave 1 until the comet reveal has settled on the ground. The HUD
+    // button is the only start path and it is withheld while `revealSettled`
+    // is false (`tick` keeps that in sync with the settle timer every frame),
+    // but this early return also guards any programmatic start.
+    if (currentWave === 0) {
+      const { cometReveal, levelEnterRun } = useLevelStore.getState();
+      const currentReveal =
+        cometReveal && cometReveal.run === levelEnterRun
+          ? cometReveal
+          : null;
+      // `armed` (comet in flight) is always blocked; after the impact, only
+      // start once the portals have settled (`revealSettled`, maintained by
+      // `tick`). The explicit `armed` check also closes the single frame
+      // before the first `tick` in which `revealSettled` is still `true`.
+      if (
+        currentReveal &&
+        (currentReveal.phase === "armed" ||
+          !useWaveStore.getState().revealSettled)
+      ) {
+        return;
+      }
+    }
     if (currentWave > 0) {
       // A wave that has started but not yet finished its completion delay must
       // not be replaced: doing so would reset `waveStarted` and skip the
@@ -178,6 +224,19 @@ export const createWaveSystem = ({
       currentWave === 0 || (currentWave < totalWaves && waveCleared);
     if (useWaveStore.getState().nextWaveReady !== nextWaveReady) {
       useWaveStore.getState().setNextWaveReady(nextWaveReady);
+    }
+    // Wave 1 must not start until the comet reveal has settled on the ground
+    // (the portals have finished rising out of the scorch). Tracked in the
+    // wave store (not folded into `nextWaveReady`) so the "waiting for the
+    // next wave" pause-blocking is unchanged while the comet is in flight.
+    // Only relevant for the very first wave; once any wave has started the
+    // reveal is long done.
+    const revealSettled =
+      currentWave === 0
+        ? isRevealSettled(frame.simulationTimeSeconds)
+        : true;
+    if (useWaveStore.getState().revealSettled !== revealSettled) {
+      useWaveStore.getState().setRevealSettled(revealSettled);
     }
 
     if (currentWave === 0 || currentWave > totalWaves) return;

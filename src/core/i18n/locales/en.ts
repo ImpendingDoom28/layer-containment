@@ -329,7 +329,7 @@ export const en = {
     chain: {
       name: "Chain Lightning",
       description:
-        "Chain lightning jumps to nearby enemies (-15% damage per hop, up to 3 hops).",
+        "Fires a slow, branching lightning bolt that crackles toward its target and lights up the enemies around it; it jumps to nearby enemies (-30% damage per hop, up to 3 hops).",
     },
   },
   enemies: {

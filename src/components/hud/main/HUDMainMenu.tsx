@@ -18,6 +18,7 @@ import { BlurBackdrop } from "./BlurBackdrop";
 import { GithubButton } from "./GithubButton";
 import { useBlurBackdrop } from "../../../core/hooks/utils/useBlurBackdrop";
 import { useHeldClose } from "../../../core/hooks/useHeldClose";
+import { useUpdateStore } from "../../../core/pwa/useUpdateStore";
 
 type HUDMainMenuProps = MenuActions;
 
@@ -114,6 +115,9 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
     const title = GAME_NAME.split(" ");
 
     const isMenu = activeView === "menu";
+    const isUpdating = useUpdateStore((state) =>
+      state.status === "checking" || state.status === "updating"
+    );
 
     const menuPart = (
       <HUDWrapper className="pointer-events-none">
@@ -154,6 +158,20 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
                 {t("menu.tagline")}
               </UITypography>
             </div>
+
+            {/* A background update in flight: subtle "Updating..." line
+                between the tagline and the navigation. */}
+            {isUpdating && (
+              <div
+                className="flex items-center gap-2 text-muted-foreground"
+                data-testid="update-in-progress"
+              >
+                <Icon name="Download" size={14} className="animate-pulse" />
+                <UITypography variant="verySmall" className="tracking-widest uppercase">
+                  {t("common.updating")}
+                </UITypography>
+              </div>
+            )}
 
             <nav className="flex flex-col gap-1">
               {actions.map(({ labelKey, onClick, variant, className }) => {

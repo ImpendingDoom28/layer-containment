@@ -94,6 +94,34 @@ describe("buildCanyonBridgePaths", () => {
     const [result] = buildCanyonBridgePaths([path], canyons, GRID, TILE);
     expect(result.every((point) => point.y === 0)).toBe(true);
   });
+
+  it("returns non-canyon paths unchanged even when the level has canyons", () => {
+    // Authored coordinates are preserved (off-center x, nonzero y) instead of
+    // being re-sampled to tile centers just because some other path bridges a
+    // canyon.
+    const authored: PathWaypoint[] = [
+      { x: 4.3, y: 2.5, z: -3.1 },
+      { x: 4.3, y: 2.5, z: 5.2 },
+    ];
+    const canyons = [canyon(9, 8), canyon(9, 9), canyon(9, 10)];
+    const [result] = buildCanyonBridgePaths([authored], canyons, GRID, TILE);
+    expect(result).toBe(authored);
+  });
+
+  it("re-samples only the paths that actually cross a canyon", () => {
+    const crossing = column(9, 4, 12); // over the canyon column
+    const off = column(15, 4, 12); // far from it
+    const canyons = [canyon(9, 8), canyon(9, 9), canyon(9, 10)];
+    const [resultCrossing, resultOff] = buildCanyonBridgePaths(
+      [crossing, off],
+      canyons,
+      GRID,
+      TILE
+    );
+    expect(resultCrossing).toHaveLength(crossing.length);
+    expect(resultCrossing[4].y).toBe(BRIDGE_ELEVATION); // canyon tile
+    expect(resultOff).toBe(off);
+  });
 });
 
 describe("getBridgeTiles", () => {

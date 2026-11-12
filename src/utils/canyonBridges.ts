@@ -108,8 +108,9 @@ const samplePathToTilePoints = (
  * The bridge is flush with the ground (`BRIDGE_ELEVATION` is 0), so the path
  * over the canyon simply stays at ground level. Each path is re-sampled per
  * tile (orthogonal paths, so shape/length are preserved) to match the bridge
- * span's per-tile footprint. Returns the input unchanged when the level has
- * no canyons.
+ * span's per-tile footprint. Paths that never cross a canyon are returned
+ * unchanged, so their authored (possibly off-center or elevated) waypoints are
+ * preserved whether or not the level has any canyon.
  */
 export const buildCanyonBridgePaths = (
   pathWaypoints: PathWaypoint[][],
@@ -132,6 +133,7 @@ export const buildCanyonBridgePaths = (
     const isCanyon = points.map(
       (p) => mask[p.gridZ * gridSize + p.gridX] === 1
     );
+    if (!isCanyon.includes(true)) return path;
     return points.map((p, i) => ({
       x: p.x,
       // The bridge is flush with the ground, so tiles on the canyon span sit

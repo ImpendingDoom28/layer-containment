@@ -335,7 +335,10 @@ export const Path: FC<PathProps> = memo(
         />
       )}
 
-      <GUINextWavePreview pathIndex={pathIndex} />
+      {/* The preview reads wave state from the game's shared stores, which the
+          editor does not reset — a ready wave from a previous run would show at
+          the previous level's spawn point, so it renders with the endpoints. */}
+      {showEndpoints && <GUINextWavePreview pathIndex={pathIndex} />}
     </group>
   );
   }

@@ -47,9 +47,11 @@ export const resolveGameSoundBuffer = async (
       return generatePlaceholderSound(audioContext, "tone", 0.3, 200);
     case GameEvent.PROJECTILE_HIT:
       return generatePlaceholderSound(audioContext, "click", 0.08, 1000);
-    // The micro camera punches are visual-only (no audio cue).
+    // The micro camera punches and the money HUD feedback are visual-only
+    // (no audio cue).
     case GameEvent.PROJECTILE_EXPLOSION:
     case GameEvent.BASE_DAMAGE_TAKEN:
+    case GameEvent.MONEY_CHANGED:
       return null;
     case GameEvent.WAVE_STARTED:
       return generatePlaceholderSound(audioContext, "whoosh", 0.5, 200);

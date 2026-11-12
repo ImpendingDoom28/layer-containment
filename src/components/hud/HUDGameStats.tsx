@@ -18,10 +18,9 @@ import {
 } from "../../core/stores/useWaveStore";
 import { HUDWrapper } from "./HUDWrapper";
 import { HUDEnemyUpgrades } from "./HUDEnemyUpgrades";
-import { UIMoney } from "../ui/UIMoney";
+import { HUDMoneyCard } from "./HUDMoneyCard";
 
 type HUDGameStatsProps = {
-  money: number;
   health: number;
   currentWave: number;
   remainingEnemies: number;
@@ -31,7 +30,6 @@ type HUDGameStatsProps = {
 };
 
 export const HUDGameStats: FC<HUDGameStatsProps> = ({
-  money,
   health,
   currentWave,
   remainingEnemies,
@@ -73,7 +71,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
           data-testid="game-stats"
           className="ui-menu-tilt ui-menu-tilt-left flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-2 gap-y-1 px-3 py-1.5"
         >
-          <UIMoney money={money} variant="medium" iconSize={14} />
+          <HUDMoneyCard variant="medium" iconSize={14} />
           <div className="flex items-center gap-1.5">
             <Icon name="HeartPulse" color={getHealthColor()} size={14} />
             <UITypography variant="medium" className={getHealthTextClass()}>
@@ -143,7 +141,7 @@ export const HUDGameStats: FC<HUDGameStatsProps> = ({
           <UICardContent className="gap-4">
             <div className="flex flex-row items-center justify-between gap-4">
               <div className="flex items-center">
-                <UIMoney money={money} variant="h4" iconSize={20} />
+                <HUDMoneyCard variant="h4" iconSize={20} />
               </div>
               <div className="flex items-center gap-2">
                 <Icon name="HeartPulse" color={getHealthColor()} size={20} />

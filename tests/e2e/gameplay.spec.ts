@@ -38,6 +38,27 @@ test("a short camera nudge over a tile does not place the selected tower", async
 
 test("places a basic tower and starts the first wave", async ({ page }) => {
   await onOpenGame(page, { waitForTowerShop: true });
+
+  // Building the tower spends money, so the money card flashes red on the
+  // MONEY_CHANGED decrease. The flash lasts ~600ms and the placement helper
+  // can outlast it on a slow worker, so record the transition with an
+  // observer attached before placement and verify the log afterwards.
+  await page.evaluate(() => {
+    const el = document.querySelector(
+      '[data-testid="money-card-flash"]'
+    ) as (HTMLDivElement & { __flashLog?: string[] }) | null;
+    if (!el) {
+      throw new Error("money card flash overlay is missing");
+    }
+    el.__flashLog = [];
+    const record = () =>
+      el.__flashLog?.push(`${el.className}|${el.dataset.moneyFlash ?? ""}`);
+    new MutationObserver(record).observe(el, {
+      attributes: true,
+      attributeFilter: ["class", "data-money-flash"],
+    });
+  });
+
   await onPlaceBasicTower(page, MONEY_AFTER_FIRST_BASIC_TOWER);
 
   await expect(
@@ -46,6 +67,23 @@ test("places a basic tower and starts the first wave", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: "Cancel Selection" })
   ).toBeHidden();
+
+  await expect(
+    page.getByTestId("money-card-flash")
+  ).not.toHaveClass(/is-flashing/);
+
+  const flashLog = await page.evaluate(() => {
+    const el = document.querySelector(
+      '[data-testid="money-card-flash"]'
+    ) as HTMLDivElement & { __flashLog?: string[] };
+    return el.__flashLog ?? [];
+  });
+  expect(
+    flashLog.some(
+      (entry) => entry.includes("is-flashing") && entry.endsWith("|decrease")
+    )
+  ).toBe(true);
+  expect(flashLog.at(-1)).not.toContain("is-flashing");
 
   await page.getByRole("button", { name: "Start next wave" }).click();
 

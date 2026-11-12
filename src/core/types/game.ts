@@ -30,6 +30,16 @@ export type UiActionDeniedData = {
 };
 
 // Enemy types
+/**
+ * Payload of the `MONEY_CHANGED` event: the money after the change and
+ * whether it went up (a gain, e.g. a kill reward or a tower sell) or down
+ * (a spend, e.g. a tower purchase).
+ */
+export type MoneyChangedData = {
+  amount: number;
+  direction: "increase" | "decrease";
+};
+
 export type EnemyType = "basic" | "fast" | "tank" | "medic" | "splitter";
 
 export type HealPulseConfig = {

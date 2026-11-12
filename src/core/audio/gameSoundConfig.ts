@@ -8,6 +8,7 @@ import { GameEvent } from "../../core/types/enums/events";
 import type { CameraMove } from "../../core/keybindingsConstants";
 import type {
   EnemyType,
+  MoneyChangedData,
   ProjectileType,
   TowerType,
   UiActionDeniedData,
@@ -63,6 +64,12 @@ export const SOUND_CONFIGS = defineSoundConfigs(
       spatial: false,
     },
     [GameEvent.BASE_DAMAGE_TAKEN]: {
+      category: "sfx",
+      spatial: false,
+    },
+    // HUD-only money feedback (tween + card flash, no audio); registered so
+    // the `GameEvent` map is complete.
+    [GameEvent.MONEY_CHANGED]: {
       category: "sfx",
       spatial: false,
     },
@@ -157,6 +164,7 @@ export type AudioEventDataMap = {
     amount: number;
     worldPosition?: WorldPosition;
   };
+  money_changed: MoneyChangedData;
   wave_started: {
     waveNumber: number;
     worldPosition: WorldPosition;

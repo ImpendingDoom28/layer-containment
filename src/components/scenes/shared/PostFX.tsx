@@ -78,13 +78,23 @@ export const PostFX: FC = () => {
     const angularVelocity = delta > 0 ? angle / delta : 0;
 
     // Reduced motion: no smear at all, regardless of how fast the camera moves.
-    const target = reducedMotion
-      ? 0
-      : computeRadialBlurStrength(
-          angularVelocity,
-          RADIAL_BLUR_VELOCITY_THRESHOLD_RAD_S,
-          RADIAL_BLUR_VELOCITY_MAX_RAD_S
-        );
+    // Clear the stored strength immediately (release damping would otherwise
+    // keep the offset positive for a few frames after the preference flips),
+    // but keep sampling the camera so re-enabling motion does not spike on a
+    // stale orientation.
+    if (reducedMotion) {
+      blurStrength.current = 0;
+      effect.offset = 0;
+      prevQuaternion.current.copy(camera.quaternion);
+      hasPrevCamera.current = true;
+      return;
+    }
+
+    const target = computeRadialBlurStrength(
+      angularVelocity,
+      RADIAL_BLUR_VELOCITY_THRESHOLD_RAD_S,
+      RADIAL_BLUR_VELOCITY_MAX_RAD_S
+    );
 
     // Ease in quickly on a yank, ease out a touch slower so the smear lingers
     // ~1–2 frames before the view snaps crisp.
@@ -93,14 +103,16 @@ export const PostFX: FC = () => {
         ? RADIAL_BLUR_ATTACK_LAMBDA
         : RADIAL_BLUR_RELEASE_LAMBDA;
     const next = MathUtils.damp(blurStrength.current, target, lambda, delta);
+    blurStrength.current = next;
 
-    if (next < RADIAL_BLUR_STRENGTH_EPSILON) {
-      blurStrength.current = 0;
-      effect.offset = 0;
-    } else {
-      blurStrength.current = next;
-      effect.offset = next * RADIAL_BLUR_MAX_OFFSET_UV;
-    }
+    // Keep the damped strength accumulating while it builds — a per-frame
+    // epsilon reset would zero it at high frame rates before it ever ramps up.
+    // The epsilon only suppresses the *rendered* offset: below it the smear is
+    // invisible, and the shader early-outs at offset 0 so no ring is sampled.
+    effect.offset =
+      next > RADIAL_BLUR_STRENGTH_EPSILON
+        ? next * RADIAL_BLUR_MAX_OFFSET_UV
+        : 0;
 
     prevQuaternion.current.copy(camera.quaternion);
     hasPrevCamera.current = true;

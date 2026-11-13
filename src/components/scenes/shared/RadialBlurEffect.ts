@@ -8,10 +8,13 @@ import { MathUtils, Uniform } from "three";
  * collapses onto the center, so the effect is a no-op — which is also how it is
  * gated (see `PostFX`).
  *
- * It is a plain `postprocessing` `Effect` (not a convolution pass): it reads the
- * `inputBuffer` directly and averages a fixed ring of samples per pixel, so it
- * costs a handful of extra texture fetches only when the camera is actually
- * moving fast, and nothing at rest.
+ * It is a `postprocessing` `Effect` that reads the `inputBuffer` directly and
+ * averages a fixed ring of samples per pixel, so it costs a handful of extra
+ * texture fetches only when the camera is actually moving fast, and none at
+ * rest. The `CONVOLUTION` attribute tells the composer that the effect samples
+ * the input buffer beyond its main pixel: in a shared `EffectPass` (e.g. with
+ * Bloom) it is then executed first, so the ring reads the un-blurred scene
+ * rather than an already-processed frame.
  */
 const FRAGMENT_SHADER = /* glsl */ `
 uniform float uOffset;
@@ -25,8 +28,11 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
     return;
   }
   vec2 dir = uv - 0.5;
-  vec4 color = inputColor;
-  for (int i = 0; i < 9; i++) {
+  // 9 taps total (the center sample plus 8 around the ring), all read from the
+  // input buffer and averaged over 9 so a uniform image keeps its brightness
+  // regardless of whether the smear is active.
+  vec4 color = texture2D(inputBuffer, uv).rgba;
+  for (int i = 1; i < 9; i++) {
     float t = float(i) * 0.125;
     color += texture2D(inputBuffer, uv + dir * uOffset * t).rgba;
   }
@@ -46,7 +52,7 @@ export class RadialBlurEffect extends Effect {
     const offsetUniform = new Uniform(offset);
     super("RadialBlurEffect", FRAGMENT_SHADER, {
       blendFunction: BlendFunction.NORMAL,
-      attributes: EffectAttribute.NONE,
+      attributes: EffectAttribute.CONVOLUTION,
       uniforms: new Map([["uOffset", offsetUniform]]),
     });
     this.offsetUniform = offsetUniform;

@@ -3,6 +3,7 @@ import { create } from "zustand";
 import type {
   BossConfig,
   Building,
+  CanyonConfig,
   EnemyType,
   PathWaypoint,
   Projectile,
@@ -16,6 +17,7 @@ import {
   withRecalculatedBuildingCoordinates,
   withRecalculatedWaterCoordinates,
 } from "../../utils/levelEditor";
+import { buildCanyonBridgePaths } from "../../utils/canyonBridges";
 import { getUpgradeStacks } from "../../utils/upgradeStacks";
 import { gameEvents } from "../../utils/eventEmitter";
 import { GameEvent } from "../types/enums/events";
@@ -42,6 +44,7 @@ export type CometReveal = {
 type LevelStoreState = {
   gridSize: number;
   waters: WaterBody[];
+  canyons: CanyonConfig[];
   pathWaypoints: PathWaypoint[][];
   totalWaves: number;
   waveConfigs: WaveConfig[];
@@ -115,6 +118,7 @@ const DEFAULT_STATE: LevelStoreState = {
   gridOffset: 0,
   gridSize: 0,
   waters: [],
+  canyons: [],
   totalWaves: 0,
   enemyWeights: null,
   pathWaypoints: [],
@@ -148,7 +152,7 @@ export const useLevelStore = create<LevelStore>((set) => ({
 
     const {
       gridSize,
-      pathWaypoints,
+      pathWaypoints: rawPathWaypoints,
       enemies,
       towers,
       buildings,
@@ -161,6 +165,16 @@ export const useLevelStore = create<LevelStore>((set) => ({
     } = levelData;
 
     const gridOffset = getLevelGridOffset(gridSize, tileSize);
+    // Bake a bridge elevation into any path that crosses a canyon. This is the
+    // single point of change: enemies (position.y = waypoint.y), tower aiming
+    // (targetPathPos.y), and the path strip render (yBase + pathYOffset) all
+    // read these waypoints, so they all follow the bridge height automatically.
+    const pathWaypoints = buildCanyonBridgePaths(
+      rawPathWaypoints,
+      levelData.canyons ?? [],
+      gridSize,
+      tileSize
+    );
     const actions = enemyActions(world);
 
     actions.clearAllEnemies();
@@ -226,6 +240,7 @@ export const useLevelStore = create<LevelStore>((set) => ({
       waveConfigs,
       projectiles,
       waters: levelWaters,
+      canyons: levelData.canyons ?? [],
       buildings: levelBuildings,
       towers: levelTowers,
       totalWaves: waveConfigs.length,
@@ -358,6 +373,7 @@ export const useLevelStore = create<LevelStore>((set) => ({
 export const gridOffsetSelector = (state: LevelStore) => state.gridOffset;
 export const gridSizeSelector = (state: LevelStore) => state.gridSize;
 export const watersSelector = (state: LevelStore) => state.waters;
+export const canyonsSelector = (state: LevelStore) => state.canyons;
 export const pathWaypointsSelector = (state: LevelStore) => state.pathWaypoints;
 export const totalWavesSelector = (state: LevelStore) => state.totalWaves;
 export const waveConfigsSelector = (state: LevelStore) => state.waveConfigs;

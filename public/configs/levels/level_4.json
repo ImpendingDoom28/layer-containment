@@ -1,0 +1,551 @@
+{
+  "name": "4",
+  "label": "Sector 4: The Gorge",
+  "description": "A river cuts a deep canyon across the grid. Bridge the span and hold the crossing.",
+  "startingHealth": 20,
+  "startingMoney": 250,
+  "gridSize": 20,
+  "waters": [
+    {
+      "id": 1,
+      "gridX": 6,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 2,
+      "gridX": 7,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 3,
+      "gridX": 8,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 4,
+      "gridX": 9,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 5,
+      "gridX": 10,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 6,
+      "gridX": 11,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 7,
+      "gridX": 12,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 8,
+      "gridX": 13,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 9,
+      "gridX": 17,
+      "gridZ": 1,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 10,
+      "gridX": 18,
+      "gridZ": 1,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 11,
+      "gridX": 17,
+      "gridZ": 2,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 12,
+      "gridX": 18,
+      "gridZ": 2,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 13,
+      "gridX": 1,
+      "gridZ": 15,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 14,
+      "gridX": 2,
+      "gridZ": 15,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 15,
+      "gridX": 1,
+      "gridZ": 16,
+      "shape": "box",
+      "color": "#0e7490"
+    },
+    {
+      "id": 16,
+      "gridX": 2,
+      "gridZ": 16,
+      "shape": "box",
+      "color": "#0e7490"
+    }
+  ],
+  "canyons": [
+    {
+      "id": 1,
+      "gridX": 6,
+      "gridZ": 8
+    },
+    {
+      "id": 2,
+      "gridX": 6,
+      "gridZ": 9
+    },
+    {
+      "id": 3,
+      "gridX": 6,
+      "gridZ": 10
+    },
+    {
+      "id": 4,
+      "gridX": 6,
+      "gridZ": 11
+    },
+    {
+      "id": 5,
+      "gridX": 7,
+      "gridZ": 8
+    },
+    {
+      "id": 6,
+      "gridX": 7,
+      "gridZ": 9
+    },
+    {
+      "id": 7,
+      "gridX": 7,
+      "gridZ": 10
+    },
+    {
+      "id": 8,
+      "gridX": 7,
+      "gridZ": 11
+    },
+    {
+      "id": 9,
+      "gridX": 8,
+      "gridZ": 8
+    },
+    {
+      "id": 10,
+      "gridX": 8,
+      "gridZ": 9
+    },
+    {
+      "id": 11,
+      "gridX": 8,
+      "gridZ": 10
+    },
+    {
+      "id": 12,
+      "gridX": 8,
+      "gridZ": 11
+    },
+    {
+      "id": 13,
+      "gridX": 9,
+      "gridZ": 8
+    },
+    {
+      "id": 14,
+      "gridX": 9,
+      "gridZ": 9
+    },
+    {
+      "id": 15,
+      "gridX": 9,
+      "gridZ": 10
+    },
+    {
+      "id": 16,
+      "gridX": 9,
+      "gridZ": 11
+    },
+    {
+      "id": 17,
+      "gridX": 10,
+      "gridZ": 8
+    },
+    {
+      "id": 18,
+      "gridX": 10,
+      "gridZ": 9
+    },
+    {
+      "id": 19,
+      "gridX": 10,
+      "gridZ": 10
+    },
+    {
+      "id": 20,
+      "gridX": 10,
+      "gridZ": 11
+    },
+    {
+      "id": 21,
+      "gridX": 11,
+      "gridZ": 8
+    },
+    {
+      "id": 22,
+      "gridX": 11,
+      "gridZ": 9
+    },
+    {
+      "id": 23,
+      "gridX": 11,
+      "gridZ": 10
+    },
+    {
+      "id": 24,
+      "gridX": 11,
+      "gridZ": 11
+    },
+    {
+      "id": 25,
+      "gridX": 12,
+      "gridZ": 8
+    },
+    {
+      "id": 26,
+      "gridX": 12,
+      "gridZ": 9
+    },
+    {
+      "id": 27,
+      "gridX": 12,
+      "gridZ": 10
+    },
+    {
+      "id": 28,
+      "gridX": 12,
+      "gridZ": 11
+    },
+    {
+      "id": 29,
+      "gridX": 13,
+      "gridZ": 8
+    },
+    {
+      "id": 30,
+      "gridX": 13,
+      "gridZ": 9
+    },
+    {
+      "id": 31,
+      "gridX": 13,
+      "gridZ": 10
+    },
+    {
+      "id": 32,
+      "gridX": 13,
+      "gridZ": 11
+    }
+  ],
+  "pathWaypoints": [
+    [
+      {
+        "x": -7.5,
+        "y": 0,
+        "z": -8.5
+      },
+      {
+        "x": -7.5,
+        "y": 0,
+        "z": -2.5
+      },
+      {
+        "x": -0.5,
+        "y": 0,
+        "z": -2.5
+      },
+      {
+        "x": -0.5,
+        "y": 0,
+        "z": 2.5
+      },
+      {
+        "x": 6.5,
+        "y": 0,
+        "z": 2.5
+      },
+      {
+        "x": 6.5,
+        "y": 0,
+        "z": 7.5
+      }
+    ]
+  ],
+  "waveConfigs": [
+    {
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 12,
+          "spawnInterval": 0.9
+        }
+      ],
+      "totalEnemies": 12
+    },
+    {
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 14,
+          "spawnInterval": 0.8
+        },
+        {
+          "type": "fast",
+          "count": 5,
+          "spawnInterval": 0.8
+        }
+      ],
+      "totalEnemies": 19
+    },
+    {
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 16,
+          "spawnInterval": 0.7
+        },
+        {
+          "type": "fast",
+          "count": 7,
+          "spawnInterval": 0.7
+        }
+      ],
+      "totalEnemies": 23
+    },
+    {
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 18,
+          "spawnInterval": 0.6
+        },
+        {
+          "type": "fast",
+          "count": 9,
+          "spawnInterval": 0.6
+        },
+        {
+          "type": "tank",
+          "count": 2,
+          "spawnInterval": 0.6
+        },
+        {
+          "type": "medic",
+          "count": 1,
+          "spawnInterval": 0.6
+        }
+      ],
+      "totalEnemies": 30
+    },
+    {
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 20,
+          "spawnInterval": 0.55
+        },
+        {
+          "type": "fast",
+          "count": 11,
+          "spawnInterval": 0.55
+        },
+        {
+          "type": "tank",
+          "count": 3,
+          "spawnInterval": 0.55
+        },
+        {
+          "type": "medic",
+          "count": 2,
+          "spawnInterval": 0.55
+        }
+      ],
+      "totalEnemies": 36
+    },
+    {
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 24,
+          "spawnInterval": 0.5
+        },
+        {
+          "type": "fast",
+          "count": 14,
+          "spawnInterval": 0.5
+        },
+        {
+          "type": "tank",
+          "count": 4,
+          "spawnInterval": 0.5
+        },
+        {
+          "type": "medic",
+          "count": 2,
+          "spawnInterval": 0.5
+        }
+      ],
+      "totalEnemies": 44
+    },
+    {
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 28,
+          "spawnInterval": 0.45
+        },
+        {
+          "type": "fast",
+          "count": 18,
+          "spawnInterval": 0.45
+        },
+        {
+          "type": "tank",
+          "count": 6,
+          "spawnInterval": 0.45
+        },
+        {
+          "type": "medic",
+          "count": 3,
+          "spawnInterval": 0.45
+        }
+      ],
+      "totalEnemies": 55
+    },
+    {
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 32,
+          "spawnInterval": 0.4
+        },
+        {
+          "type": "fast",
+          "count": 22,
+          "spawnInterval": 0.4
+        },
+        {
+          "type": "tank",
+          "count": 8,
+          "spawnInterval": 0.4
+        },
+        {
+          "type": "medic",
+          "count": 4,
+          "spawnInterval": 0.4
+        }
+      ],
+      "totalEnemies": 66
+    }
+  ],
+  "buildings": [
+    {
+      "id": 1,
+      "gridX": 12,
+      "gridZ": 4,
+      "x": 2.5,
+      "z": -5.5,
+      "shape": "box",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#8b7355"
+    },
+    {
+      "id": 2,
+      "gridX": 5,
+      "gridZ": 14,
+      "x": -4.5,
+      "z": 4.5,
+      "shape": "box",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#8b7355"
+    },
+    {
+      "id": 3,
+      "gridX": 15,
+      "gridZ": 14,
+      "x": 5.5,
+      "z": 4.5,
+      "shape": "box",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#8b7355"
+    },
+    {
+      "id": 4,
+      "gridX": 3,
+      "gridZ": 10,
+      "x": -6.5,
+      "z": 0.5,
+      "shape": "box",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#8b7355"
+    }
+  ],
+  "towers": [],
+  "enemies": [],
+  "projectiles": [],
+  "enemyWeights": null,
+  "boss": {
+    "name": "The Gorge Tyrant",
+    "everyNthWave": 4,
+    "baseStats": {
+      "health": 1600,
+      "speed": 0.8,
+      "size": 1.7,
+      "healthLoss": 7,
+      "reward": 400
+    },
+    "hpGrowthPerAppearance": 1.6
+  }
+}

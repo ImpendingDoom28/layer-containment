@@ -223,6 +223,7 @@ export const en = {
     modePath: "Path",
     modeBuilding: "Building",
     modeWater: "Water",
+    modeCanyon: "Canyon",
     modeErase: "Erase",
     level: "Level",
     name: "Name",

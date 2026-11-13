@@ -17,6 +17,7 @@ import { Light } from "../shared/Light";
 import {
   buildingsSelector,
   gridSizeSelector,
+  canyonsSelector,
   gridOffsetSelector,
   pathWaypointsSelector,
   towersSelector,
@@ -63,6 +64,7 @@ const REINFORCEMENT_PORTALS: { tier: number; position: [number, number, number] 
 export const TestingLevelScene: FC = () => {
   const buildings = useLevelStore(buildingsSelector);
   const waters = useLevelStore(watersSelector);
+  const canyons = useLevelStore(canyonsSelector);
   const towers = useLevelStore(towersSelector);
   const pathWaypoints = useLevelStore(pathWaypointsSelector);
   const gridSize = useLevelStore(gridSizeSelector);
@@ -78,6 +80,7 @@ export const TestingLevelScene: FC = () => {
     pathWaypoints,
     pathWidth,
     waters,
+    canyons,
   });
 
   return (
@@ -90,7 +93,9 @@ export const TestingLevelScene: FC = () => {
 
       <TestingLevelCamera />
 
-      <Grid placeTower={noopPlaceTower} occupancy={occupancy} />
+      <Grid placeTower={noopPlaceTower} occupancy={occupancy}
+        canyonBBox={null}
+      />
 
       <PlanetTileDecorations occupancy={occupancy} />
 

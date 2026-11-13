@@ -10,6 +10,7 @@ import {
   waypointToTileUnclamped,
 } from "../../utils/levelEditor";
 import { MIN_GRID_SIZE } from "../../utils/gridSizeLimits";
+import { findBridgeCrossings } from "../../utils/canyonBridges";
 import { isGridTileOnPath } from "../../utils/pathUtils";
 import { parseLevelConfigData, type LevelConfigData } from "./levelConfig";
 
@@ -94,7 +95,13 @@ describe("playable level files", () => {
           `building ${building.id} at ${building.gridX},${building.gridZ} is on the path`
         ).toBe(false);
       }
+      const canyonKeys = new Set(
+        (level.canyons ?? []).map((c) => `${c.gridX},${c.gridZ}`)
+      );
       for (const water of level.waters) {
+        // Water is allowed on the path only over a canyon (a river the path
+        // bridges): the bridge deck runs above the water.
+        if (canyonKeys.has(`${water.gridX},${water.gridZ}`)) continue;
         expect(
           isOnPath(water.gridX, water.gridZ),
           `water ${water.id} at ${water.gridX},${water.gridZ} is on the path`
@@ -121,8 +128,8 @@ describe("playable level files", () => {
     it(`${id}: no duplicate or overlapping building/water tiles`, () => {
       const level = loadLevel(id);
       const tileKey = (gridX: number, gridZ: number) => `${gridX},${gridZ}`;
-      const buildingKeys = level.buildings.map(
-        (b) => tileKey(b.gridX, b.gridZ)
+      const buildingKeys = level.buildings.map((b) =>
+        tileKey(b.gridX, b.gridZ)
       );
       expect(new Set(buildingKeys).size).toBe(buildingKeys.length);
       const waterKeys = level.waters.map((w) => tileKey(w.gridX, w.gridZ));
@@ -132,10 +139,13 @@ describe("playable level files", () => {
       }
     });
 
-    it(`${id}: path waypoints never sit on water`, () => {
+    it(`${id}: path waypoints never sit on water (except over a canyon)`, () => {
       const level = loadLevel(id);
       const waterKeys = new Set(
         level.waters.map((w) => `${w.gridX},${w.gridZ}`)
+      );
+      const canyonKeys = new Set(
+        (level.canyons ?? []).map((c) => `${c.gridX},${c.gridZ}`)
       );
       for (const path of level.pathWaypoints) {
         for (const waypoint of path) {
@@ -144,11 +154,27 @@ describe("playable level files", () => {
             level.gridSize,
             TILE_SIZE
           );
+          // Over a canyon the path bridges the water in the gorge, so a
+          // waypoint there sits above the water rather than in it.
+          const onWaterOverCanyon = canyonKeys.has(`${gridX},${gridZ}`);
           expect(
-            waterKeys.has(`${gridX},${gridZ}`),
+            waterKeys.has(`${gridX},${gridZ}`) && !onWaterOverCanyon,
             `path waypoint at grid ${gridX},${gridZ} sits on water`
           ).toBe(false);
         }
+      }
+    });
+
+    it(`${id}: buildings never sit on canyon tiles`, () => {
+      const level = loadLevel(id);
+      const canyonKeys = new Set(
+        (level.canyons ?? []).map((c) => `${c.gridX},${c.gridZ}`)
+      );
+      for (const building of level.buildings) {
+        expect(
+          canyonKeys.has(`${building.gridX},${building.gridZ}`),
+          `building ${building.id} at ${building.gridX},${building.gridZ} is on a canyon tile`
+        ).toBe(false);
       }
     });
 
@@ -174,8 +200,80 @@ describe("playable level files", () => {
         expect(inBounds(water.gridX)).toBe(true);
         expect(inBounds(water.gridZ)).toBe(true);
       }
+      for (const canyon of level.canyons ?? []) {
+        expect(inBounds(canyon.gridX)).toBe(true);
+        expect(inBounds(canyon.gridZ)).toBe(true);
+      }
+    });
+
+    it(`${id}: no duplicate canyon tiles`, () => {
+      const level = loadLevel(id);
+      const canyonKeys = (level.canyons ?? []).map(
+        (c) => `${c.gridX},${c.gridZ}`
+      );
+      expect(new Set(canyonKeys).size).toBe(canyonKeys.length);
+    });
+
+    it(`${id}: no two paths cross the same canyon tile (overlapping bridges)`, () => {
+      const level = loadLevel(id);
+      const crossings = findBridgeCrossings(
+        level.pathWaypoints,
+        level.canyons ?? [],
+        level.gridSize,
+        TILE_SIZE
+      );
+      expect(
+        crossings,
+        `paths cross over the same canyon tile: ${JSON.stringify(crossings)}`
+      ).toEqual([]);
+    });
+
+    it(`${id}: canyon tiles use integer grid coordinates`, () => {
+      const level = loadLevel(id);
+      for (const canyon of level.canyons ?? []) {
+        expect(Number.isInteger(canyon.gridX), `canyon ${canyon.id} gridX`).toBe(
+          true
+        );
+        expect(Number.isInteger(canyon.gridZ), `canyon ${canyon.id} gridZ`).toBe(
+          true
+        );
+      }
     });
   }
+});
+
+// The canyon schema must reject fractional grid coordinates: a non-integer
+// index silently skips the mask cell (buildCanyonMask) while the basin bbox
+// still uses the fractional value, so the level would mis-render and the
+// validation bounds check (0 <= gridX < gridSize) would wrongly pass.
+describe("canyon coordinate schema", () => {
+  const base = loadLevel("level_4");
+
+  it("rejects a fractional canyon gridX", () => {
+    const mutated: unknown = {
+      ...base,
+      canyons: [...(base.canyons ?? []), { id: 999999, gridX: 5.5, gridZ: 3 }],
+    };
+    expect(parseLevelConfigData(mutated).success).toBe(false);
+  });
+
+  it("rejects a fractional canyon gridZ", () => {
+    const mutated: unknown = {
+      ...base,
+      canyons: [...(base.canyons ?? []), { id: 999999, gridX: 3, gridZ: 7.25 }],
+    };
+    expect(parseLevelConfigData(mutated).success).toBe(false);
+  });
+
+  it("accepts integer canyon coordinates", () => {
+    const mutated: unknown = {
+      ...base,
+      canyons: [...(base.canyons ?? []), { id: 999999, gridX: 0, gridZ: 0 }],
+    };
+    // (0,0) is not a canyon in level_4, so the no-dup/bounds rules are not
+    // triggered by the added cell — only the integer-ness is under test here.
+    expect(parseLevelConfigData(mutated).success).toBe(true);
+  });
 });
 
 // The 3D asset showcase (`/testing-level`) is not a playable level, so it sits
@@ -204,10 +302,14 @@ describe("3D asset showcase level", () => {
     const enemyTypes = new Set(level.enemies.map((e) => e.type));
     const towerTypes = new Set(level.towers.map((t) => t.type));
     for (const type of ["basic", "fast", "tank", "medic", "splitter"]) {
-      expect(enemyTypes.has(type as never), `enemy type ${type} missing`).toBe(true);
+      expect(enemyTypes.has(type as never), `enemy type ${type} missing`).toBe(
+        true
+      );
     }
     for (const type of ["basic", "slow", "brl", "laser", "relay", "chain"]) {
-      expect(towerTypes.has(type as never), `tower type ${type} missing`).toBe(true);
+      expect(towerTypes.has(type as never), `tower type ${type} missing`).toBe(
+        true
+      );
     }
   });
 
@@ -228,7 +330,9 @@ describe("3D asset showcase level", () => {
       "regenerating",
       "missingOut",
     ]) {
-      expect(upgradesShown.has(id as never), `upgrade ${id} missing`).toBe(true);
+      expect(upgradesShown.has(id as never), `upgrade ${id} missing`).toBe(
+        true
+      );
     }
     // Each upgrade id appears exactly three times (tiers 1, 2, 3).
     const count = (id: string) =>
@@ -262,7 +366,8 @@ describe("3D asset showcase level", () => {
     }
     // Enemy world coords sit one tile inside the board (offset −gridSize/2,
     // tile size 1): a 20×20 grid spans [−9.5, 10.5) per axis.
-    const worldInBounds = (v: number) => v >= -level.gridSize / 2 && v <= level.gridSize / 2 + 1;
+    const worldInBounds = (v: number) =>
+      v >= -level.gridSize / 2 && v <= level.gridSize / 2 + 1;
     for (const enemy of level.enemies) {
       expect(worldInBounds(enemy.x)).toBe(true);
       expect(worldInBounds(enemy.z)).toBe(true);

@@ -12,6 +12,7 @@ export type TilePlacementState = {
   isOccupiedByBuilding: boolean;
   isOnPath: boolean;
   isWater: boolean;
+  isCanyon: boolean;
   isBlocked: boolean;
 };
 
@@ -21,6 +22,7 @@ type GetTilePlacementStateParams = {
   towers: Tower[];
   buildings: Building[];
   waters: WaterBodyConfig[];
+  canyons: { gridX: number; gridZ: number }[];
   gridOffset: number;
   tileSize: number;
   pathWaypoints: PathWaypoint[][];
@@ -33,6 +35,7 @@ export const getTilePlacementState = ({
   towers,
   buildings,
   waters,
+  canyons,
   gridOffset,
   tileSize,
   pathWaypoints,
@@ -53,12 +56,21 @@ export const getTilePlacementState = ({
     pathWidth
   );
   const isWater = waters.some((w) => w.gridX === gridX && w.gridZ === gridZ);
+  const isCanyon = canyons.some(
+    (c) => c.gridX === gridX && c.gridZ === gridZ
+  );
 
   return {
     isOccupiedByTower,
     isOccupiedByBuilding,
     isOnPath,
     isWater,
-    isBlocked: isOccupiedByTower || isOccupiedByBuilding || isOnPath || isWater,
+    isCanyon,
+    isBlocked:
+      isOccupiedByTower ||
+      isOccupiedByBuilding ||
+      isOnPath ||
+      isWater ||
+      isCanyon,
   };
 };

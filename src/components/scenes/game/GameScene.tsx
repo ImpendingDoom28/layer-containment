@@ -18,6 +18,7 @@ import type {
 import { EntitiesSystem } from "../../systems/EntitiesSystem";
 import { CombatJuice } from "../../entities/effects/CombatJuice";
 import { CometStrike } from "../../entities/effects/CometStrike";
+import { FocusDim } from "../../entities/effects/FocusDim";
 import {
   canyonsSelector,
   gridOffsetSelector,
@@ -149,6 +150,11 @@ export const GameScene: React.FC<GameSceneProps> = ({
       <EntitiesSystem onSellTower={onSellTower} selectedTower={selectedTower} />
 
       <CombatJuice />
+
+      {/* Focus dim: while a placed tower is selected, everything outside its
+          range is gently darkened so the eye is pulled to the selection.
+          Purely view-side; self-gates on `selectedTower`. */}
+      <FocusDim />
 
       {/* The level-load comet strike: a comet strikes each spawn portal's
           tile on level load, and the portal grows out of the scorch as it

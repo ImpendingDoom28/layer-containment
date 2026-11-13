@@ -134,6 +134,7 @@ describe("createWaveSystem", () => {
     useUpgradeStore.getState().resetLevelEnemyUpgrades();
     useWaveStore.getState().setNextWaveReady(true);
     useWaveStore.getState().setRevealSettled(true);
+    useWaveStore.setState({ waveClearedPulse: 0 });
     useGameStore.setState({
       gameStatus: "playing",
       enemyTypes: {
@@ -209,6 +210,9 @@ describe("createWaveSystem", () => {
     }
     tick(waves, 2.5);
     waves.startWave();
+    expect(useLevelStore.getState().currentWave).toBe(1);
+    tick(waves, 3.1);
+    waves.startWave();
     expect(useLevelStore.getState().currentWave).toBe(2);
   });
 
@@ -233,7 +237,11 @@ describe("createWaveSystem", () => {
     waves.startWave();
     tick(waves, 1);
     enemyActions(testWorld).removeEnemy(1, false);
+    // The clear is first observed at 1.4; the 0.375s completion budget keeps
+    // the win pending until 1.775.
     tick(waves, 1.4);
+    expect(winGame).not.toHaveBeenCalled();
+    tick(waves, 2);
     expect(winGame).toHaveBeenCalledTimes(1);
   });
 
@@ -258,11 +266,13 @@ describe("createWaveSystem", () => {
     waves.startWave();
     tick(waves, 1);
     enemyActions(testWorld).removeEnemy(1, false);
-    // Cleared only 0.2s after the first spawn: the completion gate is deferred
-    // but must not be skipped.
+    // Cleared only 0.2s after the first spawn: the completion budget is
+    // measured from the clear, so the win is deferred until 0.375s past it.
     tick(waves, 1.2);
     expect(winGame).not.toHaveBeenCalled();
-    tick(waves, 1.5);
+    tick(waves, 1.4);
+    expect(winGame).not.toHaveBeenCalled();
+    tick(waves, 1.6);
     expect(winGame).toHaveBeenCalledTimes(1);
   });
 
@@ -293,18 +303,19 @@ describe("createWaveSystem", () => {
     tick(waves, 1); // the single enemy spawns
     enemyActions(testWorld).removeEnemy(1, false); // wave 1 clears at t=1
 
-    // 0.2s after the clear, the 0.3s completion delay is still pending. The
-    // next wave must not be offered, and starting it must be a no-op — doing
-    // so would reset `waveStarted` and skip the completion step.
+    // 0.2s after the clear, the 0.375s completion budget is still pending.
+    // The next wave must not be offered, and starting it must be a no-op —
+    // doing so would reset `waveStarted` and skip the completion step.
     tick(waves, 1.2);
     expect(useWaveStore.getState().nextWaveReady).toBe(false);
     waves.startWave();
     expect(useLevelStore.getState().currentWave).toBe(1);
 
-    // Once the delay elapses the wave is finished; readiness updates on the
-    // following frame and the next wave can start.
-    tick(waves, 1.5);
+    // Once the budget elapses (0.375s past the clear) the wave is finished;
+    // readiness updates on the following frame and the next wave can start.
+    tick(waves, 1.4);
     tick(waves, 1.6);
+    tick(waves, 1.65);
     expect(useWaveStore.getState().nextWaveReady).toBe(true);
     waves.startWave();
     expect(useLevelStore.getState().currentWave).toBe(2);
@@ -386,15 +397,17 @@ describe("createWaveSystem", () => {
   });
 
   describe("upgrade gate", () => {
-    // Clears the first (single-enemy) wave and lets the 0.3s completion delay
-    // run, which opens the upgrade gate.
+    // Clears the first (single-enemy) wave and lets the 0.375s completion
+    // budget (0.3s delay + the last-enemy slow-mo beat) run, which opens the
+    // upgrade gate.
     const clearWave1AndOpenGate = (
       waves: ReturnType<typeof createWaveSystem>
     ) => {
       waves.startWave();
-      tick(waves, 1);
+      tick(waves, 1); // the single enemy spawns
       enemyActions(testWorld).removeEnemy(1, false);
-      tick(waves, 1.5);
+      tick(waves, 1.5); // the clear is observed here (waveClearedAt = 1.5)
+      tick(waves, 1.9); // 0.375s completion budget elapses → gate opens
     };
 
     it("offers the Unstoppable upgrade only when a slow tower is placed", () => {
@@ -471,6 +484,48 @@ describe("createWaveSystem", () => {
       expect(pendingEnemyUpgradeGate).toBe(true);
       expect(upgradeChoiceOptions).not.toContain("slowResistance");
       expect(upgradeChoiceOptions).toContain("swift");
+    });
+
+    it("bumps the wave-cleared pulse exactly once per clear", () => {
+      useGameStore.setState({
+        enemyUpgrades: {
+          swift: swiftUpgrade,
+        } as Record<EnemyUpgradeId, EnemyUpgradeConfig>,
+      });
+      useLevelStore.setState({ towers: [] });
+
+      let nextId = 1;
+      const waves = createWaveSystem({
+        world: testWorld,
+        getNextEnemyId: () => nextId++,
+        winGame: vi.fn(),
+      });
+      useLevelStore.setState({
+        totalWaves: 2,
+        waveConfigs: [
+          {
+            totalEnemies: 1,
+            enemies: [{ type: "basic", count: 1, spawnInterval: 0.5 }],
+          },
+          {
+            totalEnemies: 1,
+            enemies: [{ type: "basic", count: 1, spawnInterval: 0.5 }],
+          },
+        ],
+      });
+
+      expect(useWaveStore.getState().waveClearedPulse).toBe(0);
+      clearWave1AndOpenGate(waves);
+      // The completion branch re-runs every frame until the budget elapses,
+      // so the pulse must fire once per clear, not per frame.
+      expect(useWaveStore.getState().waveClearedPulse).toBe(1);
+
+      // The second wave gets its own beat when it clears.
+      waves.startWave();
+      tick(waves, 2); // enemy 2 spawns
+      enemyActions(testWorld).removeEnemy(2, false);
+      tick(waves, 2.5); // the clear is observed → pulse 2
+      expect(useWaveStore.getState().waveClearedPulse).toBe(2);
     });
   });
 

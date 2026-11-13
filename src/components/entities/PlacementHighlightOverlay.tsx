@@ -25,7 +25,9 @@ import { RangeFadeWall } from "./effects/RangeFadeWall";
 import { RangeRing } from "./effects/RangeRing";
 import {
   flatFieldToSphereOverlayPlanePose,
+  flatFieldToSphereSurface,
   getPlanetRadius,
+  getSurfaceQuaternion,
 } from "../../utils/planetSurfaceMapping";
 
 const PLACEMENT_OVERLAY_Y_EPSILON = 0.016;
@@ -147,6 +149,22 @@ export const PlacementHighlightOverlay: FC = memo(() => {
         pathYOffset + PLACEMENT_OVERLAY_Y_EPSILON + 0.004
       );
 
+      // The ring lies in the plane's local XY (its geometry's face normal is
+      // local +Z), so it keeps the plane quaternion. The light wall builds its
+      // base circle in the local XZ plane and extends the strips along local
+      // +Y, so it needs the surface quaternion (local +Y = surface normal)
+      // instead — passing the plane quaternion would tilt the wall's base
+      // circle perpendicular to the ring and make the strips extend sideways.
+      const { normal } = flatFieldToSphereSurface(wx, wz, planetRadius);
+      const wallQuaternion = getSurfaceQuaternion(normal);
+      // Sit the wall's base a hair below the ring along the surface normal so
+      // the two don't z-fight at the shared ring line (flat world: -0.08 in Y).
+      const wallPosition: [number, number, number] = [
+        position.x - normal.x * 0.08,
+        position.y - normal.y * 0.08,
+        position.z - normal.z * 0.08,
+      ];
+
       const minRange = towerTypes[selectedTowerType].minRange;
       return {
         position: [position.x, position.y, position.z] as [
@@ -155,6 +173,8 @@ export const PlacementHighlightOverlay: FC = memo(() => {
           number,
         ],
         quaternion,
+        wallPosition,
+        wallQuaternion,
         range,
         minRange,
       };
@@ -197,12 +217,8 @@ export const PlacementHighlightOverlay: FC = memo(() => {
             />
             <RangeFadeWall
               range={rangeRing.range}
-              position={[
-                rangeRing.position[0],
-                rangeRing.position[1] - 0.08,
-                rangeRing.position[2],
-              ]}
-              quaternion={rangeRing.quaternion}
+              position={rangeRing.wallPosition}
+              quaternion={rangeRing.wallQuaternion}
             />
           </>
         )}

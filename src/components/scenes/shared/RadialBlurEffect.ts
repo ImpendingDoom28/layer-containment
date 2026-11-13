@@ -1,6 +1,13 @@
 import { BlendFunction, Effect, EffectAttribute } from "postprocessing";
 import { MathUtils, Uniform } from "three";
 
+import {
+  RADIAL_BLUR_ANGULAR_MAX_RAD_S,
+  RADIAL_BLUR_ANGULAR_THRESHOLD_RAD_S,
+  RADIAL_BLUR_LINEAR_MAX_UNITS_S,
+  RADIAL_BLUR_LINEAR_THRESHOLD_UNITS_S,
+} from "../../../constants/radialBlur";
+
 /**
  * A cheap radial blur for the post-process chain: the previous frame's
  * framebuffer is re-sampled along rays from the screen center and averaged,
@@ -69,23 +76,41 @@ export class RadialBlurEffect extends Effect {
 }
 
 /**
- * Maps a camera angular velocity (radians/s) to a 0..1 radial-blur strength
- * with a smoothstep ramp: crisp below `thresholdRadPerSec`, fully smeared at
- * `maxRadPerSec`. Pure so it can be unit-tested without a scene.
+ * Maps a single velocity value to a 0..1 strength with a smoothstep ramp:
+ * crisp below `threshold`, fully smeared at `max`. Pure so it can be
+ * unit-tested without a scene.
  */
-export const computeRadialBlurStrength = (
-  velocityRadPerSec: number,
-  thresholdRadPerSec: number,
-  maxRadPerSec: number
+const smoothstepRamp = (
+  value: number,
+  threshold: number,
+  max: number
 ): number => {
-  if (maxRadPerSec <= thresholdRadPerSec) {
+  if (max <= threshold) {
     return 0;
   }
-  const x = MathUtils.clamp(
-    (velocityRadPerSec - thresholdRadPerSec) /
-      (maxRadPerSec - thresholdRadPerSec),
-    0,
-    1
-  );
+  const x = MathUtils.clamp((value - threshold) / (max - threshold), 0, 1);
   return MathUtils.smoothstep(x, 0, 1);
 };
+
+/**
+ * Maps the camera's per-frame linear speed (world units/s) and angular
+ * velocity (radians/s) to a 0..1 radial-blur strength: the larger of the two
+ * independent smoothstep ramps, so the smear responds to a pan *or* a turn (or
+ * both). Pure so it can be unit-tested without a scene.
+ */
+export const computeRadialBlurStrength = (
+  linearUnitsPerSec: number,
+  angularRadPerSec: number
+): number =>
+  Math.max(
+    smoothstepRamp(
+      linearUnitsPerSec,
+      RADIAL_BLUR_LINEAR_THRESHOLD_UNITS_S,
+      RADIAL_BLUR_LINEAR_MAX_UNITS_S
+    ),
+    smoothstepRamp(
+      angularRadPerSec,
+      RADIAL_BLUR_ANGULAR_THRESHOLD_RAD_S,
+      RADIAL_BLUR_ANGULAR_MAX_RAD_S
+    )
+  );

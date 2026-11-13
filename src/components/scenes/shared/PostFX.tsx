@@ -2,7 +2,7 @@ import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import { useFrame, useThree } from "@react-three/fiber";
 import { FC, useMemo, useRef } from "react";
 
-import { MathUtils, Quaternion } from "three";
+import { MathUtils, Quaternion, Vector3 } from "three";
 
 import {
   bloomEnabledSelector,
@@ -16,8 +16,6 @@ import {
   RADIAL_BLUR_MAX_OFFSET_UV,
   RADIAL_BLUR_RELEASE_LAMBDA,
   RADIAL_BLUR_STRENGTH_EPSILON,
-  RADIAL_BLUR_VELOCITY_MAX_RAD_S,
-  RADIAL_BLUR_VELOCITY_THRESHOLD_RAD_S,
 } from "../../../constants/radialBlur";
 import {
   computeRadialBlurStrength,
@@ -33,10 +31,11 @@ import {
  * space); the rest of the scene renders untouched, and bloom runs at half
  * resolution to stay cheap.
  *
- * The radial blur is a view-side physical cue: it tracks the camera's angular
- * velocity and smears the frame along rays from the screen center, growing
- * with turn speed and easing back off as the camera settles, so the camera
- * reads as having momentum instead of teleporting. It is off under
+ * The radial blur is a view-side physical cue: it tracks the camera's per-frame
+ * motion — panning (linear speed) as well as turning (angular velocity) — and
+ * smears the frame along rays from the screen center, growing with the move
+ * speed and easing back off as the camera settles, so the camera reads as
+ * having momentum instead of teleporting. It is off under
  * `prefers-reduced-motion` or the "Motion blur (camera)" quality setting (the
  * strength is cleared to 0) and, like bloom, is auto-skipped on software (CPU)
  * WebGL renderers where a fullscreen pass would starve the main thread.
@@ -57,14 +56,13 @@ export const PostFX: FC = () => {
     () => new RadialBlurEffect({ offset: 0 }),
     []
   );
+  const prevPosition = useRef(new Vector3());
   const prevQuaternion = useRef(new Quaternion());
   const hasPrevCamera = useRef(false);
   const blurStrength = useRef(0);
 
   // Runs before the composer (default priority 0 < the composer's 1), so the
-  // strength is fresh for this frame's render. The camera is read in *view*
-  // time (real delta), not the paused simulation clock: a yank is a physical
-  // camera move, so the blur follows it even if the game world is frozen.
+  // strength is fresh for this frame's render.
   useFrame((_, delta) => {
     const effect = radialBlurEffect;
     if (softwareRenderer) {
@@ -72,9 +70,19 @@ export const PostFX: FC = () => {
       return;
     }
 
-    // Angular velocity (radians/s) from the camera's orientation change — the
-    // rotational "yank" the radial blur is meant to depict.
-    const angle = hasPrevCamera.current
+    // Per-frame camera motion in *view* time (real delta), so the blur
+    // follows a physical camera move even if the game world is paused. Two
+    // independent cues, both feeding the strength:
+    //   - linear speed (world units/s) from the position change — covers panning
+    //     with WASD / the touch D-pad;
+    //   - angular velocity (radians/s) from the orientation change — covers
+    //     rotating with a mouse-drag / the touch joystick.
+    const hasPrev = hasPrevCamera.current;
+    const linearVelocity =
+      hasPrev && delta > 0
+        ? prevPosition.current.distanceTo(camera.position) / delta
+        : 0;
+    const angle = hasPrev
       ? prevQuaternion.current.angleTo(camera.quaternion)
       : 0;
     const angularVelocity = delta > 0 ? angle / delta : 0;
@@ -87,16 +95,13 @@ export const PostFX: FC = () => {
     if (reducedMotion || !motionBlurEnabled) {
       blurStrength.current = 0;
       effect.offset = 0;
+      prevPosition.current.copy(camera.position);
       prevQuaternion.current.copy(camera.quaternion);
       hasPrevCamera.current = true;
       return;
     }
 
-    const target = computeRadialBlurStrength(
-      angularVelocity,
-      RADIAL_BLUR_VELOCITY_THRESHOLD_RAD_S,
-      RADIAL_BLUR_VELOCITY_MAX_RAD_S
-    );
+    const target = computeRadialBlurStrength(linearVelocity, angularVelocity);
 
     // Ease in quickly on a yank, ease out a touch slower so the smear lingers
     // ~1–2 frames before the view snaps crisp.
@@ -116,6 +121,7 @@ export const PostFX: FC = () => {
         ? next * RADIAL_BLUR_MAX_OFFSET_UV
         : 0;
 
+    prevPosition.current.copy(camera.position);
     prevQuaternion.current.copy(camera.quaternion);
     hasPrevCamera.current = true;
   });

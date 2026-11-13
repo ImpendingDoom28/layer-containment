@@ -1,9 +1,10 @@
 /**
  * Radial (camera-move) blur: a light, continuous radial smear while the player
- * moves the camera, growing with the turn speed, so the view feels like it has
- * momentum instead of teleporting. Driven by the camera's per-frame angular
- * velocity; the blur eases in within ~1–2 frames and eases out a touch slower
- * as the camera settles. Off under `prefers-reduced-motion` and via the
+ * moves the camera in any direction (panning with WASD, or rotating with a
+ * mouse-drag), growing with the move speed, so the view feels like it has
+ * momentum instead of teleporting. Driven by the camera's per-frame linear and
+ * angular velocity; the blur eases in within ~1–2 frames and eases out a touch
+ * slower as the camera settles. Off under `prefers-reduced-motion` and via the
  * "Motion blur (camera)" quality setting.
  */
 /**
@@ -14,19 +15,34 @@
 export const RADIAL_BLUR_MAX_OFFSET_UV = 0.01;
 
 /**
- * Camera angular velocity (radians/s, ~17°/s) below which no blur is applied.
- * Set low on purpose: any real camera move should show a hint of the smear;
- * only a near-still camera (micro-drift, a very slow pan) stays fully crisp.
+ * Camera linear speed (world units/s) below which no blur is applied. Set low
+ * on purpose: any real pan (WASD / touch D-pad) should show a hint of the
+ * smear; only a near-still camera stays fully crisp. (The game's camera move
+ * speed is ~10 u/s at full throttle.) A punch/shake jolt is a one-frame ~3–4
+ * u/s spike, so it reads as a brief, modest smear — the camera reacting to
+ * impact — rather than a full blur.
  */
-export const RADIAL_BLUR_VELOCITY_THRESHOLD_RAD_S = 0.3;
+export const RADIAL_BLUR_LINEAR_THRESHOLD_UNITS_S = 0.3;
+
+/**
+ * Camera linear speed (world units/s) at which the smear reaches its peak
+ * offset from panning alone. Slightly below the full-throttle pan speed (10)
+ * so a hard pan saturates the ramp.
+ */
+export const RADIAL_BLUR_LINEAR_MAX_UNITS_S = 8.0;
+
+/**
+ * Camera angular velocity (radians/s, ~17°/s) below which no blur is applied
+ * from rotation alone. Set low on purpose: any real turn should show a hint
+ * of the smear; only a near-still camera stays fully crisp.
+ */
+export const RADIAL_BLUR_ANGULAR_THRESHOLD_RAD_S = 0.3;
 
 /**
  * Camera angular velocity (radians/s, ~229°/s) at which the smear reaches its
- * peak offset. Smoothstep between the threshold and this value maps velocity to
- * blur strength, so the ramp is gentle near the threshold and saturates for a
- * hard flick.
+ * peak offset from turning alone.
  */
-export const RADIAL_BLUR_VELOCITY_MAX_RAD_S = 4.0;
+export const RADIAL_BLUR_ANGULAR_MAX_RAD_S = 4.0;
 
 /**
  * Attack time-constant (1/s): how quickly the smear builds while the camera is

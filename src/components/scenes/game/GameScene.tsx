@@ -1,5 +1,8 @@
+import { useMemo } from "react";
 import { AudioListenerSync } from "@webgamedevkit/audio-engine/r3f";
 
+import { Bridge } from "../../entities/Bridge";
+import { CanyonBasin } from "../../entities/CanyonBasin";
 import { Grid } from "../../entities/Grid";
 import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
 import { PlacementDenialRipple } from "../../entities/PlacementDenialRipple";
@@ -16,6 +19,7 @@ import { EntitiesSystem } from "../../systems/EntitiesSystem";
 import { CombatJuice } from "../../entities/effects/CombatJuice";
 import { CometStrike } from "../../entities/effects/CometStrike";
 import {
+  canyonsSelector,
   gridOffsetSelector,
   gridSizeSelector,
   pathWaypointsSelector,
@@ -24,10 +28,16 @@ import {
 } from "../../../core/stores/useLevelStore";
 import {
   pathWidthSelector,
+  pathYOffsetSelector,
   tileSizeSelector,
   useGameStore,
 } from "../../../core/stores/useGameStore";
 import { useTileOccupancyMasks } from "../../../core/hooks/utils/useTileOccupancyMasks";
+import {
+  BRIDGE_ELEVATION,
+  getCanyonWorldBBox,
+  getBridgeTiles,
+} from "../../../utils/canyonBridges";
 import { Ground } from "../shared/Ground";
 import { Light } from "../shared/Light";
 import { Skybox } from "../shared/Skybox";
@@ -50,9 +60,11 @@ export const GameScene: React.FC<GameSceneProps> = ({
   const pathWaypoints = useLevelStore(pathWaypointsSelector);
   const gridSize = useLevelStore(gridSizeSelector);
   const waters = useLevelStore(watersSelector);
+  const canyons = useLevelStore(canyonsSelector);
   const gridOffset = useLevelStore(gridOffsetSelector);
   const tileSize = useGameStore(tileSizeSelector);
   const pathWidth = useGameStore(pathWidthSelector);
+  const pathYOffset = useGameStore(pathYOffsetSelector);
 
   const occupancy = useTileOccupancyMasks({
     gridSize,
@@ -61,13 +73,37 @@ export const GameScene: React.FC<GameSceneProps> = ({
     pathWaypoints,
     pathWidth,
     waters,
+    canyons,
   });
+
+  // The canyon's world bbox drives the basin (carved bowl + the cut in the
+  // ground sphere), the tiles' floor position, and the bridge piers.
+  const canyonBBox = useMemo(
+    () =>
+      canyons.length === 0
+        ? null
+        : getCanyonWorldBBox(canyons, gridSize, tileSize),
+    [canyons, gridSize, tileSize]
+  );
+
+  // Bridge tiles per path, memoized so unrelated re-renders reuse the same
+  // arrays and the `Bridge` memo holds (its geometry would otherwise re-merge).
+  const bridgeTilesByPath = useMemo(
+    () =>
+      canyons.length === 0
+        ? []
+        : pathWaypoints.map((path) =>
+            getBridgeTiles(path, canyons, gridSize, tileSize)
+          ),
+    [pathWaypoints, canyons, gridSize, tileSize]
+  );
 
   return (
     <>
       <Skybox />
       <Light />
       <Ground />
+      <CanyonBasin />
 
       <GameCamera
         movementSpeed={10}
@@ -82,7 +118,25 @@ export const GameScene: React.FC<GameSceneProps> = ({
         <Path key={index} pathIndex={index} />
       ))}
 
-      <Grid placeTower={placeTower} occupancy={occupancy} />
+      <Grid placeTower={placeTower} occupancy={occupancy} canyonBBox={canyonBBox} />
+
+      {/* Bridge support structure (rails + piers) over each path that crosses
+          a canyon. The deck itself is the elevated path strip rendered by
+          `Path`, so the bridge draws only the raised-walkway framing. */}
+      {bridgeTilesByPath.map((bridgeTiles, index) =>
+        bridgeTiles.length === 0 ? null : (
+          <Bridge
+            key={`bridge-${index}`}
+            tiles={bridgeTiles}
+            deckHeight={BRIDGE_ELEVATION}
+            pathYOffset={pathYOffset}
+            pathWidth={pathWidth}
+            tileSize={tileSize}
+            gridSize={gridSize}
+            canyonBBox={canyonBBox}
+          />
+        )
+      )}
 
       <PlanetTileDecorations occupancy={occupancy} />
 

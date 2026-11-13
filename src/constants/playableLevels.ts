@@ -1,4 +1,9 @@
-export const PLAYABLE_LEVEL_IDS = ["level_1", "level_2", "level_3"] as const;
+export const PLAYABLE_LEVEL_IDS = [
+  "level_1",
+  "level_2",
+  "level_3",
+  "level_4",
+] as const;
 
 export type PlayableLevelId = (typeof PLAYABLE_LEVEL_IDS)[number];
 

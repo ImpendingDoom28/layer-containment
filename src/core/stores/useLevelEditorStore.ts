@@ -7,15 +7,18 @@ import type {
   LevelEditorTool,
   LevelEditorValidationIssue,
 } from "../types/editor";
-import type { EnemyType, PathWaypoint, WaveConfig } from "../types/game";
+import type { CanyonConfig, EnemyType, PathWaypoint, WaveConfig } from "../types/game";
 import type { TileData } from "../types/utils";
 import { getTilePlacementState } from "../../utils/tilePlacement";
+import { findBridgeCrossings } from "../../utils/canyonBridges";
 import { clampGridSize } from "../../utils/gridSizeLimits";
 import { validateLevel } from "../../utils/validateLevel";
 import {
   clampWaterToGrid,
   computeWaveTotalEnemies,
+  createCanyonDefaults,
   createEmptyLevelConfig,
+  filterCanyonsToGrid,
   filterWatersToGrid,
   getLevelGridOffset,
   normalizeImportedLevel,
@@ -173,6 +176,24 @@ const ensurePathExists = (
   return nextPaths;
 };
 
+/**
+ * True when `nextPaths` introduces a bridge crossing absent from
+ * `previousPaths` — two paths crossing the same canyon tile at a right angle
+ * would draw overlapping bridge decks (overlapping rails). Reuses the
+ * validator's `findBridgeCrossings`, so every path-mutating editor action
+ * (drawing, moving an endpoint, dragging a waypoint) blocks the same case the
+ * publish check rejects.
+ */
+const introducesBridgeCrossing = (
+  previousPaths: PathWaypoint[][],
+  nextPaths: PathWaypoint[][],
+  canyons: CanyonConfig[],
+  gridSize: number,
+  tileSize: number
+): boolean =>
+  findBridgeCrossings(nextPaths, canyons, gridSize, tileSize).length >
+  findBridgeCrossings(previousPaths, canyons, gridSize, tileSize).length;
+
 const createBuildingDefaults = (
   gridX: number,
   gridZ: number,
@@ -302,6 +323,7 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
             ),
             nextGridSize
           ),
+          canyons: filterCanyonsToGrid(state.draftLevel.canyons, nextGridSize),
           buildings: state.draftLevel.buildings.map((building) =>
             withRecalculatedBuildingCoordinates(
               {
@@ -327,7 +349,7 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
       // seeds the default weight of 1.
       const nextWeights = ALL_ENEMY_TYPES.reduce(
         (acc, type) => {
-          acc[type] = existingWeights ? existingWeights[type] ?? 0 : 1;
+          acc[type] = existingWeights ? (existingWeights[type] ?? 0) : 1;
           return acc;
         },
         {} as Record<EnemyType, number>
@@ -545,12 +567,13 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
         towers: [],
         buildings: state.draftLevel.buildings,
         waters: state.draftLevel.waters,
+        canyons: state.draftLevel.canyons,
         gridOffset: getLevelGridOffset(state.draftLevel.gridSize, tileSize),
         tileSize,
         pathWaypoints: state.draftLevel.pathWaypoints,
         pathWidth,
       });
-      if (waterCheck.isWater) {
+      if (waterCheck.isWater && !waterCheck.isCanyon) {
         return state;
       }
 
@@ -571,6 +594,18 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
           );
         }
       );
+
+      if (
+        introducesBridgeCrossing(
+          state.draftLevel.pathWaypoints,
+          nextPaths,
+          state.draftLevel.canyons,
+          state.draftLevel.gridSize,
+          tileSize
+        )
+      ) {
+        return state;
+      }
 
       return {
         draftLevel: {
@@ -685,6 +720,22 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
           };
         }
 
+        const canyonAtTile = draftLevel.canyons.find(
+          (item) => item.gridX === tile.gridX && item.gridZ === tile.gridZ
+        );
+        if (canyonAtTile) {
+          return {
+            draftLevel: {
+              ...draftLevel,
+              canyons: draftLevel.canyons.filter(
+                (item) => item.id !== canyonAtTile.id
+              ),
+            },
+            selected: null,
+            hasUnsavedChanges: true,
+          };
+        }
+
         if (waypointSelection) {
           return {
             draftLevel: {
@@ -715,6 +766,7 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
           towers: [],
           buildings: draftLevel.buildings,
           waters: draftLevel.waters,
+          canyons: draftLevel.canyons,
           gridOffset: getLevelGridOffset(draftLevel.gridSize, tileSize),
           tileSize,
           pathWaypoints: draftLevel.pathWaypoints,
@@ -752,6 +804,7 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
           towers: [],
           buildings: draftLevel.buildings,
           waters: draftLevel.waters,
+          canyons: draftLevel.canyons,
           gridOffset: getLevelGridOffset(draftLevel.gridSize, tileSize),
           tileSize,
           pathWaypoints: draftLevel.pathWaypoints,
@@ -781,6 +834,45 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
         };
       }
 
+      if (activeTool === "canyon") {
+        const placementState = getTilePlacementState({
+          gridX: tile.gridX,
+          gridZ: tile.gridZ,
+          towers: [],
+          buildings: draftLevel.buildings,
+          waters: draftLevel.waters,
+          canyons: draftLevel.canyons,
+          gridOffset: getLevelGridOffset(draftLevel.gridSize, tileSize),
+          tileSize,
+          pathWaypoints: draftLevel.pathWaypoints,
+          pathWidth,
+        });
+
+        if (placementState.isOnPath || placementState.isOccupiedByBuilding) {
+          return state;
+        }
+
+        const hasCanyon = draftLevel.canyons.some(
+          (c) => c.gridX === tile.gridX && c.gridZ === tile.gridZ
+        );
+        const nextCanyons = hasCanyon
+          ? draftLevel.canyons.filter(
+              (c) => !(c.gridX === tile.gridX && c.gridZ === tile.gridZ)
+            )
+          : [
+              ...draftLevel.canyons,
+              createCanyonDefaults(tile.gridX, tile.gridZ, draftLevel),
+            ];
+
+        return {
+          draftLevel: {
+            ...draftLevel,
+            canyons: filterCanyonsToGrid(nextCanyons, draftLevel.gridSize),
+          },
+          hasUnsavedChanges: true,
+        };
+      }
+
       const nextWaypoint = tileToWaypoint(tile, draftLevel.gridSize, tileSize);
       const ensuredPaths = ensurePathExists(
         draftLevel.pathWaypoints,
@@ -794,6 +886,7 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
         towers: [],
         buildings: draftLevel.buildings,
         waters: draftLevel.waters,
+        canyons: draftLevel.canyons,
         gridOffset: getLevelGridOffset(draftLevel.gridSize, tileSize),
         tileSize,
         pathWaypoints: draftLevel.pathWaypoints,
@@ -802,6 +895,7 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
 
       if (
         pathTargetPlacement.isWater &&
+        !pathTargetPlacement.isCanyon &&
         (activeTool === "drawPath" ||
           activeTool === "setSpawn" ||
           activeTool === "setBase")
@@ -822,6 +916,17 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
         const nextPaths = ensuredPaths.map((path, pathIndex) =>
           pathIndex === selectedPathIndex ? [...path, nextWaypoint] : path
         );
+        if (
+          introducesBridgeCrossing(
+            ensuredPaths,
+            nextPaths,
+            draftLevel.canyons,
+            draftLevel.gridSize,
+            tileSize
+          )
+        ) {
+          return state;
+        }
 
         return {
           draftLevel: {
@@ -846,6 +951,18 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
         const nextPaths = ensuredPaths.map((path, pathIndex) =>
           pathIndex === selectedPathIndex ? nextPath : path
         );
+
+        if (
+          introducesBridgeCrossing(
+            ensuredPaths,
+            nextPaths,
+            draftLevel.canyons,
+            draftLevel.gridSize,
+            tileSize
+          )
+        ) {
+          return state;
+        }
 
         return {
           draftLevel: {
@@ -872,6 +989,18 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
         const nextPaths = ensuredPaths.map((path, pathIndex) =>
           pathIndex === selectedPathIndex ? nextPath : path
         );
+
+        if (
+          introducesBridgeCrossing(
+            ensuredPaths,
+            nextPaths,
+            draftLevel.canyons,
+            draftLevel.gridSize,
+            tileSize
+          )
+        ) {
+          return state;
+        }
 
         return {
           draftLevel: {

@@ -2,17 +2,18 @@ import type { PathWaypoint } from "../core/types/game";
 import { isGridTileOnPath } from "./pathUtils";
 
 /**
- * Per-tile path/water occupancy for a level, as flat bitmask arrays.
+ * Per-tile path/water/canyon occupancy for a level, as flat bitmask arrays.
  *
- * `water` and `onPath` are indexed by `gridZ * gridSize + gridX` (1 =
- * occupied, 0 = free). Both `Grid` and `PlanetTileDecorations` need exactly
- * this information for every tile; hoisting the computation to a single
- * memo (see `useTileOccupancyMasks`) lets them share one pass over the level
- * data instead of each running their own grid loop.
+ * `water`, `canyon`, and `onPath` are indexed by `gridZ * gridSize + gridX`
+ * (1 = occupied, 0 = free). Both `Grid` and `PlanetTileDecorations` need
+ * exactly this information for every tile; hoisting the computation to a
+ * single memo (see `useTileOccupancyMasks`) lets them share one pass over the
+ * level data instead of each running their own grid loop.
  */
 export type TileOccupancyMasks = {
   gridSize: number;
   water: Uint8Array;
+  canyon: Uint8Array;
   onPath: Uint8Array;
 };
 
@@ -23,6 +24,7 @@ export type TileOccupancyParams = {
   pathWaypoints: PathWaypoint[][];
   pathWidth: number;
   waters: { gridX: number; gridZ: number }[];
+  canyons: { gridX: number; gridZ: number }[];
 };
 
 /**
@@ -44,14 +46,21 @@ export const computeTileOccupancyMasks = (
     pathWaypoints,
     pathWidth,
     waters,
+    canyons,
   } = params;
   const size = gridSize * gridSize;
   const water = new Uint8Array(size);
+  const canyon = new Uint8Array(size);
   const onPath = new Uint8Array(size);
 
   for (const w of waters) {
     const idx = w.gridZ * gridSize + w.gridX;
     if (idx >= 0 && idx < size) water[idx] = 1;
+  }
+
+  for (const c of canyons) {
+    const idx = c.gridZ * gridSize + c.gridX;
+    if (idx >= 0 && idx < size) canyon[idx] = 1;
   }
 
   for (let gridX = 0; gridX < gridSize; gridX += 1) {
@@ -71,5 +80,5 @@ export const computeTileOccupancyMasks = (
     }
   }
 
-  return { gridSize, water, onPath };
+  return { gridSize, water, canyon, onPath };
 };

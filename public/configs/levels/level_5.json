@@ -1,0 +1,1113 @@
+{
+  "name": "5",
+  "label": "Sector 5: The Salt Wastes",
+  "description": "Two fronts march through brine pools and mineral outcrops. Cross the salt river \u2014 twice \u2014 and hold the flats.",
+  "startingHealth": 16,
+  "startingMoney": 300,
+  "gridSize": 20,
+  "waters": [
+    {
+      "id": 1,
+      "gridX": 6,
+      "gridZ": 8,
+      "shape": "box",
+      "color": "#164e63"
+    },
+    {
+      "id": 2,
+      "gridX": 6,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#164e63"
+    },
+    {
+      "id": 3,
+      "gridX": 7,
+      "gridZ": 8,
+      "shape": "box",
+      "color": "#164e63"
+    },
+    {
+      "id": 4,
+      "gridX": 7,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#164e63"
+    },
+    {
+      "id": 5,
+      "gridX": 8,
+      "gridZ": 8,
+      "shape": "box",
+      "color": "#164e63"
+    },
+    {
+      "id": 6,
+      "gridX": 8,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#164e63"
+    },
+    {
+      "id": 7,
+      "gridX": 9,
+      "gridZ": 8,
+      "shape": "box",
+      "color": "#164e63"
+    },
+    {
+      "id": 8,
+      "gridX": 9,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#164e63"
+    },
+    {
+      "id": 9,
+      "gridX": 10,
+      "gridZ": 8,
+      "shape": "box",
+      "color": "#164e63"
+    },
+    {
+      "id": 10,
+      "gridX": 10,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#164e63"
+    },
+    {
+      "id": 11,
+      "gridX": 11,
+      "gridZ": 8,
+      "shape": "box",
+      "color": "#164e63"
+    },
+    {
+      "id": 12,
+      "gridX": 11,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#164e63"
+    },
+    {
+      "id": 13,
+      "gridX": 12,
+      "gridZ": 8,
+      "shape": "box",
+      "color": "#164e63"
+    },
+    {
+      "id": 14,
+      "gridX": 12,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#164e63"
+    },
+    {
+      "id": 15,
+      "gridX": 13,
+      "gridZ": 8,
+      "shape": "box",
+      "color": "#164e63"
+    },
+    {
+      "id": 16,
+      "gridX": 13,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#164e63"
+    },
+    {
+      "id": 17,
+      "gridX": 1,
+      "gridZ": 1,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 18,
+      "gridX": 2,
+      "gridZ": 1,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 19,
+      "gridX": 1,
+      "gridZ": 2,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 20,
+      "gridX": 2,
+      "gridZ": 2,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 21,
+      "gridX": 17,
+      "gridZ": 1,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 22,
+      "gridX": 18,
+      "gridZ": 1,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 23,
+      "gridX": 17,
+      "gridZ": 2,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 24,
+      "gridX": 18,
+      "gridZ": 2,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 25,
+      "gridX": 1,
+      "gridZ": 17,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 26,
+      "gridX": 2,
+      "gridZ": 17,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 27,
+      "gridX": 1,
+      "gridZ": 18,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 28,
+      "gridX": 2,
+      "gridZ": 18,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 29,
+      "gridX": 17,
+      "gridZ": 17,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 30,
+      "gridX": 18,
+      "gridZ": 17,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 31,
+      "gridX": 17,
+      "gridZ": 18,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 32,
+      "gridX": 18,
+      "gridZ": 18,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 33,
+      "gridX": 5,
+      "gridZ": 8,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 34,
+      "gridX": 5,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 35,
+      "gridX": 14,
+      "gridZ": 8,
+      "shape": "box",
+      "color": "#155e75"
+    },
+    {
+      "id": 36,
+      "gridX": 14,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#155e75"
+    }
+  ],
+  "canyons": [
+    {
+      "id": 1,
+      "gridX": 6,
+      "gridZ": 7
+    },
+    {
+      "id": 2,
+      "gridX": 6,
+      "gridZ": 8
+    },
+    {
+      "id": 3,
+      "gridX": 6,
+      "gridZ": 9
+    },
+    {
+      "id": 4,
+      "gridX": 6,
+      "gridZ": 10
+    },
+    {
+      "id": 5,
+      "gridX": 7,
+      "gridZ": 7
+    },
+    {
+      "id": 6,
+      "gridX": 7,
+      "gridZ": 8
+    },
+    {
+      "id": 7,
+      "gridX": 7,
+      "gridZ": 9
+    },
+    {
+      "id": 8,
+      "gridX": 7,
+      "gridZ": 10
+    },
+    {
+      "id": 9,
+      "gridX": 8,
+      "gridZ": 7
+    },
+    {
+      "id": 10,
+      "gridX": 8,
+      "gridZ": 8
+    },
+    {
+      "id": 11,
+      "gridX": 8,
+      "gridZ": 9
+    },
+    {
+      "id": 12,
+      "gridX": 8,
+      "gridZ": 10
+    },
+    {
+      "id": 13,
+      "gridX": 9,
+      "gridZ": 7
+    },
+    {
+      "id": 14,
+      "gridX": 9,
+      "gridZ": 8
+    },
+    {
+      "id": 15,
+      "gridX": 9,
+      "gridZ": 9
+    },
+    {
+      "id": 16,
+      "gridX": 9,
+      "gridZ": 10
+    },
+    {
+      "id": 17,
+      "gridX": 10,
+      "gridZ": 7
+    },
+    {
+      "id": 18,
+      "gridX": 10,
+      "gridZ": 8
+    },
+    {
+      "id": 19,
+      "gridX": 10,
+      "gridZ": 9
+    },
+    {
+      "id": 20,
+      "gridX": 10,
+      "gridZ": 10
+    },
+    {
+      "id": 21,
+      "gridX": 11,
+      "gridZ": 7
+    },
+    {
+      "id": 22,
+      "gridX": 11,
+      "gridZ": 8
+    },
+    {
+      "id": 23,
+      "gridX": 11,
+      "gridZ": 9
+    },
+    {
+      "id": 24,
+      "gridX": 11,
+      "gridZ": 10
+    },
+    {
+      "id": 25,
+      "gridX": 12,
+      "gridZ": 7
+    },
+    {
+      "id": 26,
+      "gridX": 12,
+      "gridZ": 8
+    },
+    {
+      "id": 27,
+      "gridX": 12,
+      "gridZ": 9
+    },
+    {
+      "id": 28,
+      "gridX": 12,
+      "gridZ": 10
+    },
+    {
+      "id": 29,
+      "gridX": 13,
+      "gridZ": 7
+    },
+    {
+      "id": 30,
+      "gridX": 13,
+      "gridZ": 8
+    },
+    {
+      "id": 31,
+      "gridX": 13,
+      "gridZ": 9
+    },
+    {
+      "id": 32,
+      "gridX": 13,
+      "gridZ": 10
+    }
+  ],
+  "pathWaypoints": [
+    [
+      {
+        "x": -6.5,
+        "y": 0,
+        "z": -9.5
+      },
+      {
+        "x": -6.5,
+        "y": 0,
+        "z": -6.5
+      },
+      {
+        "x": -2.5,
+        "y": 0,
+        "z": -6.5
+      },
+      {
+        "x": -2.5,
+        "y": 0,
+        "z": 3.5
+      },
+      {
+        "x": -6.5,
+        "y": 0,
+        "z": 3.5
+      },
+      {
+        "x": -6.5,
+        "y": 0,
+        "z": 7.5
+      },
+      {
+        "x": 0.5,
+        "y": 0,
+        "z": 7.5
+      }
+    ],
+    [
+      {
+        "x": 6.5,
+        "y": 0,
+        "z": -9.5
+      },
+      {
+        "x": 6.5,
+        "y": 0,
+        "z": -6.5
+      },
+      {
+        "x": 2.5,
+        "y": 0,
+        "z": -6.5
+      },
+      {
+        "x": 2.5,
+        "y": 0,
+        "z": 3.5
+      },
+      {
+        "x": 6.5,
+        "y": 0,
+        "z": 3.5
+      },
+      {
+        "x": 6.5,
+        "y": 0,
+        "z": 7.5
+      },
+      {
+        "x": 0.5,
+        "y": 0,
+        "z": 7.5
+      }
+    ]
+  ],
+  "waveConfigs": [
+    {
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 10,
+          "spawnInterval": 0.9,
+          "pathIndex": 0
+        },
+        {
+          "type": "basic",
+          "count": 10,
+          "spawnInterval": 0.9,
+          "pathIndex": 1
+        }
+      ],
+      "totalEnemies": 20
+    },
+    {
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 12,
+          "spawnInterval": 0.8,
+          "pathIndex": 0
+        },
+        {
+          "type": "fast",
+          "count": 4,
+          "spawnInterval": 0.8,
+          "pathIndex": 0
+        },
+        {
+          "type": "basic",
+          "count": 10,
+          "spawnInterval": 0.8,
+          "pathIndex": 1
+        }
+      ],
+      "totalEnemies": 26
+    },
+    {
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 14,
+          "spawnInterval": 0.75,
+          "pathIndex": 1
+        },
+        {
+          "type": "fast",
+          "count": 6,
+          "spawnInterval": 0.75,
+          "pathIndex": 0
+        },
+        {
+          "type": "basic",
+          "count": 8,
+          "spawnInterval": 0.75,
+          "pathIndex": 0
+        }
+      ],
+      "totalEnemies": 28
+    },
+    {
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 16,
+          "spawnInterval": 0.7,
+          "pathIndex": 0
+        },
+        {
+          "type": "fast",
+          "count": 8,
+          "spawnInterval": 0.7,
+          "pathIndex": 1
+        },
+        {
+          "type": "tank",
+          "count": 2,
+          "spawnInterval": 0.7,
+          "pathIndex": 0
+        },
+        {
+          "type": "splitter",
+          "count": 2,
+          "spawnInterval": 0.7,
+          "pathIndex": 1
+        }
+      ],
+      "totalEnemies": 28
+    },
+    {
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 18,
+          "spawnInterval": 0.65,
+          "pathIndex": 1
+        },
+        {
+          "type": "fast",
+          "count": 10,
+          "spawnInterval": 0.65,
+          "pathIndex": 0
+        },
+        {
+          "type": "tank",
+          "count": 3,
+          "spawnInterval": 0.65,
+          "pathIndex": 1
+        },
+        {
+          "type": "medic",
+          "count": 2,
+          "spawnInterval": 0.65,
+          "pathIndex": 0
+        }
+      ],
+      "totalEnemies": 33
+    },
+    {
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 20,
+          "spawnInterval": 0.6,
+          "pathIndex": 0
+        },
+        {
+          "type": "fast",
+          "count": 12,
+          "spawnInterval": 0.6,
+          "pathIndex": 1
+        },
+        {
+          "type": "tank",
+          "count": 4,
+          "spawnInterval": 0.6,
+          "pathIndex": 0
+        },
+        {
+          "type": "splitter",
+          "count": 3,
+          "spawnInterval": 0.6,
+          "pathIndex": 1
+        },
+        {
+          "type": "medic",
+          "count": 2,
+          "spawnInterval": 0.6,
+          "pathIndex": 1
+        }
+      ],
+      "totalEnemies": 41
+    },
+    {
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 24,
+          "spawnInterval": 0.55,
+          "pathIndex": 1
+        },
+        {
+          "type": "fast",
+          "count": 14,
+          "spawnInterval": 0.55,
+          "pathIndex": 0
+        },
+        {
+          "type": "tank",
+          "count": 5,
+          "spawnInterval": 0.55,
+          "pathIndex": 1
+        },
+        {
+          "type": "splitter",
+          "count": 4,
+          "spawnInterval": 0.55,
+          "pathIndex": 0
+        },
+        {
+          "type": "medic",
+          "count": 3,
+          "spawnInterval": 0.55,
+          "pathIndex": 0
+        }
+      ],
+      "totalEnemies": 50
+    },
+    {
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 28,
+          "spawnInterval": 0.5,
+          "pathIndex": 0
+        },
+        {
+          "type": "fast",
+          "count": 16,
+          "spawnInterval": 0.5,
+          "pathIndex": 1
+        },
+        {
+          "type": "tank",
+          "count": 6,
+          "spawnInterval": 0.5,
+          "pathIndex": 0
+        },
+        {
+          "type": "splitter",
+          "count": 5,
+          "spawnInterval": 0.5,
+          "pathIndex": 1
+        },
+        {
+          "type": "medic",
+          "count": 4,
+          "spawnInterval": 0.5,
+          "pathIndex": 1
+        }
+      ],
+      "totalEnemies": 59
+    },
+    {
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 32,
+          "spawnInterval": 0.45,
+          "pathIndex": 1
+        },
+        {
+          "type": "fast",
+          "count": 18,
+          "spawnInterval": 0.45,
+          "pathIndex": 0
+        },
+        {
+          "type": "tank",
+          "count": 8,
+          "spawnInterval": 0.45,
+          "pathIndex": 1
+        },
+        {
+          "type": "splitter",
+          "count": 6,
+          "spawnInterval": 0.45,
+          "pathIndex": 0
+        },
+        {
+          "type": "medic",
+          "count": 4,
+          "spawnInterval": 0.45,
+          "pathIndex": 0
+        }
+      ],
+      "totalEnemies": 68
+    },
+    {
+      "enemies": [
+        {
+          "type": "basic",
+          "count": 36,
+          "spawnInterval": 0.4,
+          "pathIndex": 0
+        },
+        {
+          "type": "fast",
+          "count": 22,
+          "spawnInterval": 0.4,
+          "pathIndex": 1
+        },
+        {
+          "type": "tank",
+          "count": 10,
+          "spawnInterval": 0.4,
+          "pathIndex": 0
+        },
+        {
+          "type": "splitter",
+          "count": 8,
+          "spawnInterval": 0.4,
+          "pathIndex": 1
+        },
+        {
+          "type": "medic",
+          "count": 6,
+          "spawnInterval": 0.4,
+          "pathIndex": 0
+        }
+      ],
+      "totalEnemies": 82
+    }
+  ],
+  "buildings": [
+    {
+      "id": 1,
+      "gridX": 1,
+      "gridZ": 5,
+      "x": -8.5,
+      "z": -4.5,
+      "shape": "box",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#a8a294"
+    },
+    {
+      "id": 2,
+      "gridX": 1,
+      "gridZ": 7,
+      "x": -8.5,
+      "z": -2.5,
+      "shape": "box",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#a8a294"
+    },
+    {
+      "id": 3,
+      "gridX": 1,
+      "gridZ": 9,
+      "x": -8.5,
+      "z": -0.5,
+      "shape": "cylinder",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#a8a294"
+    },
+    {
+      "id": 4,
+      "gridX": 5,
+      "gridZ": 1,
+      "x": -4.5,
+      "z": -8.5,
+      "shape": "box",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 1.4,
+      "color": "#94a3b8"
+    },
+    {
+      "id": 5,
+      "gridX": 5,
+      "gridZ": 5,
+      "x": -4.5,
+      "z": -4.5,
+      "shape": "box",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#a8a294"
+    },
+    {
+      "id": 6,
+      "gridX": 14,
+      "gridZ": 1,
+      "x": 4.5,
+      "z": -8.5,
+      "shape": "cylinder",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#a8a294"
+    },
+    {
+      "id": 7,
+      "gridX": 14,
+      "gridZ": 5,
+      "x": 4.5,
+      "z": -4.5,
+      "shape": "box",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#a8a294"
+    },
+    {
+      "id": 8,
+      "gridX": 15,
+      "gridZ": 7,
+      "x": 5.5,
+      "z": -2.5,
+      "shape": "box",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 1.4,
+      "color": "#94a3b8"
+    },
+    {
+      "id": 9,
+      "gridX": 8,
+      "gridZ": 1,
+      "x": -1.5,
+      "z": -8.5,
+      "shape": "cylinder",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#a8a294"
+    },
+    {
+      "id": 10,
+      "gridX": 10,
+      "gridZ": 1,
+      "x": 0.5,
+      "z": -8.5,
+      "shape": "box",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#a8a294"
+    },
+    {
+      "id": 11,
+      "gridX": 11,
+      "gridZ": 1,
+      "x": 1.5,
+      "z": -8.5,
+      "shape": "box",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#a8a294"
+    },
+    {
+      "id": 12,
+      "gridX": 8,
+      "gridZ": 15,
+      "x": -1.5,
+      "z": 5.5,
+      "shape": "cylinder",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 1.4,
+      "color": "#94a3b8"
+    },
+    {
+      "id": 13,
+      "gridX": 11,
+      "gridZ": 15,
+      "x": 1.5,
+      "z": 5.5,
+      "shape": "box",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#a8a294"
+    },
+    {
+      "id": 14,
+      "gridX": 13,
+      "gridZ": 15,
+      "x": 3.5,
+      "z": 5.5,
+      "shape": "box",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#a8a294"
+    },
+    {
+      "id": 15,
+      "gridX": 17,
+      "gridZ": 15,
+      "x": 7.5,
+      "z": 5.5,
+      "shape": "cylinder",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#a8a294"
+    },
+    {
+      "id": 16,
+      "gridX": 6,
+      "gridZ": 15,
+      "x": -3.5,
+      "z": 5.5,
+      "shape": "box",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 1.4,
+      "color": "#94a3b8"
+    },
+    {
+      "id": 17,
+      "gridX": 14,
+      "gridZ": 16,
+      "x": 4.5,
+      "z": 6.5,
+      "shape": "box",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#a8a294"
+    },
+    {
+      "id": 18,
+      "gridX": 2,
+      "gridZ": 6,
+      "x": -7.5,
+      "z": -3.5,
+      "shape": "cylinder",
+      "width": 0.86,
+      "depth": 0.86,
+      "height": 2.1,
+      "color": "#a8a294"
+    }
+  ],
+  "towers": [
+    {
+      "id": 1,
+      "type": "basic",
+      "gridX": 6,
+      "gridZ": 6,
+      "x": -3.5,
+      "z": -3.5
+    },
+    {
+      "id": 2,
+      "type": "relay",
+      "gridX": 8,
+      "gridZ": 6,
+      "x": -1.5,
+      "z": -3.5
+    },
+    {
+      "id": 3,
+      "type": "basic",
+      "gridX": 9,
+      "gridZ": 6,
+      "x": -0.5,
+      "z": -3.5
+    },
+    {
+      "id": 4,
+      "type": "basic",
+      "gridX": 11,
+      "gridZ": 6,
+      "x": 1.5,
+      "z": -3.5
+    },
+    {
+      "id": 5,
+      "type": "slow",
+      "gridX": 13,
+      "gridZ": 6,
+      "x": 3.5,
+      "z": -3.5
+    },
+    {
+      "id": 6,
+      "type": "relay",
+      "gridX": 6,
+      "gridZ": 11,
+      "x": -3.5,
+      "z": 1.5
+    },
+    {
+      "id": 7,
+      "type": "basic",
+      "gridX": 5,
+      "gridZ": 11,
+      "x": -4.5,
+      "z": 1.5
+    },
+    {
+      "id": 8,
+      "type": "relay",
+      "gridX": 10,
+      "gridZ": 12,
+      "x": 0.5,
+      "z": 2.5
+    },
+    {
+      "id": 9,
+      "type": "basic",
+      "gridX": 9,
+      "gridZ": 12,
+      "x": -0.5,
+      "z": 2.5
+    },
+    {
+      "id": 10,
+      "type": "slow",
+      "gridX": 7,
+      "gridZ": 16,
+      "x": -2.5,
+      "z": 6.5
+    }
+  ],
+  "enemies": [],
+  "projectiles": [],
+  "enemyWeights": null,
+  "boss": {
+    "name": "The Salt Colossus",
+    "everyNthWave": 4,
+    "baseStats": {
+      "health": 2000,
+      "speed": 0.85,
+      "size": 1.8,
+      "healthLoss": 8,
+      "reward": 500
+    },
+    "hpGrowthPerAppearance": 1.7
+  }
+}

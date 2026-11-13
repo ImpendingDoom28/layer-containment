@@ -1,20 +1,24 @@
 import { describe, expect, it } from "vitest";
 
+import {
+  RADIAL_BLUR_VELOCITY_MAX_RAD_S,
+  RADIAL_BLUR_VELOCITY_THRESHOLD_RAD_S,
+} from "../../../constants/radialBlur";
 import { computeRadialBlurStrength } from "./RadialBlurEffect";
 
-const THRESHOLD = 0.12;
-const MAX = 0.9;
+const THRESHOLD = RADIAL_BLUR_VELOCITY_THRESHOLD_RAD_S;
+const MAX = RADIAL_BLUR_VELOCITY_MAX_RAD_S;
 
 describe("computeRadialBlurStrength", () => {
-  it("is 0 below the threshold (a slow pan stays crisp)", () => {
+  it("is 0 below the threshold (a near-still camera stays crisp)", () => {
     expect(computeRadialBlurStrength(0, THRESHOLD, MAX)).toBe(0);
-    expect(computeRadialBlurStrength(0.05, THRESHOLD, MAX)).toBe(0);
+    expect(computeRadialBlurStrength(THRESHOLD * 0.5, THRESHOLD, MAX)).toBe(0);
     expect(computeRadialBlurStrength(THRESHOLD, THRESHOLD, MAX)).toBe(0);
   });
 
   it("is 1 at or above the max (a hard yank saturates)", () => {
     expect(computeRadialBlurStrength(MAX, THRESHOLD, MAX)).toBe(1);
-    expect(computeRadialBlurStrength(3, THRESHOLD, MAX)).toBe(1);
+    expect(computeRadialBlurStrength(MAX * 2, THRESHOLD, MAX)).toBe(1);
   });
 
   it("ramps smoothly between threshold and max", () => {
@@ -41,7 +45,7 @@ describe("computeRadialBlurStrength", () => {
   });
 
   it("is monotonic with velocity", () => {
-    const values = [0, 0.1, 0.2, 0.4, 0.6, 0.9, 2].map((v) =>
+    const values = [0, 0.2, 0.5, 1, 2, 4, 8].map((v) =>
       computeRadialBlurStrength(v, THRESHOLD, MAX)
     );
     for (let i = 1; i < values.length; i++) {

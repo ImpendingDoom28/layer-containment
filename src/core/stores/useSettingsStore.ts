@@ -21,6 +21,7 @@ type SettingsStoreState = {
   pauseWhenTabHidden: boolean;
   bloomEnabled: boolean;
   shadowsEnabled: boolean;
+  motionBlurEnabled: boolean;
   language: LanguageId;
   controlScheme: ControlSchemeId;
   keybindings: KeybindingsConfig;
@@ -30,6 +31,7 @@ type SettingsStoreActions = {
   setPauseWhenTabHidden: (pause: boolean) => void;
   setBloomEnabled: (enabled: boolean) => void;
   setShadowsEnabled: (enabled: boolean) => void;
+  setMotionBlurEnabled: (enabled: boolean) => void;
   setLanguage: (language: LanguageId) => void;
   setControlScheme: (scheme: ControlSchemeId) => void;
   setKeybinding: (key: KeybindingKey, value: string) => void;
@@ -48,6 +50,7 @@ const DEFAULT_STATE: SettingsStoreState = {
   pauseWhenTabHidden: true,
   bloomEnabled: true,
   shadowsEnabled: true,
+  motionBlurEnabled: true,
   language: DEFAULT_LANGUAGE_ID,
   controlScheme: DEFAULT_CONTROL_SCHEME,
   keybindings: { ...CONTROL_SCHEME_PRESETS[DEFAULT_CONTROL_SCHEME] },
@@ -68,6 +71,10 @@ export const useSettingsStore = create<SettingsStore>()(
 
       setShadowsEnabled: (enabled) => {
         set({ shadowsEnabled: enabled });
+      },
+
+      setMotionBlurEnabled: (enabled) => {
+        set({ motionBlurEnabled: enabled });
       },
 
       setLanguage: (language) => {
@@ -114,6 +121,10 @@ export const useSettingsStore = create<SettingsStore>()(
             typeof persistedState.shadowsEnabled === "boolean"
               ? persistedState.shadowsEnabled
               : DEFAULT_STATE.shadowsEnabled,
+          motionBlurEnabled:
+            typeof persistedState.motionBlurEnabled === "boolean"
+              ? persistedState.motionBlurEnabled
+              : DEFAULT_STATE.motionBlurEnabled,
         };
       },
     }
@@ -130,6 +141,10 @@ export const shadowsEnabledSelector = (state: SettingsStore) =>
   state.shadowsEnabled;
 export const setShadowsEnabledSelector = (state: SettingsStore) =>
   state.setShadowsEnabled;
+export const motionBlurEnabledSelector = (state: SettingsStore) =>
+  state.motionBlurEnabled;
+export const setMotionBlurEnabledSelector = (state: SettingsStore) =>
+  state.setMotionBlurEnabled;
 export const setPauseWhenTabHiddenSelector = (state: SettingsStore) =>
   state.setPauseWhenTabHidden;
 export const languageSelector = (state: SettingsStore) => state.language;

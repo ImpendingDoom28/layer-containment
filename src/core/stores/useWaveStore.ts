@@ -12,6 +12,14 @@ type WaveStore = {
    */
   revealSettled: boolean;
   setRevealSettled: (settled: boolean) => void;
+  /**
+   * Bumped the instant a wave's field clears (the last enemy is gone). The
+   * simulation clock's slow-mo beat listens for this: it eases the whole
+   * world into a brief time dilation so the wave's end lands with a beat
+   * before the upgrade gate opens.
+   */
+  waveClearedPulse: number;
+  bumpWaveClearedPulse: () => void;
 };
 
 export const useWaveStore = create<WaveStore>((set) => ({
@@ -23,6 +31,9 @@ export const useWaveStore = create<WaveStore>((set) => ({
   setRevealSettled: (settled) => {
     set({ revealSettled: settled });
   },
+  waveClearedPulse: 0,
+  bumpWaveClearedPulse: () =>
+    set((state) => ({ waveClearedPulse: state.waveClearedPulse + 1 })),
 }));
 
 export const nextWaveReadySelector = (state: WaveStore) => state.nextWaveReady;

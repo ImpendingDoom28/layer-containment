@@ -1,6 +1,7 @@
 import type { World } from "koota";
 
 import { PORTAL_REVEAL_DURATION_S } from "../../constants/cometReveal";
+import { SLOW_MO_BEAT_SECONDS, SLOW_MO_RATE } from "../../constants/slowMo";
 import { bossHealthForWave, isBossWave } from "../../utils/bossHp";
 import { gameEvents } from "../../utils/eventEmitter";
 import {
@@ -23,6 +24,13 @@ import type { SimulationFrame } from "./types";
 // must not start while that rise is in progress, so the gate holds for the
 // full rise plus a small buffer before the first wave is offered.
 const COMET_SETTLE_SECONDS = PORTAL_REVEAL_DURATION_S + 0.3;
+
+// The last-enemy slow-mo beat (wall time, `SLOW_MO_BEAT_SECONDS` at
+// `SLOW_MO_RATE` of real time, see `constants/slowMo.ts`) is driven by the
+// simulation clock's own dilation. During the beat, simulation time advances
+// at `SLOW_MO_RATE`, so the beat adds exactly this much simulation time to
+// the completion delay — the upgrade gate opens the moment the beat ends.
+const SLOW_MO_COMPLETION_BUDGET_SECONDS = SLOW_MO_BEAT_SECONDS * SLOW_MO_RATE;
 
 type BossSpawnStats = {
   name: string;
@@ -67,6 +75,7 @@ export const createWaveSystem = ({
   let spawnQueue: SpawnQueueItem[] = [];
   let spawnQueueIndex = 0;
   let waveStartedAt: number | null = null;
+  let waveClearedAt: number | null = null;
   let waveStarted = false;
   let initializedWave = 0;
 
@@ -93,6 +102,7 @@ export const createWaveSystem = ({
     spawnQueue = [];
     spawnQueueIndex = 0;
     waveStartedAt = null;
+    waveClearedAt = null;
     waveStarted = false;
     initializedWave = 0;
   };
@@ -102,6 +112,7 @@ export const createWaveSystem = ({
     spawnQueue = [];
     spawnQueueIndex = 0;
     waveStartedAt = null;
+    waveClearedAt = null;
     waveStarted = false;
 
     const { totalWaves, waveConfigs, pathWaypoints, boss } =
@@ -168,9 +179,7 @@ export const createWaveSystem = ({
     if (currentWave === 0) {
       const { cometReveal, levelEnterRun } = useLevelStore.getState();
       const currentReveal =
-        cometReveal && cometReveal.run === levelEnterRun
-          ? cometReveal
-          : null;
+        cometReveal && cometReveal.run === levelEnterRun ? cometReveal : null;
       // `armed` (comet in flight) is always blocked; after the impact, only
       // start once the portals have settled (`revealSettled`, maintained by
       // `tick`). The explicit `armed` check also closes the single frame
@@ -232,9 +241,7 @@ export const createWaveSystem = ({
     // Only relevant for the very first wave; once any wave has started the
     // reveal is long done.
     const revealSettled =
-      currentWave === 0
-        ? isRevealSettled(frame.simulationTimeSeconds)
-        : true;
+      currentWave === 0 ? isRevealSettled(frame.simulationTimeSeconds) : true;
     if (useWaveStore.getState().revealSettled !== revealSettled) {
       useWaveStore.getState().setRevealSettled(revealSettled);
     }
@@ -243,9 +250,19 @@ export const createWaveSystem = ({
 
     if (spawnQueueIndex >= spawnQueue.length) {
       if (waveStarted && getRemainingEnemyCount() === 0) {
+        if (waveClearedAt === null) {
+          waveClearedAt = frame.simulationTimeSeconds;
+          useWaveStore.getState().bumpWaveClearedPulse();
+        }
+        // The 0.3s completion delay plus the slow-mo beat's simulation-time
+        // budget, measured from the clear: the beat eases the world to
+        // `SLOW_MO_RATE` for `SLOW_MO_BEAT_SECONDS`, during which
+        // simulation time itself runs that slow, so the gate lands exactly
+        // as the beat ends.
         if (
-          waveStartedAt !== null &&
-          frame.simulationTimeSeconds - waveStartedAt > 0.3
+          waveClearedAt !== null &&
+          frame.simulationTimeSeconds - waveClearedAt >
+            0.3 + SLOW_MO_COMPLETION_BUDGET_SECONDS
         ) {
           waveStarted = false;
           if (currentWave < totalWaves) {

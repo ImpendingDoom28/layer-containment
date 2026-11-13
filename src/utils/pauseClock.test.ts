@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   beginPauseSegment,
+  beginSlowMoSegment,
   createPauseClock,
   endPauseSegment,
+  endSlowMoSegment,
   getEffectiveGameTime,
 } from "./pauseClock";
 
@@ -60,5 +62,33 @@ describe("getEffectiveGameTime + pause clock", () => {
     expect(clock.pauseDurationTotal).toBe(20);
     // A frame 1 s after resume reports effective time 11, not 31.
     expect(getEffectiveGameTime(31, clock)).toBe(11);
+  });
+});
+
+describe("slow-mo segments", () => {
+  it("advances effective time at the segment's rate while open", () => {
+    const clock = createPauseClock();
+    beginSlowMoSegment(clock, 10, 0.3);
+    expect(getEffectiveGameTime(10, clock)).toBe(10);
+    expect(getEffectiveGameTime(10.5, clock)).toBeCloseTo(10.15);
+  });
+
+  it("banks the lost time when the segment ends", () => {
+    const clock = createPauseClock();
+    beginSlowMoSegment(clock, 10, 0.3);
+    endSlowMoSegment(clock, 10.25, 0.3);
+    // 0.25 s of wall time at 0.3 rate loses 0.175 s of game time.
+    expect(clock.slowMoDurationTotal).toBeCloseTo(0.175);
+    expect(getEffectiveGameTime(10.25, clock)).toBeCloseTo(10.075);
+    // After the segment, effective time lags wall by the banked loss.
+    expect(getEffectiveGameTime(11, clock)).toBeCloseTo(10.825);
+  });
+
+  it("keeps advancing before a pause that starts mid-segment", () => {
+    const clock = createPauseClock();
+    beginSlowMoSegment(clock, 10, 0.3);
+    beginPauseSegment(clock, 10.2);
+    expect(getEffectiveGameTime(10.5, clock)).toBeCloseTo(10.06);
+    expect(getEffectiveGameTime(99, clock)).toBeCloseTo(10.06);
   });
 });

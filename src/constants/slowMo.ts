@@ -5,5 +5,5 @@
  * the wave system's completion delay and the simulation clock read these, so
  * the beat's length and the extra simulation time it adds always agree.
  */
-export const SLOW_MO_BEAT_SECONDS = 0.25;
+export const SLOW_MO_BEAT_SECONDS = 0.5;
 export const SLOW_MO_RATE = 0.3;

@@ -80,8 +80,9 @@ describe("usePauseClock slow-mo beat", () => {
 
       useWaveStore.getState().bumpWaveClearedPulse();
 
-      // The beat opens on the next frame (t=0.05) and runs 0.25s of wall
-      // time; the scale eases 1 → SLOW_MO_RATE over 0.2s (4 steps).
+      // The beat opens on the next frame (t=0.05) and runs
+      // SLOW_MO_BEAT_SECONDS of wall time; the scale eases 1 → SLOW_MO_RATE
+      // over 0.2s (4 steps), well before the beat ends.
       for (const t of [0.05, 0.1, 0.15, 0.2, 0.25]) await step(t);
       expect(holder.timeScale!()).toBeCloseTo(SLOW_MO_RATE, 5);
       // While the beat is open, simulation time advances at the beat rate:
@@ -91,13 +92,21 @@ describe("usePauseClock slow-mo beat", () => {
         5
       );
 
-      // The beat ends at wall 0.30 (the frame right at its budget) and the
-      // world eases back to full speed; the banked loss is the beat's lost
-      // time: 0.25s × (1 − rate) = 0.175s.
-      for (const t of [0.3, 0.35, 0.4, 0.45, 0.5]) await step(t);
+      // The beat ends at its wall-time budget and the world eases back to
+      // full speed over 0.2s; the banked loss is the beat's lost time:
+      // SLOW_MO_BEAT_SECONDS × (1 − rate).
+      const beatEnd = 0.05 + SLOW_MO_BEAT_SECONDS;
+      const wall = beatEnd + 0.2;
+      for (
+        let t = 0.3;
+        t <= wall;
+        t = Math.round((t + 0.05) * 100) / 100
+      ) {
+        await step(t);
+      }
       expect(holder.timeScale!()).toBe(1);
       expect(holder.simTime!(holder.clock!.elapsedTime)).toBeCloseTo(
-        0.5 - SLOW_MO_BEAT_SECONDS * (1 - SLOW_MO_RATE),
+        wall - SLOW_MO_BEAT_SECONDS * (1 - SLOW_MO_RATE),
         5
       );
     } finally {
@@ -146,9 +155,10 @@ describe("usePauseClock slow-mo beat", () => {
       for (const t of [0.05, 0.1, 0.15, 0.2]) await step(t);
       expect(holder.timeScale!()).toBe(0);
 
-      // Resuming restores full speed with no beat lag: only the 0.25s pause
-      // itself is excluded from simulation time — if the dropped beat had
-      // leaked, there would be an extra 0.25s × (1 − rate) = 0.175s of loss.
+      // Resuming restores full speed with no beat lag: only the pause
+      // (0 → the first resumed frame at 0.25) is excluded from simulation
+      // time — if the dropped beat had leaked, there would be an extra
+      // SLOW_MO_BEAT_SECONDS × (1 − rate) of loss on top.
       await ReactThreeTestRenderer.act(async () => {
         useGameStore.getState().setGameStatus("playing");
       });

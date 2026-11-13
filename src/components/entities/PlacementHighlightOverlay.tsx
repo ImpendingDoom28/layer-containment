@@ -21,6 +21,7 @@ import { getEffectiveTowerCombatStats } from "../../core/relayBuffs";
 import type { Tower } from "../../core/types/game";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import { DeadZoneDisc } from "./effects/DeadZoneDisc";
+import { RangeFadeWall } from "./effects/RangeFadeWall";
 import { RangeRing } from "./effects/RangeRing";
 import {
   flatFieldToSphereOverlayPlanePose,
@@ -139,11 +140,6 @@ export const PlacementHighlightOverlay: FC = memo(() => {
       ).range;
       if (!range || range <= 0.01) return null;
 
-      const placementState = getTilePlacementState(
-        hoveredTile.gridX,
-        hoveredTile.gridZ
-      );
-
       const { position, quaternion } = flatFieldToSphereOverlayPlanePose(
         wx,
         wz,
@@ -161,20 +157,16 @@ export const PlacementHighlightOverlay: FC = memo(() => {
         quaternion,
         range,
         minRange,
-        color: placementState.isBlocked ? invalidColor : validColor,
       };
     }, [
       selectedTowerType,
       hoveredTile,
       towerTypes,
       towers,
-      getTilePlacementState,
       gridSize,
       tileSize,
       planetRadius,
       pathYOffset,
-      validColor,
-      invalidColor,
     ]);
 
     if (!selectedTowerType || cells.length === 0) {
@@ -192,16 +184,27 @@ export const PlacementHighlightOverlay: FC = memo(() => {
             color={color}
           />
         ))}
+        {/* The reach preview is the same thin white max-radius stripe as the
+            selected tower (plus the light wall rising off it): the tile's
+            buildability is already carried by the per-tile overlay tints and
+            the ghost model, so the ring itself stays colour-neutral. */}
         {rangeRing && (
-          <RangeRing
-            range={rangeRing.range}
-            color={rangeRing.color}
-            position={rangeRing.position}
-            quaternion={rangeRing.quaternion}
-            innerRadiusFraction={0.94}
-            radialSegments={48}
-            opacity={0.45}
-          />
+          <>
+            <RangeRing
+              range={rangeRing.range}
+              position={rangeRing.position}
+              quaternion={rangeRing.quaternion}
+            />
+            <RangeFadeWall
+              range={rangeRing.range}
+              position={[
+                rangeRing.position[0],
+                rangeRing.position[1] - 0.08,
+                rangeRing.position[2],
+              ]}
+              quaternion={rangeRing.quaternion}
+            />
+          </>
         )}
         {rangeRing && (rangeRing.minRange ?? 0) > 0.01 && (
           <DeadZoneDisc

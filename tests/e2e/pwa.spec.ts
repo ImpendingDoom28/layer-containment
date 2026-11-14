@@ -6,6 +6,7 @@ import {
   type Route,
 } from "@playwright/test";
 
+import { PLAYABLE_LEVEL_IDS } from "../../src/constants/playableLevels";
 import { CONTROLS_INTRO_SEEN_KEY } from "./fixtures/navigation";
 
 // PWA: manifest + icon links in the shell, and service worker registration
@@ -334,5 +335,81 @@ test.describe("PWA versioned cache and updates", () => {
     await page.getByRole("button", { name: "Go to Main Menu" }).click();
     await page.getByRole("button", { name: "Proceed" }).click();
     await waitForBootedVersion(page, "v2", 120_000);
+  });
+
+  // The level configs are runtime-loaded (not referenced by index.html), so
+  // they only reach the offline cache through STATIC_ASSETS. If a level added
+  // later is missing from that list, the SW never precaches it and the level
+  // picker fails to load — the whole picker (a Promise.all over every level)
+  // errors out, leaving the player unable to start any level. This guards
+  // against a new level config being added to the app without the SW list.
+  test("every playable level config is precached by the service worker", async ({
+    page,
+  }) => {
+    test.setTimeout(150_000);
+    await bootMenu(page);
+
+    const precachedLevelConfigs = await page.evaluate(async () => {
+      const paths = new Set<string>();
+      for (const name of await caches.keys()) {
+        if (!name.startsWith("lc-")) continue;
+        for (const request of await (await caches.open(name)).keys()) {
+          const path = new URL(request.url).pathname;
+          if (path.startsWith("/configs/levels/")) {
+            paths.add(path);
+          }
+        }
+      }
+      return [...paths];
+    });
+
+    for (const levelId of PLAYABLE_LEVEL_IDS) {
+      expect(
+        precachedLevelConfigs,
+        `the SW must precache /configs/levels/${levelId}.json`
+      ).toContain(`/configs/levels/${levelId}.json`);
+    }
+  });
+
+  // The SW's network fallback (serveAsset) must reach the network and cache
+  // the result for any runtime asset that is not precached. A broken fallback
+  // used to reject the response (net::ERR_FAILED / "Failed to fetch") for
+  // every such asset and never cache the miss — this guards that path. To
+  // guarantee a fresh fallback miss (not a cache hit from the app's own
+  // loads), it fetches a model URL *without* its version query: the app
+  // always requests it with ?v=N and the precache is keyed with that query,
+  // so the no-query URL is served only by the network fallback.
+  test("the SW's network fallback loads and caches a non-precached asset", async ({
+    page,
+  }) => {
+    test.setTimeout(150_000);
+    await bootMenu(page);
+
+    const url = "/assets/models/troop.glb";
+    const result = await page.evaluate(async (assetUrl) => {
+      try {
+        const response = await fetch(assetUrl);
+        const bytes = (await response.arrayBuffer()).byteLength;
+        return { ok: response.ok, status: response.status, bytes };
+      } catch (error) {
+        return { ok: false, error: String(error) };
+      }
+    }, url);
+
+    expect(result, `fetching ${url} through the SW fallback`).toMatchObject({
+      ok: true,
+      status: 200,
+    });
+    // The miss must be cached by the fallback so the next load is
+    // fully offline-capable (this is the part that was broken).
+    const cached = await page.evaluate(async (assetUrl) => {
+      for (const name of await caches.keys()) {
+        if (!name.startsWith("lc-")) continue;
+        const cache = await caches.open(name);
+        if (await cache.match(assetUrl)) return true;
+      }
+      return false;
+    }, url);
+    expect(cached, `${url} must be cached by the SW fallback`).toBe(true);
   });
 });

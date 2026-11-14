@@ -71,6 +71,7 @@ const STATIC_ASSETS = [
   "configs/levels/level_1.json",
   "configs/levels/level_2.json",
   "configs/levels/level_3.json",
+  "configs/levels/level_4.json",
   "configs/levels/level_testing.json",
   "configs/levels/stress.json",
 ];
@@ -252,9 +253,12 @@ const serveAsset = async (request) => {
   }
   const response = await fetch(request);
   if (response.ok && version) {
-    await caches
-      .open(assetsCacheName(version))
-      .put(request.url, response.clone());
+    // caches.open() is async — await it before .put(), or the miss is never
+    // cached and the pending promise rejects the response.
+    await (await caches.open(assetsCacheName(version))).put(
+      request.url,
+      response.clone()
+    );
   }
   return response;
 };

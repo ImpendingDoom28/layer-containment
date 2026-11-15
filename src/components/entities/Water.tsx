@@ -7,9 +7,14 @@ import { getCssColorValue } from "../ui/lib/cssUtils";
 
 type WaterProps = {
   water: WaterBodyInstance;
+  /** Position of the body's center; defaults to the body's own (flat)
+      coordinates. The editor passes the sphere-surface point instead. */
+  position?: [number, number, number];
+  /** Orientation of the body on the surface; defaults to identity. */
+  quaternion?: import("three").Quaternion;
 };
 
-export const Water: FC<WaterProps> = memo(({ water }) => {
+export const Water: FC<WaterProps> = memo(({ water, position, quaternion }) => {
   const { time } = useWaterClock();
   const emissiveHue = getCssColorValue("scene-water-emissive");
 
@@ -37,9 +42,10 @@ export const Water: FC<WaterProps> = memo(({ water }) => {
   // The body sits 0.03 below the tile surface so it reads as a deeper pool
   // that peeks through the tile's troughs instead of floating above the shore.
   const yPosition = water.height / 2 - 0.03;
+  const basePosition = position ?? [water.x, 0, water.z];
 
   return (
-    <group position={[water.x, 0, water.z]}>
+    <group position={basePosition} quaternion={quaternion}>
       {water.shape === "box" ? (
         <mesh position={[0, yPosition, 0]} material={material} receiveShadow>
           <boxGeometry args={[water.width, water.height, water.depth, 8, 1, 8]} />

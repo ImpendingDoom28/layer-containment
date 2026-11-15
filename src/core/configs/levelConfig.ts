@@ -5,6 +5,7 @@ import { MAX_GRID_SIZE, MIN_GRID_SIZE } from "../../utils/gridSizeLimits";
 import type {
   BossConfig,
   Building,
+  CanyonConfig,
   Enemy,
   EnemyUpgradeStack,
   PathWaypoint,
@@ -60,6 +61,19 @@ const waterBodyConfigFields = z.object({
 
 export const waterBodyConfigSchema: z.ZodType<WaterBodyConfig> =
   waterBodyConfigFields;
+
+/**
+ * A canyon tile: a non-buildable rocky basin. Rendering (the basin, its
+ * walls, and the bridge that spans it) is derived from the tile set, so the
+ * JSON only needs the grid cells. Coordinates are integer grid indices — a
+ * fractional one would silently skip the mask cell while still shaping the
+ * basin bbox — so the schema rejects them at load.
+ */
+export const canyonConfigSchema: z.ZodType<CanyonConfig> = z.object({
+  id: z.number(),
+  gridX: z.number().int(),
+  gridZ: z.number().int(),
+});
 
 /** Resolved water instance (e.g. after {@link withRecalculatedWaterCoordinates}). */
 export const waterBodySchema: z.ZodType<WaterBody> = z.object({
@@ -200,7 +214,13 @@ const projectileSchema: z.ZodType<Projectile> = z.object({
 });
 
 export type LevelConfigFiles =
-  "level_main" | "level_1" | "level_2" | "level_3" | "level_testing" | "stress";
+  | "level_main"
+  | "level_1"
+  | "level_2"
+  | "level_3"
+  | "level_4"
+  | "level_testing"
+  | "stress";
 
 export const DEFAULT_STARTING_HEALTH = 20;
 
@@ -217,6 +237,8 @@ export const levelConfigSchema = z.object({
   tileColor: z.string().optional(),
   groundColor: z.string().optional(),
   waters: z.array(waterBodyConfigSchema).default([]),
+  /** Non-buildable canyon tiles (rocky basins); a path crossing them is bridged. */
+  canyons: z.array(canyonConfigSchema).default([]),
   pathWaypoints: z.array(z.array(pathWaypointSchema)),
   waveConfigs: z.array(waveConfigSchema),
   /** Per-level boss definition; absent = no boss waves for this level. */

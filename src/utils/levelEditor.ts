@@ -7,6 +7,7 @@ import {
   DEFAULT_WATER_BODY_HEIGHT,
   DEFAULT_WATER_BODY_WIDTH,
   type Building,
+  type CanyonConfig,
   type PathWaypoint,
   type WaterBody,
   type WaterBodyConfig,
@@ -142,6 +143,53 @@ export const filterWatersToGrid = (
   return out;
 };
 
+export const clampCanyonToGrid = (
+  canyon: CanyonConfig,
+  gridSize: number
+): CanyonConfig => ({
+  id: canyon.id,
+  gridX: Math.max(0, Math.min(gridSize - 1, canyon.gridX)),
+  gridZ: Math.max(0, Math.min(gridSize - 1, canyon.gridZ)),
+});
+
+export const filterCanyonsToGrid = (
+  canyons: CanyonConfig[],
+  gridSize: number
+): CanyonConfig[] => {
+  const filtered = canyons.filter(
+    (c) =>
+      c.gridX >= 0 && c.gridX < gridSize && c.gridZ >= 0 && c.gridZ < gridSize
+  );
+  const seen = new Set<string>();
+  const out: CanyonConfig[] = [];
+  for (const c of filtered) {
+    const key = `${c.gridX},${c.gridZ}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(c);
+  }
+  return out;
+};
+
+export const getNextCanyonId = (level: LevelConfigData) => {
+  const maxId = level.canyons.reduce(
+    (currentMax, canyon) => Math.max(currentMax, canyon.id),
+    0
+  );
+
+  return maxId + 1;
+};
+
+export const createCanyonDefaults = (
+  gridX: number,
+  gridZ: number,
+  level: LevelConfigData
+): CanyonConfig => ({
+  id: getNextCanyonId(level),
+  gridX,
+  gridZ,
+});
+
 export const createEmptyLevelConfig = (
   name: string = DEFAULT_LEVEL_NAME
 ): LevelConfigData => {
@@ -153,6 +201,7 @@ export const createEmptyLevelConfig = (
     startingMoney: DEFAULT_STARTING_MONEY,
     gridSize: DEFAULT_GRID_SIZE,
     waters: [],
+    canyons: [],
     pathWaypoints: [[]],
     waveConfigs: [],
     buildings: [],
@@ -199,10 +248,15 @@ export const normalizeImportedLevel = (
   tileSize: number
 ): LevelConfigData => {
   const watersFiltered = filterWatersToGrid(level.waters ?? [], level.gridSize);
+  const canyonsFiltered = filterCanyonsToGrid(
+    level.canyons ?? [],
+    level.gridSize
+  );
   return {
     ...level,
     name: level.name?.trim() || DEFAULT_LEVEL_NAME,
     waters: watersFiltered,
+    canyons: canyonsFiltered,
     waveConfigs: withRecomputedWaveTotals(level.waveConfigs),
     buildings: level.buildings.map((building) =>
       withRecalculatedBuildingCoordinates(building, level.gridSize, tileSize)
@@ -215,10 +269,15 @@ export const createExportableLevel = (
   tileSize: number
 ): LevelConfigData => {
   const watersFiltered = filterWatersToGrid(level.waters ?? [], level.gridSize);
+  const canyonsFiltered = filterCanyonsToGrid(
+    level.canyons ?? [],
+    level.gridSize
+  );
   return {
     ...level,
     name: level.name.trim(),
     waters: watersFiltered,
+    canyons: canyonsFiltered,
     waveConfigs: withRecomputedWaveTotals(level.waveConfigs),
     buildings: level.buildings.map((building) =>
       withRecalculatedBuildingCoordinates(building, level.gridSize, tileSize)

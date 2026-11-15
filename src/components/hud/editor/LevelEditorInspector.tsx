@@ -20,6 +20,7 @@ const TOOL_TO_MODE: Record<LevelEditorTool, LevelEditorMode> = {
   setBase: "path",
   erase: "erase",
   water: "water",
+  canyon: "canyon",
 };
 
 export const LevelEditorInspector = () => {

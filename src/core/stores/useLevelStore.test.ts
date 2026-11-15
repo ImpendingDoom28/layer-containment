@@ -89,6 +89,7 @@ const levelData: LevelConfigData = {
   ],
   waveConfigs: [],
   waters: [],
+  canyons: [],
   buildings: [],
   towers: [],
   enemies: [],

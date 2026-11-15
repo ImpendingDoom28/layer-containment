@@ -8,6 +8,7 @@ const blocked: TilePlacementState = {
   isOccupiedByBuilding: false,
   isOnPath: false,
   isWater: false,
+  isCanyon: false,
   isBlocked: true,
 };
 
@@ -16,6 +17,7 @@ const free: TilePlacementState = {
   isOccupiedByBuilding: false,
   isOnPath: false,
   isWater: false,
+  isCanyon: false,
   isBlocked: false,
 };
 

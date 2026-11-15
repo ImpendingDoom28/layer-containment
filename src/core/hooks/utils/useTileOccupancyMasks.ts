@@ -13,11 +13,12 @@ export type TileOccupancyInputs = {
   pathWaypoints: PathWaypoint[][];
   pathWidth: number;
   waters: { gridX: number; gridZ: number }[];
+  canyons: { gridX: number; gridZ: number }[];
 };
 
 /**
- * Per-tile path/water occupancy masks, computed once per level load and shared
- * by `Grid` and `PlanetTileDecorations` through their parents.
+ * Per-tile path/water/canyon occupancy masks, computed once per level load and
+ * shared by `Grid` and `PlanetTileDecorations` through their parents.
  *
  * The inputs are level data only — none of them mutate during play — so the
  * memo rebuilds only when a level (re)loads. Passing a stable object keeps
@@ -28,8 +29,15 @@ export type TileOccupancyInputs = {
 export const useTileOccupancyMasks = (
   inputs: TileOccupancyInputs
 ): TileOccupancyMasks => {
-  const { gridSize, gridOffset, tileSize, pathWaypoints, pathWidth, waters } =
-    inputs;
+  const {
+    gridSize,
+    gridOffset,
+    tileSize,
+    pathWaypoints,
+    pathWidth,
+    waters,
+    canyons,
+  } = inputs;
   return useMemo(
     () =>
       computeTileOccupancyMasks({
@@ -39,7 +47,16 @@ export const useTileOccupancyMasks = (
         pathWaypoints,
         pathWidth,
         waters,
+        canyons,
       }),
-    [gridSize, gridOffset, tileSize, pathWaypoints, pathWidth, waters]
+    [
+      gridSize,
+      gridOffset,
+      tileSize,
+      pathWaypoints,
+      pathWidth,
+      waters,
+      canyons,
+    ]
   );
 };

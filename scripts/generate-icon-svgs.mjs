@@ -67,6 +67,7 @@ const ICONS = {
   Keyboard: "keyboard",
   Menu: "menu",
   MousePointer2: "mouse-pointer-2",
+  Mountain: "mountain",
   Pencil: "pencil",
   Play: "play",
   Plus: "plus",

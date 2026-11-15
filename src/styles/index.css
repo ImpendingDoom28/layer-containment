@@ -65,6 +65,15 @@
   --scene-regolith-highlight: #6b7280; /* gray-500 — mineral flecks */
   --scene-regolith-shadow: #1f2937; /* gray-800 — crater / grit */
   --scene-regolith-rock: #525a63; /* cool gray rock props */
+  /* Canyon rock: darker, warmer strata than the surface regolith so the
+     recessed basin reads as a cut into the planet, not a hole in the tiles. */
+  --scene-canyon-floor: #2a2f38; /* near-black regolith bedrock */
+  --scene-canyon-rock: #4b5563; /* gray-600 strata base */
+  --scene-canyon-rock-light: #6b7280; /* gray-500 upper strata */
+  --scene-canyon-rim: #7c8693; /* worn rim catch-light */
+  --scene-bridge-deck: #8a7a63; /* weathered timber decking */
+  --scene-bridge-rail: #6b6152; /* timber railing posts */
+  --scene-bridge-strut: #41495a; /* stone support struts */
 
   /* Editor palette */
   --editor-tool-select: #374151; /* gray-700 */
@@ -74,6 +83,7 @@
   --editor-tool-set-base: #b45309; /* amber-700 */
   --editor-tool-erase: #b91c1c; /* red-700 */
   --editor-tool-water: #0e7490; /* cyan-700 */
+  --editor-tool-canyon: #a16207; /* yellow-700 — canyon paint */
   --editor-indicator-selected: #facc15; /* yellow-400 */
   --editor-indicator-edge: #22c55e; /* green-500 */
   --editor-indicator-path: #a855f7; /* purple-500 */

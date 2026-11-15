@@ -73,6 +73,7 @@ const ICON_NAMES = {
   Keyboard: 1,
   Menu: 1,
   MousePointer2: 1,
+  Mountain: 1,
   Pencil: 1,
   Pause: 1,
   Play: 1,

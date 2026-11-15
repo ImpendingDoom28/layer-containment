@@ -37,6 +37,7 @@ const minimalLevelData: LevelConfigData = {
   pathWaypoints: [],
   waveConfigs: [],
   waters: [],
+  canyons: [],
   buildings: [],
   towers: [],
   enemies: [],

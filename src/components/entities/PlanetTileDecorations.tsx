@@ -45,6 +45,9 @@ import { getCssColorValue } from "../ui/lib/cssUtils";
 
 export type PlanetTileDecorationsProps = {
   occupancy: TileOccupancyMasks;
+  /** The board size; defaults to the published level. The editor passes its
+      draft grid so the rubble scatters over the board being built. */
+  gridSize?: number;
 };
 
 // How often a free tile gets a rubble prop at all, plus the per-instance
@@ -120,7 +123,11 @@ export const buildRubbleMatrices = (
   for (let gridX = 0; gridX < gridSize; gridX += 1) {
     for (let gridZ = 0; gridZ < gridSize; gridZ += 1) {
       const index = gridZ * occupancy.gridSize + gridX;
-      if (occupancy.onPath[index] === 1 || occupancy.water[index] === 1) {
+      if (
+        occupancy.onPath[index] === 1 ||
+        occupancy.water[index] === 1 ||
+        occupancy.canyon[index] === 1
+      ) {
         continue;
       }
 
@@ -338,10 +345,11 @@ const RubbleVariantSlot: FC<RubbleVariantProps> = ({ spec, instances }) => {
 // randomizer is deterministic (hashGrid2D per tile), so every load of the
 // same level scatters the same rubble in the same places.
 export const PlanetTileDecorations: FC<PlanetTileDecorationsProps> = memo(
-  ({ occupancy }) => {
+  ({ occupancy, gridSize: gridSizeProp }) => {
     const pathYOffset = useGameStore(pathYOffsetSelector);
     const tileSize = useGameStore(tileSizeSelector);
-    const gridSize = useLevelStore(gridSizeSelector);
+    const storeGridSize = useLevelStore(gridSizeSelector);
+    const gridSize = gridSizeProp ?? storeGridSize;
 
     const instancesPerVariant = useMemo(
       () => buildRubbleMatrices(occupancy, gridSize, tileSize, pathYOffset),

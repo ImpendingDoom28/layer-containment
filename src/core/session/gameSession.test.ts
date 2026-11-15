@@ -67,7 +67,8 @@ const basicTower: TowerConfig = {
 
 const makeLevel = (
   startingHealth = 37,
-  startingMoney = 100
+  startingMoney = 100,
+  towers: LevelConfigData["towers"] = []
 ): LevelConfigData => ({
   name: "Test",
   label: "Test",
@@ -90,7 +91,7 @@ const makeLevel = (
     },
   ],
   buildings: [],
-  towers: [],
+  towers,
   enemies: [],
   projectiles: [],
   enemyWeights: null,
@@ -116,13 +117,15 @@ const makeSession = (
   const session = createGameSession({
     world: testWorld,
     getNextTowerId: towerIds.getNextId,
+    ensureTowerIdAtLeast: towerIds.ensureAtLeast,
     getNextEnemyId: enemyIds.getNextId,
     ensureEnemyIdAtLeast: enemyIds.ensureAtLeast,
     getNextProjectileId: projectileIds.getNextId,
+    ensureProjectileIdAtLeast: projectileIds.ensureAtLeast,
     loadLevel,
   });
   session.connectRuntime(runtime);
-  return { session, runtime, enemyIds };
+  return { session, runtime, enemyIds, towerIds, projectileIds };
 };
 
 const clearWorld = () => {
@@ -170,6 +173,22 @@ describe("createGameSession lifecycle", () => {
     session.startWave();
     session.tick(frame);
     expect(getEnemySnapshots(testWorld)).toHaveLength(1);
+  });
+
+  it("starts the tower id counter past the level's pre-placed towers", async () => {
+    const level = makeLevel(37, 100, [
+      { id: 1, type: "basic", gridX: 1, gridZ: 1, x: -3, z: -3 },
+      { id: 2, type: "basic", gridX: 2, gridZ: 1, x: -2, z: -3 },
+    ]);
+    const { session, towerIds } = makeSession(async () => level);
+
+    await session.startRun("level_1");
+
+    expect(useLevelStore.getState().towers).toHaveLength(2);
+    // The run reset the shared counter to 1, then the level's two pre-placed
+    // towers must have pushed it past their max — the first player-placed
+    // tower is id 3, not 1 (which would collide with the pre-placed tower).
+    expect(towerIds.getNextId()).toBe(3);
   });
 
   it("restarts every run-owned store and runtime system", async () => {

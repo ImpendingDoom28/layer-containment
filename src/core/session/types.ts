@@ -46,8 +46,10 @@ export type GameSessionController = GameSession & {
 export type GameSessionDependencies = {
   world: World;
   getNextTowerId: (reset?: boolean) => number;
+  ensureTowerIdAtLeast: (minId: number) => void;
   getNextEnemyId: (reset?: boolean) => number;
   ensureEnemyIdAtLeast: (minId: number) => void;
   getNextProjectileId: (reset?: boolean) => number;
+  ensureProjectileIdAtLeast: (minId: number) => void;
   loadLevel?: (levelId: AnyPlayableLevelId) => Promise<LevelConfigData>;
 };

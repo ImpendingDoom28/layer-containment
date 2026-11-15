@@ -27,7 +27,8 @@ export const LevelSystem: FC<{ levelName?: LevelConfigFiles }> = ({
   const levelLoadRetryToken = useLevelStore(levelLoadRetryTokenSelector);
   const resetLevelState = useLevelStore(resetLevelStateSelector);
   const setLevelLoadError = useLevelStore(setLevelLoadErrorSelector);
-  const { ensureEnemyIdAtLeast } = useEntityIds();
+  const { ensureTowerIdAtLeast, ensureEnemyIdAtLeast, ensureProjectileIdAtLeast } =
+    useEntityIds();
   const loadGenerationRef = useRef(0);
 
   useLayoutEffect(() => {
@@ -52,7 +53,9 @@ export const LevelSystem: FC<{ levelName?: LevelConfigFiles }> = ({
         if (cancelled || generation !== loadGenerationRef.current) return;
 
         initializeLevelState(levelData, tileSize);
+        ensureTowerIdAtLeast(getMaxEntityId(levelData.towers) + 1);
         ensureEnemyIdAtLeast(getMaxEntityId(levelData.enemies) + 1);
+        ensureProjectileIdAtLeast(getMaxEntityId(levelData.projectiles) + 1);
       } catch (error) {
         if (cancelled || generation !== loadGenerationRef.current) return;
         const message =
@@ -72,6 +75,8 @@ export const LevelSystem: FC<{ levelName?: LevelConfigFiles }> = ({
     };
   }, [
     ensureEnemyIdAtLeast,
+    ensureProjectileIdAtLeast,
+    ensureTowerIdAtLeast,
     initializeLevelState,
     isLevelConfigLoaded,
     levelLoadError,

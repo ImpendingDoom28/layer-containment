@@ -26,10 +26,11 @@ export const RangeRing: FC<RangeRingProps> = memo(
   ({
     range,
     color = "#ffffff",
-    // Thin band: only 4% of the range wide, so it reads as a crisp stripe
-    // at the max radius rather than a filled band.
-    innerRadiusFraction = 0.96,
-    radialSegments = 64,
+    // Crisp stripe: only 0.5% of the range wide — the same width as the
+    // `RangeFadeWall` spikes (range * 0.005) — so the ring reads as the
+    // base line the wave rises out of, not a filled band.
+    innerRadiusFraction = 0.995,
+    radialSegments = 128,
     opacity = 0.9,
     position = DEFAULT_POSITION,
     quaternion,

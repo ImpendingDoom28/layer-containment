@@ -25,10 +25,11 @@ describe("RangeRing", () => {
 
     try {
       const { parameters } = getRingGeometry(renderer);
-      // Thin band: 4% of the range wide, more segments for a smooth stripe.
-      expect(parameters.innerRadius).toBeCloseTo(3.84);
+      // Crisp stripe: 0.5% of the range wide (matching the RangeFadeWall
+      // spike width, range * 0.005), 128 segments for a smooth line.
+      expect(parameters.innerRadius).toBeCloseTo(3.98);
       expect(parameters.outerRadius).toBeCloseTo(4);
-      expect(parameters.thetaSegments).toBe(64);
+      expect(parameters.thetaSegments).toBe(128);
     } finally {
       renderer.unmount();
     }

@@ -16,96 +16,128 @@ import { useReducedMotion } from "../../../core/hooks/useReducedMotion";
 import { useSimulationClock } from "../../../core/contexts/SimulationClockContext";
 
 const DEFAULT_POSITION: [number, number, number] = [0, 0, 0];
-
-// Golden angle (radians): spreading the spikes by it (phyllotaxis) gives the
-// "random" scatter without an RNG — deterministic per range, no two adjacent
-// spikes share a bearing, and every mount of the same range looks identical.
-const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+const TAU = Math.PI * 2;
 
 const stripAlpha = (value: number): number => value - Math.floor(value);
 
-type StripSpec = {
-  theta: number;
-  halfWidth: number;
-  height: number;
-  opacity: number;
-  /** Per-spike phase (radians) so the traveling wave never reads as uniform. */
-  phase: number;
+// The band is one quad per segment of the ring circumference, sharing its
+// top corners with the neighbouring segments — a single connected surface
+// (the "wave") instead of separate stripes. The segment count tracks the
+// circumference so the wave's resolution stays roughly constant across ranges,
+// clamped to keep the buffer and the per-frame update cheap.
+const SEGMENT_ARC = 0.08;
+const MIN_SEGMENTS = 128;
+const MAX_SEGMENTS = 256;
+
+const getSegmentCount = (range: number): number =>
+  Math.min(
+    MAX_SEGMENTS,
+    Math.max(MIN_SEGMENTS, Math.round((TAU * range) / SEGMENT_ARC))
+  );
+
+// The traveling swell: the sum of two counter-rotating sine components (a
+// slow 3-crest swell plus a faster 7-crest ripple), sharpened to crest-like
+// peaks. Deterministic per range (the phases and the per-range rotation
+// scatter vary by range) — no RNG, so every wall of the same range looks
+// identical.
+const WAVE_BASE = 0.12;
+const WAVE_A1 = 0.45;
+const WAVE_K1 = 3;
+const WAVE_S1 = 1.2;
+const WAVE_A2 = 0.18;
+const WAVE_K2 = 7;
+const WAVE_S2 = 2.1;
+
+const swell = (x: number): number => {
+  const s = 0.5 + 0.5 * Math.sin(x);
+  return s * s * s; // pointy crests, soft troughs
 };
 
-// The spike count tracks the range so a bigger ring reads as a denser crest
-// line (a 3-unit ring is a sparse few spikes, a 5-unit BRL ring a fuller
-// wave), clamped so it stays cheap.
-const getStripCount = (range: number): number =>
-  Math.max(12, Math.min(24, Math.round(range * 4)));
+const waveHeight = (
+  theta: number,
+  t: number,
+  phase1: number,
+  phase2: number
+): number =>
+  WAVE_BASE +
+  WAVE_A1 * swell(theta * WAVE_K1 - t * WAVE_S1 + phase1) +
+  WAVE_A2 * swell(theta * WAVE_K2 + t * WAVE_S2 + phase2);
 
-const buildStripSpecs = (range: number): StripSpec[] => {
-  const count = getStripCount(range);
-  const specs: StripSpec[] = [];
+type SegmentSpec = {
+  thetaA: number;
+  thetaB: number;
+  baseAlpha: number;
+};
+
+const buildSegmentSpecs = (range: number): SegmentSpec[] => {
+  const count = getSegmentCount(range);
+  const delta = TAU / count;
+  const rotation = range * 0.35;
+  const specs: SegmentSpec[] = [];
   for (let i = 0; i < count; i += 1) {
     specs.push({
-      // The per-range offset scatters the pattern differently per tower type.
-      theta: (i * GOLDEN_ANGLE + range * 1.7) % (Math.PI * 2),
-      // The base width matches the ring's band (range * 0.005 — the ring's
-      // 1.5% inner-radius fraction) so each spike reads as the stripe itself
-      // growing into a crest.
-      halfWidth: (range * 0.005) / 2,
-      // A short crest line (0.18–0.75 units), like the lip of a breaking
-      // wave rather than a tall curtain.
-      height: 0.18 + 0.57 * stripAlpha(i * 0.75471 + range * 0.2113),
-      opacity: 0.3 + 0.45 * stripAlpha(i * 0.42701 + range * 0.5719),
-      phase: Math.PI * 2 * stripAlpha(i * 0.31416 + range * 0.9317),
+      thetaA: rotation + i * delta,
+      thetaB: rotation + (i + 1) * delta,
+      // A subtle per-segment shimmer in the base band (no two neighbours the
+      // same) so the water surface doesn't read as a flat stripe.
+      baseAlpha: 0.38 + 0.18 * stripAlpha(i * 0.31416 + range * 0.5719),
     });
   }
   return specs;
 };
 
 /**
- * One quad per spike (4 vertices, 2 triangles): a thin vertical ribbon
- * standing on the ring line (y = 0 at the local origin, radius in the XZ
- * plane). The per-vertex colour carries white + the spike's alpha, fading to
- * 0 at the top. The top vertices start at the spike's max height and are
- * animated per frame (a traveling wave around the ring — the crest swells and
- * recedes like water, see `useFrame` below); the base vertices never move.
+ * One quad per segment (4 vertices, 2 triangles): the quad stands on the
+ * ring line (y = 0 at the local origin, the ring's radius in the XZ plane)
+ * and reaches up to the swell height at each edge angle — adjacent segments
+ * share their top corner, so the top edge is a continuous wavy line. The
+ * per-vertex colour carries white + the band's alpha, fading to 0 at the
+ * top. The top vertices start at the t = 0 swell and are animated per frame
+ * (the swell travels around the ring, see `useFrame` below); the base
+ * vertices never move.
  */
 const buildRangeFadeWallGeometry = (
   range: number,
-  specs: StripSpec[]
+  specs: SegmentSpec[],
+  phase1: number,
+  phase2: number
 ): BufferGeometry => {
   const positions: number[] = [];
   const colors: number[] = [];
   const indices: number[] = [];
   specs.forEach((spec, i) => {
-    const sin = Math.sin(spec.theta);
-    const cos = Math.cos(spec.theta);
-    const innerR = range - spec.halfWidth;
-    const outerR = range + spec.halfWidth;
-    // 0: base/inner, 1: base/outer, 2: top/outer, 3: top/inner.
+    const ca = Math.cos(spec.thetaA);
+    const sa = Math.sin(spec.thetaA);
+    const cb = Math.cos(spec.thetaB);
+    const sb = Math.sin(spec.thetaB);
+    const hA = waveHeight(spec.thetaA, 0, phase1, phase2);
+    const hB = waveHeight(spec.thetaB, 0, phase1, phase2);
+    // 0: base/left, 1: base/right, 2: top/right, 3: top/left.
     positions.push(
-      cos * innerR,
+      ca * range,
       0,
-      sin * innerR,
-      cos * outerR,
+      sa * range,
+      cb * range,
       0,
-      sin * outerR,
-      cos * outerR,
-      spec.height,
-      sin * outerR,
-      cos * innerR,
-      spec.height,
-      sin * innerR
+      sb * range,
+      cb * range,
+      hB,
+      sb * range,
+      ca * range,
+      hA,
+      sa * range
     );
-    // RGBA vertex colours: solid white at the base (the main stripe),
-    // fully transparent at the top — the fade from the stripe to the crest.
+    // RGBA vertex colours: solid white at the base (the water surface at the
+    // ring line), fully transparent at the top — the fade to the crest.
     colors.push(
       1,
       1,
       1,
-      spec.opacity,
+      spec.baseAlpha,
       1,
       1,
       1,
-      spec.opacity,
+      spec.baseAlpha,
       1,
       1,
       1,
@@ -128,21 +160,30 @@ const buildRangeFadeWallGeometry = (
 
 type WallEntry = {
   geometry: BufferGeometry;
-  specs: StripSpec[];
+  segments: SegmentSpec[];
+  phase1: number;
+  phase2: number;
 };
 
 // One entry per distinct range (a handful in practice: the tower ranges plus
-// relay-buffed variants) — shared by every wall of that range, so the
-// per-frame cost is a single additive draw (plus one tiny buffer update for
-// the wave).
+// relay-buffed variants) — shared by every wall of that range, so the per-
+// frame cost is a single additive draw plus one small buffer update for the
+// swell.
 const wallCache = new Map<number, WallEntry>();
 
 const getWallEntry = (range: number): WallEntry => {
   const key = Math.round(range * 100) / 100;
   let entry = wallCache.get(key);
   if (!entry) {
-    const specs = buildStripSpecs(key);
-    entry = { specs, geometry: buildRangeFadeWallGeometry(key, specs) };
+    const segments = buildSegmentSpecs(key);
+    const phase1 = key * 1.7;
+    const phase2 = key * 0.9317 + 2.1;
+    entry = {
+      segments,
+      phase1,
+      phase2,
+      geometry: buildRangeFadeWallGeometry(key, segments, phase1, phase2),
+    };
     wallCache.set(key, entry);
   }
   return entry;
@@ -164,18 +205,6 @@ const getWallMaterial = (): MeshBasicMaterial => {
   }
   return wallMaterial;
 };
-
-// The traveling crest: how fast the swell moves around the ring (radians of
-// phase per second of render time) and the phase step between adjacent spikes
-// (together they make the crest travel the ring in a few seconds).
-const WAVE_SPEED = 1.4;
-const WAVE_SPACING = 0.27;
-// How low a crest dips at the trough (fraction of the spike's max height) —
-// the spikes never fully flatten, so the wave keeps a visible lip.
-const MIN_HEIGHT_FACTOR = 0.45;
-// The resting height under `prefers-reduced-motion` (a still, gently raised
-// crest instead of the traveling swell).
-const STATIC_HEIGHT_FACTOR = 0.72;
 
 // A hidden stand-in quad (never drawn) that keeps the wall's material program
 // — additive MeshBasicMaterial with 4-component (alpha) vertex colours —
@@ -233,15 +262,14 @@ type RangeFadeWallProps = {
 };
 
 /**
- * The animated light wall around the range ring: thin white spikes rising
- * from the ring line and fading to transparent at their tops, at scattered
- * bearings (deterministic per range — see the golden-angle spread above). The
- * spikes swell and recede on a traveling wave so the wall reads as a wave of
- * water crested around the ring — the crest line flows around the ring, each
- * spike phased against its neighbours. The wave is driven by the simulation
- * clock (like the other tower FX), so the crest freezes with the world on
- * pause (easing in/out with the pause dilation); it is frozen to a still
- * crest under `prefers-reduced-motion`.
+ * The animated light wall around the range ring: a continuous white band
+ * following the ring line, whose top edge is a traveling swell — the sum of
+ * two counter-rotating sine components (see the constants above), so the
+ * crests read as a connected wave of water around the tower rather than
+ * separate stripes. The band fades from a solid white base (at the ring
+ * line) to transparent at the crest. The swell moves in `useFrame` on the
+ * simulation clock (like the other tower FX): it freezes with the world on
+ * pause and is frozen to a still crest under `prefers-reduced-motion`.
  * Shared by the selected tower's range indicator and the placement preview.
  */
 export const RangeFadeWall: FC<RangeFadeWallProps> = memo(
@@ -251,36 +279,26 @@ export const RangeFadeWall: FC<RangeFadeWallProps> = memo(
     const entry = useMemo(() => getWallEntry(range), [range]);
     const meshRef = useRef<Mesh>(null);
 
-    // The wave mutates the shared geometry's top-vertex Y in place (a ~few
-    // dozen floats per frame — no React state, no allocations). Two walls of
-    // the same range share the buffer and both write the same values.
+    // The swell mutates the shared geometry's top-vertex Y in place (a few
+    // hundred floats per frame — no React state, no allocations). Two walls
+    // of the same range share the buffer and both write the same values.
     useFrame((state) => {
       const mesh = meshRef.current;
       if (!mesh) return;
       const positions = entry.geometry.getAttribute(
         "position"
       ) as BufferAttribute;
-      const { specs } = entry;
-      if (reducedMotion) {
-        for (let i = 0; i < specs.length; i += 1) {
-          const y = specs[i].height * STATIC_HEIGHT_FACTOR;
-          positions.setY(i * 4 + 2, y);
-          positions.setY(i * 4 + 3, y);
-        }
-        positions.needsUpdate = true;
-        return;
-      }
-      // Driven by the simulation clock, so the crest freezes with the world
-      // on pause (like the other tower FX).
-      const t = getSimulationTime(state.clock.elapsedTime) * WAVE_SPEED;
-      for (let i = 0; i < specs.length; i += 1) {
-        const swell =
-          0.5 - 0.5 * Math.cos(t - i * WAVE_SPACING + specs[i].phase);
-        const y =
-          specs[i].height *
-          (MIN_HEIGHT_FACTOR + (1 - MIN_HEIGHT_FACTOR) * swell);
-        positions.setY(i * 4 + 2, y);
-        positions.setY(i * 4 + 3, y);
+      const { segments, phase1, phase2 } = entry;
+      const t = reducedMotion ? 0 : getSimulationTime(state.clock.elapsedTime);
+      for (let i = 0; i < segments.length; i += 1) {
+        positions.setY(
+          i * 4 + 2,
+          waveHeight(segments[i].thetaB, t, phase1, phase2)
+        );
+        positions.setY(
+          i * 4 + 3,
+          waveHeight(segments[i].thetaA, t, phase1, phase2)
+        );
       }
       positions.needsUpdate = true;
     });

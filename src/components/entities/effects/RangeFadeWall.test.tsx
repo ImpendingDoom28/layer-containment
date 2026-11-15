@@ -64,7 +64,7 @@ describe("RangeFadeWall", () => {
     useSettingsStore.setState({ pauseWhenTabHidden: false });
   });
 
-  it("builds one fading quad per spike, with the spike count tracking the range", async () => {
+  it("builds one connected band of quads around the ring, with the resolution tracking the range", async () => {
     const renderer = await ReactThreeTestRenderer.create(
       wrap(<RangeFadeWall range={3} />)
     );
@@ -82,31 +82,31 @@ describe("RangeFadeWall", () => {
         count: number;
         getW: (i: number) => number;
       };
-      // A 3-unit ring gets 12 spikes (the count tracks the range, clamped),
-      // each spike one quad: 4 vertices and 6 indices.
-      expect(position.count).toBe(48);
-      expect(color.count).toBe(48);
-      expect(geometry.index!.count).toBe(72);
+      // A 3-unit ring gets 236 segments (the resolution tracks the
+      // circumference, clamped 128–256); each segment is one quad: 4
+      // vertices and 6 indices.
+      expect(position.count).toBe(944);
+      expect(color.count).toBe(944);
+      expect(geometry.index!.count).toBe(1416);
 
-      const spikeCount = position.count / 4;
-      for (let spike = 0; spike < spikeCount; spike += 1) {
-        const base = spike * 4;
-        // Base vertices: white and solid (the spike's opacity, in 0.3–0.75),
-        // standing on the ring line (y = 0, radius ≈ the range).
+      const segments = position.count / 4;
+      for (let i = 0; i < segments; i += 1) {
+        const base = i * 4;
+        // Base vertices: white and solid (the band's alpha, in 0.38–0.56),
+        // standing on the ring line (y = 0, radius exactly the range).
         for (const vertex of [base, base + 1]) {
-          expect(color.getW(vertex)).toBeGreaterThanOrEqual(0.3);
-          expect(color.getW(vertex)).toBeLessThanOrEqual(0.75);
+          expect(color.getW(vertex)).toBeGreaterThanOrEqual(0.38);
+          expect(color.getW(vertex)).toBeLessThanOrEqual(0.56);
           expect(position.getY(vertex)).toBeCloseTo(0);
           const radius = Math.hypot(
             position.getX(vertex),
             position.getZ(vertex)
           );
-          expect(radius).toBeGreaterThan(3 - 0.06);
-          expect(radius).toBeLessThan(3 + 0.06);
+          expect(radius).toBeCloseTo(3);
         }
         // Top vertices: the fade — fully transparent, lifted above the base
-        // (their Y is animated per frame; the initial value is the spike's
-        // max height).
+        // (their Y is animated per frame; the initial value is the t = 0
+        // swell at that edge, between the base and the max crest height).
         for (const vertex of [base + 2, base + 3]) {
           expect(color.getW(vertex)).toBe(0);
           expect(position.getY(vertex)).toBeGreaterThan(0);
@@ -118,7 +118,7 @@ describe("RangeFadeWall", () => {
     }
   });
 
-  it("swells the crest on a traveling wave and freezes it on pause", async () => {
+  it("flows the swell around the ring and freezes it on pause", async () => {
     const renderer = await ReactThreeTestRenderer.create(
       wrap(
         <>
@@ -133,16 +133,16 @@ describe("RangeFadeWall", () => {
       const position = mesh.geometry.getAttribute("position") as {
         getY: (i: number) => number;
       };
-      // The crest height of spike 0 (its two top vertices share a Y).
-      const crestY = () => position.getY(2);
+      // The crest height of the first segment's top-left vertex.
+      const crestY = () => position.getY(3);
 
       await advanceFrame(renderer, 0);
       const y0 = crestY();
       await advanceFrame(renderer, 2);
       const y2 = crestY();
-      // Advancing the simulation clock moves the crest (the wave travels).
+      // Advancing the simulation clock moves the crest (the swell travels).
       expect(Math.abs(y2 - y0)).toBeGreaterThan(0.02);
-      // The crest never exceeds the spike's max height.
+      // The crest never exceeds the swell's max height.
       expect(y0).toBeLessThanOrEqual(0.75 + 1e-6);
       expect(y2).toBeLessThanOrEqual(0.75 + 1e-6);
 

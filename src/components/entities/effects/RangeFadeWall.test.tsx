@@ -1,5 +1,6 @@
 import ReactThreeTestRenderer from "@react-three/test-renderer";
-import { describe, expect, it } from "vitest";
+import { useThree } from "@react-three/fiber";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   AdditiveBlending,
   type Group,
@@ -8,6 +9,9 @@ import {
 } from "three";
 
 import { RangeFadeWall, RangeFadeWallPrewarm } from "./RangeFadeWall";
+import { SimulationClockProvider } from "../../../core/contexts/SimulationClockContext";
+import { useGameStore } from "../../../core/stores/useGameStore";
+import { useSettingsStore } from "../../../core/stores/useSettingsStore";
 
 // IS_REACT_ACT_ENVIRONMENT is not typed on globalThis
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,10 +30,43 @@ const getWallMesh = (renderer: Renderer): Mesh => {
   return visible ?? meshes[0];
 };
 
+const wrap = (children: React.ReactElement) => (
+  <SimulationClockProvider>{children}</SimulationClockProvider>
+);
+
+// The test renderer runs in frameloop "never" mode and never advances the
+// THREE clock, so the test drives raw elapsed time by writing to the scene
+// clock directly before each frame (with the clock unpaused, the simulation
+// time equals the raw time).
+let sceneClock: { elapsedTime: number };
+
+const ClockCapture = () => {
+  const clock = useThree((s) => s.clock) as unknown as { elapsedTime: number };
+  sceneClock = clock;
+  return null;
+};
+
+const advanceFrame = async (renderer: Renderer, rawTime: number) => {
+  await ReactThreeTestRenderer.act(async () => {
+    sceneClock.elapsedTime = rawTime;
+    await renderer.advanceFrames(1, 1);
+  });
+};
+
 describe("RangeFadeWall", () => {
+  beforeEach(() => {
+    useGameStore.setState({ gameStatus: "playing", isPageVisible: true });
+    useSettingsStore.setState({ pauseWhenTabHidden: false });
+  });
+
+  afterEach(() => {
+    useGameStore.setState({ gameStatus: "playing", isPageVisible: true });
+    useSettingsStore.setState({ pauseWhenTabHidden: false });
+  });
+
   it("builds one fading quad per spike, with the spike count tracking the range", async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <RangeFadeWall range={3} />
+      wrap(<RangeFadeWall range={3} />)
     );
 
     try {
@@ -40,7 +77,6 @@ describe("RangeFadeWall", () => {
         getX: (i: number) => number;
         getY: (i: number) => number;
         getZ: (i: number) => number;
-        getW: (i: number) => number;
       };
       const color = geometry.getAttribute("color") as {
         count: number;
@@ -82,11 +118,53 @@ describe("RangeFadeWall", () => {
     }
   });
 
+  it("swells the crest on a traveling wave and freezes it on pause", async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      wrap(
+        <>
+          <ClockCapture />
+          <RangeFadeWall range={4} />
+        </>
+      )
+    );
+
+    try {
+      const mesh = getWallMesh(renderer);
+      const position = mesh.geometry.getAttribute("position") as {
+        getY: (i: number) => number;
+      };
+      // The crest height of spike 0 (its two top vertices share a Y).
+      const crestY = () => position.getY(2);
+
+      await advanceFrame(renderer, 0);
+      const y0 = crestY();
+      await advanceFrame(renderer, 2);
+      const y2 = crestY();
+      // Advancing the simulation clock moves the crest (the wave travels).
+      expect(Math.abs(y2 - y0)).toBeGreaterThan(0.02);
+      // The crest never exceeds the spike's max height.
+      expect(y0).toBeLessThanOrEqual(0.75 + 1e-6);
+      expect(y2).toBeLessThanOrEqual(0.75 + 1e-6);
+
+      // Pausing the world freezes the crest.
+      useGameStore.setState({ gameStatus: "paused" });
+      await advanceFrame(renderer, 3);
+      const y3 = crestY();
+      await advanceFrame(renderer, 6);
+      const y6 = crestY();
+      expect(Math.abs(y6 - y3)).toBeLessThan(1e-6);
+    } finally {
+      renderer.unmount();
+    }
+  });
+
   it("reuses one geometry per range and a shared additive material", async () => {
     const a = await ReactThreeTestRenderer.create(
-      <RangeFadeWall range={4} position={[1, 2, 3]} />
+      wrap(<RangeFadeWall range={4} position={[1, 2, 3]} />)
     );
-    const b = await ReactThreeTestRenderer.create(<RangeFadeWall range={4} />);
+    const b = await ReactThreeTestRenderer.create(
+      wrap(<RangeFadeWall range={4} />)
+    );
 
     try {
       const meshA = getWallMesh(a);

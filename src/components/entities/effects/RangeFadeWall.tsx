@@ -13,6 +13,7 @@ import {
 } from "three";
 
 import { useReducedMotion } from "../../../core/hooks/useReducedMotion";
+import { useSimulationClock } from "../../../core/contexts/SimulationClockContext";
 
 const DEFAULT_POSITION: [number, number, number] = [0, 0, 0];
 
@@ -237,14 +238,16 @@ type RangeFadeWallProps = {
  * bearings (deterministic per range — see the golden-angle spread above). The
  * spikes swell and recede on a traveling wave so the wall reads as a wave of
  * water crested around the ring — the crest line flows around the ring, each
- * spike phased against its neighbours (driven in `useFrame`, on the render
- * clock: view feedback, so it keeps flowing while the world is paused; frozen
- * to a still crest under `prefers-reduced-motion`).
+ * spike phased against its neighbours. The wave is driven by the simulation
+ * clock (like the other tower FX), so the crest freezes with the world on
+ * pause (easing in/out with the pause dilation); it is frozen to a still
+ * crest under `prefers-reduced-motion`.
  * Shared by the selected tower's range indicator and the placement preview.
  */
 export const RangeFadeWall: FC<RangeFadeWallProps> = memo(
   ({ range, position = DEFAULT_POSITION, quaternion, rotation }) => {
     const reducedMotion = useReducedMotion();
+    const { getSimulationTime } = useSimulationClock();
     const entry = useMemo(() => getWallEntry(range), [range]);
     const meshRef = useRef<Mesh>(null);
 
@@ -267,7 +270,9 @@ export const RangeFadeWall: FC<RangeFadeWallProps> = memo(
         positions.needsUpdate = true;
         return;
       }
-      const t = state.clock.elapsedTime * WAVE_SPEED;
+      // Driven by the simulation clock, so the crest freezes with the world
+      // on pause (like the other tower FX).
+      const t = getSimulationTime(state.clock.elapsedTime) * WAVE_SPEED;
       for (let i = 0; i < specs.length; i += 1) {
         const swell =
           0.5 - 0.5 * Math.cos(t - i * WAVE_SPACING + specs[i].phase);

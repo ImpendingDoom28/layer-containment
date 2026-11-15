@@ -22,7 +22,7 @@ import { IsEffect, spawnEffectRequest } from "../ecs/traits/effect";
 import { isDead } from "../ecs/traits/health";
 import { IsStats, RunEnded } from "../ecs/traits/stats";
 import { useGameStore } from "../stores/useGameStore";
-import { useLevelStore } from "../stores/useLevelStore";
+import { getMaxEntityId, useLevelStore } from "../stores/useLevelStore";
 import { useUpgradeStore } from "../stores/useUpgradeStore";
 import { useWaveStore } from "../stores/useWaveStore";
 import { GameEvent } from "../types/enums/events";
@@ -41,9 +41,11 @@ const noop = () => undefined;
 export const createGameSession = ({
   world,
   getNextTowerId,
+  ensureTowerIdAtLeast,
   getNextEnemyId,
   ensureEnemyIdAtLeast,
   getNextProjectileId,
+  ensureProjectileIdAtLeast,
   loadLevel = loadLevelConfigFile,
 }: GameSessionDependencies): GameSessionController => {
   let currentLevelId: AnyPlayableLevelId | null = null;
@@ -129,10 +131,15 @@ export const createGameSession = ({
     currentLevelId = levelId;
     statsActions(world).startRunStats();
     useLevelStore.getState().initializeLevelState(levelData, tileSize);
-    ensureEnemyIdAtLeast(
-      levelData.enemies.reduce((maxId, enemy) => Math.max(maxId, enemy.id), 0) +
-        1
-    );
+    // Each counter is reset by `clearRunState` (and the in-scene level store's
+    // `resetLevelState`) before the level loads, so the freshly loaded level's
+    // pre-placed towers, enemies, and projectiles — which take ids 1..N in
+    // level order — must push every counter past them. Without this, the first
+    // player-placed tower (or fired projectile) reuses a pre-placed id, so
+    // selecting or shooting one tower hits the other.
+    ensureTowerIdAtLeast(getMaxEntityId(levelData.towers) + 1);
+    ensureEnemyIdAtLeast(getMaxEntityId(levelData.enemies) + 1);
+    ensureProjectileIdAtLeast(getMaxEntityId(levelData.projectiles) + 1);
     worldBaseActions(world).spawnBase(levelData.startingHealth);
   };
 

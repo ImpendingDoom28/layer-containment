@@ -1,6 +1,5 @@
 import type { World } from "koota";
 
-import { PORTAL_REVEAL_DURATION_S } from "../../constants/cometReveal";
 import { SLOW_MO_BEAT_SECONDS, SLOW_MO_RATE } from "../../constants/slowMo";
 import { bossHealthForWave, isBossWave } from "../../utils/bossHp";
 import { gameEvents } from "../../utils/eventEmitter";
@@ -16,14 +15,8 @@ import { useUpgradeStore } from "../stores/useUpgradeStore";
 import { useWaveStore } from "../stores/useWaveStore";
 import { GameEvent } from "../types/enums/events";
 import type { EnemyType, EnemyUpgradeId } from "../types/game";
+import { isRevealSettled } from "../utils/revealSettle";
 import type { SimulationFrame } from "./types";
-
-// How long (simulation seconds) after the comet's impact the spawn portals
-// are considered "still settling". The portal rises out of the scorch over
-// `PORTAL_REVEAL_DURATION_S` (see `Portal.tsx`'s `ENTRY_DURATION`); wave 1
-// must not start while that rise is in progress, so the gate holds for the
-// full rise plus a small buffer before the first wave is offered.
-const COMET_SETTLE_SECONDS = PORTAL_REVEAL_DURATION_S + 0.3;
 
 // The last-enemy slow-mo beat (wall time, `SLOW_MO_BEAT_SECONDS` at
 // `SLOW_MO_RATE` of real time, see `constants/slowMo.ts`) is driven by the
@@ -81,22 +74,6 @@ export const createWaveSystem = ({
 
   const getRemainingEnemyCount = () =>
     enemyActions(world).getRemainingEnemyCount();
-
-  // A reveal is "settled" (the portals have finished rising onto the ground)
-  // when: there is no reveal at all, or the reveal belongs to an earlier run
-  // (a stale reveal from a previous level), or the current run's reveal has
-  // been `revealed` for at least `COMET_SETTLE_SECONDS` of simulation time.
-  // While the comet is still in flight (`armed`) or still rising, it is not
-  // settled, so wave 1 must not start.
-  const isRevealSettled = (simulationTimeSeconds: number): boolean => {
-    const { cometReveal, levelEnterRun } = useLevelStore.getState();
-    if (cometReveal === null) return true;
-    if (cometReveal.run !== levelEnterRun) return true;
-    if (cometReveal.phase === "armed") return false;
-    const revealedAt = cometReveal.revealedAt;
-    if (revealedAt === undefined) return false;
-    return simulationTimeSeconds - revealedAt >= COMET_SETTLE_SECONDS;
-  };
 
   const reset = () => {
     spawnQueue = [];

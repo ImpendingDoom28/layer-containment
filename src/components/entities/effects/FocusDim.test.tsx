@@ -2,7 +2,7 @@ import ReactThreeTestRenderer from "@react-three/test-renderer";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Mesh } from "three";
 
-import { FocusDim } from "./FocusDim";
+import { FocusDim, FocusDimPrewarm } from "./FocusDim";
 import { useGameStore } from "../../../core/stores/useGameStore";
 import { useLevelStore } from "../../../core/stores/useLevelStore";
 import type { Tower } from "../../../core/types/game";
@@ -129,6 +129,34 @@ describe("FocusDim", () => {
       expect(mesh.visible).toBe(true);
     } finally {
       renderer.unmount();
+    }
+  });
+
+  it("mounts a hidden prewarm sharing the dim's shader material", async () => {
+    useGameStore.setState({ selectedTower: null });
+    useLevelStore.setState({ gridSize: 4, towers: [tower] });
+
+    const dimRenderer = await ReactThreeTestRenderer.create(<FocusDim />);
+    const prewarmRenderer = await ReactThreeTestRenderer.create(
+      <FocusDimPrewarm />
+    );
+
+    try {
+      const dimMesh = getFocusMesh(dimRenderer);
+      const prewarmMeshes = prewarmRenderer.scene
+        .findAll((instance) => instance.type === "Mesh")
+        .map((entry) => entry.instance) as unknown as Mesh[];
+      expect(prewarmMeshes).toHaveLength(1);
+      // The prewarm is hidden (never drawn) but holds the same material
+      // instance as the dim, so the dim's shader program is in the scene
+      // graph for the ShaderReadyGate to compile before the first selection.
+      expect((prewarmMeshes[0].parent as { visible: boolean }).visible).toBe(
+        false
+      );
+      expect(prewarmMeshes[0].material).toBe(dimMesh.material);
+    } finally {
+      dimRenderer.unmount();
+      prewarmRenderer.unmount();
     }
   });
 

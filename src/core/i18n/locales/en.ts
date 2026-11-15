@@ -12,6 +12,9 @@ export const en = {
     shadows: "Shadows",
     shadowsHint:
       "Real-time shadows cast by towers, enemies, and props onto the terrain. Disable on slower devices for higher performance. Automatically off on software (CPU) renderers.",
+    motionBlur: "Motion blur (camera)",
+    motionBlurHint:
+      "A light radial smear while you move the camera, so fast moves feel physical instead of teleporting. Automatically off on software (CPU) renderers and under reduced motion.",
     language: "Language",
     audio: "Audio",
     mute: "Mute",

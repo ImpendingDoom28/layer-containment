@@ -7,6 +7,8 @@ import { Canvas } from "@react-three/fiber";
 import { cn } from "../ui/lib/twUtils";
 import { GameScene } from "../scenes/game/GameScene";
 import { MainMenuScene } from "../scenes/mainMenu/MainMenuScene";
+import { FocusDimPrewarm } from "../entities/effects/FocusDim";
+import { RangeFadeWallPrewarm } from "../entities/effects/RangeFadeWall";
 import { HUDTowerShop } from "../hud/HUDTowerShop";
 import { HudAnimationSystem } from "../hud/HudAnimationSystem";
 import { HUDGameStats } from "../hud/HUDGameStats";
@@ -263,6 +265,16 @@ export const GamePage: FC<GamePageProps> = ({
         <SimulationClockProvider>
           <WaterClockProvider>
             <BackgroundGameLoopSystem />
+
+            {/* Selection-indicator shader prewarm: the range wall (additive
+                alpha-vertex-colour quads) and the focus dim (custom shader)
+                only appear on a tower selection, so their programs would
+                otherwise compile on the first selection and hitch that frame.
+                Hidden stand-ins keep the programs in the scene graph so the
+                ShaderReadyGate's compileAsync covers them during the loading
+                screen (first selection, first placement preview, first dim). */}
+            <RangeFadeWallPrewarm />
+            <FocusDimPrewarm />
 
             {shaderGateKey !== null && (
               <ShaderReadyGate

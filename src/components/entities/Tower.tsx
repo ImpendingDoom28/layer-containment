@@ -15,6 +15,7 @@ import { CylinderGeometry, MeshStandardMaterial } from "three";
 import type { Tower as TowerInstance } from "../../core/types/game";
 import { GUIDebugInfo } from "../gui/GUIDebugInfo";
 import { DeadZoneDisc } from "./effects/DeadZoneDisc";
+import { RangeFadeWall } from "./effects/RangeFadeWall";
 import { RangeRing } from "./effects/RangeRing";
 import { TowerFireFX } from "./effects/TowerFireFX";
 import { registerTowerIdleAnimation } from "./effects/towerIdleRig";
@@ -424,13 +425,21 @@ export const Tower: FC<TowerProps> = memo(
             onDone={() => setIsDropping(false)}
           />
         )}
-        {/* Selection indicator */}
+        {/* Selection indicator: the thin white max-radius stripe, with the
+            randomized light wall (strips fading up) rising off the ring. The
+            wall sits a touch lower than the ring to avoid z-fighting at the
+            base line. */}
         {isSelected && (effectiveRange ?? tower.range) > 0.01 && (
-          <RangeRing
-            range={effectiveRange ?? tower.range}
-            color={tower.color}
-            position={[0, 0.1, 0]}
-          />
+          <>
+            <RangeRing
+              range={effectiveRange ?? tower.range}
+              position={[0, 0.1, 0]}
+            />
+            <RangeFadeWall
+              range={effectiveRange ?? tower.range}
+              position={[0, 0.02, 0]}
+            />
+          </>
         )}
         {/* Artillery dead zone: the filled disc shows the area the tower
             refuses to shoot at (enemies closer than minRange are out of reach).

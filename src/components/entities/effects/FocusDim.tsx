@@ -1,4 +1,4 @@
-import { FC, useEffect, useMemo, useRef } from "react";
+import { FC, useEffect, useRef } from "react";
 
 import { useFrame } from "@react-three/fiber";
 import {
@@ -106,6 +106,65 @@ const FRAGMENT_SHADER = /* glsl */ `
   }
 `;
 
+// One geometry + ShaderMaterial pair for the whole session, shared by the dim
+// and its prewarm (a custom shader compiles once per program; re-allocating per
+// mount was the first-selection stall). Never disposed: app-lifetime and tiny.
+type FocusDimShared = { geometry: BufferGeometry; material: ShaderMaterial };
+let focusDimShared: FocusDimShared | null = null;
+
+const getFocusDimShared = (): FocusDimShared => {
+  if (!focusDimShared) {
+    const geometry = new BufferGeometry();
+    geometry.setAttribute(
+      "position",
+      new Float32BufferAttribute(FULLSCREEN_TRIANGLE_POSITIONS, 3)
+    );
+    const material = new ShaderMaterial({
+      vertexShader: VERTEX_SHADER,
+      fragmentShader: FRAGMENT_SHADER,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      uniforms: {
+        uInvProjection: { value: new Matrix4() },
+        uViewToWorld: { value: new Matrix4() },
+        uCenter: { value: new Vector3() },
+        uNormal: { value: new Vector3(0, 1, 0) },
+        uRadius: { value: 0 },
+        uSoftness: { value: 0.5 },
+        uStrength: { value: DIM_STRENGTH },
+        uFade: { value: 0 },
+      },
+    });
+    focusDimShared = { geometry, material };
+  }
+  return focusDimShared;
+};
+
+/**
+ * Keeps the focus dim's shader program compiled during the loading screen (see
+ * `getFocusDimShared`). Mount once per scene; the scene's ShaderReadyGate
+ * compiles it (gl.compileAsync walks the full graph, including hidden
+ * objects), so the first tower selection doesn't pay a one-time
+ * shader-compile stall.
+ */
+export const FocusDimPrewarm: FC = () => {
+  const { geometry, material } = getFocusDimShared();
+  return (
+    <group visible={false}>
+      <mesh
+        geometry={geometry}
+        material={material}
+        frustumCulled={false}
+        renderOrder={999}
+        raycast={() => null}
+      />
+    </group>
+  );
+};
+
+FocusDimPrewarm.displayName = "FocusDimPrewarm";
+
 /**
  * Focus dim for the selected tower.
  *
@@ -133,42 +192,11 @@ export const FocusDim: FC = () => {
   const meshRef = useRef<Mesh>(null);
   const fadeRef = useRef(0);
 
-  // Created once; the shader's per-frame uniforms (matrices, fade) are mutated
-  // in `useFrame`, and the disc uniforms are re-set when the selection changes.
-  const { geometry, material } = useMemo(() => {
-    const geo = new BufferGeometry();
-    geo.setAttribute(
-      "position",
-      new Float32BufferAttribute(FULLSCREEN_TRIANGLE_POSITIONS, 3)
-    );
-    const mat = new ShaderMaterial({
-      vertexShader: VERTEX_SHADER,
-      fragmentShader: FRAGMENT_SHADER,
-      transparent: true,
-      depthTest: false,
-      depthWrite: false,
-      uniforms: {
-        uInvProjection: { value: new Matrix4() },
-        uViewToWorld: { value: new Matrix4() },
-        uCenter: { value: new Vector3() },
-        uNormal: { value: new Vector3(0, 1, 0) },
-        uRadius: { value: 0 },
-        uSoftness: { value: 0.5 },
-        uStrength: { value: DIM_STRENGTH },
-        uFade: { value: 0 },
-      },
-    });
-    return { geometry: geo, material: mat };
-  }, []);
-
-  // Dispose the imperative geometry/material on unmount (R3F only auto-disposes
-  // JSX-declared objects).
-  useEffect(() => {
-    return () => {
-      geometry.dispose();
-      material.dispose();
-    };
-  }, [geometry, material]);
+  // Shared for the whole session (see `getFocusDimShared`): the shader's
+  // per-frame uniforms (matrices, fade) are mutated in `useFrame`, and the disc
+  // uniforms are re-set when the selection changes — nothing is disposed on
+  // unmount, so the prewarm and the dim reuse the very same program.
+  const { geometry, material } = getFocusDimShared();
 
   // Re-set the disc (center / normal / radius) when the selected tower — or the
   // level geometry / relay buffs that shape its effective range — changes.
@@ -229,6 +257,7 @@ export const FocusDim: FC = () => {
       ref={meshRef}
       geometry={geometry}
       material={material}
+      visible={false}
       frustumCulled={false}
       renderOrder={999}
       raycast={() => null}

@@ -21,6 +21,12 @@ import { buildCanyonBridgePaths } from "../../utils/canyonBridges";
 import { getUpgradeStacks } from "../../utils/upgradeStacks";
 import { gameEvents } from "../../utils/eventEmitter";
 import { GameEvent } from "../types/enums/events";
+import {
+  createTileBlockage,
+  getTilePlacementState,
+  type TileBlockage,
+  type TilePlacementState,
+} from "../../utils/tilePlacement";
 import { enemyActions } from "../ecs/actions/enemyActions";
 import { splitRequest } from "../ecs/traits/split";
 import { world } from "../ecs/world";
@@ -86,6 +92,15 @@ type LevelStoreState = {
    */
   cometReveal: CometReveal | null;
   hoveredTile: TileData | null;
+  /**
+   * Precomputed static blockage (paths, water, canyons, buildings) for the
+   * loaded level. Rebuilt only on a level load — none of these ever change
+   * during play, so per-tile placement checks read these O(1) masks instead of
+   * re-running the path intersection for every tile (the old
+   * `useLevelSystem.getTilePlacementState` did exactly that on every render of
+   * the placement overlay). `null` until a level loads.
+   */
+  tileBlockage: TileBlockage | null;
 };
 
 type LevelStoreActions = {
@@ -107,6 +122,7 @@ type LevelStoreActions = {
   setLevelLoadError: (error: string | null) => void;
   retryLevelLoad: () => void;
   initializeLevelState: (levelData: LevelConfigData, tileSize: number) => void;
+  getTilePlacementState: (gridX: number, gridZ: number) => TilePlacementState;
 };
 
 type LevelStore = LevelStoreState & LevelStoreActions;
@@ -133,6 +149,7 @@ const DEFAULT_STATE: LevelStoreState = {
   levelEnterRun: 0,
   cometReveal: null,
   hoveredTile: null,
+  tileBlockage: null,
 };
 
 export const getMaxEntityId = (
@@ -144,9 +161,8 @@ export const useLevelStore = create<LevelStore>((set) => ({
   ...DEFAULT_STATE,
 
   initializeLevelState: (levelData: LevelConfigData, tileSize: number) => {
-    const towerTypes = useGameStore.getState().towerTypes;
-    const enemyTypes = useGameStore.getState().enemyTypes;
-    const enemyUpgrades = useGameStore.getState().enemyUpgrades;
+    const { towerTypes, enemyTypes, enemyUpgrades, pathWidth } =
+      useGameStore.getState();
 
     if (!towerTypes || !enemyTypes || !enemyUpgrades) return;
 
@@ -210,6 +226,20 @@ export const useLevelStore = create<LevelStore>((set) => ({
       withRecalculatedWaterCoordinates(water, levelData.gridSize, tileSize)
     );
 
+    // Static blockage is baked here, once per load: paths, water, canyons and
+    // buildings never change during play, so the per-tile placement checks
+    // (tower placement, the placement overlay) read precomputed masks.
+    const tileBlockage = createTileBlockage({
+      gridSize,
+      gridOffset,
+      tileSize,
+      pathWaypoints,
+      pathWidth,
+      buildings: levelBuildings,
+      waters: levelWaters,
+      canyons: levelData.canyons ?? [],
+    });
+
     // A fresh level load gets a unique id (the monotonic counter) and raises
     // the `LEVEL_ENTERED` event so the scene's `CometStrike` orchestrator —
     // which is subscribed for the whole time the scene is mounted — plays its
@@ -242,6 +272,7 @@ export const useLevelStore = create<LevelStore>((set) => ({
       waters: levelWaters,
       canyons: levelData.canyons ?? [],
       buildings: levelBuildings,
+      tileBlockage,
       towers: levelTowers,
       totalWaves: waveConfigs.length,
       boss: boss ?? null,
@@ -345,6 +376,14 @@ export const useLevelStore = create<LevelStore>((set) => ({
     }));
   },
 
+  // An explicit return type: the body reads `useLevelStore` itself, and
+  // inferring the type from that circular body would degrade the whole
+  // store to `any`.
+  getTilePlacementState: (gridX: number, gridZ: number): TilePlacementState => {
+    const { tileBlockage, towers } = useLevelStore.getState();
+    return getTilePlacementState({ gridX, gridZ, blockage: tileBlockage, towers });
+  },
+
   removeProjectile: (projectileId: number) => {
     set((state) => ({
       projectiles: state.projectiles.filter((p) => p.id !== projectileId),
@@ -412,6 +451,9 @@ export const resetLevelStateSelector = (state: LevelStore) =>
 export const hoveredTileSelector = (state: LevelStore) => state.hoveredTile;
 export const setHoveredTileSelector = (state: LevelStore) =>
   state.setHoveredTile;
+export const tileBlockageSelector = (state: LevelStore) => state.tileBlockage;
+export const getTilePlacementStateSelector = (state: LevelStore) =>
+  state.getTilePlacementState;
 export const levelEnterRunSelector = (state: LevelStore) => state.levelEnterRun;
 export const cometRevealSelector = (state: LevelStore) => state.cometReveal;
 export const setCometRevealSelector = (state: LevelStore) => state.setCometReveal;

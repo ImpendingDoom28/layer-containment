@@ -187,3 +187,36 @@ describe("useLevelStore comet reveal", () => {
     expect(received[0].portalPositions).toEqual([{ x: 1, z: 2 }]);
   });
 });
+
+describe("useLevelStore tile blockage cache", () => {
+  afterEach(() => {
+    useLevelStore.getState().resetLevelState();
+    useGameStore.setState({
+      tileSize: 0,
+      towerTypes: null,
+      enemyTypes: null,
+      enemyUpgrades: null,
+    });
+  });
+
+  it("is null before a level loads", () => {
+    expect(state().tileBlockage).toBe(null);
+    // The placement check stays usable (and unblocked) pre-load.
+    expect(state().getTilePlacementState(0, 0).isBlocked).toBe(false);
+  });
+
+  it("is precomputed on level load and drives the placement check", () => {
+    seedGameConfig();
+    useGameStore.setState({ pathWidth: 1 });
+
+    state().initializeLevelState(levelData, 1);
+
+    expect(state().tileBlockage).not.toBe(null);
+    // Tile (2,2) holds the level's spawn waypoint (0,1) at its corner, so it
+    // is blocked by the precomputed path mask alone (no tower placed).
+    expect(state().getTilePlacementState(2, 2).isOnPath).toBe(true);
+    expect(state().getTilePlacementState(2, 2).isBlocked).toBe(true);
+    // A tile far from the path is free until a tower lands on it.
+    expect(state().getTilePlacementState(0, 0).isBlocked).toBe(false);
+  });
+});

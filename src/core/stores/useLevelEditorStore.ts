@@ -9,8 +9,13 @@ import type {
 } from "../types/editor";
 import type { CanyonConfig, EnemyType, PathWaypoint, WaveConfig } from "../types/game";
 import type { TileData } from "../types/utils";
-import { getTilePlacementState } from "../../utils/tilePlacement";
+import {
+  createTileBlockage,
+  getTilePlacementState,
+  type TileBlockage,
+} from "../../utils/tilePlacement";
 import { findBridgeCrossings } from "../../utils/canyonBridges";
+import { withCache } from "../../utils/withCache";
 import { clampGridSize } from "../../utils/gridSizeLimits";
 import { validateLevel } from "../../utils/validateLevel";
 import {
@@ -229,6 +234,43 @@ const createWaterDefaults = (
   shape: "box" as const,
   color: getCssColorValue("scene-water"),
 });
+
+// The draft's static blockage (paths, water, canyons, buildings), cached per
+// draft object and per tileSize/pathWidth: each edit produces a fresh
+// `draftLevel` (the WeakMap key is collected with its draft, no manual
+// invalidation) and a drag or click runs many per-tile checks against the
+// same draft, so the build happens once per (draft, tile size, path width).
+const getDraftBlockage = withCache(
+  (
+    level: LevelConfigData,
+    tileSize: number,
+    pathWidth: number
+  ): TileBlockage =>
+    createTileBlockage({
+      gridSize: level.gridSize,
+      gridOffset: getLevelGridOffset(level.gridSize, tileSize),
+      tileSize,
+      pathWaypoints: level.pathWaypoints,
+      pathWidth,
+      buildings: level.buildings,
+      waters: level.waters,
+      canyons: level.canyons,
+    })
+);
+
+const getDraftTilePlacementState = (
+  level: LevelConfigData,
+  gridX: number,
+  gridZ: number,
+  tileSize: number,
+  pathWidth: number
+) =>
+  getTilePlacementState({
+    gridX,
+    gridZ,
+    blockage: getDraftBlockage(level, tileSize, pathWidth),
+    towers: [],
+  });
 
 export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
   ...DEFAULT_STATE,
@@ -561,18 +603,13 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
         waypointIndex: selectedWaypointIndex,
       } = state.selected;
 
-      const waterCheck = getTilePlacementState({
-        gridX: tile.gridX,
-        gridZ: tile.gridZ,
-        towers: [],
-        buildings: state.draftLevel.buildings,
-        waters: state.draftLevel.waters,
-        canyons: state.draftLevel.canyons,
-        gridOffset: getLevelGridOffset(state.draftLevel.gridSize, tileSize),
+      const waterCheck = getDraftTilePlacementState(
+        state.draftLevel,
+        tile.gridX,
+        tile.gridZ,
         tileSize,
-        pathWaypoints: state.draftLevel.pathWaypoints,
-        pathWidth,
-      });
+        pathWidth
+      );
       if (waterCheck.isWater && !waterCheck.isCanyon) {
         return state;
       }
@@ -760,18 +797,13 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
       }
 
       if (activeTool === "placeBuilding") {
-        const placementState = getTilePlacementState({
-          gridX: tile.gridX,
-          gridZ: tile.gridZ,
-          towers: [],
-          buildings: draftLevel.buildings,
-          waters: draftLevel.waters,
-          canyons: draftLevel.canyons,
-          gridOffset: getLevelGridOffset(draftLevel.gridSize, tileSize),
+        const placementState = getDraftTilePlacementState(
+          draftLevel,
+          tile.gridX,
+          tile.gridZ,
           tileSize,
-          pathWaypoints: draftLevel.pathWaypoints,
-          pathWidth,
-        });
+          pathWidth
+        );
 
         if (placementState.isBlocked) {
           return state;
@@ -798,18 +830,13 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
       }
 
       if (activeTool === "water") {
-        const placementState = getTilePlacementState({
-          gridX: tile.gridX,
-          gridZ: tile.gridZ,
-          towers: [],
-          buildings: draftLevel.buildings,
-          waters: draftLevel.waters,
-          canyons: draftLevel.canyons,
-          gridOffset: getLevelGridOffset(draftLevel.gridSize, tileSize),
+        const placementState = getDraftTilePlacementState(
+          draftLevel,
+          tile.gridX,
+          tile.gridZ,
           tileSize,
-          pathWaypoints: draftLevel.pathWaypoints,
-          pathWidth,
-        });
+          pathWidth
+        );
 
         if (placementState.isOnPath) {
           return state;
@@ -835,18 +862,13 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
       }
 
       if (activeTool === "canyon") {
-        const placementState = getTilePlacementState({
-          gridX: tile.gridX,
-          gridZ: tile.gridZ,
-          towers: [],
-          buildings: draftLevel.buildings,
-          waters: draftLevel.waters,
-          canyons: draftLevel.canyons,
-          gridOffset: getLevelGridOffset(draftLevel.gridSize, tileSize),
+        const placementState = getDraftTilePlacementState(
+          draftLevel,
+          tile.gridX,
+          tile.gridZ,
           tileSize,
-          pathWaypoints: draftLevel.pathWaypoints,
-          pathWidth,
-        });
+          pathWidth
+        );
 
         if (placementState.isOnPath || placementState.isOccupiedByBuilding) {
           return state;
@@ -880,18 +902,13 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
       );
       const currentPath = ensuredPaths[selectedPathIndex] ?? [];
 
-      const pathTargetPlacement = getTilePlacementState({
-        gridX: tile.gridX,
-        gridZ: tile.gridZ,
-        towers: [],
-        buildings: draftLevel.buildings,
-        waters: draftLevel.waters,
-        canyons: draftLevel.canyons,
-        gridOffset: getLevelGridOffset(draftLevel.gridSize, tileSize),
+      const pathTargetPlacement = getDraftTilePlacementState(
+        draftLevel,
+        tile.gridX,
+        tile.gridZ,
         tileSize,
-        pathWaypoints: draftLevel.pathWaypoints,
-        pathWidth,
-      });
+        pathWidth
+      );
 
       if (
         pathTargetPlacement.isWater &&

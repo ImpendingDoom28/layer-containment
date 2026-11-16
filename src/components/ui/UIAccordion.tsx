@@ -76,9 +76,13 @@ function UIAccordionContent({
       className="overflow-hidden text-xs data-open:animate-accordion-down data-closed:animate-accordion-up"
       {...props}
     >
+      {/* min-height, not height: Radix measures the content once on open and
+          pins it here; a fixed height would clip content added later (e.g. a
+          new wave in an open Waves item), while min-height keeps the same
+          size when the content fits and grows with it otherwise. */}
       <div
         className={cn(
-          "pt-0 pb-2.5 [&_a]:hover:text-foreground h-(--radix-accordion-content-height) [&_a]:underline [&_a]:underline-offset-3 [&_p:not(:last-child)]:mb-4",
+          "pt-0 pb-2.5 [&_a]:hover:text-foreground min-h-(--radix-accordion-content-height) [&_a]:underline [&_a]:underline-offset-3 [&_p:not(:last-child)]:mb-4",
           className
         )}
       >

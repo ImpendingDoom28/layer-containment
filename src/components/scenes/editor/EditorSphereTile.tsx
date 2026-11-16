@@ -1,7 +1,7 @@
 import { FC, memo, useCallback, useEffect, useMemo } from "react";
 
 import type { ThreeEvent } from "@react-three/fiber";
-import { MeshStandardMaterial } from "three";
+import { BoxGeometry, MeshStandardMaterial } from "three";
 
 import { getCssColorValue, type ColorToken } from "../../ui/lib/cssUtils";
 import type { LevelEditorTool } from "../../../core/types/editor";
@@ -35,6 +35,49 @@ const toolTokenMap: Record<LevelEditorTool, ColorToken> = {
 
 const getToolPreviewColor = (tool: LevelEditorTool): string =>
   getCssColorValue(toolTokenMap[tool]);
+
+// The non-land slabs (path, water, canyon, hover tints) are identical on
+// every tile that shows them: one material per (colour, hovered) pair
+// instead of one per tile (never disposed — the scene's lifetime).
+const editorTileMaterialCache = new Map<string, MeshStandardMaterial>();
+const getEditorTileMaterial = (color: string, isHovered: boolean) => {
+  const key = `${isHovered ? 1 : 0}|${color}`;
+  const entry = editorTileMaterialCache.get(key);
+  if (entry) return entry;
+  const material = new MeshStandardMaterial({
+    transparent: true,
+    opacity: isHovered ? 0.75 : 0.45,
+    color,
+    emissive: isHovered ? color : getCssColorValue("scene-black"),
+    emissiveIntensity: isHovered ? 0.25 : 0,
+  });
+  editorTileMaterialCache.set(key, material);
+  return material;
+};
+
+// Fixed-arg slab and hitbox geometries, shared across all tiles of a grid
+// size (never disposed — the scene's lifetime).
+const slabGeometryCache = new Map<number, BoxGeometry>();
+const getSlabGeometry = (tileSize: number): BoxGeometry => {
+  const entry = slabGeometryCache.get(tileSize);
+  if (entry) return entry;
+  const geometry = new BoxGeometry(tileSize, LEVEL_EDITOR_TILE_HEIGHT, tileSize);
+  slabGeometryCache.set(tileSize, geometry);
+  return geometry;
+};
+
+const hitboxGeometryCache = new Map<number, BoxGeometry>();
+const getHitboxGeometry = (tileSize: number): BoxGeometry => {
+  const entry = hitboxGeometryCache.get(tileSize);
+  if (entry) return entry;
+  const geometry = new BoxGeometry(
+    tileSize,
+    LEVEL_EDITOR_TILE_HEIGHT + 0.2,
+    tileSize
+  );
+  hitboxGeometryCache.set(tileSize, geometry);
+  return geometry;
+};
 
 type EditorSphereTileProps = {
   gridX: number;
@@ -100,26 +143,32 @@ export const EditorSphereTile: FC<EditorSphereTileProps> = memo(
       return -(depth + LEVEL_EDITOR_TILE_HEIGHT / 2);
     }, [worldX, worldZ, radius, placementState.isCanyon, canyonBBox]);
 
-    const material = useMemo(() => {
+    // Only the plain land slab is tile-owned (per-tile seeded regolith); the
+    // non-land slabs share one material per (colour, hovered) pair and must
+    // not be disposed here.
+    const { material, shared } = useMemo(() => {
       if (
         !placementState.isOnPath &&
         !placementState.isWater &&
         !placementState.isCanyon &&
         !isHovered
       ) {
-        return createPlanetTileMaterial({
-          baseColor: landBaseColor,
-          emissive: getCssColorValue("scene-black"),
-          emissiveIntensity: 0,
-          metalness: 0.05,
-          roughness: 0.88,
-          tileSeed: hashGrid2D(gridX, gridZ),
-          tileHalfHeight: LEVEL_EDITOR_TILE_HEIGHT / 2,
-          regolithHighlight: getCssColorValue("scene-regolith-highlight"),
-          regolithShadow: getCssColorValue("scene-regolith-shadow"),
-          transparent: true,
-          opacity: 0.45,
-        });
+        return {
+          material: createPlanetTileMaterial({
+            baseColor: landBaseColor,
+            emissive: getCssColorValue("scene-black"),
+            emissiveIntensity: 0,
+            metalness: 0.05,
+            roughness: 0.88,
+            tileSeed: hashGrid2D(gridX, gridZ),
+            tileHalfHeight: LEVEL_EDITOR_TILE_HEIGHT / 2,
+            regolithHighlight: getCssColorValue("scene-regolith-highlight"),
+            regolithShadow: getCssColorValue("scene-regolith-shadow"),
+            transparent: true,
+            opacity: 0.45,
+          }),
+          shared: false,
+        };
       }
 
       let color: string;
@@ -136,15 +185,11 @@ export const EditorSphereTile: FC<EditorSphereTileProps> = memo(
       } else {
         color = landBaseColor;
       }
-      const emissive = isHovered ? color : getCssColorValue("scene-black");
 
-      return new MeshStandardMaterial({
-        transparent: true,
-        opacity: isHovered ? 0.75 : 0.45,
-        color,
-        emissive,
-        emissiveIntensity: isHovered ? 0.25 : 0,
-      });
+      return {
+        material: getEditorTileMaterial(color, isHovered),
+        shared: true,
+      };
     }, [
       activeTool,
       canHighlightEditorAction,
@@ -159,9 +204,9 @@ export const EditorSphereTile: FC<EditorSphereTileProps> = memo(
 
     useEffect(
       () => () => {
-        material.dispose();
+        if (!shared) material.dispose();
       },
-      [material]
+      [material, shared]
     );
 
     const onPointerOver = useCallback(
@@ -187,21 +232,23 @@ export const EditorSphereTile: FC<EditorSphereTileProps> = memo(
       >
         {/* The visible slab: on the surface for land tiles, dropped to the
             basin floor for canyon tiles (the bowl bed). */}
-        <mesh position={[0, slabLocalY, 0]} material={material} receiveShadow>
-          <boxGeometry args={[tileSize, LEVEL_EDITOR_TILE_HEIGHT, tileSize]} />
-        </mesh>
+        <mesh
+          position={[0, slabLocalY, 0]}
+          geometry={getSlabGeometry(tileSize)}
+          material={material}
+          receiveShadow
+        />
 
         {/* Invisible hitbox at the surface: three raycasts it regardless of
             visibility, so a click over the (lowered) canyon still registers
             on this tile — mirroring the game's `CanyonTile`. */}
         <mesh
           visible={false}
+          geometry={getHitboxGeometry(tileSize)}
           onClick={onTileClick}
           onPointerOver={onPointerOver}
           onPointerOut={onPointerOut}
-        >
-          <boxGeometry args={[tileSize, LEVEL_EDITOR_TILE_HEIGHT + 0.2, tileSize]} />
-        </mesh>
+        />
       </group>
     );
   }

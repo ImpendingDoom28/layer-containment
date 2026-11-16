@@ -1,9 +1,11 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 import type { ThreeEvent } from "@react-three/fiber";
+import { MeshStandardMaterial, SphereGeometry } from "three";
 
 import { Bridge } from "../../entities/Bridge";
 import { CanyonBasin } from "../../entities/CanyonBasin";
+import { CanyonBoulders } from "../../entities/CanyonBoulders";
 import { CanyonTile } from "../../entities/CanyonTile";
 import { Path } from "../../entities/Path";
 import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
@@ -39,6 +41,12 @@ import { LevelEditorCamera } from "./LevelEditorCamera";
 import { EditorSphereTile } from "./EditorSphereTile";
 
 const BUILDING_OUTLINE_SCALE = 1.06;
+
+// One material per waypoint state (4 states) and per building base colour
+// instead of one per marker/instance; both are static for the scene's
+// lifetime.
+const waypointMaterialCache = new Map<string, MeshStandardMaterial>();
+const buildingBaseMaterialCache = new Map<string, MeshStandardMaterial>();
 
 const getWaypointColor = (
   isSelected: boolean,
@@ -146,6 +154,63 @@ export const LevelEditorScene = () => {
     [draftLevel.gridSize, tileSize]
   );
 
+  // Waypoint markers: one sphere per radius and one material per state
+  // (emissive intensity is the only state-dependent parameter).
+  const waypointGeometry = useMemo(
+    () => ({
+      default: new SphereGeometry(0.14, 16, 16),
+      selected: new SphereGeometry(0.2, 16, 16),
+    }),
+    []
+  );
+
+  const waypointMaterial = (
+    isSelected: boolean,
+    isEdgeWaypoint: boolean,
+    isInSelectedPath: boolean
+  ): MeshStandardMaterial => {
+    const key = `${isSelected ? 1 : 0}|${isEdgeWaypoint ? 1 : 0}|${
+      isInSelectedPath ? 1 : 0
+    }`;
+    const entry = waypointMaterialCache.get(key);
+    if (entry) return entry;
+    const material = new MeshStandardMaterial({
+      color: getWaypointColor(isSelected, isEdgeWaypoint, isInSelectedPath),
+      emissive: getWaypointColor(isSelected, isEdgeWaypoint, isInSelectedPath),
+      emissiveIntensity: isSelected ? 0.45 : 0.2,
+    });
+    waypointMaterialCache.set(key, material);
+    return material;
+  };
+
+  // The two building outlines (box and cylinder) draw the same wireframe, so
+  // they share one material instance.
+  const buildingOutlineMaterial = useMemo(
+    () =>
+      new MeshStandardMaterial({
+        color: getCssColorValue("editor-indicator-selected"),
+        wireframe: true,
+        transparent: true,
+        opacity: 0.8,
+      }),
+    []
+  );
+
+  const buildingBaseMaterial = (color: string): MeshStandardMaterial => {
+    const entry = buildingBaseMaterialCache.get(color);
+    if (entry) return entry;
+    const material = new MeshStandardMaterial({ color });
+    buildingBaseMaterialCache.set(color, material);
+    return material;
+  };
+
+  useEffect(
+    () => () => {
+      Object.values(waypointGeometry).forEach((g) => g.dispose());
+    },
+    [waypointGeometry]
+  );
+
   const tiles = useMemo(() => {
     const tileEntries: Array<{ gridX: number; gridZ: number }> = [];
 
@@ -188,6 +253,12 @@ export const LevelEditorScene = () => {
           water and buildings are all placed on the sphere surface. */}
       <Ground gridSize={draftLevel.gridSize} canyons={draftLevel.canyons} />
       <CanyonBasin canyons={draftLevel.canyons} gridSize={draftLevel.gridSize} />
+      <CanyonBoulders
+        canyons={draftLevel.canyons}
+        gridSize={draftLevel.gridSize}
+        tileSize={tileSize}
+        canyonBBox={canyonBBox}
+      />
 
       <group>
         {tiles.map(({ gridX, gridZ }) => {
@@ -316,11 +387,6 @@ export const LevelEditorScene = () => {
                   selected.waypointIndex === waypointIndex;
                 const isEdgeWaypoint =
                   waypointIndex === 0 || waypointIndex === path.length - 1;
-                const color = getWaypointColor(
-                  isSelectedWaypoint,
-                  isEdgeWaypoint,
-                  isSelectedPath
-                );
                 const { surfacePoint, normal } = flatFieldToSphereSurface(
                   waypoint.x,
                   waypoint.z,
@@ -336,20 +402,21 @@ export const LevelEditorScene = () => {
                     key={`editor-path-${pathIndex}-waypoint-${waypointIndex}`}
                     position={position}
                     quaternion={getSurfaceQuaternion(normal)}
+                    geometry={
+                      isSelectedWaypoint
+                        ? waypointGeometry.selected
+                        : waypointGeometry.default
+                    }
+                    material={waypointMaterial(
+                      isSelectedWaypoint,
+                      isEdgeWaypoint,
+                      isSelectedPath
+                    )}
                     onClick={(event: ThreeEvent<MouseEvent>) => {
                       event.stopPropagation();
                       selectWaypoint(pathIndex, waypointIndex);
                     }}
-                  >
-                    <sphereGeometry
-                      args={[isSelectedWaypoint ? 0.2 : 0.14, 16, 16]}
-                    />
-                    <meshStandardMaterial
-                      color={color}
-                      emissive={color}
-                      emissiveIntensity={isSelectedWaypoint ? 0.45 : 0.2}
-                    />
-                  </mesh>
+                  />
                 );
               })}
             </group>
@@ -401,14 +468,19 @@ export const LevelEditorScene = () => {
             >
               {building.shape === "box" ? (
                 <>
-                  <mesh position={[0, yPosition, 0]}>
+                  <mesh
+                    position={[0, yPosition, 0]}
+                    material={buildingBaseMaterial(building.color)}
+                  >
                     <boxGeometry
                       args={[building.width, building.height, building.depth]}
                     />
-                    <meshStandardMaterial color={building.color} />
                   </mesh>
                   {isSelectedBuilding ? (
-                    <mesh position={[0, yPosition, 0]}>
+                    <mesh
+                      position={[0, yPosition, 0]}
+                      material={buildingOutlineMaterial}
+                    >
                       <boxGeometry
                         args={[
                           building.width * BUILDING_OUTLINE_SCALE,
@@ -416,18 +488,15 @@ export const LevelEditorScene = () => {
                           building.depth * BUILDING_OUTLINE_SCALE,
                         ]}
                       />
-                      <meshStandardMaterial
-                        color={getCssColorValue("editor-indicator-selected")}
-                        wireframe
-                        transparent
-                        opacity={0.8}
-                      />
                     </mesh>
                   ) : null}
                 </>
               ) : (
                 <>
-                  <mesh position={[0, yPosition, 0]}>
+                  <mesh
+                    position={[0, yPosition, 0]}
+                    material={buildingBaseMaterial(building.color)}
+                  >
                     <cylinderGeometry
                       args={[
                         building.width / 2,
@@ -436,10 +505,12 @@ export const LevelEditorScene = () => {
                         16,
                       ]}
                     />
-                    <meshStandardMaterial color={building.color} />
                   </mesh>
                   {isSelectedBuilding ? (
-                    <mesh position={[0, yPosition, 0]}>
+                    <mesh
+                      position={[0, yPosition, 0]}
+                      material={buildingOutlineMaterial}
+                    >
                       <cylinderGeometry
                         args={[
                           (building.width / 2) * BUILDING_OUTLINE_SCALE,
@@ -447,12 +518,6 @@ export const LevelEditorScene = () => {
                           building.height * BUILDING_OUTLINE_SCALE,
                           16,
                         ]}
-                      />
-                      <meshStandardMaterial
-                        color={getCssColorValue("editor-indicator-selected")}
-                        wireframe
-                        transparent
-                        opacity={0.8}
                       />
                     </mesh>
                   ) : null}

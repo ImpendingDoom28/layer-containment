@@ -1,7 +1,47 @@
 import { FC, memo } from "react";
-import { Quaternion } from "three";
+import { MeshBasicMaterial, Quaternion, RingGeometry } from "three";
 
 const DEFAULT_POSITION: [number, number, number] = [0, 0, 0];
+
+// At most two live instances at a time (the selected tower and the placement
+// preview), so the ring geometry and material are shared per varying-prop set
+// instead of allocated per mount (never disposed — the scene's lifetime).
+const rangeRingGeometryCache = new Map<string, RingGeometry>();
+const getRangeRingGeometry = (
+  range: number,
+  innerRadiusFraction: number,
+  radialSegments: number
+): RingGeometry => {
+  const key = `${range}|${innerRadiusFraction}|${radialSegments}`;
+  const entry = rangeRingGeometryCache.get(key);
+  if (entry) return entry;
+  const geometry = new RingGeometry(
+    range * innerRadiusFraction,
+    range,
+    radialSegments
+  );
+  rangeRingGeometryCache.set(key, geometry);
+  return geometry;
+};
+
+const rangeRingMaterialCache = new Map<string, MeshBasicMaterial>();
+const getRangeRingMaterial = (
+  color: string,
+  opacity: number
+): MeshBasicMaterial => {
+  const key = `${color}|${opacity}`;
+  const entry = rangeRingMaterialCache.get(key);
+  if (entry) return entry;
+  const material = new MeshBasicMaterial({
+    color,
+    transparent: true,
+    opacity,
+    side: 2,
+    depthWrite: false,
+  });
+  rangeRingMaterialCache.set(key, material);
+  return material;
+};
 
 type RangeRingProps = {
   range: number;
@@ -40,17 +80,10 @@ export const RangeRing: FC<RangeRingProps> = memo(
       position={position}
       rotation={quaternion ? undefined : (rotation ?? [-Math.PI / 2, 0, 0])}
       quaternion={quaternion}
+      geometry={getRangeRingGeometry(range, innerRadiusFraction, radialSegments)}
+      material={getRangeRingMaterial(color, opacity)}
       raycast={() => null}
-    >
-      <ringGeometry args={[range * innerRadiusFraction, range, radialSegments]} />
-      <meshBasicMaterial
-        color={color}
-        transparent
-        opacity={opacity}
-        side={2}
-        depthWrite={false}
-      />
-    </mesh>
+    />
   )
 );
 

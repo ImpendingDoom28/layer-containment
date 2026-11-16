@@ -1,7 +1,7 @@
-import { FC, useRef, useEffect, useMemo, memo } from "react";
+import { FC, useEffect, useMemo, useRef, memo } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Color } from "three";
-import type { Group, Mesh, MeshStandardMaterial, Quaternion } from "three";
+import { Color, CylinderGeometry, MeshStandardMaterial, SphereGeometry } from "three";
+import type { Group, Mesh, Quaternion } from "three";
 
 import { useSimulationClock } from "../../core/contexts/SimulationClockContext";
 import { useReducedMotion } from "../../core/hooks/useReducedMotion";
@@ -11,6 +11,23 @@ import { getCssColorValue } from "../ui/lib/cssUtils";
 // 1 keeps a clear green base, 3 reads as hot orange.
 const REINFORCEMENT_TINT_MAX = 0.85;
 const ORANGE_TINT = new Color("#f59e0b");
+
+// All 12 orbiting particles share one geometry (identical args) and one
+// material (their props never mutate per frame), so neither is allocated per
+// particle.
+const PARTICLE_GEOMETRY = new SphereGeometry(0.03, 8, 8);
+
+// The base disc's props are constant (no per-frame writes), so the geometry
+// and material are module-level and shared across every portal.
+const BASE_DISC_GEOMETRY = new CylinderGeometry(0.45, 0.45, 0.05, 16);
+const baseDiscMaterial: MeshStandardMaterial | null =
+  typeof document === "undefined"
+    ? null
+    : new MeshStandardMaterial({
+        color: getCssColorValue("scene-gray-700"),
+        emissive: getCssColorValue("scene-gray-800"),
+        emissiveIntensity: 0.1,
+      });
 
 // The portal's entrance: after the level's comet strikes the ground, the
 // portal grows out of the rock over this window (ease-out, from a collapsed
@@ -55,7 +72,12 @@ export const Portal: FC<PortalProps> = memo(
     const middleRingRef = useRef<Mesh>(null);
     const innerRingRef = useRef<Mesh>(null);
     const portalCoreRef = useRef<Mesh>(null);
-    const particlesRef = useRef<(Mesh | null)[]>([]);
+    // Initialized with the full (null) list so all 12 particles mount on the
+    // first render — mapping over a ref that a post-commit effect fills in
+    // produced 0 of them (no re-render happens).
+    const particlesRef = useRef<(Mesh | null)[]>(
+      Array.from({ length: 12 }, () => null)
+    );
     const groupRef = useRef<Group>(null);
     const indicatorRefs = useRef<(Mesh | null)[]>([]);
     const animTimeRef = useRef(0);
@@ -84,10 +106,6 @@ export const Portal: FC<PortalProps> = memo(
     // of the world.
     const { getTimeScale } = useSimulationClock();
     const reducedMotion = useReducedMotion();
-
-    useEffect(() => {
-      particlesRef.current = Array.from({ length: 12 }, () => null);
-    }, []);
 
     useFrame((_, delta) => {
       const dt = delta * getTimeScale();
@@ -237,6 +255,26 @@ export const Portal: FC<PortalProps> = memo(
       [tint]
     );
 
+    // One material for all 12 particles (their props never change per frame);
+    // per-portal because the glow tracks the reinforcements tier.
+    const particleMaterial = useMemo(
+      () =>
+        new MeshStandardMaterial({
+          color: portalColor,
+          emissive: portalGlow,
+          emissiveIntensity: 1,
+          transparent: true,
+          opacity: 0.8,
+        }),
+      [portalColor, portalGlow]
+    );
+
+    useEffect(() => {
+      return () => {
+        particleMaterial.dispose();
+      };
+    }, [particleMaterial]);
+
     return (
       <group
         ref={groupRef}
@@ -298,16 +336,9 @@ export const Portal: FC<PortalProps> = memo(
             ref={(el) => {
               if (el) particlesRef.current[index] = el;
             }}
-          >
-            <sphereGeometry args={[0.03, 8, 8]} />
-            <meshStandardMaterial
-              color={portalColor}
-              emissive={portalGlow}
-              emissiveIntensity={1}
-              transparent
-              opacity={0.8}
-            />
-          </mesh>
+            geometry={PARTICLE_GEOMETRY}
+            material={particleMaterial}
+          />
         ))}
 
         {reinforcementTier > 0 &&
@@ -331,14 +362,14 @@ export const Portal: FC<PortalProps> = memo(
             </mesh>
           ))}
 
-        <mesh position={[0, -0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.45, 0.45, 0.05, 16]} />
-          <meshStandardMaterial
-            color={getCssColorValue("scene-gray-700")}
-            emissive={getCssColorValue("scene-gray-800")}
-            emissiveIntensity={0.1}
+        {baseDiscMaterial && (
+          <mesh
+            position={[0, -0.05, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            geometry={BASE_DISC_GEOMETRY}
+            material={baseDiscMaterial}
           />
-        </mesh>
+        )}
       </group>
     );
   },

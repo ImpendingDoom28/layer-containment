@@ -1,6 +1,13 @@
 import { FC, memo, useLayoutEffect, useMemo, useRef } from "react";
 
-import { Color, Mesh, Quaternion, Vector3 } from "three";
+import {
+  Color,
+  MeshBasicMaterial,
+  Mesh,
+  PlaneGeometry,
+  Quaternion,
+  Vector3,
+} from "three";
 
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import {
@@ -31,6 +38,26 @@ const PLACEMENT_OVERLAY_Y_EPSILON = 0.018;
 const PLANE_INSET = 0.98;
 const OVERLAY_OPACITY_BUFF = 0.38;
 const OVERLAY_OPACITY_FOOTPRINT = 0.22;
+
+// The preview renders at most four cells with one of two (color, opacity)
+// pairs, so the planes share one unit geometry and two materials.
+const unitPlane = new PlaneGeometry(1, 1);
+const overlayMaterialCache = new Map<string, MeshBasicMaterial>();
+
+const getOverlayMaterial = (color: string, opacity: number) => {
+  const key = `${color}|${opacity}`;
+  const entry = overlayMaterialCache.get(key);
+  if (entry) return entry;
+  const material = new MeshBasicMaterial({
+    color,
+    transparent: true,
+    opacity,
+    depthWrite: false,
+    depthTest: true,
+  });
+  overlayMaterialCache.set(key, material);
+  return material;
+};
 
 const NEIGHBOR_OFFSETS: ReadonlyArray<readonly [number, number]> = [
   [1, 0],
@@ -273,16 +300,14 @@ const OverlayPlane: FC<OverlayPlaneProps> = memo(
     }, []);
 
     return (
-      <mesh ref={meshRef} position={position} quaternion={quaternion}>
-        <planeGeometry args={[planeSize, planeSize]} />
-        <meshBasicMaterial
-          color={color}
-          transparent
-          opacity={opacity}
-          depthWrite={false}
-          depthTest
-        />
-      </mesh>
+      <mesh
+        ref={meshRef}
+        position={position}
+        quaternion={quaternion}
+        scale={planeSize}
+        geometry={unitPlane}
+        material={getOverlayMaterial(color, opacity)}
+      />
     );
   }
 );

@@ -1,5 +1,5 @@
 import { forwardRef, memo } from "react";
-import type { Mesh } from "three";
+import type { BufferGeometry, Material, Mesh } from "three";
 
 type EmissiveTorusProps = {
   torusArgs: [number, number, number, number];
@@ -9,6 +9,10 @@ type EmissiveTorusProps = {
   color: string;
   emissiveIntensity: number;
   opacity: number;
+  /** Shared geometry (e.g. a module-level singleton); omit to build one. */
+  geometry?: BufferGeometry;
+  /** Shared material; omit to build one. */
+  material?: Material;
 };
 
 export const EmissiveTorus = memo(
@@ -22,6 +26,8 @@ export const EmissiveTorus = memo(
         color,
         emissiveIntensity,
         opacity,
+        geometry,
+        material,
       },
       ref
     ) => {
@@ -35,15 +41,19 @@ export const EmissiveTorus = memo(
           position={position}
           rotation={rotation}
           scale={scaleTuple}
+          geometry={geometry}
+          material={material}
         >
-          <torusGeometry args={torusArgs} />
-          <meshStandardMaterial
-            color={color}
-            emissive={color}
-            emissiveIntensity={emissiveIntensity}
-            transparent
-            opacity={opacity}
-          />
+          {!geometry && <torusGeometry args={torusArgs} />}
+          {!material && (
+            <meshStandardMaterial
+              color={color}
+              emissive={color}
+              emissiveIntensity={emissiveIntensity}
+              transparent
+              opacity={opacity}
+            />
+          )}
         </mesh>
       );
     }

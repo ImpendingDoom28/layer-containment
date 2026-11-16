@@ -10,7 +10,14 @@ import {
 } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import type { Group, Object3D } from "three";
-import { CylinderGeometry, MeshStandardMaterial } from "three";
+import {
+  CylinderGeometry,
+  MeshStandardMaterial,
+  SphereGeometry,
+  TorusKnotGeometry,
+  type BufferGeometry,
+} from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 import type { Tower as TowerInstance } from "../../core/types/game";
 import { GUIDebugInfo } from "../gui/GUIDebugInfo";
@@ -61,6 +68,28 @@ const syncSharedMaterials = () => {
   baseMaterial.color.set(color);
   basePreviewMaterial.color.set(color);
   materialsInitialized = true;
+};
+
+// One base cylinder per (radius, height): every tower instance with the same
+// level config shares the buffers instead of each allocating its own.
+let baseGeometry: CylinderGeometry | null = null;
+let baseGeometryKey: string | null = null;
+const getBaseGeometry = (
+  towerBaseRadius: number,
+  towerHeight: number
+): CylinderGeometry => {
+  const key = `${towerBaseRadius}|${towerHeight}`;
+  if (!baseGeometry || baseGeometryKey !== key) {
+    baseGeometry?.dispose();
+    baseGeometry = new CylinderGeometry(
+      towerBaseRadius,
+      towerBaseRadius * 1.2,
+      towerHeight * 0.3,
+      16
+    );
+    baseGeometryKey = key;
+  }
+  return baseGeometry;
 };
 
 type TowerProps = {
@@ -115,11 +144,6 @@ export const Tower: FC<TowerProps> = memo(
     // appears at rest instantly).
     const reducedMotion = useReducedMotion();
     const towerBasePosition: Vector3D = [0, towerBaseRadius, 0];
-    const towerBodyPosition: Vector3D = [
-      0,
-      towerHeight * 0.3 + towerHeight * 0.35,
-      0,
-    ];
 
     const groupRef = useRef<Group>(null);
     // The model's rotating turret node, kept locally for the firing feedback
@@ -220,17 +244,7 @@ export const Tower: FC<TowerProps> = memo(
       [isPreview, tower, onTurretNode]
     );
 
-    // Memoize base geometry to avoid recreation on each render
-    const baseGeometry = useMemo(
-      () =>
-        new CylinderGeometry(
-          towerBaseRadius,
-          towerBaseRadius * 1.2,
-          towerHeight * 0.3,
-          16
-        ),
-      [towerBaseRadius, towerHeight]
-    );
+    const sharedBaseGeometry = getBaseGeometry(towerBaseRadius, towerHeight);
 
     const footing = useMemo(() => {
       const r = getPlanetRadius(gridSize, tileSize);
@@ -288,91 +302,114 @@ export const Tower: FC<TowerProps> = memo(
       topY = bodyTopY + topHeight / 2;
     }
 
-    const towerTop = (
-      <>
-        {topShape === "cone" && (
-          <coneGeometry
-            args={[
+    // The body and the top share the tower colour, so the fallback renders
+    // them as one baked mesh per tower instead of two (the body's emissive
+    // values are applied to the merged material); the base keeps its shared
+    // material. The merge is keyed on the body/top dimensions and is
+    // re-disposed only when those change.
+    const bodyCenterY = towerHeight * 0.3 + towerHeight * 0.35;
+    const mergedBodyTop = useMemo(() => {
+      const parts: BufferGeometry[] = [
+        new CylinderGeometry(bodyRadius, bodyRadius, towerHeight * 0.7, 16).translate(
+          0,
+          bodyCenterY,
+          0
+        ),
+      ];
+      const bake = (geometry: BufferGeometry): BufferGeometry =>
+        geometry.translate(0, topY, 0);
+      if (topShape === "cone") {
+        parts.push(
+          bake(
+            new CylinderGeometry(
+              0,
               towerBaseRadius * 0.6 * topScale,
               towerHeight * 0.3 * topScale,
-              8,
-            ]}
-          />
-        )}
-        {topShape === "sphere" && (
-          <sphereGeometry args={[towerBaseRadius * 0.4 * topScale, 16, 16]} />
-        )}
-        {topShape === "cylinder" && (
-          <cylinderGeometry
-            args={[
+              8
+            )
+          )
+        );
+      } else if (topShape === "sphere") {
+        parts.push(
+          bake(new SphereGeometry(towerBaseRadius * 0.4 * topScale, 16, 16))
+        );
+      } else if (topShape === "cylinder") {
+        parts.push(
+          bake(
+            new CylinderGeometry(
               towerBaseRadius * 0.6 * topScale,
               towerBaseRadius * 0.6 * topScale,
               towerHeight * 0.2 * topScale,
-              16,
-            ]}
-          />
-        )}
-        {topShape === "flat" && (
-          <cylinderGeometry
-            args={[
+              16
+            )
+          )
+        );
+      } else if (topShape === "flat") {
+        parts.push(
+          bake(
+            new CylinderGeometry(
               towerBaseRadius * 0.8 * topScale,
               towerBaseRadius * 0.8 * topScale,
               towerHeight * 0.1 * topScale,
-              16,
-            ]}
-          />
-        )}
-        {topShape === "coil" && (
-          <torusKnotGeometry
-            args={[
+              16
+            )
+          )
+        );
+      } else {
+        parts.push(
+          bake(
+            new TorusKnotGeometry(
               towerBaseRadius * 0.3 * topScale,
               towerBaseRadius * 0.1 * topScale,
               64,
-              8,
-            ]}
-          />
-        )}
-      </>
+              8
+            )
+          )
+        );
+      }
+      const merged = mergeGeometries(parts);
+      parts.forEach((part) => part.dispose());
+      return merged;
+    }, [bodyRadius, bodyCenterY, topShape, topScale, topY, towerBaseRadius, towerHeight]);
+
+    useEffect(() => {
+      return () => {
+        mergedBodyTop.dispose();
+      };
+    }, [mergedBodyTop]);
+
+    const bodyTopMaterial = useMemo(
+      () =>
+        new MeshStandardMaterial({
+          color: towerColor,
+          emissive: towerColor,
+          emissiveIntensity: previewEmissiveIntensity,
+          transparent: isPreview,
+          opacity: previewOpacity,
+        }),
+      [towerColor, previewEmissiveIntensity, isPreview, previewOpacity]
     );
 
-    // The primitive base + body + top. The placement preview is the 3D model
-    // itself (a translucent, colour-coded ghost — see TowerModel's "preview" /
-    // "invalid" variant); this primitive only survives as the load-failure
-    // fallback for the 3D model below.
+    useEffect(() => {
+      return () => {
+        bodyTopMaterial.dispose();
+      };
+    }, [bodyTopMaterial]);
+
+    // The primitive base + merged body/top. The placement preview is the 3D
+    // model itself (a translucent, colour-coded ghost — see TowerModel's
+    // "preview" / "invalid" variant); this primitive only survives as the
+    // load-failure fallback for the 3D model below.
     const towerBody = (
       <>
-        {/* Tower base */}
         <mesh
           position={towerBasePosition}
-          geometry={baseGeometry}
+          geometry={sharedBaseGeometry}
           material={isPreview ? basePreviewMaterial : baseMaterial}
           castShadow
           receiveShadow
         />
-
-        {/* Tower body */}
-        <mesh position={towerBodyPosition} castShadow receiveShadow>
-          <cylinderGeometry
-            args={[bodyRadius, bodyRadius, towerHeight * 0.7, 16]}
-          />
-          <meshStandardMaterial
-            color={towerColor}
-            emissive={towerColor}
-            emissiveIntensity={previewEmissiveIntensity}
-            transparent={isPreview}
-            opacity={previewOpacity}
-          />
-        </mesh>
-
-        {/* Tower top */}
-        <mesh position={[0, topY, 0]} castShadow receiveShadow>
-          {towerTop}
-          <meshStandardMaterial
-            color={towerColor}
-            transparent={isPreview}
-            opacity={previewOpacity}
-          />
-        </mesh>
+        <mesh geometry={mergedBodyTop} material={bodyTopMaterial} castShadow receiveShadow />
       </>
     );
 

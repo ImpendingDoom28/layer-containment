@@ -1,14 +1,21 @@
 import { useFrame } from "@react-three/fiber";
-import { FC, memo, useMemo, useRef } from "react";
+import { FC, memo, useEffect, useMemo, useRef } from "react";
 import {
   AdditiveBlending,
   CanvasTexture,
   DoubleSide,
+  Euler,
+  Matrix4,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  Quaternion,
+  SphereGeometry,
+  Vector3,
+  type BufferGeometry,
   type Group,
   type Mesh,
 } from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { useSimulationClock } from "../../../core/contexts/SimulationClockContext";
 import {
   enemyUpgradesSelector,
@@ -133,6 +140,46 @@ const STRAP_MATERIAL = new MeshBasicMaterial({
 });
 if (STRAP_FADE_TEXTURE) STRAP_MATERIAL.map = STRAP_FADE_TEXTURE;
 
+// The rising regen particles are small enough that one shared 0.06-radius
+// sphere covers every tier; it is not disposed.
+const REGEN_PARTICLE_GEOMETRY = new SphereGeometry(0.06, 8, 8);
+
+const _mergeM = new Matrix4();
+const _mergeQ = new Quaternion();
+const _mergeS = new Vector3(1, 1, 1);
+const _mergeP = new Vector3();
+const _mergeE = new Euler();
+
+// Bake a per-part transform into a copy of a shared geometry and merge the
+// parts into one static geometry (the Bridge pattern): the shared sources are
+// only read, the temp copies are disposed after the merge, and the merged
+// geometry is the caller's to dispose on rebuild/unmount.
+const mergeBaked = (
+  parts: {
+    geometry: BufferGeometry;
+    position: [number, number, number];
+    rotation: [number, number, number];
+    scale: [number, number, number];
+  }[]
+): BufferGeometry => {
+  const baked = parts.map(({ geometry, position, rotation, scale }) =>
+    geometry
+      .clone()
+      .applyMatrix4(
+        _mergeM.compose(
+          _mergeP.set(position[0], position[1], position[2]),
+          _mergeQ.setFromEuler(
+            _mergeE.set(rotation[0], rotation[1], rotation[2])
+          ),
+          _mergeS.set(scale[0], scale[1], scale[2])
+        )
+      )
+  );
+  const merged = mergeGeometries(baked);
+  baked.forEach((part) => part.dispose());
+  return merged;
+};
+
 type EffectLayout = {
   hasShield: boolean;
   shieldTier: number;
@@ -236,13 +283,105 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
     const glowRef = useRef<Mesh>(null);
     const ghostRef = useRef<Mesh>(null);
     const ringRef = useRef<Mesh>(null);
-    const strapRefs = useRef<(Mesh | null)[]>([]);
     const particleRefs = useRef<(Mesh | null)[]>([]);
 
     const layout = useMemo(
       () => buildEffectLayout(upgradeStacks, enemyUpgrades),
       [upgradeStacks, enemyUpgrades]
     );
+
+    // The shield plates are static relative to the direction group (the
+    // group carries the per-frame motion), so their per-plate transforms are
+    // baked into one merged geometry per (tier, size) — one draw call instead
+    // of one per plate. Same for the swift straps, which sit at constant
+    // offsets in the group.
+    const shieldGeometry = useMemo(() => {
+      if (!layout.hasShield) return null;
+      const tier = layout.shieldTier;
+      const placements: {
+        position: [number, number, number];
+        scale: [number, number, number];
+      }[] = [];
+      if (tier === 1) {
+        placements.push({
+          position: [enemySize * 1.15, 0.48 * enemySize, 0],
+          scale: [enemySize * 0.7, enemySize * 0.95, enemySize * 0.5],
+        });
+      } else if (tier === 2) {
+        placements.push(
+          {
+            position: [enemySize * 1.1, 0.38 * enemySize, -0.45 * enemySize],
+            scale: [enemySize * 0.55, enemySize * 0.75, enemySize * 0.5],
+          },
+          {
+            position: [enemySize * 1.1, 0.38 * enemySize, 0.45 * enemySize],
+            scale: [enemySize * 0.55, enemySize * 0.75, enemySize * 0.5],
+          }
+        );
+      } else {
+        placements.push(
+          {
+            position: [enemySize * 1.15, 0.48 * enemySize, 0],
+            scale: [enemySize * 0.7, enemySize * 0.95, enemySize * 0.5],
+          },
+          {
+            position: [enemySize * 1.05, 0.35 * enemySize, -0.64 * enemySize],
+            scale: [enemySize * 0.55, enemySize * 0.7, enemySize * 0.5],
+          },
+          {
+            position: [enemySize * 1.05, 0.35 * enemySize, 0.64 * enemySize],
+            scale: [enemySize * 0.55, enemySize * 0.7, enemySize * 0.5],
+          }
+        );
+      }
+      return mergeBaked(
+        placements.map((placement) => ({
+          geometry: SHIELD_PLATE_GEOMETRY,
+          position: placement.position,
+          // Plate normal (local +z) rotated to the travel direction so the
+          // shield face is perpendicular to the path.
+          rotation: [0, Math.PI / 2, 0] as [number, number, number],
+          scale: placement.scale,
+        }))
+      );
+    }, [layout.hasShield, layout.shieldTier, enemySize]);
+
+    const strapGeometry = useMemo(() => {
+      if (!layout.hasSwift) return null;
+      const tier = layout.swiftTier;
+      return mergeBaked(
+        Array.from({ length: tier }, (_, index) => ({
+          geometry: STRAP_PLANE_GEOMETRY,
+          // Flat ribbon just above the ground (the feet plane is y = 0),
+          // trailing behind the body along the travel direction; the per-tier
+          // z-spread was previously driven per frame, but the offsets are
+          // constant per tier.
+          position: [
+            -1.0 * enemySize,
+            0.04 * enemySize,
+            (index - (tier - 1) / 2) * enemySize * 0.6,
+          ] as [number, number, number],
+          rotation: [Math.PI / 2, 0, 0] as [number, number, number],
+          scale: [
+            2.6 * enemySize,
+            0.55 * enemySize,
+            1,
+          ] as [number, number, number],
+        }))
+      );
+    }, [layout.hasSwift, layout.swiftTier, enemySize]);
+
+    useEffect(() => {
+      return () => {
+        shieldGeometry?.dispose();
+      };
+    }, [shieldGeometry]);
+
+    useEffect(() => {
+      return () => {
+        strapGeometry?.dispose();
+      };
+    }, [strapGeometry]);
 
     useFrame((_, delta) => {
       const scaledDelta = delta * getTimeScale();
@@ -299,98 +438,26 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
         }
       }
 
-      if (layout.hasShield || layout.hasSwift) {
-        // The parent enemy group is already oriented along the path (local
-        // +x = travel direction, +y = surface normal), so the shield plates
-        // sit on the +x side (in front) and the swift straps trail on the -x
-        // side without any extra orientation work.
-        for (let i = 0; i < layout.swiftTier; i++) {
-          const strap = strapRefs.current[i];
-          if (!strap) continue;
-          const offset = (i - (layout.swiftTier - 1) / 2) * enemySize * 0.6;
-          // Flat ribbon just above the ground (the feet plane is y = 0),
-          // trailing behind the body along the travel direction; u fades
-          // toward the tail.
-          strap.position.set(-1.0 * enemySize, 0.04 * enemySize, offset);
-        }
-      }
     });
 
     if (upgradeStacks.length === 0) return null;
 
-    // Shield plates stand on the ground (the feet plane is y = 0, so the
-    // center sits at half the plate height) in front of the body, on the +x
-    // side of the direction group (which faces the travel direction).
-    const shieldPlacements: {
-      position: [number, number, number];
-      scale: [number, number, number];
-    }[] = [];
-    if (layout.hasShield) {
-      const tier = layout.shieldTier;
-      if (tier === 1) {
-        shieldPlacements.push({
-          position: [enemySize * 1.15, 0.48 * enemySize, 0],
-          scale: [enemySize * 0.7, enemySize * 0.95, enemySize * 0.5],
-        });
-      } else if (tier === 2) {
-        shieldPlacements.push(
-          {
-            position: [enemySize * 1.1, 0.38 * enemySize, -0.45 * enemySize],
-            scale: [enemySize * 0.55, enemySize * 0.75, enemySize * 0.5],
-          },
-          {
-            position: [enemySize * 1.1, 0.38 * enemySize, 0.45 * enemySize],
-            scale: [enemySize * 0.55, enemySize * 0.75, enemySize * 0.5],
-          }
-        );
-      } else {
-        shieldPlacements.push(
-          {
-            position: [enemySize * 1.15, 0.48 * enemySize, 0],
-            scale: [enemySize * 0.7, enemySize * 0.95, enemySize * 0.5],
-          },
-          {
-            position: [enemySize * 1.05, 0.35 * enemySize, -0.64 * enemySize],
-            scale: [enemySize * 0.55, enemySize * 0.7, enemySize * 0.5],
-          },
-          {
-            position: [enemySize * 1.05, 0.35 * enemySize, 0.64 * enemySize],
-            scale: [enemySize * 0.55, enemySize * 0.7, enemySize * 0.5],
-          }
-        );
-      }
-    }
-
     return (
       <group>
-        {(layout.hasShield || layout.hasSwift) && (
+        {/* The parent enemy group is already oriented along the path (local
+            +x = travel direction, +y = surface normal), so the shield plates
+            sit on the +x side (in front) and the swift straps trail on the
+            -x side; their constant per-tier offsets are baked into the merged
+            geometries above, so the direction group needs no per-frame work. */}
+        {(shieldGeometry || strapGeometry) && (
           <group ref={dirGroupRef}>
-            {layout.hasShield &&
-              shieldPlacements.map((placement, index) => (
-                <mesh
-                  key={`shield-${index}`}
-                  position={placement.position}
-                  // Plate normal (local +z) rotated to the travel direction so
-                  // the shield face is perpendicular to the path.
-                  rotation={[0, Math.PI / 2, 0]}
-                  scale={placement.scale}
-                  geometry={SHIELD_PLATE_GEOMETRY}
-                  material={getEmissiveMaterial(layout.shieldColor, 0.95, 0.9)}
-                />
-              ))}
-            {layout.hasSwift &&
-              Array.from({ length: layout.swiftTier }, (_, index) => (
-                <mesh
-                  key={`strap-${index}`}
-                  ref={(el) => {
-                    if (el) strapRefs.current[index] = el;
-                  }}
-                  rotation={[Math.PI / 2, 0, 0]}
-                  scale={[2.6 * enemySize, 0.55 * enemySize, 1]}
-                  geometry={STRAP_PLANE_GEOMETRY}
-                  material={STRAP_MATERIAL}
-                />
-              ))}
+            {shieldGeometry && (
+              <mesh
+                geometry={shieldGeometry}
+                material={getEmissiveMaterial(layout.shieldColor, 0.95, 0.9)}
+              />
+            )}
+            {strapGeometry && <mesh geometry={strapGeometry} material={STRAP_MATERIAL} />}
           </group>
         )}
 
@@ -446,6 +513,7 @@ export const UpgradeEffect: FC<UpgradeEffectProps> = memo(
                   if (el) particleRefs.current[index] = el;
                 }}
                 radius={0.06}
+                geometry={REGEN_PARTICLE_GEOMETRY}
                 color={layout.regenColor}
                 emissiveIntensity={1.5}
                 opacity={0.9}

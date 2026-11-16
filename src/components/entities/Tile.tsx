@@ -9,7 +9,7 @@ import {
 } from "react";
 
 import type { ThreeEvent } from "@react-three/fiber";
-import { Mesh, MeshStandardMaterial, Vector3 } from "three";
+import { BoxGeometry, Mesh, MeshStandardMaterial, Vector3 } from "three";
 
 import {
   flatFieldToSphereTilePose,
@@ -40,6 +40,74 @@ import { useWaterClock } from "../../core/contexts/WaterClockContext";
 import { freezeSubtree } from "../../utils/freezeSubtree";
 
 type PlacementHoverKey = "idle" | "canPlace" | "cannotPlace";
+
+// One geometry per slab shape, shared across all tiles of a level. The water
+// slab is subdivided on its top face so the vertex displacement has vertices
+// to swell; the non-water slab stays a single-segment box.
+const slabGeometryCache = new Map<string, BoxGeometry>();
+const getSlabGeometry = (
+  tileSize: number,
+  pathYOffset: number,
+  subdivided: boolean
+): BoxGeometry => {
+  const key = `${subdivided ? 1 : 0}|${tileSize}x${pathYOffset}`;
+  const entry = slabGeometryCache.get(key);
+  if (entry) return entry;
+  const geometry = new BoxGeometry(
+    tileSize,
+    pathYOffset,
+    tileSize,
+    subdivided ? 8 : undefined,
+    1,
+    subdivided ? 8 : undefined
+  );
+  slabGeometryCache.set(key, geometry);
+  return geometry;
+};
+
+// The hover tints and the path-land material are identical on every tile that
+// shows them, so each is a single lazy shared instance (never disposed — the
+// scene's lifetime). The water hover tints differ from the land ones in
+// metalness/roughness to keep the wet look under the tint.
+const sharedTileMaterialCache = new Map<string, MeshStandardMaterial>();
+const getSharedTileMaterial = (key: string, params: ConstructorParameters<typeof MeshStandardMaterial>[0]): MeshStandardMaterial => {
+  const entry = sharedTileMaterialCache.get(key);
+  if (entry) return entry;
+  const material = new MeshStandardMaterial(params);
+  sharedTileMaterialCache.set(key, material);
+  return material;
+};
+
+const getLandHoverMaterial = (key: "canPlace" | "cannotPlace") => {
+  const c = getCssColorValue(key === "canPlace" ? "primary" : "destructive");
+  return getSharedTileMaterial(`land-${key}`, {
+    color: c,
+    emissive: c,
+    emissiveIntensity: 0.45,
+    metalness: 0.05,
+    roughness: 0.75,
+  });
+};
+
+const getWaterHoverMaterial = (key: "canPlace" | "cannotPlace") => {
+  const c = getCssColorValue(key === "canPlace" ? "primary" : "destructive");
+  return getSharedTileMaterial(`water-${key}`, {
+    color: c,
+    emissive: c,
+    emissiveIntensity: 0.35,
+    metalness: 0.35,
+    roughness: 0.22,
+  });
+};
+
+const getSharedPathLandMaterial = () =>
+  getSharedTileMaterial("path-land", {
+    color: getCssColorValue("scene-gray-700"),
+    emissive: getCssColorValue("scene-black"),
+    emissiveIntensity: 0,
+    metalness: 0.05,
+    roughness: 0.88,
+  });
 
 type TileProps = {
   gridX: number;
@@ -93,10 +161,6 @@ export const Tile: FC<TileProps> = memo(
       return canPlace ? "canPlace" : "cannotPlace";
     }, [isHovered, canPlace]);
 
-    // Water tiles get a subdivided box (8×8 top-face grid) so the vertex
-    // displacement has enough vertices to swell; the 4 corners of a plain box
-    // could only tilt. Non-water (or hover) tiles stay a single-segment box.
-    const WATER_TOP_SEGMENTS = 8;
     // The tile's top face (the shore) sits at pathYOffset above the ground
     // sphere, so the water has a 0.05 basin between the shore and the sphere.
     // Recess the water top face to the middle of that basin — 0.025 above the
@@ -110,25 +174,10 @@ export const Tile: FC<TileProps> = memo(
     // material's top-face mask keys off.
     const waterTopY = pathYOffset / 2;
     const isAnimatedWater = isWater && placementHoverKey === "idle";
-    const TILE_POSITION:
-      | [
-          width?: number | undefined,
-          height?: number | undefined,
-          depth?: number | undefined,
-          widthSegments?: number | undefined,
-          heightSegments?: number | undefined,
-          depthSegments?: number | undefined,
-        ]
-      | undefined = isAnimatedWater
-      ? [
-          tileSize,
-          pathYOffset,
-          tileSize,
-          WATER_TOP_SEGMENTS,
-          1,
-          WATER_TOP_SEGMENTS,
-        ]
-      : [tileSize, pathYOffset, tileSize];
+    const slabGeometry = useMemo(
+      () => getSlabGeometry(tileSize, pathYOffset, isAnimatedWater),
+      [tileSize, pathYOffset, isAnimatedWater]
+    );
     const planetPose = useMemo(
       () =>
         flatFieldToSphereTilePose(
@@ -158,86 +207,61 @@ export const Tile: FC<TileProps> = memo(
       if (meshRef.current) freezeSubtree(meshRef.current);
     }, [waterMeshPosition]);
 
-    const material = useMemo(() => {
+    // The hover tints and the path-land body are shared instances (they
+    // outlive the tile, so they must not be disposed here); only the per-tile
+    // animated water and seeded regolith materials are tile-owned.
+    const { material, shared } = useMemo(() => {
       if (isWater) {
         const base = getCssColorValue("scene-water");
         const emissiveHue = getCssColorValue("scene-water-emissive");
         if (placementHoverKey === "canPlace") {
-          return new MeshStandardMaterial({
-            color: getCssColorValue("primary"),
-            emissive: getCssColorValue("primary"),
-            emissiveIntensity: 0.35,
-            metalness: 0.35,
-            roughness: 0.22,
-          });
+          return { material: getWaterHoverMaterial("canPlace"), shared: true };
         }
         if (placementHoverKey === "cannotPlace") {
-          return new MeshStandardMaterial({
-            color: getCssColorValue("destructive"),
-            emissive: getCssColorValue("destructive"),
-            emissiveIntensity: 0.35,
-            metalness: 0.35,
-            roughness: 0.22,
-          });
+          return { material: getWaterHoverMaterial("cannotPlace"), shared: true };
         }
         // Non-hover water: the visible surface is this tile, so it carries the
         // animated ripple (per-tile instance — disposed by the effect below, so
         // the cached shared body material must not be used here). The top face
         // sits at local y = pathYOffset/2; the swell amplitude is a small fixed
         // world offset.
-        return createWaterMaterial({
-          color: base,
-          time: waterClock.time,
-          glow: emissiveHue,
-          amplitude: WATER_AMPLITUDE,
-          topY: waterTopY,
-        });
+        return {
+          material: createWaterMaterial({
+            color: base,
+            time: waterClock.time,
+            glow: emissiveHue,
+            amplitude: WATER_AMPLITUDE,
+            topY: waterTopY,
+          }),
+          shared: false,
+        };
       }
 
       if (placementHoverKey === "canPlace") {
-        const c = getCssColorValue("primary");
-        return new MeshStandardMaterial({
-          color: c,
-          emissive: c,
-          emissiveIntensity: 0.45,
-          metalness: 0.05,
-          roughness: 0.75,
-        });
+        return { material: getLandHoverMaterial("canPlace"), shared: true };
       }
       if (placementHoverKey === "cannotPlace") {
-        const c = getCssColorValue("destructive");
-        return new MeshStandardMaterial({
-          color: c,
-          emissive: c,
-          emissiveIntensity: 0.45,
-          metalness: 0.05,
-          roughness: 0.75,
-        });
+        return { material: getLandHoverMaterial("cannotPlace"), shared: true };
       }
-
-      const land = getCssColorValue("scene-gray-700");
-      const baseLand = {
-        emissive: getCssColorValue("scene-black"),
-        emissiveIntensity: 0,
-        metalness: 0.05,
-        roughness: 0.88,
-      };
 
       if (!isOnPath) {
-        return createPlanetTileMaterial({
-          baseColor: land,
-          ...baseLand,
-          tileSeed: hashGrid2D(gridX, gridZ),
-          tileHalfHeight: pathYOffset / 2,
-          regolithHighlight: getCssColorValue("scene-regolith-highlight"),
-          regolithShadow: getCssColorValue("scene-regolith-shadow"),
-        });
+        return {
+          material: createPlanetTileMaterial({
+            baseColor: getCssColorValue("scene-gray-700"),
+            emissive: getCssColorValue("scene-black"),
+            emissiveIntensity: 0,
+            metalness: 0.05,
+            roughness: 0.88,
+            tileSeed: hashGrid2D(gridX, gridZ),
+            tileHalfHeight: pathYOffset / 2,
+            regolithHighlight: getCssColorValue("scene-regolith-highlight"),
+            regolithShadow: getCssColorValue("scene-regolith-shadow"),
+          }),
+          shared: false,
+        };
       }
 
-      return new MeshStandardMaterial({
-        color: land,
-        ...baseLand,
-      });
+      return { material: getSharedPathLandMaterial(), shared: true };
     }, [
       isWater,
       isOnPath,
@@ -251,9 +275,9 @@ export const Tile: FC<TileProps> = memo(
 
     useEffect(
       () => () => {
-        material.dispose();
+        if (!shared) material.dispose();
       },
-      [material]
+      [material, shared]
     );
 
     const onPointerOver = useCallback(
@@ -293,15 +317,14 @@ export const Tile: FC<TileProps> = memo(
         ref={meshRef}
         position={waterMeshPosition}
         quaternion={planetPose.quaternion}
+        geometry={slabGeometry}
         material={material}
         castShadow
         receiveShadow
         onClick={onInnerClick}
         onPointerOver={onPointerOver}
         onPointerOut={onPointerOut}
-      >
-        <boxGeometry args={TILE_POSITION} />
-      </mesh>
+      />
     );
   }
 );

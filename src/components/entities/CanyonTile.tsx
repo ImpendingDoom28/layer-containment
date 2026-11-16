@@ -28,7 +28,6 @@ import {
   setHoveredTileSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
-import { hashGrid2D } from "../../core/tileGridHash";
 import { useWaterClock } from "../../core/contexts/WaterClockContext";
 import { createWaterMaterial, WATER_AMPLITUDE } from "../../utils/waterMaterial";
 import {
@@ -36,6 +35,7 @@ import {
   type CanyonWorldBBox,
 } from "../../utils/canyonBridges";
 import { freezeSubtree } from "../../utils/freezeSubtree";
+import { getCanyonTileBoulderLayout } from "../../utils/canyonBoulders";
 
 type CanyonTileProps = {
   gridX: number;
@@ -57,6 +57,10 @@ type CanyonTileProps = {
   /** The editor's placement tint; true = the hovered action is allowed here
        (primary tint), false/omitted = destructive "cannot place" tint. */
   canPlace?: boolean;
+  /** Both scenes bake this tile's boulders into the scene-level
+        `CanyonBoulders`, so the tile skips them by default; pass true to
+        render its own copies (e.g. a standalone preview without the bake). */
+  showBoulders?: boolean;
 };
 
 // The river (water) surface sits a little above the basin floor so its top
@@ -71,23 +75,6 @@ const RIVER_TOP_Y = RIVER_HALF_HEIGHT;
 // a plain box's 4 top corners could only tilt (see `Tile`).
 const RIVER_TOP_SEGMENTS = 8;
 
-// A handful of boulders on the floor for a rugged, eroded bed.
-const buildBoulders = (
-  seed: number
-): Array<{ position: [number, number, number]; radius: number }> => {
-  const out: Array<{ position: [number, number, number]; radius: number }> = [];
-  const count = 2 + (seed % 2);
-  for (let i = 0; i < count; i++) {
-    const u = hashGrid2D(seed, i);
-    const v = hashGrid2D(seed + 7, i);
-    const x = (u - 0.5) * 0.6;
-    const z = (v - 0.5) * 0.6;
-    const radius = 0.05 + hashGrid2D(seed + 13, i) * 0.07;
-    out.push({ position: [x, radius * 0.4, z], radius });
-  }
-  return out;
-};
-
 export const CanyonTile: FC<CanyonTileProps> = memo(
   ({
     gridX,
@@ -100,6 +87,7 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
     onHover,
     onHoverEnd,
     canPlace = false,
+    showBoulders = false,
   }) => {
     const tileSize = useGameStore(tileSizeSelector);
     const selectedTowerToPlace = useGameStore(selectedTowerTypeToPlaceSelector);
@@ -108,7 +96,6 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
     const setHoveredTile = useLevelStore(setHoveredTileSelector);
 
     const waterClock = useWaterClock();
-    const seed = hashGrid2D(gridX, gridZ);
     const radius = getPlanetRadius(gridSize, tileSize);
 
     const worldX = tileToWorldCoordinate(gridX, gridSize, tileSize);
@@ -133,7 +120,9 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
       };
     }, [worldX, worldZ, canyonBBox, radius]);
 
-    const boulders = useMemo(() => buildBoulders(seed), [seed]);
+    const boulders = showBoulders
+      ? getCanyonTileBoulderLayout(gridX, gridZ)
+      : null;
 
     // The basin floor is one shared carved bowl (CanyonBasin), so the tile
     // renders no floor of its own. The river (when the cell is water) is the
@@ -262,8 +251,9 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
           </mesh>
         )}
 
-        {/* Bedrock boulders on the floor. */}
-        {boulders.map((b, i) => (
+        {/* Bedrock boulders on the floor (the scene-level `CanyonBoulders`
+            bake renders them when mounted). */}
+        {boulders?.map((b, i) => (
           <mesh
             key={`b-${i}`}
             position={b.position}

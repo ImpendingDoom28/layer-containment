@@ -1,7 +1,18 @@
-import { FC, memo, useCallback, useLayoutEffect, useRef } from "react";
-import type { Group, Mesh, Object3D, Quaternion } from "three";
+import { FC, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import {
+  type BufferGeometry,
+  type Group,
+  BoxGeometry,
+  CylinderGeometry,
+  Mesh,
+  MeshStandardMaterial,
+  type Object3D,
+  type Quaternion,
+} from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 import { BASE_MODEL } from "../../constants/models";
+import { bakeStaticModel } from "../../utils/bakeStaticModel";
 import { freezeSubtree } from "../../utils/freezeSubtree";
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import { ModelLoader } from "./ModelLoader";
@@ -24,10 +35,12 @@ type EndBuildingProps = {
 const BASE_MODEL_SCALE = 0.75;
 
 // `Player_Base_ROOT` is grounded at y = 0 and centered on x/z, so no fit math
-// is needed — the clone only gets the display scale and shadow flags (they are
-// not part of the GLTF and would otherwise stay at three's defaults).
+// is needed. The base is fully static (no animation), so its same-material
+// meshes are baked into one mesh per material; the result only gets the display
+// scale and shadow flags (they are not part of the GLTF and would otherwise
+// stay at three's defaults).
 const prepareBaseModel = (source: Object3D): Object3D => {
-  const clone = source.clone();
+  const clone = bakeStaticModel(source, () => false);
   clone.scale.setScalar(BASE_MODEL_SCALE);
   clone.traverse((child) => {
     if ((child as Partial<Mesh>).isMesh) {
@@ -38,13 +51,57 @@ const prepareBaseModel = (source: Object3D): Object3D => {
   return clone;
 };
 
+// The four corner pillars are identical, so one geometry serves them all (the
+// merge clones it per position).
+const pillarGeometry = new CylinderGeometry(0.05, 0.05, 0.6, 8);
+
+const PILLAR_POSITIONS: Array<[number, number, number]> = [
+  [-0.25, 0.5, -0.25],
+  [0.25, 0.5, -0.25],
+  [-0.25, 0.5, 0.25],
+  [0.25, 0.5, 0.25],
+];
+
 // The old primitive building, kept solely as the model's load-failure
 // fallback so a missing GLB degrades to the plain house rather than an empty
-// path end.
+// path end. The accent pieces (top box + four pillars, one material) are baked
+// into a single mesh; the base, roof, platform and warning light each keep
+// their own material.
 const PrimitiveBuilding: FC = () => {
   const buildingColor = getCssColorValue("scene-white");
   const buildingAccent = getCssColorValue("scene-gray-200");
   const roofColor = getCssColorValue("scene-gray-300");
+
+  const accentMaterial = useMemo(
+    () =>
+      new MeshStandardMaterial({
+        color: buildingAccent,
+        emissive: buildingAccent,
+        emissiveIntensity: 0.1,
+      }),
+    [buildingAccent]
+  );
+
+  const accentGeometry = useMemo(() => {
+    const parts: BufferGeometry[] = [new BoxGeometry(0.5, 0.3, 0.5)];
+    for (const [x, y, z] of PILLAR_POSITIONS) {
+      const part = pillarGeometry.clone();
+      part.translate(x, y, z);
+      parts.push(part);
+    }
+    const merged = mergeGeometries(parts, false);
+    for (const part of parts) part.dispose();
+    if (!merged) throw new Error("Failed to merge accent geometry");
+    return merged;
+  }, []);
+
+  useEffect(
+    () => () => {
+      accentGeometry.dispose();
+      accentMaterial.dispose();
+    },
+    [accentGeometry, accentMaterial]
+  );
 
   return (
     <>
@@ -58,15 +115,13 @@ const PrimitiveBuilding: FC = () => {
         />
       </mesh>
 
-      {/* Building top section */}
-      <mesh position={[0, 0.9, 0]} castShadow receiveShadow>
-        <boxGeometry args={[0.5, 0.3, 0.5]} />
-        <meshStandardMaterial
-          color={buildingAccent}
-          emissive={buildingAccent}
-          emissiveIntensity={0.08}
-        />
-      </mesh>
+      {/* Building top section and corner pillars (one accent material). */}
+      <mesh
+        geometry={accentGeometry}
+        material={accentMaterial}
+        castShadow
+        receiveShadow
+      />
 
       {/* Roof */}
       <mesh position={[0, 1.15, 0]} castShadow receiveShadow>
@@ -77,28 +132,6 @@ const PrimitiveBuilding: FC = () => {
           emissiveIntensity={0.05}
         />
       </mesh>
-
-      {/* Decorative corner pillars */}
-      {[
-        [-0.25, 0.5, -0.25],
-        [0.25, 0.5, -0.25],
-        [-0.25, 0.5, 0.25],
-        [0.25, 0.5, 0.25],
-      ].map(([x, y, z], index) => (
-        <mesh
-          key={`pillar-${index}`}
-          position={[x, y, z]}
-          castShadow
-          receiveShadow
-        >
-          <cylinderGeometry args={[0.05, 0.05, 0.6, 8]} />
-          <meshStandardMaterial
-            color={buildingAccent}
-            emissive={buildingAccent}
-            emissiveIntensity={0.1}
-          />
-        </mesh>
-      ))}
 
       {/* Base platform */}
       <mesh

@@ -3,33 +3,10 @@ import { useTranslation } from "react-i18next";
 
 import { UITypography } from "../../ui/UITypography";
 import { useLevelEditorStore } from "../../../core/stores/useLevelEditorStore";
-import type { LevelEditorMode, LevelEditorTool } from "../../../core/types/editor";
-import { EDITOR_MODE_LABEL_KEYS } from "./editorModeLabels";
-
-const TOOL_TO_MODE: Record<LevelEditorTool, LevelEditorMode> = {
-  select: "select",
-  placeBuilding: "building",
-  drawPath: "path",
-  setSpawn: "path",
-  setBase: "path",
-  erase: "erase",
-  water: "water",
-  canyon: "canyon",
-};
-
-const MODE_DOT_COLORS: Record<LevelEditorMode, string> = {
-  select: "bg-zinc-400",
-  path: "bg-violet-400",
-  building: "bg-blue-400",
-  water: "bg-cyan-400",
-  canyon: "bg-yellow-500",
-  erase: "bg-red-400",
-};
 
 export const LevelEditorSelectionHeader = () => {
   const { t } = useTranslation();
-  const { activeTool, selected, hasUnsavedChanges } = useLevelEditorStore();
-  const activeMode = TOOL_TO_MODE[activeTool];
+  const { selected, hasUnsavedChanges } = useLevelEditorStore();
 
   const selectionLabel = useMemo(() => {
     if (!selected) return null;
@@ -45,22 +22,20 @@ export const LevelEditorSelectionHeader = () => {
     return t("editor.pathSelection", { path: selected.pathIndex + 1 });
   }, [selected, t]);
 
+  // The active tool is already highlighted in the top-left mode rail, so the
+  // header only surfaces what is selected plus the unsaved-changes dot; when
+  // neither applies it renders nothing.
+  if (!selectionLabel && !hasUnsavedChanges) return null;
+
   return (
     <div className="flex items-center justify-between border-b border-border px-4 py-2">
-      <div className="flex items-center gap-2">
-        <span className={`size-2 rounded-full ${MODE_DOT_COLORS[activeMode]}`} />
-        <UITypography variant="medium">
-          {t(EDITOR_MODE_LABEL_KEYS[activeMode])}
+      {selectionLabel ? (
+        <UITypography variant="verySmall" className="text-muted-foreground">
+          {selectionLabel}
         </UITypography>
-        {selectionLabel ? (
-          <>
-            <span className="text-muted-foreground">·</span>
-            <UITypography variant="verySmall" className="text-muted-foreground">
-              {selectionLabel}
-            </UITypography>
-          </>
-        ) : null}
-      </div>
+      ) : (
+        <span />
+      )}
       {hasUnsavedChanges ? (
         <span
           className="size-1.5 rounded-full bg-amber-400"

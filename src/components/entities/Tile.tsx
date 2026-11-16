@@ -48,24 +48,45 @@ type TileProps = {
   isOnPath: boolean;
   canPlace: boolean;
   onClick: () => void;
+  /** The board size; defaults to the published level. The editor passes its
+      draft grid so the tile sits on the matching sphere. */
+  gridSize?: number;
+  /** The editor drives hover from its own store; pass this (with the hover
+      callbacks) to override the game-store hover. Omitted in the game. */
+  isHovered?: boolean;
+  onHover?: () => void;
+  onHoverEnd?: () => void;
 };
 
 export const Tile: FC<TileProps> = memo(
-  ({ gridX, gridZ, isWater, isOnPath, canPlace, onClick }) => {
+  ({
+    gridX,
+    gridZ,
+    isWater,
+    isOnPath,
+    canPlace,
+    onClick,
+    gridSize: gridSizeProp,
+    isHovered: isHoveredProp,
+    onHover,
+    onHoverEnd,
+  }) => {
     const tileSize = useGameStore(tileSizeSelector);
     const pathYOffset = useGameStore(pathYOffsetSelector);
     const selectedTowerToPlace = useGameStore(selectedTowerTypeToPlaceSelector);
 
-    const gridSize = useLevelStore(gridSizeSelector);
+    const storeGridSize = useLevelStore(gridSizeSelector);
     const hoveredTile = useLevelStore(hoveredTileSelector);
     const setHoveredTile = useLevelStore(setHoveredTileSelector);
 
     const waterClock = useWaterClock();
+    const gridSize = gridSizeProp ?? storeGridSize;
 
     const isHovered =
-      hoveredTile?.gridX === gridX &&
-      hoveredTile.gridZ === gridZ &&
-      selectedTowerToPlace !== null;
+      isHoveredProp ??
+      (hoveredTile?.gridX === gridX &&
+        hoveredTile.gridZ === gridZ &&
+        selectedTowerToPlace !== null);
 
     const placementHoverKey = useMemo<PlacementHoverKey>(() => {
       if (!isHovered) return "idle";
@@ -238,15 +259,26 @@ export const Tile: FC<TileProps> = memo(
     const onPointerOver = useCallback(
       (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
+        if (onHover) {
+          onHover();
+          return;
+        }
         setHoveredTile({ gridX, gridZ });
       },
-      [gridX, gridZ]
+      [onHover, setHoveredTile, gridX, gridZ]
     );
 
-    const onPointerOut = useCallback((e: ThreeEvent<PointerEvent>) => {
-      e.stopPropagation();
-      setHoveredTile(null);
-    }, []);
+    const onPointerOut = useCallback(
+      (e: ThreeEvent<PointerEvent>) => {
+        e.stopPropagation();
+        if (onHoverEnd) {
+          onHoverEnd();
+          return;
+        }
+        setHoveredTile(null);
+      },
+      [onHoverEnd, setHoveredTile]
+    );
 
     const onInnerClick = useCallback(
       (e: ThreeEvent<MouseEvent>) => {

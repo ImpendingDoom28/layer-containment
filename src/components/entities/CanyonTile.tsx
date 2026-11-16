@@ -49,6 +49,11 @@ type CanyonTileProps = {
       gorge); the basin floor then shows the animated water surface. */
   isWater: boolean;
   onClick: () => void;
+  /** The editor drives hover from its own store; pass this (with the hover
+       callbacks) to override the game-store hover. Omitted in the game. */
+  isHovered?: boolean;
+  onHover?: () => void;
+  onHoverEnd?: () => void;
 };
 
 // The river (water) surface sits a little above the basin floor so its top
@@ -81,7 +86,17 @@ const buildBoulders = (
 };
 
 export const CanyonTile: FC<CanyonTileProps> = memo(
-  ({ gridX, gridZ, gridSize, canyonBBox, isWater, onClick }) => {
+  ({
+    gridX,
+    gridZ,
+    gridSize,
+    canyonBBox,
+    isWater,
+    onClick,
+    isHovered: isHoveredProp,
+    onHover,
+    onHoverEnd,
+  }) => {
     const tileSize = useGameStore(tileSizeSelector);
     const selectedTowerToPlace = useGameStore(selectedTowerTypeToPlaceSelector);
 
@@ -96,9 +111,10 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
     const worldZ = tileToWorldCoordinate(gridZ, gridSize, tileSize);
 
     const isHovered =
-      hoveredTile?.gridX === gridX &&
-      hoveredTile?.gridZ === gridZ &&
-      selectedTowerToPlace !== null;
+      isHoveredProp ??
+      (hoveredTile?.gridX === gridX &&
+        hoveredTile?.gridZ === gridZ &&
+        selectedTowerToPlace !== null);
 
     // The tile's features sit at the basin floor — the planet surface at this
     // tile lowered by the full depth, so the canyon reads as a bowl you can
@@ -181,16 +197,24 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
     const onPointerOver = useCallback(
       (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
+        if (onHover) {
+          onHover();
+          return;
+        }
         setHoveredTile({ gridX, gridZ });
       },
-      [setHoveredTile, gridX, gridZ]
+      [onHover, setHoveredTile, gridX, gridZ]
     );
     const onPointerOut = useCallback(
       (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
+        if (onHoverEnd) {
+          onHoverEnd();
+          return;
+        }
         setHoveredTile(null);
       },
-      [setHoveredTile]
+      [onHoverEnd, setHoveredTile]
     );
     const onInnerClick = useCallback(
       (e: ThreeEvent<MouseEvent>) => {

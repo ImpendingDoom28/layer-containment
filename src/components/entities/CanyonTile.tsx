@@ -54,6 +54,9 @@ type CanyonTileProps = {
   isHovered?: boolean;
   onHover?: () => void;
   onHoverEnd?: () => void;
+  /** The editor's placement tint; true = the hovered action is allowed here
+       (primary tint), false/omitted = destructive "cannot place" tint. */
+  canPlace?: boolean;
 };
 
 // The river (water) surface sits a little above the basin floor so its top
@@ -96,6 +99,7 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
     isHovered: isHoveredProp,
     onHover,
     onHoverEnd,
+    canPlace = false,
   }) => {
     const tileSize = useGameStore(tileSizeSelector);
     const selectedTowerToPlace = useGameStore(selectedTowerTypeToPlaceSelector);
@@ -151,11 +155,12 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
       });
     }, [isAnimatedRiver, waterClock]);
 
-    // A canyon cell can never hold a tower, so the placement hover reads as
-    // "cannot place".
+    // The hover slab marks the placement action on the basin floor: the
+    // allowed-action tint when the active tool can act on this cell, the
+    // "cannot place" tint otherwise (game tower placement always falls here).
     const hoverMaterial = useMemo(() => {
       if (!isHovered) return null;
-      const color = getCssColorValue("destructive");
+      const color = getCssColorValue(canPlace ? "primary" : "destructive");
       return new MeshStandardMaterial({
         color,
         emissive: color,
@@ -163,7 +168,7 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
         roughness: 0.95,
         metalness: 0.02,
       });
-    }, [isHovered]);
+    }, [isHovered, canPlace]);
 
     const boulderMaterial = useMemo(
       () =>

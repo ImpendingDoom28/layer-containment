@@ -42,8 +42,10 @@ export const LevelEditorInspector = () => {
       <div className="flex h-full w-full justify-end">
         {/* A fixed, full-height side panel: no menu tilt/slide machinery, so
             the card genuinely fills the viewport height and its content
-            scrolls instead of overflowing. */}
-        <div className="h-full w-full max-w-xl pointer-events-auto">
+            scrolls instead of overflowing. The left padding keeps the panel
+            clear of the mode rail at narrow widths, where max-w-xl does not
+            constrain it to a width narrow enough to avoid the rail. */}
+        <div className="h-full w-full max-w-xl pointer-events-auto pl-[72px] md:pl-[76px]">
           <UICard className="h-full w-full py-0">
             <LevelEditorSelectionHeader />
             <UICardContent className="min-h-0 flex-1 overflow-y-auto">

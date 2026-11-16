@@ -208,6 +208,7 @@ export const LevelEditorScene = () => {
                 canyonBBox={canyonBBox!}
                 isWater={placementState.isWater}
                 isHovered={showActionHighlight ? true : undefined}
+                canPlace={showActionHighlight}
                 onHover={() => onTileHover(gridX, gridZ)}
                 onHoverEnd={onTileHoverEnd}
                 onClick={() => onTileClick(gridX, gridZ)}

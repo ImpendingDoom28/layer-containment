@@ -72,6 +72,7 @@ const STATIC_ASSETS = [
   "configs/levels/level_2.json",
   "configs/levels/level_3.json",
   "configs/levels/level_4.json",
+  "configs/levels/level_5.json",
   "configs/levels/level_testing.json",
   "configs/levels/stress.json",
 ];

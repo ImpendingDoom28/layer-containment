@@ -22,7 +22,10 @@ import {
   useGameStore,
 } from "../../../core/stores/useGameStore";
 import { useLevelEditorStore } from "../../../core/stores/useLevelEditorStore";
-import { getTilePlacementState } from "../../../utils/tilePlacement";
+import {
+  createTileBlockage,
+  getTilePlacementState,
+} from "../../../utils/tilePlacement";
 import {
   flatFieldToSphereSurface,
   getPlanetRadius,
@@ -70,6 +73,33 @@ export const LevelEditorScene = () => {
   const gridOffset = useMemo(
     () => getLevelGridOffset(draftLevel.gridSize, tileSize),
     [draftLevel.gridSize, tileSize]
+  );
+
+  // Static blockage for the draft (paths, water, canyons, buildings), built
+  // once per draft change instead of re-running the path intersection per
+  // tile per render.
+  const draftBlockage = useMemo(
+    () =>
+      createTileBlockage({
+        gridSize: draftLevel.gridSize,
+        gridOffset,
+        tileSize,
+        pathWaypoints: draftLevel.pathWaypoints,
+        pathWidth,
+        buildings: draftLevel.buildings,
+        waters: draftLevel.waters,
+        canyons: draftLevel.canyons,
+      }),
+    [
+      draftLevel.gridSize,
+      draftLevel.pathWaypoints,
+      draftLevel.buildings,
+      draftLevel.waters,
+      draftLevel.canyons,
+      gridOffset,
+      tileSize,
+      pathWidth,
+    ]
   );
 
   const occupancy = useTileOccupancyMasks({
@@ -167,14 +197,8 @@ export const LevelEditorScene = () => {
           const placementState = getTilePlacementState({
             gridX,
             gridZ,
+            blockage: draftBlockage,
             towers: [],
-            buildings: draftLevel.buildings,
-            waters: draftLevel.waters,
-            canyons: draftLevel.canyons,
-            gridOffset,
-            tileSize,
-            pathWaypoints: draftLevel.pathWaypoints,
-            pathWidth,
           });
           const isHovered =
             hoveredTile?.gridX === gridX && hoveredTile?.gridZ === gridZ;

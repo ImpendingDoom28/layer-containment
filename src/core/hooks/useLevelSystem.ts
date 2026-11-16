@@ -2,7 +2,6 @@ import { useCallback } from "react";
 import { useActions, useWorld } from "koota/react";
 
 import {
-  pathWidthSelector,
   setSelectedTowerSelector,
   setSelectedTowerTypeToPlaceSelector,
   tileSizeSelector,
@@ -13,23 +12,18 @@ import {
 } from "../stores/useGameStore";
 import {
   addMoneySelector,
-  buildingsSelector,
-  canyonsSelector,
   currentWaveSelector,
   enemiesKilledSelector,
-  gridOffsetSelector,
   gridSizeSelector,
   isLevelConfigLoadedSelector,
   levelLoadErrorSelector,
   moneySelector,
-  pathWaypointsSelector,
   resetLevelStateSelector,
   retryLevelLoadSelector,
   setTowersSelector,
   spendMoneySelector,
   towersSelector,
   useLevelStore,
-  watersSelector,
 } from "../stores/useLevelStore";
 import {
   resetLevelEnemyUpgradesSelector,
@@ -48,7 +42,6 @@ import {
   TowerType,
 } from "../types/game";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
-import { getTilePlacementState as getSharedTilePlacementState } from "../../utils/tilePlacement";
 import { useEntityIds } from "../contexts/EntityIdContext";
 import { gameEvents } from "../../utils/eventEmitter";
 import { GameEvent } from "../types/enums/events";
@@ -61,15 +54,10 @@ export const useLevelSystem = () => {
   const setNextWaveReady = useWaveStore(setNextWaveReadySelector);
   const setRevealSettled = useWaveStore(setRevealSettledSelector);
 
-  const buildings = useLevelStore(buildingsSelector);
-  const waters = useLevelStore(watersSelector);
-  const canyons = useLevelStore(canyonsSelector);
-  const gridOffset = useLevelStore(gridOffsetSelector);
   const gridSize = useLevelStore(gridSizeSelector);
   const setTowers = useLevelStore(setTowersSelector);
   const resetLevelState = useLevelStore(resetLevelStateSelector);
   const towers = useLevelStore(towersSelector);
-  const pathWaypoints = useLevelStore(pathWaypointsSelector);
   const currentWave = useLevelStore(currentWaveSelector);
   const money = useLevelStore(moneySelector);
   const enemiesKilled = useLevelStore(enemiesKilledSelector);
@@ -88,7 +76,6 @@ export const useLevelSystem = () => {
   const towerSellPriceMultiplier = useGameStore(
     towerSellPriceMultiplierSelector
   );
-  const pathWidth = useGameStore(pathWidthSelector);
   const towerHeight = useGameStore(towerHeightSelector);
 
   const resetLevelEnemyUpgrades = useUpgradeStore(
@@ -101,39 +88,18 @@ export const useLevelSystem = () => {
   const { getNextTowerId, getNextEnemyId, getNextProjectileId } =
     useEntityIds();
 
-  const getTilePlacementState = useCallback(
-    (gridX: number, gridZ: number) => {
-      return getSharedTilePlacementState({
-        gridX,
-        gridZ,
-        towers,
-        buildings,
-        waters,
-        canyons,
-        gridOffset,
-        tileSize,
-        pathWaypoints,
-        pathWidth,
-      });
-    },
-    [
-      towers,
-      buildings,
-      waters,
-      canyons,
-      gridOffset,
-      tileSize,
-      pathWaypoints,
-      pathWidth,
-    ]
-  );
-
   const placeTower = useCallback(
     (gridX: number, gridZ: number, towerType: TowerType): boolean => {
       const towerConfig = towerTypes?.[towerType];
       if (!towerConfig) return false;
 
-      const placementState = getTilePlacementState(gridX, gridZ);
+      // The stable store action reads the precomputed static blockage (built
+      // once per level load) plus the live tower list, so it never has to be
+      // recreated with the store — see `useLevelStore.getTilePlacementState`.
+      const placementState = useLevelStore.getState().getTilePlacementState(
+        gridX,
+        gridZ
+      );
       const denyReason = getTowerPlacementDenyReason(
         useLevelStore.getState().money >= towerConfig.cost,
         placementState
@@ -192,7 +158,6 @@ export const useLevelSystem = () => {
     },
     [
       towerTypes,
-      getTilePlacementState,
       gridSize,
       tileSize,
       getNextTowerId,
@@ -285,7 +250,6 @@ export const useLevelSystem = () => {
     isLevelConfigLoaded,
     levelLoadError,
     retryLevelLoad,
-    getTilePlacementState,
   };
 };
 

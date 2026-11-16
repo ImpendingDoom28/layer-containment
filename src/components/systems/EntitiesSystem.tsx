@@ -1,27 +1,21 @@
-import { FC, memo, useCallback, useMemo } from "react";
+import { FC, memo, useCallback } from "react";
 
 import { TowerSystem } from "./TowerSystem";
 import { Building } from "../entities/Building";
 import {
   buildingsSelector,
-  canyonsSelector,
-  gridOffsetSelector,
   hoveredTileSelector,
-  pathWaypointsSelector,
+  tileBlockageSelector,
   towersSelector,
   useLevelStore,
-  watersSelector,
 } from "../../core/stores/useLevelStore";
 import type { Tower as TowerInstance, Tower } from "../../core/types/game";
-import type { TilePlacementState } from "../../utils/tilePlacement";
 import { getTilePlacementState } from "../../utils/tilePlacement";
 import { EffectSystem } from "./EffectSystem";
 import {
-  pathWidthSelector,
   selectedTowerTypeToPlaceSelector,
   setSelectedTowerSelector,
   setSelectedTowerTypeToPlaceSelector,
-  tileSizeSelector,
   useGameStore,
 } from "../../core/stores/useGameStore";
 import { useGameSessionRuntime } from "./GameSessionSystem";
@@ -47,43 +41,22 @@ export const EntitiesSystem: FC<EntitiesSystemProps> = memo(
       setSelectedTowerTypeToPlaceSelector
     );
     const setSelectedTower = useGameStore(setSelectedTowerSelector);
-    const tileSize = useGameStore(tileSizeSelector);
-    const pathWidth = useGameStore(pathWidthSelector);
 
     const buildings = useLevelStore(buildingsSelector);
-    const canyons = useLevelStore(canyonsSelector);
-    const waters = useLevelStore(watersSelector);
     const towers = useLevelStore(towersSelector);
-    const gridOffset = useLevelStore(gridOffsetSelector);
-    const pathWaypoints = useLevelStore(pathWaypointsSelector);
     const hoveredTile = useLevelStore(hoveredTileSelector);
+    const tileBlockage = useLevelStore(tileBlockageSelector);
 
-    const hoveredTilePlacementState = useMemo<TilePlacementState | null>(() => {
-      if (!hoveredTile) return null;
-      return getTilePlacementState({
-        gridX: hoveredTile.gridX,
-        gridZ: hoveredTile.gridZ,
-        towers,
-        buildings,
-        waters,
-        canyons,
-        gridOffset,
-        tileSize,
-        pathWaypoints,
-        pathWidth,
-      });
-    }, [
-      hoveredTile?.gridX,
-      hoveredTile?.gridZ,
-      towers,
-      buildings,
-      waters,
-      canyons,
-      gridOffset,
-      tileSize,
-      pathWaypoints,
-      pathWidth,
-    ]);
+    // Static blockage is precomputed per level load; only the tower check is
+    // dynamic, so this is an O(1) mask read plus a small tower scan.
+    const hoveredTilePlacementState = hoveredTile
+      ? getTilePlacementState({
+          gridX: hoveredTile.gridX,
+          gridZ: hoveredTile.gridZ,
+          blockage: tileBlockage,
+          towers,
+        })
+      : null;
 
     const onTowerClick = useCallback(
       (tower: Tower) => {

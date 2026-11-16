@@ -9,7 +9,11 @@ import type {
 } from "../types/editor";
 import type { CanyonConfig, EnemyType, PathWaypoint, WaveConfig } from "../types/game";
 import type { TileData } from "../types/utils";
-import { getTilePlacementState } from "../../utils/tilePlacement";
+import {
+  createTileBlockage,
+  getTilePlacementState,
+  type TileBlockage,
+} from "../../utils/tilePlacement";
 import { findBridgeCrossings } from "../../utils/canyonBridges";
 import { clampGridSize } from "../../utils/gridSizeLimits";
 import { validateLevel } from "../../utils/validateLevel";
@@ -229,6 +233,49 @@ const createWaterDefaults = (
   shape: "box" as const,
   color: getCssColorValue("scene-water"),
 });
+
+// The draft's static blockage (paths, water, canyons, buildings) rebuilt per
+// draft edit: each edit produces a fresh `draftLevel` object, so a WeakMap
+// keyed by it needs no manual invalidation (a stale entry is collected with
+// its draft). That keeps a drag or a click — many per-tile checks against the
+// same draft — at one blockage build plus O(1) lookups.
+const draftBlockageCache = new WeakMap<LevelConfigData, TileBlockage>();
+
+const getDraftBlockage = (
+  level: LevelConfigData,
+  tileSize: number,
+  pathWidth: number
+): TileBlockage => {
+  const cached = draftBlockageCache.get(level);
+  if (cached) return cached;
+
+  const blockage = createTileBlockage({
+    gridSize: level.gridSize,
+    gridOffset: getLevelGridOffset(level.gridSize, tileSize),
+    tileSize,
+    pathWaypoints: level.pathWaypoints,
+    pathWidth,
+    buildings: level.buildings,
+    waters: level.waters,
+    canyons: level.canyons,
+  });
+  draftBlockageCache.set(level, blockage);
+  return blockage;
+};
+
+const getDraftTilePlacementState = (
+  level: LevelConfigData,
+  gridX: number,
+  gridZ: number,
+  tileSize: number,
+  pathWidth: number
+) =>
+  getTilePlacementState({
+    gridX,
+    gridZ,
+    blockage: getDraftBlockage(level, tileSize, pathWidth),
+    towers: [],
+  });
 
 export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
   ...DEFAULT_STATE,
@@ -561,18 +608,13 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
         waypointIndex: selectedWaypointIndex,
       } = state.selected;
 
-      const waterCheck = getTilePlacementState({
-        gridX: tile.gridX,
-        gridZ: tile.gridZ,
-        towers: [],
-        buildings: state.draftLevel.buildings,
-        waters: state.draftLevel.waters,
-        canyons: state.draftLevel.canyons,
-        gridOffset: getLevelGridOffset(state.draftLevel.gridSize, tileSize),
+      const waterCheck = getDraftTilePlacementState(
+        state.draftLevel,
+        tile.gridX,
+        tile.gridZ,
         tileSize,
-        pathWaypoints: state.draftLevel.pathWaypoints,
-        pathWidth,
-      });
+        pathWidth
+      );
       if (waterCheck.isWater && !waterCheck.isCanyon) {
         return state;
       }
@@ -760,18 +802,13 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
       }
 
       if (activeTool === "placeBuilding") {
-        const placementState = getTilePlacementState({
-          gridX: tile.gridX,
-          gridZ: tile.gridZ,
-          towers: [],
-          buildings: draftLevel.buildings,
-          waters: draftLevel.waters,
-          canyons: draftLevel.canyons,
-          gridOffset: getLevelGridOffset(draftLevel.gridSize, tileSize),
+        const placementState = getDraftTilePlacementState(
+          draftLevel,
+          tile.gridX,
+          tile.gridZ,
           tileSize,
-          pathWaypoints: draftLevel.pathWaypoints,
-          pathWidth,
-        });
+          pathWidth
+        );
 
         if (placementState.isBlocked) {
           return state;
@@ -798,18 +835,13 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
       }
 
       if (activeTool === "water") {
-        const placementState = getTilePlacementState({
-          gridX: tile.gridX,
-          gridZ: tile.gridZ,
-          towers: [],
-          buildings: draftLevel.buildings,
-          waters: draftLevel.waters,
-          canyons: draftLevel.canyons,
-          gridOffset: getLevelGridOffset(draftLevel.gridSize, tileSize),
+        const placementState = getDraftTilePlacementState(
+          draftLevel,
+          tile.gridX,
+          tile.gridZ,
           tileSize,
-          pathWaypoints: draftLevel.pathWaypoints,
-          pathWidth,
-        });
+          pathWidth
+        );
 
         if (placementState.isOnPath) {
           return state;
@@ -835,18 +867,13 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
       }
 
       if (activeTool === "canyon") {
-        const placementState = getTilePlacementState({
-          gridX: tile.gridX,
-          gridZ: tile.gridZ,
-          towers: [],
-          buildings: draftLevel.buildings,
-          waters: draftLevel.waters,
-          canyons: draftLevel.canyons,
-          gridOffset: getLevelGridOffset(draftLevel.gridSize, tileSize),
+        const placementState = getDraftTilePlacementState(
+          draftLevel,
+          tile.gridX,
+          tile.gridZ,
           tileSize,
-          pathWaypoints: draftLevel.pathWaypoints,
-          pathWidth,
-        });
+          pathWidth
+        );
 
         if (placementState.isOnPath || placementState.isOccupiedByBuilding) {
           return state;
@@ -880,18 +907,13 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
       );
       const currentPath = ensuredPaths[selectedPathIndex] ?? [];
 
-      const pathTargetPlacement = getTilePlacementState({
-        gridX: tile.gridX,
-        gridZ: tile.gridZ,
-        towers: [],
-        buildings: draftLevel.buildings,
-        waters: draftLevel.waters,
-        canyons: draftLevel.canyons,
-        gridOffset: getLevelGridOffset(draftLevel.gridSize, tileSize),
+      const pathTargetPlacement = getDraftTilePlacementState(
+        draftLevel,
+        tile.gridX,
+        tile.gridZ,
         tileSize,
-        pathWaypoints: draftLevel.pathWaypoints,
-        pathWidth,
-      });
+        pathWidth
+      );
 
       if (
         pathTargetPlacement.isWater &&

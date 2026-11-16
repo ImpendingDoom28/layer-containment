@@ -3,7 +3,6 @@ import { FC, memo, useLayoutEffect, useMemo, useRef } from "react";
 import { Color, Mesh, Quaternion, Vector3 } from "three";
 
 import { getCssColorValue } from "../ui/lib/cssUtils";
-import { useLevelSystem } from "../../core/hooks/useLevelSystem";
 import {
   pathYOffsetSelector,
   selectedTowerTypeToPlaceSelector,
@@ -14,9 +13,11 @@ import {
 import {
   gridSizeSelector,
   hoveredTileSelector,
+  tileBlockageSelector,
   towersSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
+import { getTilePlacementState } from "../../utils/tilePlacement";
 import { getEffectiveTowerCombatStats } from "../../core/relayBuffs";
 import type { Tower } from "../../core/types/game";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
@@ -44,7 +45,7 @@ export const PlacementHighlightOverlay: FC = memo(() => {
     const towers = useLevelStore(towersSelector);
     const hoveredTile = useLevelStore(hoveredTileSelector);
 
-    const { getTilePlacementState } = useLevelSystem();
+    const tileBlockage = useLevelStore(tileBlockageSelector);
 
     const validColor = useMemo(() => {
       const c = new Color(getCssColorValue("scene-hp-high"));
@@ -81,7 +82,14 @@ export const PlacementHighlightOverlay: FC = memo(() => {
             continue;
           }
 
-          const placementState = getTilePlacementState(gridX, gridZ);
+          // Static blockage is precomputed per level load, so this whole grid
+          // pass is O(1) mask lookups plus one tower scan per tile.
+          const placementState = getTilePlacementState({
+            gridX,
+            gridZ,
+            blockage: tileBlockage,
+            towers,
+          });
           const canPlace = !placementState.isBlocked;
           const wx = tileToWorldCoordinate(gridX, gridSize, tileSize);
           const wz = tileToWorldCoordinate(gridZ, gridSize, tileSize);
@@ -108,7 +116,8 @@ export const PlacementHighlightOverlay: FC = memo(() => {
       hoveredTile,
       gridSize,
       tileSize,
-      getTilePlacementState,
+      tileBlockage,
+      towers,
       planetRadius,
       heightAlongNormal,
       validColor,

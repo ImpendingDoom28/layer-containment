@@ -3,7 +3,6 @@ import { FC, memo, useLayoutEffect, useMemo, useRef } from "react";
 import { Color, Mesh, Quaternion, Vector3 } from "three";
 
 import { getCssColorValue } from "../ui/lib/cssUtils";
-import { useLevelSystem } from "../../core/hooks/useLevelSystem";
 import {
   pathYOffsetSelector,
   selectedTowerTypeToPlaceSelector,
@@ -13,6 +12,7 @@ import {
 import {
   gridSizeSelector,
   hoveredTileSelector,
+  tileBlockageSelector,
   towersSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
@@ -22,7 +22,10 @@ import {
   flatFieldToSphereOverlayPlanePose,
   getPlanetRadius,
 } from "../../utils/planetSurfaceMapping";
-import type { TilePlacementState } from "../../utils/tilePlacement";
+import {
+  getTilePlacementState,
+  type TileBlockage,
+} from "../../utils/tilePlacement";
 
 const PLACEMENT_OVERLAY_Y_EPSILON = 0.018;
 const PLANE_INSET = 0.98;
@@ -44,11 +47,6 @@ type RelayNeighborOverlayItem = {
   opacity: number;
 };
 
-type GetTilePlacementStateFn = (
-  gridX: number,
-  gridZ: number
-) => TilePlacementState;
-
 const buildRelayNeighborOverlayItems = ({
   sourceGridX,
   sourceGridZ,
@@ -57,7 +55,7 @@ const buildRelayNeighborOverlayItems = ({
   overlayY,
   planetRadius,
   towers,
-  getTilePlacementState,
+  tileBlockage,
   buffColor,
   footprintColor,
 }: {
@@ -68,7 +66,7 @@ const buildRelayNeighborOverlayItems = ({
   overlayY: number;
   planetRadius: number;
   towers: Tower[];
-  getTilePlacementState: GetTilePlacementStateFn;
+  tileBlockage: TileBlockage | null;
   buffColor: string;
   footprintColor: string;
 }): RelayNeighborOverlayItem[] => {
@@ -84,7 +82,12 @@ const buildRelayNeighborOverlayItems = ({
     const towerOnCell = towers.find(
       (t) => t.gridX === gridX && t.gridZ === gridZ
     );
-    const placementState = getTilePlacementState(gridX, gridZ);
+    const placementState = getTilePlacementState({
+      gridX,
+      gridZ,
+      blockage: tileBlockage,
+      towers,
+    });
 
     const wx = tileToWorldCoordinate(gridX, gridSize, tileSize);
     const wz = tileToWorldCoordinate(gridZ, gridSize, tileSize);
@@ -144,11 +147,16 @@ export const RelayBuffPreviewOverlay: FC<RelayBuffPreviewOverlayProps> = memo(
     const towers = useLevelStore(towersSelector);
     const hoveredTile = useLevelStore(hoveredTileSelector);
 
-    const { getTilePlacementState } = useLevelSystem();
+    const tileBlockage = useLevelStore(tileBlockageSelector);
 
     const hoveredTilePlacementState =
       hoveredTile !== null
-        ? getTilePlacementState(hoveredTile.gridX, hoveredTile.gridZ)
+        ? getTilePlacementState({
+            gridX: hoveredTile.gridX,
+            gridZ: hoveredTile.gridZ,
+            blockage: tileBlockage,
+            towers,
+          })
         : null;
 
     const buffColor = useMemo(() => {
@@ -186,7 +194,7 @@ export const RelayBuffPreviewOverlay: FC<RelayBuffPreviewOverlayProps> = memo(
           overlayY,
           planetRadius,
           towers,
-          getTilePlacementState,
+          tileBlockage,
           buffColor,
           footprintColor,
         });
@@ -201,7 +209,7 @@ export const RelayBuffPreviewOverlay: FC<RelayBuffPreviewOverlayProps> = memo(
           overlayY,
           planetRadius,
           towers,
-          getTilePlacementState,
+          tileBlockage,
           buffColor,
           footprintColor,
         });
@@ -216,7 +224,7 @@ export const RelayBuffPreviewOverlay: FC<RelayBuffPreviewOverlayProps> = memo(
       gridSize,
       tileSize,
       towers,
-      getTilePlacementState,
+      tileBlockage,
       overlayY,
       planetRadius,
       buffColor,

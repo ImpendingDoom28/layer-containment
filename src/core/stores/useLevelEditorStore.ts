@@ -64,8 +64,6 @@ type LevelEditorStoreActions = {
   setStartingMoney: (value: number) => void;
   setGridSize: (gridSize: number, tileSize: number) => void;
   setEnemyWeight: (enemyType: EnemyType, value: number | null) => void;
-  setTileColor: (color: string) => void;
-  setGroundColor: (color: string) => void;
   addPath: () => void;
   selectPath: (pathIndex: number) => void;
   removeSelectedPath: () => void;
@@ -415,20 +413,6 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
         hasUnsavedChanges: true,
       };
     });
-  },
-
-  setTileColor: (color) => {
-    set((state) => ({
-      draftLevel: { ...state.draftLevel, tileColor: color },
-      hasUnsavedChanges: true,
-    }));
-  },
-
-  setGroundColor: (color) => {
-    set((state) => ({
-      draftLevel: { ...state.draftLevel, groundColor: color },
-      hasUnsavedChanges: true,
-    }));
   },
 
   addPath: () => {

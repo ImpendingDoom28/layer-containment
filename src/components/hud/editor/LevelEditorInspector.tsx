@@ -1,9 +1,8 @@
 import { UIAccordion } from "../../ui/UIAccordion";
 import { UICard, UICardContent } from "../../ui/UICard";
-import { UITypography } from "../../ui/UITypography";
 import { useLevelEditorStore } from "../../../core/stores/useLevelEditorStore";
 import type { LevelEditorMode, LevelEditorTool } from "../../../core/types/editor";
-import { HUDSidePanel } from "../HUDSidePanel";
+import { HUDWrapper } from "../HUDWrapper";
 
 import { LevelEditorSelectionHeader } from "./LevelEditorSelectionHeader";
 import { LevelEditorLevelSection } from "./LevelEditorLevelSection";
@@ -24,7 +23,7 @@ const TOOL_TO_MODE: Record<LevelEditorTool, LevelEditorMode> = {
 };
 
 export const LevelEditorInspector = () => {
-  const { activeTool, selected, draftLevel } = useLevelEditorStore();
+  const { activeTool, selected } = useLevelEditorStore();
   const activeMode = TOOL_TO_MODE[activeTool];
 
   const showPath =
@@ -39,26 +38,28 @@ export const LevelEditorInspector = () => {
   if (showBuilding) defaultOpen.push("building");
 
   return (
-    <HUDSidePanel side="right" className="pointer-events-none">
-      <UICard className="pointer-events-auto h-full w-full shadow-2xl">
-        <LevelEditorSelectionHeader />
-
-        <div className="flex items-center justify-between px-4 pt-3 pb-1">
-          <UITypography variant="verySmall" className="text-muted-foreground">
-            {`level_${draftLevel.name || "name"}.json`}
-          </UITypography>
+    <HUDWrapper className="pointer-events-none">
+      <div className="flex h-full w-full justify-end">
+        {/* A fixed, full-height side panel: no menu tilt/slide machinery, so
+            the card genuinely fills the viewport height and its content
+            scrolls instead of overflowing. The left padding keeps the panel
+            clear of the mode rail at narrow widths, where max-w-xl does not
+            constrain it to a width narrow enough to avoid the rail. */}
+        <div className="h-full w-full max-w-xl pointer-events-auto pl-[72px] md:pl-[76px]">
+          <UICard className="h-full w-full py-0">
+            <LevelEditorSelectionHeader />
+            <UICardContent className="min-h-0 flex-1 overflow-y-auto">
+              <UIAccordion type="multiple" defaultValue={defaultOpen}>
+                <LevelEditorLevelSection />
+                {showPath ? <LevelEditorPathSection /> : null}
+                {showBuilding ? <LevelEditorBuildingSection /> : null}
+                <LevelEditorWaveSection />
+                <LevelEditorPublishSection />
+              </UIAccordion>
+            </UICardContent>
+          </UICard>
         </div>
-
-        <UICardContent className="min-h-0 flex-1 overflow-y-auto pb-4">
-          <UIAccordion type="multiple" defaultValue={defaultOpen}>
-            <LevelEditorLevelSection />
-            {showPath ? <LevelEditorPathSection /> : null}
-            {showBuilding ? <LevelEditorBuildingSection /> : null}
-            <LevelEditorWaveSection />
-            <LevelEditorPublishSection />
-          </UIAccordion>
-        </UICardContent>
-      </UICard>
-    </HUDSidePanel>
+      </div>
+    </HUDWrapper>
   );
 };

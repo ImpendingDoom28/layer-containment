@@ -49,6 +49,14 @@ type CanyonTileProps = {
       gorge); the basin floor then shows the animated water surface. */
   isWater: boolean;
   onClick: () => void;
+  /** The editor drives hover from its own store; pass this (with the hover
+       callbacks) to override the game-store hover. Omitted in the game. */
+  isHovered?: boolean;
+  onHover?: () => void;
+  onHoverEnd?: () => void;
+  /** The editor's placement tint; true = the hovered action is allowed here
+       (primary tint), false/omitted = destructive "cannot place" tint. */
+  canPlace?: boolean;
 };
 
 // The river (water) surface sits a little above the basin floor so its top
@@ -81,7 +89,18 @@ const buildBoulders = (
 };
 
 export const CanyonTile: FC<CanyonTileProps> = memo(
-  ({ gridX, gridZ, gridSize, canyonBBox, isWater, onClick }) => {
+  ({
+    gridX,
+    gridZ,
+    gridSize,
+    canyonBBox,
+    isWater,
+    onClick,
+    isHovered: isHoveredProp,
+    onHover,
+    onHoverEnd,
+    canPlace = false,
+  }) => {
     const tileSize = useGameStore(tileSizeSelector);
     const selectedTowerToPlace = useGameStore(selectedTowerTypeToPlaceSelector);
 
@@ -96,9 +115,10 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
     const worldZ = tileToWorldCoordinate(gridZ, gridSize, tileSize);
 
     const isHovered =
-      hoveredTile?.gridX === gridX &&
-      hoveredTile?.gridZ === gridZ &&
-      selectedTowerToPlace !== null;
+      isHoveredProp ??
+      (hoveredTile?.gridX === gridX &&
+        hoveredTile?.gridZ === gridZ &&
+        selectedTowerToPlace !== null);
 
     // The tile's features sit at the basin floor — the planet surface at this
     // tile lowered by the full depth, so the canyon reads as a bowl you can
@@ -135,11 +155,12 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
       });
     }, [isAnimatedRiver, waterClock]);
 
-    // A canyon cell can never hold a tower, so the placement hover reads as
-    // "cannot place".
+    // The hover slab marks the placement action on the basin floor: the
+    // allowed-action tint when the active tool can act on this cell, the
+    // "cannot place" tint otherwise (game tower placement always falls here).
     const hoverMaterial = useMemo(() => {
       if (!isHovered) return null;
-      const color = getCssColorValue("destructive");
+      const color = getCssColorValue(canPlace ? "primary" : "destructive");
       return new MeshStandardMaterial({
         color,
         emissive: color,
@@ -147,7 +168,7 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
         roughness: 0.95,
         metalness: 0.02,
       });
-    }, [isHovered]);
+    }, [isHovered, canPlace]);
 
     const boulderMaterial = useMemo(
       () =>
@@ -181,16 +202,24 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
     const onPointerOver = useCallback(
       (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
+        if (onHover) {
+          onHover();
+          return;
+        }
         setHoveredTile({ gridX, gridZ });
       },
-      [setHoveredTile, gridX, gridZ]
+      [onHover, setHoveredTile, gridX, gridZ]
     );
     const onPointerOut = useCallback(
       (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
+        if (onHoverEnd) {
+          onHoverEnd();
+          return;
+        }
         setHoveredTile(null);
       },
-      [setHoveredTile]
+      [onHoverEnd, setHoveredTile]
     );
     const onInnerClick = useCallback(
       (e: ThreeEvent<MouseEvent>) => {

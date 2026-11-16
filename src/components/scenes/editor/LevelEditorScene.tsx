@@ -4,9 +4,10 @@ import type { ThreeEvent } from "@react-three/fiber";
 
 import { Bridge } from "../../entities/Bridge";
 import { CanyonBasin } from "../../entities/CanyonBasin";
+import { CanyonTile } from "../../entities/CanyonTile";
 import { Path } from "../../entities/Path";
 import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
-import { Water } from "../../entities/Water";
+import { Tile } from "../../entities/Tile";
 import {
   BRIDGE_ELEVATION,
   getCanyonWorldBBox,
@@ -31,11 +32,7 @@ import {
   getPlanetRadius,
   getSurfaceQuaternion,
 } from "../../../utils/planetSurfaceMapping";
-import {
-  getLevelGridOffset,
-  tileToWorldCoordinate,
-  withRecalculatedWaterCoordinates,
-} from "../../../utils/levelEditor";
+import { getLevelGridOffset } from "../../../utils/levelEditor";
 import { useTileOccupancyMasks } from "../../../core/hooks/utils/useTileOccupancyMasks";
 import { getCssColorValue } from "../../ui/lib/cssUtils";
 import { LevelEditorCamera } from "./LevelEditorCamera";
@@ -215,8 +212,51 @@ export const LevelEditorScene = () => {
             canPlaceBuilding ||
             (activeTool === "water" && canPaintWater) ||
             canPaintCanyon;
+          const showActionHighlight =
+            isHovered && canHighlightEditorAction;
           const baseTileColor =
             draftLevel.tileColor ?? getCssColorValue("editor-default-tile");
+
+          // Canyon cells use the game's `CanyonTile` (bowl + river), every
+          // other cell the game's `Tile` (water reads as the same animated
+          // surface the game runs). The editor keeps its thin flat land
+          // `EditorSphereTile` only where neither applies, so water and
+          // canyons render exactly like the game, not a flat slab.
+          if (placementState.isCanyon) {
+            return (
+              <CanyonTile
+                key={`${gridX}-${gridZ}`}
+                gridX={gridX}
+                gridZ={gridZ}
+                gridSize={draftLevel.gridSize}
+                canyonBBox={canyonBBox!}
+                isWater={placementState.isWater}
+                isHovered={showActionHighlight ? true : undefined}
+                canPlace={showActionHighlight}
+                onHover={() => onTileHover(gridX, gridZ)}
+                onHoverEnd={onTileHoverEnd}
+                onClick={() => onTileClick(gridX, gridZ)}
+              />
+            );
+          }
+
+          if (placementState.isWater) {
+            return (
+              <Tile
+                key={`${gridX}-${gridZ}`}
+                gridX={gridX}
+                gridZ={gridZ}
+                gridSize={draftLevel.gridSize}
+                isWater
+                isOnPath={placementState.isOnPath}
+                canPlace={showActionHighlight}
+                isHovered={showActionHighlight ? true : undefined}
+                onHover={() => onTileHover(gridX, gridZ)}
+                onHoverEnd={onTileHoverEnd}
+                onClick={() => onTileClick(gridX, gridZ)}
+              />
+            );
+          }
 
           return (
             <EditorSphereTile
@@ -333,37 +373,6 @@ export const LevelEditorScene = () => {
             />
           )
         )}
-      </group>
-
-      <group>
-        {draftLevel.waters.map((water) => {
-          const worldX = tileToWorldCoordinate(
-            water.gridX,
-            draftLevel.gridSize,
-            tileSize
-          );
-          const worldZ = tileToWorldCoordinate(
-            water.gridZ,
-            draftLevel.gridSize,
-            tileSize
-          );
-          const surface = flatFieldToSphereSurface(worldX, worldZ, radius);
-          const position = surface.surfacePoint
-            .clone()
-            .addScaledVector(surface.normal, 0.02);
-          return (
-            <Water
-              key={water.id}
-              water={withRecalculatedWaterCoordinates(
-                water,
-                draftLevel.gridSize,
-                tileSize
-              )}
-              position={position.toArray() as [number, number, number]}
-              quaternion={getSurfaceQuaternion(surface.normal)}
-            />
-          );
-        })}
       </group>
 
       <group>

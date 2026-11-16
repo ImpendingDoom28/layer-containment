@@ -63,6 +63,11 @@ test("shows the in-game HUD after starting a run", async ({ page }) => {
 test("opens the Almanac from the main menu, switches tabs, and returns", async ({
   page,
 }) => {
+  // Slow CI runners exceed the default 30s budget at various steps of this
+  // long multi-tab flow (each retry timed out on a different step), so give it
+  // more headroom like the Empower test does.
+  test.setTimeout(90_000);
+
   // The almanac side panel carries a 3D tilt (ui-menu-tilt) whose transform is
   // re-animated on every pointermove by useMenuParallax, including a proximity
   // lift near the left edge where the back button lives. That keeps the button

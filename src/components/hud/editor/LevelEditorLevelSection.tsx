@@ -22,7 +22,6 @@ import {
 import { UIInput } from "../../ui/UIInput";
 import { UITextarea } from "../../ui/UITextarea";
 
-import { EditorColorField } from "./EditorColorField";
 import { EditorField } from "./EditorField";
 
 export const LevelEditorLevelSection = () => {
@@ -38,8 +37,6 @@ export const LevelEditorLevelSection = () => {
     setStartingMoney,
     setGridSize,
     setEnemyWeight,
-    setTileColor,
-    setGroundColor,
   } = useLevelEditorStore();
 
   return (
@@ -126,23 +123,6 @@ export const LevelEditorLevelSection = () => {
             }
           />
         </EditorField>
-
-        <div className="grid grid-cols-2 gap-2">
-          <EditorField label={t("editor.tileColor")}>
-            <EditorColorField
-              value={draftLevel.tileColor}
-              defaultToken="editor-default-tile"
-              onChange={setTileColor}
-            />
-          </EditorField>
-          <EditorField label={t("editor.groundColor")}>
-            <EditorColorField
-              value={draftLevel.groundColor}
-              defaultToken="editor-default-ground"
-              onChange={setGroundColor}
-            />
-          </EditorField>
-        </div>
 
         <div className="grid grid-cols-3 gap-2">
           {enemyTypeOptions.map((enemyType) => (

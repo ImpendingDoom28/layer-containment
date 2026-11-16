@@ -16,6 +16,7 @@ import {
 import { useLevelSystem } from "../../../core/hooks/useLevelSystem";
 import { EntitiesSystem } from "../../systems/EntitiesSystem";
 import { useGameSystem } from "../../../core/hooks/useGameSystem";
+import { useSimulationClock } from "../../../core/contexts/SimulationClockContext";
 import {
   enemyTypesSelector,
   pathWidthSelector,
@@ -23,6 +24,7 @@ import {
   useGameStore,
 } from "../../../core/stores/useGameStore";
 import { enemyActions } from "../../../core/ecs/actions/enemyActions";
+import { isRevealSettled } from "../../../core/utils/revealSettle";
 import { Path } from "../../entities/Path";
 import { Grid } from "../../entities/Grid";
 import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
@@ -93,6 +95,7 @@ export const MainMenuScene: FC = () => {
     waters,
     canyons,
   });
+  const { getSimulationTime } = useSimulationClock();
 
   const lastSpawnTime = useRef(0);
   const clockRef = useRef(0);
@@ -110,7 +113,17 @@ export const MainMenuScene: FC = () => {
 
   // TODO: This should be handled by the wave system, or enemy system
   useFrame((state) => {
-    clockRef.current = state.clock.elapsedTime;
+    // The pause-aware simulation clock: it freezes with the world (the menu
+    // is always `playing`, but a hidden tab pauses it) so the spawn interval
+    // and the comet-settle gate — both measured in simulation seconds — stay
+    // in sync with the portals' own reveal, which runs on the same clock.
+    clockRef.current = getSimulationTime(state.clock.elapsedTime);
+
+    // Hold the ambient spawns until the level-load comet has struck and the
+    // spawn portals have finished rising out of the scorch (the same gate the
+    // wave system uses for wave 1); without it the first enemies spawn at the
+    // first waypoint, in mid-air, before the portals are even on the ground.
+    if (!isRevealSettled(clockRef.current)) return;
 
     const timeSinceLastSpawn = clockRef.current - lastSpawnTime.current;
     const spawnInterval =

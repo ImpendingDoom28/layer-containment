@@ -12,6 +12,7 @@ import type {
   TowerTargeting,
 } from "../../core/types/game";
 import { useTranslationInCanvas } from "../../core/i18n/useTranslationInCanvas";
+import { getTowerSellPrice } from "../../core/utils/towerSellPrice";
 import {
   towerBaseRadiusSelector,
   towerHeightSelector,
@@ -78,7 +79,7 @@ export const GUITowerInfoPanel: FC<GUITowerInfoPanelProps> = ({
   const tileSize = useGameStore(tileSizeSelector);
   const gridSize = useLevelStore(gridSizeSelector);
 
-  const sellPrice = Math.floor(tower.cost * towerSellPriceMultiplier);
+  const sellPrice = getTowerSellPrice(tower, towerSellPriceMultiplier);
 
   // Non-attacking towers (the relay) never pick a target, so the selector is
   // omitted to match the almanac.

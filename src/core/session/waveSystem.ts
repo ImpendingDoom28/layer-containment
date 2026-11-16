@@ -181,6 +181,16 @@ export const createWaveSystem = ({
     const nextWave = currentWave + 1;
     useWaveStore.getState().setNextWaveReady(false);
     useLevelStore.getState().setCurrentWave(nextWave);
+    // The build phase the towers were placed in is over: clear the full-price
+    // refund flag so they (and anything placed mid-wave) sell at the standard
+    // fraction from here on.
+    useLevelStore.getState().setTowers((towers) =>
+      towers.map((tower) =>
+        tower.placedBetweenWaves
+          ? { ...tower, placedBetweenWaves: false }
+          : tower
+      )
+    );
     initializeWave(nextWave);
 
     const waypoint = pathWaypoints[0]?.[0];

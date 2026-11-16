@@ -1,12 +1,13 @@
 import type { Tower } from "../types/game";
 
 /**
- * The refund a tower pays on sale. A tower placed while no wave was active
- * (a build phase — before wave 1 or after the previous wave cleared) is fully
+ * The refund a tower pays on sale. A tower placed in the current build phase
+ * (no wave active when it was placed, and no wave started since) is fully
  * refundable, so placing one and selling it straight away loses nothing while
- * the player experiments between waves. A tower placed during an active wave
- * (or a level's pre-placed towers, which were never bought mid-build) sells
- * for the standard `towerSellPriceMultiplier` fraction of its cost.
+ * the player experiments between waves. The moment the next wave starts the
+ * wave system clears the flag, so towers from an earlier build phase — like
+ * towers placed during an active wave and a level's pre-placed towers — sell
+ * for the standard `towerSellPriceMultiplier` fraction of their cost.
  */
 export const getTowerSellPrice = (
   tower: Tower,

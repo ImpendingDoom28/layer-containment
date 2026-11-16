@@ -15,6 +15,7 @@ import type {
   EnemyUpgradeId,
   Tower,
 } from "../types/game";
+import { getTowerSellPrice } from "../utils/towerSellPrice";
 import { createWaveSystem } from "./waveSystem";
 
 const armoredUpgrade: EnemyUpgradeConfig = {
@@ -214,6 +215,34 @@ describe("createWaveSystem", () => {
     tick(waves, 3.1);
     waves.startWave();
     expect(useLevelStore.getState().currentWave).toBe(2);
+  });
+
+  it("ends the build-phase full refund for towers placed before the wave starts", () => {
+    const waves = createWaveSystem({
+      world: testWorld,
+      getNextEnemyId: () => 1,
+      winGame: vi.fn(),
+    });
+
+    // A tower placed during the build phase (before wave 1): it refunds its
+    // full cost while the build phase is live.
+    useLevelStore
+      .getState()
+      .setTowers([{ ...makeSlowTower(1), placedBetweenWaves: true }]);
+    expect(getTowerSellPrice(useLevelStore.getState().towers[0], 0.75)).toBe(
+      75
+    );
+
+    waves.startWave();
+
+    // The moment the wave starts, the build phase is over: the tower now
+    // sells for the standard fraction (floor(75 * 0.75) = 56).
+    expect(
+      useLevelStore.getState().towers[0]?.placedBetweenWaves
+    ).toBe(false);
+    expect(getTowerSellPrice(useLevelStore.getState().towers[0], 0.75)).toBe(
+      56
+    );
   });
 
   it("wins only after the final wave has started and cleared", () => {

@@ -219,10 +219,12 @@ export type Tower = Omit<TowerConfig, "id"> & {
   x: number;
   z: number;
   /**
-   * Whether the tower was placed while no wave was active (a build phase —
-   * before wave 1 or after the previous wave cleared). Such towers are fully
-   * refundable (see `getTowerSellPrice`); towers placed during an active wave
-   * and level pre-placed towers (absent here) sell at the standard fraction.
+   * Whether the tower was placed in the *current* build phase (no wave active
+   * when it was placed) and no wave has started since. Such towers are fully
+   * refundable (see `getTowerSellPrice`). The wave system clears the flag the
+   * moment the next wave starts, so a tower from an earlier build phase, a
+   * tower placed during an active wave, and level pre-placed towers (absent
+   * here) all sell at the standard fraction.
    */
   placedBetweenWaves?: boolean;
 };

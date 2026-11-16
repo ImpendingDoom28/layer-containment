@@ -30,6 +30,7 @@ import {
   useUpgradeStore,
 } from "../stores/useUpgradeStore";
 import {
+  nextWaveReadySelector,
   setNextWaveReadySelector,
   setRevealSettledSelector,
   useWaveStore,
@@ -46,6 +47,7 @@ import { useEntityIds } from "../contexts/EntityIdContext";
 import { gameEvents } from "../../utils/eventEmitter";
 import { GameEvent } from "../types/enums/events";
 import { getTowerPlacementDenyReason } from "../utils/towerPlacementDenyReason";
+import { getTowerSellPrice } from "../utils/towerSellPrice";
 import { towerShopRowElementId } from "../utils/towerShopRowElementId";
 import { statsActions } from "../ecs/actions/statsActions";
 import { spawnLevelEnemy } from "../ecs/spawnLevelEnemy";
@@ -53,6 +55,7 @@ import { spawnLevelEnemy } from "../ecs/spawnLevelEnemy";
 export const useLevelSystem = () => {
   const setNextWaveReady = useWaveStore(setNextWaveReadySelector);
   const setRevealSettled = useWaveStore(setRevealSettledSelector);
+  const nextWaveReady = useWaveStore(nextWaveReadySelector);
 
   const gridSize = useLevelStore(gridSizeSelector);
   const setTowers = useLevelStore(setTowersSelector);
@@ -134,6 +137,9 @@ export const useLevelSystem = () => {
         x: worldX,
         z: worldZ,
         lastFireTime: 0,
+        // A tower placed while no wave is active (the build phase) is fully
+        // refundable; `nextWaveReady` is true exactly then.
+        placedBetweenWaves: nextWaveReady,
       };
 
       setTowers((prev) => [...prev, newTower]);
@@ -166,6 +172,7 @@ export const useLevelSystem = () => {
       recordTowerPurchase,
       setSelectedTowerTypeToPlace,
       towerHeight,
+      nextWaveReady,
     ]
   );
 
@@ -182,7 +189,7 @@ export const useLevelSystem = () => {
       const tower = towers.find((t) => t.id === towerId);
       if (!tower) return;
 
-      const sellPrice = Math.floor(tower.cost * towerSellPriceMultiplier);
+      const sellPrice = getTowerSellPrice(tower, towerSellPriceMultiplier);
       addMoney(sellPrice);
       removeTower(towerId);
       const emitterY =

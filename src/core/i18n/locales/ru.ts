@@ -326,7 +326,6 @@ const ruValues = {
     new: "Новый",
     sample: "Пример",
     import: "Импортировать",
-    unsavedChanges: "Несохранённые изменения",
     buildingSelection: "Здание #{{id}}",
     waypointSelection: "Точка {{waypoint}} · Путь {{path}}",
     pathSelection: "Путь {{path}}",

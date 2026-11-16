@@ -6,7 +6,7 @@ import { useLevelEditorStore } from "../../../core/stores/useLevelEditorStore";
 
 export const LevelEditorSelectionHeader = () => {
   const { t } = useTranslation();
-  const { selected, hasUnsavedChanges } = useLevelEditorStore();
+  const { selected } = useLevelEditorStore();
 
   const selectionLabel = useMemo(() => {
     if (!selected) return null;
@@ -22,26 +22,13 @@ export const LevelEditorSelectionHeader = () => {
     return t("editor.pathSelection", { path: selected.pathIndex + 1 });
   }, [selected, t]);
 
-  // The active tool is already highlighted in the top-left mode rail, so the
-  // header only surfaces what is selected plus the unsaved-changes dot; when
-  // neither applies it renders nothing.
-  if (!selectionLabel && !hasUnsavedChanges) return null;
+  if (!selectionLabel) return null;
 
   return (
-    <div className="flex items-center justify-between border-b border-border px-4 py-2">
-      {selectionLabel ? (
-        <UITypography variant="verySmall" className="text-muted-foreground">
-          {selectionLabel}
-        </UITypography>
-      ) : (
-        <span />
-      )}
-      {hasUnsavedChanges ? (
-        <span
-          className="size-1.5 rounded-full bg-amber-400"
-          title={t("editor.unsavedChanges")}
-        />
-      ) : null}
+    <div className="flex items-center border-b border-border px-4 py-2">
+      <UITypography variant="verySmall" className="text-muted-foreground">
+        {selectionLabel}
+      </UITypography>
     </div>
   );
 };

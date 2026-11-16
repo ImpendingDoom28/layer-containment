@@ -308,7 +308,6 @@ export const en = {
     new: "New",
     sample: "Sample",
     import: "Import",
-    unsavedChanges: "Unsaved changes",
     buildingSelection: "Building #{{id}}",
     waypointSelection: "Waypoint {{waypoint}} · Path {{path}}",
     pathSelection: "Path {{path}}",

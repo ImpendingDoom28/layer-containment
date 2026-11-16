@@ -241,8 +241,6 @@ export const en = {
     startingHealth: "Starting Health",
     startingMoney: "Starting Money",
     gridSize: "Grid Size",
-    tileColor: "Tile Color",
-    groundColor: "Ground Color",
     pathTab: "Path",
     pathNumber: "Path {{index}}",
     pathButton: "P{{index}} ({{count}})",

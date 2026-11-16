@@ -251,8 +251,6 @@ const ruValues = {
     startingHealth: "Начальное здоровье",
     startingMoney: "Начальные деньги",
     gridSize: "Размер сетки",
-    tileColor: "Цвет плиток",
-    groundColor: "Цвет грунта",
     pathTab: "Путь",
     pathNumber: "Путь {{index}}",
     pathButton: "П{{index}} ({{count}})",

@@ -62,8 +62,8 @@ const blockage = createTileBlockage({
   pathWaypoints: PATH_WAYPOINTS,
   pathWidth: PATH_WIDTH,
   buildings: [makeBuilding(3, 3)],
-  waters: [{ id: 1, gridX: 2, gridZ: 2 }],
-  canyons: [{ id: 1, gridX: 1, gridZ: 3 }],
+  waters: [{ gridX: 2, gridZ: 2 }],
+  canyons: [{ gridX: 1, gridZ: 3 }],
 });
 
 describe("createTileBlockage", () => {

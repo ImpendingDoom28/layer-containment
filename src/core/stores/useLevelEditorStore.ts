@@ -15,6 +15,7 @@ import {
   type TileBlockage,
 } from "../../utils/tilePlacement";
 import { findBridgeCrossings } from "../../utils/canyonBridges";
+import { withCache } from "../../utils/withCache";
 import { clampGridSize } from "../../utils/gridSizeLimits";
 import { validateLevel } from "../../utils/validateLevel";
 import {
@@ -234,34 +235,28 @@ const createWaterDefaults = (
   color: getCssColorValue("scene-water"),
 });
 
-// The draft's static blockage (paths, water, canyons, buildings) rebuilt per
-// draft edit: each edit produces a fresh `draftLevel` object, so a WeakMap
-// keyed by it needs no manual invalidation (a stale entry is collected with
-// its draft). That keeps a drag or a click — many per-tile checks against the
-// same draft — at one blockage build plus O(1) lookups.
-const draftBlockageCache = new WeakMap<LevelConfigData, TileBlockage>();
-
-const getDraftBlockage = (
-  level: LevelConfigData,
-  tileSize: number,
-  pathWidth: number
-): TileBlockage => {
-  const cached = draftBlockageCache.get(level);
-  if (cached) return cached;
-
-  const blockage = createTileBlockage({
-    gridSize: level.gridSize,
-    gridOffset: getLevelGridOffset(level.gridSize, tileSize),
-    tileSize,
-    pathWaypoints: level.pathWaypoints,
-    pathWidth,
-    buildings: level.buildings,
-    waters: level.waters,
-    canyons: level.canyons,
-  });
-  draftBlockageCache.set(level, blockage);
-  return blockage;
-};
+// The draft's static blockage (paths, water, canyons, buildings), cached per
+// draft object and per tileSize/pathWidth: each edit produces a fresh
+// `draftLevel` (the WeakMap key is collected with its draft, no manual
+// invalidation) and a drag or click runs many per-tile checks against the
+// same draft, so the build happens once per (draft, tile size, path width).
+const getDraftBlockage = withCache(
+  (
+    level: LevelConfigData,
+    tileSize: number,
+    pathWidth: number
+  ): TileBlockage =>
+    createTileBlockage({
+      gridSize: level.gridSize,
+      gridOffset: getLevelGridOffset(level.gridSize, tileSize),
+      tileSize,
+      pathWaypoints: level.pathWaypoints,
+      pathWidth,
+      buildings: level.buildings,
+      waters: level.waters,
+      canyons: level.canyons,
+    })
+);
 
 const getDraftTilePlacementState = (
   level: LevelConfigData,

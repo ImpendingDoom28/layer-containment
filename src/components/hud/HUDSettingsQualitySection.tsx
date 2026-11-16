@@ -5,7 +5,9 @@ import { UICheckbox } from "../ui/UICheckbox";
 import { UITypography } from "../ui/UITypography";
 import {
   bloomEnabledSelector,
+  motionBlurEnabledSelector,
   setBloomEnabledSelector,
+  setMotionBlurEnabledSelector,
   setShadowsEnabledSelector,
   shadowsEnabledSelector,
   useSettingsStore,
@@ -17,6 +19,8 @@ export const HUDSettingsQualitySection: FC = () => {
   const setBloomEnabled = useSettingsStore(setBloomEnabledSelector);
   const shadowsEnabled = useSettingsStore(shadowsEnabledSelector);
   const setShadowsEnabled = useSettingsStore(setShadowsEnabledSelector);
+  const motionBlurEnabled = useSettingsStore(motionBlurEnabledSelector);
+  const setMotionBlurEnabled = useSettingsStore(setMotionBlurEnabledSelector);
 
   return (
     <section className="flex flex-col gap-4">
@@ -54,6 +58,24 @@ export const HUDSettingsQualitySection: FC = () => {
           </label>
           <UITypography variant="small" className="text-muted-foreground">
             {t("settings.shadowsHint")}
+          </UITypography>
+        </div>
+      </div>
+      <div className="flex items-start gap-2">
+        <UICheckbox
+          id="settings-motion-blur"
+          checked={motionBlurEnabled}
+          onCheckedChange={(checked) => setMotionBlurEnabled(checked === true)}
+        />
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor="settings-motion-blur"
+            className="text-sm font-medium leading-none"
+          >
+            {t("settings.motionBlur")}
+          </label>
+          <UITypography variant="small" className="text-muted-foreground">
+            {t("settings.motionBlurHint")}
           </UITypography>
         </div>
       </div>

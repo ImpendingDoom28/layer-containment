@@ -18,22 +18,24 @@ const getRingGeometry = (
 };
 
 describe("RangeRing", () => {
-  it("renders a ring with the expected radius and segment count", async () => {
+  it("renders the thin white max-radius stripe by default", async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <RangeRing range={4} color="#ffffff" />
+      <RangeRing range={4} />
     );
 
     try {
       const { parameters } = getRingGeometry(renderer);
-      expect(parameters.innerRadius).toBeCloseTo(3.6);
+      // Crisp stripe: 0.5% of the range wide (matching the RangeFadeWall
+      // spike width, range * 0.005), 128 segments for a smooth line.
+      expect(parameters.innerRadius).toBeCloseTo(3.98);
       expect(parameters.outerRadius).toBeCloseTo(4);
-      expect(parameters.thetaSegments).toBe(32);
+      expect(parameters.thetaSegments).toBe(128);
     } finally {
       renderer.unmount();
     }
   });
 
-  it("honors custom radius fraction, segments, opacity and position", async () => {
+  it("honors custom radius fraction, segments, opacity, colour and position", async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <RangeRing
         range={3}
@@ -56,7 +58,12 @@ describe("RangeRing", () => {
       expect(mesh.position.x).toBeCloseTo(1);
       expect(mesh.position.y).toBeCloseTo(2);
       expect(mesh.position.z).toBeCloseTo(3);
-      expect((mesh.material as { opacity: number }).opacity).toBe(0.45);
+      const material = mesh.material as unknown as {
+        opacity: number;
+        color: { getHexString(): string };
+      };
+      expect(material.opacity).toBe(0.45);
+      expect(material.color.getHexString()).toBe("ff0000");
     } finally {
       renderer.unmount();
     }

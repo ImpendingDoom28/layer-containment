@@ -59,9 +59,12 @@ both paths end at the same base tile. Concretely (20×20 grid, world coords):
 
 Key facts that drive the design:
 
-- **Two independent approaches until z ≈ 2.5.** Until the merge, a tower on the
-  left half of the map can never hit an enemy on the right half. The player is
-  forced to **split their defense across two fronts** (the level's tagline:
+- **Two mostly independent approaches until z ≈ 2.5.** Until the merge, a tower
+  on the left half can reach the right approach only from tiles near the centre
+  line — a basic tower (range 3.5) at (−0.5, −4.5) is 3.0 units from the right
+  approach at x = 2.5, so a centre-line tower can cover both approaches. Towers
+  placed further left or right cover one front only. The player is pushed to
+  **split their defense across two fronts** (the level's tagline:
   "Split your defense across both fronts.").
 - **One shared bottleneck after the merge.** From z ≈ 2.5 to the base, both
   waves flow down a single ~7-tile corridor flanked by one building. This is
@@ -145,45 +148,53 @@ a plain tank works on any map. It's the floor, not the ceiling.
 
 ---
 
-### Variant B — "The Ferryman" (path-switching roamer)
+### Variant B — "The Ferryman" (approach-crossing roamer)
 
-**Mechanic.** The Warden **changes its path mid-run**: it walks the shared
-corridor, and at a trigger point it *teleports/swaps to the other portal's
-path* and runs the remainder from there. On a two-portal map this makes the
+**Mechanic.** The Warden **crosses from one portal's approach to the other
+mid-run**: while it is still on the distinct (pre-merge) approach segment, at a
+trigger point it *teleports to the mirrored point on the other portal's
+approach* and runs the remainder from there. On a two-portal map this makes the
 boss a **roaming threat that flips front** as it goes.
 
-- **Concretely:** spawn on portal A. When its `pathProgress` on the shared
-  corridor passes the merge point, it is re-assigned to **portal B's remaining
-  path** (or, if it spawned on B, to A). Visually it "crosses over" the
-  convergence point (a short teleport/flash). It can do this up to N times per
-  appearance.
+- **Concretely:** spawn on portal A. While its `pathProgress` is still on the
+  pre-merge approach (before the merge at (−0.5, 2.5)), at a trigger point it
+  re-assigns to **portal B at the same progress**. The two approaches are exact
+  mirrors (same z rows, x mirrored: A's x ∈ {−6.5, −2.5} ↔ B's x ∈ {6.5, 2.5}),
+  so the same `pathProgress` lands on a valid, mirrored lane position — the
+  swap is geometrically clean and never pops the boss into water or buildings.
+  Visually it "crosses over" the centre line (a short teleport/flash). After the
+  swap it walks the remainder of portal B (a few approach rows, then the shared
+  corridor). It can do this up to N times per appearance.
+  (A swap *after* the merge is a no-op: both paths share all waypoints from the
+  merge point on, so re-assigning there changes nothing. The swap must be on the
+  distinct approach segments.)
 - **Challenge:** the player can never fully commit towers to one front, because
-  the boss will be walking the *other* front's tail-end path while the regular
-  wave is on the first. The boss effectively **forces the shared corridor to
-  matter**: the only place a tower can hit it on both routes is the merge and
-  the corridor.
+  the boss will be walking the *other* front's approach while the regular wave
+  is on the first. The boss effectively **forces both pre-merge approaches to
+  be covered**: a player who stacks one outer pocket and leaves the other bare
+  gets the boss walked straight down the uncovered approach to the corridor.
 - **Curve:**
-  - *Wave 4:* one swap (A→B), at a fixed late point. Teach "cover the corridor
-    or you'll be caught on the far side."
+  - *Wave 4:* one swap (A→B), at a fixed point (when the boss first reaches the
+    z = −1.5 row). Teach "both approaches matter, not just your main front."
   - *Wave 8:* two swaps (A→B→A), at *progress-triggered* points so the timing
     is unpredictable, plus the boss gains a short speed burst right after each
     swap.
-- **Tests:** placement on the **shared corridor** specifically (the design
-  intent of the map). A player who over-invests in the two outer pockets and
-  neglects the corridor gets punished hard.
+- **Tests:** placement across **both pre-merge approaches** (the design intent
+  of the map). A player who over-invests in one outer pocket and neglects the
+  other gets punished hard.
 - **Impl sketch:** a `BossPathSwap` trait (remaining swap count, trigger
-  progress, current pathIndex); a `BossPathSwapSystem` that, when the boss's
-  progress crosses the trigger, sets a new `pathIndex`/`pathProgress` and plays
-  the cross-over effect. This is the first variant that touches
-  `EnemyMotion`/path assignment directly (care: the movement system derives
-  position from `pathProgress`, so we set the new path and a matching progress
-  so it lands on the corridor, not mid-pond). Medium cost, highest thematic
-  payoff for *this* map.
+  progress, target pathIndex); a `BossPathSwapSystem` that, when the boss's
+  progress crosses the trigger *and* it is still pre-merge, sets a new
+  `pathIndex` (keeping the same `pathProgress`, since the approaches are
+  mirrors) and plays the cross-over effect. This is the first variant that
+  touches `EnemyMotion`/path assignment directly; keeping the swap on the
+  mirrored pre-merge segment means the boss always lands on a valid lane.
+  Medium cost, highest thematic payoff for *this* map.
 
-*Verdict:* the most level-2-specific variant. It turns the convergence
-geometry into an active challenge. Risk: path reassignment must be done so the
-boss never pops into water/buildings — it should only ever swap onto the shared
-corridor, which is always clear.
+*Verdict:* the most level-2-specific variant. It turns the two-front geometry
+into an active challenge. Risk: the trigger must be gated to the pre-merge
+segment (progress below the merge), or the swap degenerates to a no-op on the
+shared corridor.
 
 ---
 
@@ -345,7 +356,7 @@ distinct, satisfying mechanic.
 | Variant | Core challenge | Most on-theme for level 2? | Player skill tested | Impl cost | UI cost |
 |---|---|---|---|---|---|
 | A — The Wall | Break a peeling armor wall + clear its escorts | low | sustained DPS | low | low |
-| B — The Ferryman | Cover the shared corridor; boss flips front | **high** | placement (corridor) | medium | low |
+| B — The Ferryman | Cover both approaches; boss flips front pre-merge | **high** | placement (both approaches) | medium | low |
 | C — The Conduit | Throughput vs. a moving spawner | medium | map throughput | low-med | low |
 | D — The Phase-Shifter | Burst damage in vulnerability windows | medium | timing / AoE focus | medium | med (timer) |
 | E — The Twin | Two simultaneous fronts, boss scale | **highest** | two-front allocation | medium | med (2 bars) |
@@ -369,10 +380,10 @@ if we want the most *active/interactive* feel and are willing to tune the
 phasing.
 
 A sensible ship shape: **B (Ferryman) for wave 4** + **E (Twin) for wave 8**
-gives a two-beat level that teaches the corridor and then pays off the
-two-front theme — but that combines two mechanic surfaces, so if we want to
-ship one coherent boss, pick **E (Twin)** and let its two bodies carry the
-curve, or **B (Ferryman)** for the simplest on-theme single boss.
+gives a two-beat level that first teaches covering both approaches and then
+pays off the two-front theme — but that combines two mechanic surfaces, so if
+we want to ship one coherent boss, pick **E (Twin)** and let its two bodies
+carry the curve, or **B (Ferryman)** for the simplest on-theme single boss.
 
 ---
 

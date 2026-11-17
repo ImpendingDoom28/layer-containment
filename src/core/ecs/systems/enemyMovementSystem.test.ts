@@ -323,7 +323,9 @@ describe("enemyMovementSystem", () => {
     const entity = enemyActions(testWorld).spawnEnemy(makeEnemy(1));
     // A pending cross: the jump fires at t = 1, so the enemy stands still until
     // then (and would otherwise keep walking).
-    entity.add(PathSwap({ swaps: [], nextSwap: 0, telegraphReadyAt: 1 }));
+    entity.add(
+      PathSwap({ swaps: [], nextSwap: 0, telegraphReadyAt: 1, lastCrossAt: 0 })
+    );
 
     run(0.2, 0.2);
     expect(motionOf(entity).pathProgress).toBe(0);
@@ -343,7 +345,14 @@ describe("enemyMovementSystem", () => {
     );
     // A pending cross: the jump fires at t = 0.2, so the enemy stands still
     // until then (and would otherwise keep walking).
-    entity.add(PathSwap({ swaps: [], nextSwap: 0, telegraphReadyAt: 0.2 }));
+    entity.add(
+      PathSwap({
+        swaps: [],
+        nextSwap: 0,
+        telegraphReadyAt: 0.2,
+        lastCrossAt: 0,
+      })
+    );
 
     // t=0: frozen, establishes the regen baseline (no heal).
     run(0.2, 0);

@@ -147,6 +147,7 @@ export const spawnLevelEnemy = (
         swaps: overrides.pathSwap.swaps,
         nextSwap: 0,
         telegraphReadyAt: 0,
+        lastCrossAt: 0,
       })
     );
   }

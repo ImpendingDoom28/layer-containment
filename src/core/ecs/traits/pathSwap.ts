@@ -1,6 +1,21 @@
 import { trait } from "koota";
 
 /**
+ * How long (simulation seconds) an enemy stands still, telegraphed, before a
+ * pending cross fires. The wind-up visual (the ring + gathering particles
+ * around the enemy) lasts this long, so it disappears exactly when the jump
+ * happens.
+ */
+export const PATH_SWAP_TELEGRAPH_SECONDS = 1;
+
+/**
+ * How long (simulation seconds) the arrival burst plays after a cross. The
+ * trait is kept this long after the final cross so the landing visual can play
+ * even though the ability is one-shot.
+ */
+export const PATH_SWAP_ARRIVAL_SECONDS = 0.45;
+
+/**
  * One path-swap rule: when the enemy's `pathProgress` first crosses
  * `atProgress`, it is re-assigned onto `targetPathIndex`.
  */
@@ -31,12 +46,21 @@ export type PathSwapData = {
    * movement system skips advancing any enemy in this state.
    */
   telegraphReadyAt: number;
+  /**
+   * The simulation timestamp at which the most recent cross fired (0 = none
+   * yet). The `PathSwapEffect` view plays an arrival burst for
+   * `PATH_SWAP_ARRIVAL_SECONDS` after it; the trait is kept that long after the
+   * final cross so the landing visual can play even though the ability is
+   * one-shot.
+   */
+  lastCrossAt: number;
 };
 
 const createDefaultPathSwap = (): PathSwapData => ({
   swaps: [],
   nextSwap: 0,
   telegraphReadyAt: 0,
+  lastCrossAt: 0,
 });
 
 /**

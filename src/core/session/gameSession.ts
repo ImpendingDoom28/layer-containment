@@ -178,11 +178,9 @@ export const createGameSession = ({
     settleEnemyDeaths: (time: number) => runEnemyDeathSystem(world, time),
     splitEnemies: () => runEnemySplitSystem(world, getNextEnemyId),
     pathSwap: (time: number) => {
-      const { pathWaypoints, gridSize } = useLevelStore.getState();
-      const { tileSize } = useGameStore.getState();
+      const { pathWaypoints } = useLevelStore.getState();
       runPathSwapSystem(world, {
         pathWaypoints,
-        radius: getPlanetRadius(gridSize, tileSize),
         simulationTimeSeconds: time,
       });
     },

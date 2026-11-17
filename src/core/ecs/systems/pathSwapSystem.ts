@@ -1,35 +1,18 @@
 import type { World } from "koota";
-import { Vector3 } from "three";
 
-import { flatFieldToSphereSurface } from "../../../utils/planetSurfaceMapping";
-import {
-  getPathDirection,
-  getPositionAlongMultiplePaths,
-} from "../../../utils/pathUtils";
+import { getPositionAlongMultiplePaths, getPathDirection } from "../../../utils/pathUtils";
 import type { PathWaypoint } from "../../types/game";
-import { effectActions } from "../actions/effectActions";
 import { EnemyMotion, EnemyState } from "../traits/enemy";
 import { FacingDirection } from "../traits/facing";
-import { PathSwap } from "../traits/pathSwap";
+import {
+  PATH_SWAP_ARRIVAL_SECONDS,
+  PATH_SWAP_TELEGRAPH_SECONDS,
+  PathSwap,
+} from "../traits/pathSwap";
 import { Position } from "../traits/position";
-
-// Module-level scratch vectors: a single world, single system instance, so
-// they are safe to share (mirrors the enemy movement system).
-const scratchSurface = new Vector3();
-const scratchNormal = new Vector3();
-const scratchPos = new Vector3();
-
-/**
- * How long (in simulation seconds) an enemy stands in place, telegraphed,
- * before the pending cross fires. The telegraph ring lasts this long, so the
- * ring's disappearance coincides with the jump.
- */
-const TELEGRAPH_SECONDS = 1;
 
 export type PathSwapSystemOptions = {
   pathWaypoints: PathWaypoint[][];
-  /** Planet radius, used to convert a swap position to a surface effect. */
-  radius: number;
   /**
    * Current simulation time (the pause-adjusted clock the movement system
    * uses). The telegraph countdown runs on it, so a telegraph in flight
@@ -53,15 +36,15 @@ export type PathSwapSystemOptions = {
  * is still a valid position on a real path.
  *
  * Each cross is telegraphed: when a rule becomes due the system sets
- * `telegraphReadyAt` one simulation second ahead and raises a "spawn" ring
- * burst at the enemy's standing position. Until then the enemy **stands
- * still** (the movement system skips advancing it while
- * `telegraphReadyAt > simulationTimeSeconds`), so the player sees the cross
- * coming and knows exactly when it will happen. When the timestamp arrives the
- * cross is performed and an arrival burst plays at the new position. If the
- * next rule is already due at that moment (or was skipped past by a large
- * frame step), it is telegraphed right away; otherwise the enemy resumes
- * walking until that rule's threshold.
+ * `telegraphReadyAt` one simulation second ahead. Until then the enemy
+ * **stands still** (the movement system skips advancing it while
+ * `telegraphReadyAt > simulationTimeSeconds`), and the `PathSwapEffect` view
+ * shows a wind-up ring and rising particles around the enemy for that second,
+ * so the player sees the cross coming and knows when it will happen. When the
+ * timestamp arrives the cross is performed and the view plays a short arrival
+ * burst at the new position. If the next rule is already due at that moment
+ * (or was skipped past by a large frame step), it is telegraphed right away;
+ * otherwise the enemy resumes walking until that rule's threshold.
  *
  * The movement system derives the enemy's `Position` and `FacingDirection`
  * from `(pathIndex, pathProgress)` every frame, so the cross normally only
@@ -82,7 +65,7 @@ export const runPathSwapSystem = (
   world: World,
   options: PathSwapSystemOptions
 ): void => {
-  const { pathWaypoints, radius, simulationTimeSeconds } = options;
+  const { pathWaypoints, simulationTimeSeconds } = options;
 
   // EnemyState/EnemyMotion are queried so they can be written in place (the
   // cross re-assigns pathIndex); Position/FacingDirection are queried so the
@@ -95,9 +78,16 @@ export const runPathSwapSystem = (
         return;
       }
 
-      // No rules left (including an empty list): drop the ability.
+      // No rules left (including an empty list): keep the trait only while the
+      // arrival burst of the last cross is still playing (the view reads it),
+      // then drop the ability.
       if (swap.nextSwap >= swap.swaps.length) {
-        entity.remove(PathSwap);
+        if (
+          swap.lastCrossAt === 0 ||
+          simulationTimeSeconds - swap.lastCrossAt >= PATH_SWAP_ARRIVAL_SECONDS
+        ) {
+          entity.remove(PathSwap);
+        }
         return;
       }
 
@@ -125,12 +115,12 @@ export const runPathSwapSystem = (
         // post-merge) is skipped without moving.
         swap.nextSwap += 1;
         swap.telegraphReadyAt = 0;
-
         if (valid) {
           // Re-assign to the target path, keeping the current progress
           // fraction. On mirror-symmetric approaches this is the mirrored
           // position.
           state.pathIndex = targetPathIndex;
+          swap.lastCrossAt = simulationTimeSeconds;
 
           // Place the enemy at the new location right away (position + facing).
           // If the next rule is already due, its telegraph starts on this very
@@ -152,71 +142,19 @@ export const runPathSwapSystem = (
           );
           facing.x = direction.x;
           facing.z = direction.z;
-
-          // Raise an arrival burst at the new position (flat field → planet
-          // surface) so the landing reads as a short teleport.
-          requestSwapBurst(
-            world,
-            pathWaypoints,
-            radius,
-            targetPathIndex,
-            motion.pathProgress,
-            state.color
-          );
         }
       }
 
       // If the next rule is already due (freshly crossed, or caught up on
       // after the jump above), open its telegraph: the enemy holds its ground
-      // for TELEGRAPH_SECONDS while a ring burst plays at its standing
-      // position, so the cross is telegraphed rather than a surprise jump.
+      // for the wind-up while the view plays the ring around it, so the cross
+      // is telegraphed rather than a surprise jump.
       if (
         swap.telegraphReadyAt === 0 &&
         swap.nextSwap < swap.swaps.length &&
         motion.pathProgress >= swap.swaps[swap.nextSwap].atProgress
       ) {
-        swap.telegraphReadyAt = simulationTimeSeconds + TELEGRAPH_SECONDS;
-        requestSwapBurst(
-          world,
-          pathWaypoints,
-          radius,
-          state.pathIndex,
-          motion.pathProgress,
-          state.color,
-          TELEGRAPH_SECONDS
-        );
-      }
-
-      // The ability is one-shot per rule; drop it once the last is consumed.
-      if (swap.nextSwap >= swap.swaps.length) {
-        entity.remove(PathSwap);
+        swap.telegraphReadyAt = simulationTimeSeconds + PATH_SWAP_TELEGRAPH_SECONDS;
       }
     });
-};
-
-/**
- * Raises a "spawn" ring burst at a point along `pathIndex` (converted to the
- * planet surface) — the telegraph ring at the standing position (with a
- * `duration`) or the arrival burst after a cross.
- */
-const requestSwapBurst = (
-  world: World,
-  pathWaypoints: PathWaypoint[][],
-  radius: number,
-  pathIndex: number,
-  pathProgress: number,
-  color: string,
-  duration?: number
-): void => {
-  const point = getPositionAlongMultiplePaths(pathWaypoints, pathIndex, pathProgress);
-  flatFieldToSphereSurface(point.x, point.z, radius, scratchSurface, scratchNormal);
-  scratchPos
-    .copy(scratchSurface)
-    .addScaledVector(scratchNormal, point.y + 0.1);
-  effectActions(world).requestSpawnEffect(
-    [scratchPos.x, scratchPos.y, scratchPos.z],
-    color,
-    "spawn",
-    duration
-  );
 };

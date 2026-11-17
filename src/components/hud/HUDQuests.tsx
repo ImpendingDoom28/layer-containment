@@ -1,7 +1,7 @@
 import { FC } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Icon } from "../ui/Icon";
+import { UICheckbox } from "../ui/UICheckbox";
 import { UITypography } from "../ui/UITypography";
 import { getQuestsProgress } from "../../core/quests/evaluateQuests";
 import {
@@ -43,27 +43,32 @@ const QuestRow: FC<QuestRowProps> = ({ quest, progress, additional }) => {
         })
       : tFree(quest.labelKey, quest.labelParams);
 
+  const failed = progress.failed;
+  const complete = progress.complete;
+
   return (
     <div
       data-testid={`quest-row-${quest.id}`}
-      className={`flex items-center gap-2 ${
-        additional ? "opacity-60" : ""
-      }`}
+      data-state={failed ? "failed" : complete ? "complete" : "open"}
+      className={`flex items-center gap-2 ${additional ? "opacity-60" : ""}`}
     >
-      <Icon
-        name={progress.complete ? "Check" : "Plus"}
-        color={progress.complete ? (additional ? "muted" : "green") : undefined}
-        size={14}
-        className="shrink-0"
+      <UICheckbox
+        checked={complete}
+        failed={failed}
+        disabled
+        aria-label={label}
+        className="border-white/40"
       />
       <UITypography
         variant="body"
         className={`min-w-0 flex-1 ${
-          progress.complete
-            ? "text-muted-foreground line-through"
-            : additional
-              ? "text-muted-foreground"
-              : ""
+          failed
+            ? "text-destructive"
+            : complete
+              ? "text-muted-foreground line-through"
+              : additional
+                ? "text-muted-foreground"
+                : ""
         }`}
       >
         {label}
@@ -71,7 +76,9 @@ const QuestRow: FC<QuestRowProps> = ({ quest, progress, additional }) => {
       <UITypography
         variant="small"
         whiteSpace="nowrap"
-        className={additional ? "text-muted-foreground" : ""}
+        className={`${
+          failed ? "text-destructive" : ""
+        } ${additional ? "text-muted-foreground" : ""}`}
       >
         {progress.current}/{progress.target}
       </UITypography>
@@ -81,10 +88,11 @@ const QuestRow: FC<QuestRowProps> = ({ quest, progress, additional }) => {
 
 /**
  * The level's objectives card: main quests first, a divider, then the
- * additional (bonus) quests in a de-emphasised style. Transparent background
- * (no `UICard`), a checkbox per quest that checks off on completion with a
- * `current/target` count. Rendered right below the game stats card
- * (`HUDGameStats`). Returns `null` for levels without quests.
+ * additional (bonus) quests in a de-emphasised style. Fully transparent
+ * (no panel or card), a checkbox per quest that checks off on completion and
+ * shows a red X once failed, with a `current/target` count. Rendered right
+ * below the game stats card (`HUDGameStats`). Returns `null` for levels
+ * without quests.
  */
 export const HUDQuests: FC = () => {
   const { t } = useTranslation();
@@ -98,54 +106,52 @@ export const HUDQuests: FC = () => {
   const progress = getQuestsProgress(quests, counters);
   const mainQuests = quests.filter((quest) => !quest.additional);
   const additionalQuests = quests.filter((quest) => quest.additional);
+  const fallbackProgress: QuestProgress = {
+    current: 0,
+    target: 0,
+    complete: false,
+    failed: false,
+  };
 
   return (
     <div data-testid="quests-card" className="w-80">
-      <div className="flex flex-col gap-2">
+      <div
+        data-testid="quests-main"
+        className="flex flex-col gap-1.5"
+      >
+        <UITypography variant="small" className="tracking-wider text-muted-foreground">
+          {t("quests.objectives")}
+        </UITypography>
+        <div className="h-px w-full bg-white/20" />
+        {mainQuests.map((quest) => (
+          <QuestRow
+            key={quest.id}
+            quest={quest}
+            progress={progress.get(quest.id) ?? fallbackProgress}
+            additional={false}
+          />
+        ))}
+      </div>
+
+      {additionalQuests.length > 0 && (
         <div
-          data-testid="quests-main"
-          className="flex flex-col gap-1.5 rounded-md bg-black/30 p-2.5 backdrop-blur-sm"
+          data-testid="quests-additional"
+          className="mt-4 flex flex-col gap-1.5"
         >
-          <UITypography variant="small" className="uppercase tracking-wider text-muted-foreground">
-            {t("quests.objectives")}
+          <UITypography variant="small" className="tracking-wider text-muted-foreground/80">
+            {t("quests.bonus")}
           </UITypography>
-          {mainQuests.map((quest) => (
+          <div className="h-px w-full bg-white/20" />
+          {additionalQuests.map((quest) => (
             <QuestRow
               key={quest.id}
               quest={quest}
-              progress={progress.get(quest.id) ?? {
-                current: 0,
-                target: 0,
-                complete: false,
-              }}
-              additional={false}
+              progress={progress.get(quest.id) ?? fallbackProgress}
+              additional
             />
           ))}
         </div>
-
-        {additionalQuests.length > 0 && (
-          <div
-            data-testid="quests-additional"
-            className="flex flex-col gap-1.5 rounded-md bg-black/20 p-2.5"
-          >
-            <UITypography variant="small" className="uppercase tracking-wider text-muted-foreground/80">
-              {t("quests.bonus")}
-            </UITypography>
-            {additionalQuests.map((quest) => (
-              <QuestRow
-                key={quest.id}
-                quest={quest}
-                progress={progress.get(quest.id) ?? {
-                  current: 0,
-                  target: 0,
-                  complete: false,
-                }}
-                additional
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 };

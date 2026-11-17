@@ -48,6 +48,7 @@ const QUESTS: QuestConfig[] = [
 const COUNTERS: QuestCounters = {
   leaks: 0,
   victory: false,
+  runOver: false,
   wavesStarted: 2,
   towersPlaced: 1,
   towersSold: 0,
@@ -185,6 +186,68 @@ describe("HUDQuests", () => {
       '[data-testid="quest-row-place-2-towers"]'
     );
     expect(placeRow?.textContent).toContain("2/2");
+  });
+
+  it("renders no panel background (fully transparent card)", () => {
+    mount();
+    for (const testid of ["quests-card", "quests-main", "quests-additional"]) {
+      const section = container.querySelector(`[data-testid="${testid}"]`);
+      expect(section?.className).not.toMatch(/bg-|backdrop-blur|rounded/);
+    }
+  });
+
+  it("marks a quest failed when its leak cap is exceeded", () => {
+    mount();
+    act(() => {
+      useQuestStore.setState({
+        counters: { ...useQuestStore.getState().counters, leaks: 4 },
+      });
+    });
+    const holdRow = container.querySelector(
+      '[data-testid="quest-row-hold-front"]'
+    );
+    expect(holdRow?.getAttribute("data-state")).toBe("failed");
+    // The checkbox shows the failed state instead of a check.
+    expect(holdRow?.querySelector('[data-state="failed"]')).not.toBeNull();
+  });
+
+  it("fails every incomplete quest when the run is lost", () => {
+    mount();
+    act(() => {
+      useQuestStore.setState({
+        counters: { ...useQuestStore.getState().counters, runOver: true },
+      });
+    });
+    // place-2-towers was the only incomplete quest (1/2) -> now failed.
+    const placeRow = container.querySelector(
+      '[data-testid="quest-row-place-2-towers"]'
+    );
+    expect(placeRow?.getAttribute("data-state")).toBe("failed");
+    // The completed quests stay complete, not failed.
+    const startRow = container.querySelector(
+      '[data-testid="quest-row-start-2-waves"]'
+    );
+    expect(startRow?.getAttribute("data-state")).toBe("complete");
+    const holdRow = container.querySelector(
+      '[data-testid="quest-row-hold-front"]'
+    );
+    expect(holdRow?.getAttribute("data-state")).toBe("complete");
+  });
+
+  it("keeps incomplete quests uncompleted (not failed) when the run is won", () => {
+    mount();
+    act(() => {
+      useQuestStore.setState({
+        counters: { ...useQuestStore.getState().counters, victory: true },
+      });
+    });
+    const placeRow = container.querySelector(
+      '[data-testid="quest-row-place-2-towers"]'
+    );
+    expect(placeRow?.getAttribute("data-state")).toBe("open");
+    expect(
+      placeRow?.querySelector('[data-state="failed"]')
+    ).toBeNull();
   });
 
   it("exposes the quest selectors over the store state", () => {

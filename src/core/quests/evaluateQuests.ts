@@ -27,6 +27,11 @@ const ACCUMULATOR_KEYS: readonly QuestAccumulatorKey[] = [
   "killsByType",
 ];
 
+const fail = (progress: Omit<QuestProgress, "failed">): QuestProgress => ({
+  ...progress,
+  failed: true,
+});
+
 export const getQuestProgress = (
   quest: QuestConfig,
   counters: QuestCounters
@@ -34,25 +39,33 @@ export const getQuestProgress = (
   const spec = quest.counters;
 
   if (spec.victory === true) {
-    return {
-      current: counters.victory ? 1 : 0,
-      target: 1,
-      complete: counters.victory,
-    };
+    if (counters.victory) {
+      return { current: 1, target: 1, complete: true, failed: false };
+    }
+    return counters.runOver
+      ? fail({ current: 0, target: 1, complete: false })
+      : { current: 0, target: 1, complete: false, failed: false };
   }
 
   if (spec.leaks !== undefined) {
     const maxLeaks = spec.leaks;
     // A cap counter: current is what is left before the quest is failed, so
-    // the display empties toward the cap and the quest stays complete while
-    // the cap holds.
+    // the display empties toward the cap.
     const current = Math.max(0, maxLeaks - counters.leaks);
-    return { current, target: maxLeaks, complete: counters.leaks <= maxLeaks };
+    if (counters.leaks > maxLeaks) {
+      return fail({ current, target: maxLeaks, complete: false });
+    }
+    return {
+      current,
+      target: maxLeaks,
+      complete: true,
+      failed: false,
+    };
   }
 
   const key = ACCUMULATOR_KEYS.find((candidate) => spec[candidate] !== undefined);
   if (!key) {
-    return { current: 0, target: 0, complete: false };
+    return { current: 0, target: 0, complete: false, failed: false };
   }
 
   if (key === "killsByType") {
@@ -61,16 +74,24 @@ export const getQuestProgress = (
       ? (Object.entries(byType)[0] as [EnemyType, number] | undefined)
       : undefined;
     if (!entry) {
-      return { current: 0, target: 0, complete: false };
+      return { current: 0, target: 0, complete: false, failed: false };
     }
     const [type, target] = entry;
     const current = Math.min(target, counters.killsByType[type] ?? 0);
-    return { current, target, complete: current >= target };
+    const complete = current >= target;
+    const progress = { current, target, complete };
+    return counters.runOver && !complete
+      ? fail(progress)
+      : { ...progress, failed: false };
   }
 
   const target = spec[key] as number;
   const current = Math.min(target, counters[key]);
-  return { current, target, complete: current >= target };
+  const complete = current >= target;
+  const progress = { current, target, complete };
+  return counters.runOver && !complete
+    ? fail(progress)
+    : { ...progress, failed: false };
 };
 
 export const getQuestsProgress = (

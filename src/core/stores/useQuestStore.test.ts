@@ -38,10 +38,12 @@ describe("useQuestStore + connectQuestCounters", () => {
     gameEvents.emit(GameEvent.MONEY_EARNED, { amount: 5 });
     gameEvents.emit(GameEvent.MONEY_CHANGED, { amount: 130, direction: "decrease" });
     gameEvents.emit(GameEvent.GAME_WON);
+    gameEvents.emit(GameEvent.GAME_OVER, { gameOverType: "loss" });
 
     expect(state().counters).toEqual({
       leaks: 1,
       victory: true,
+      runOver: true,
       wavesStarted: 2,
       towersPlaced: 1,
       towersSold: 1,
@@ -68,6 +70,13 @@ describe("useQuestStore + connectQuestCounters", () => {
     useLevelStore.getState().addMoney(5);
     expect(useLevelStore.getState().money).toBe(20);
     expect(state().counters.totalGoldEarned).toBe(10);
+  });
+
+  it("marks the run over on GAME_OVER (loss)", () => {
+    connectQuestCounters();
+    expect(state().counters.runOver).toBe(false);
+    gameEvents.emit(GameEvent.GAME_OVER, { gameOverType: "loss" });
+    expect(state().counters.runOver).toBe(true);
   });
 
   it("resets quests and counters", () => {

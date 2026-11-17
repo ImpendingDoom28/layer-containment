@@ -14,6 +14,7 @@ type EnemyKilledData = {
 const EMPTY_COUNTERS: QuestCounters = {
   leaks: 0,
   victory: false,
+  runOver: false,
   wavesStarted: 0,
   towersPlaced: 0,
   towersSold: 0,
@@ -109,5 +110,11 @@ export const connectQuestCounters = (): void => {
 
   gameEvents.on(GameEvent.GAME_WON, () => {
     bump(() => ({ victory: true }));
+  });
+
+  // `GAME_OVER` is loss-only in this codebase (the win path emits `GAME_WON`),
+  // so it marks the run as over and any quest still incomplete is failed.
+  gameEvents.on(GameEvent.GAME_OVER, () => {
+    bump(() => ({ runOver: true }));
   });
 };

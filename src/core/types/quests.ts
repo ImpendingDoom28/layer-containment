@@ -6,10 +6,14 @@ import type { EnemyType } from "./game";
  * new quest kind only needs a new counter here and a schema field — no code
  * changes in the store, the evaluator, or the UI.
  *
- * - `leaks`: cap, not a target — the quest completes when the number of
- *   enemies that reached the base has *not* exceeded it (the counter counts
- *   leaks; the target is the maximum allowed).
- * - `victory`: boolean flag — completes when the run is won.
+ * - `leaks`: cap, not a target — the quest completes while the number of
+ *   enemies that reached the base has not exceeded it, and fails once it
+ *   does (the counter counts leaks; the target is the maximum allowed).
+ * - `victory`: boolean flag — completes when the run is won, fails when the
+ *   run is lost.
+ * - `runOver`: the run ended in a loss (`GAME_OVER`). Any quest that is not
+ *   complete at that point is failed — the run is over, so the objective can
+ *   never be met. A won run leaves uncompleted quests uncompleted, not failed.
  * - everything else: accumulators — complete once the counter reaches the
  *   target (over-achievement counts as the target, so one counter's surplus
  *   cannot pad another's deficit).
@@ -17,6 +21,7 @@ import type { EnemyType } from "./game";
 export type QuestCounters = {
   leaks: number;
   victory: boolean;
+  runOver: boolean;
   wavesStarted: number;
   towersPlaced: number;
   towersSold: number;
@@ -58,4 +63,10 @@ export type QuestProgress = {
   current: number;
   target: number;
   complete: boolean;
+  /**
+   * True once the objective can no longer be met: a `leaks` cap exceeded, or
+   * the run lost (`runOver`) with the quest still incomplete. Mutually
+   * exclusive with `complete`.
+   */
+  failed: boolean;
 };

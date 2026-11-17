@@ -28,7 +28,9 @@ function UICheckbox({ className, failed = false, ...props }: UICheckboxProps) {
       {...props}
       // Radix only emits checked/unchecked/indeterminate; the failed state is
       // overridden after its own data-state so the indicator can be forced on.
-      data-state={failed ? "failed" : undefined}
+      // Spread conditionally (not `data-state={undefined}`) so a non-failed
+      // box keeps Radix's generated state and its checked styling.
+      {...(failed ? { "data-state": "failed" } : {})}
     >
       <CheckboxPrimitive.Indicator forceMount={failed || undefined}>
         <Icon

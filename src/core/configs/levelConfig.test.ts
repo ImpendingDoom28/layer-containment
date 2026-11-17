@@ -72,4 +72,38 @@ describe("levelConfigSchema", () => {
     if (!result.success) return;
     expect(result.data.enemyWeights).toEqual({ basic: 10, splitter: 2 });
   });
+
+  const makeBoss = (pathSwap: unknown) => ({
+    name: "Test Boss",
+    baseStats: {
+      health: 100,
+      speed: 1,
+      size: 1,
+      healthLoss: 1,
+      reward: 10,
+    },
+    pathSwap,
+  });
+
+  it("accepts a boss path-swap threshold below the path-end boundary", () => {
+    const result = parseLevelConfigData({
+      ...makeLevel([]),
+      boss: makeBoss([{ atProgress: 0.3, targetPathIndex: 1 }]),
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.boss?.pathSwap).toEqual([
+      { atProgress: 0.3, targetPathIndex: 1 },
+    ]);
+  });
+
+  it("rejects a boss path-swap threshold the movement cannot reach (>= 0.99)", () => {
+    for (const atProgress of [0.99, 1]) {
+      const result = parseLevelConfigData({
+        ...makeLevel([]),
+        boss: makeBoss([{ atProgress, targetPathIndex: 1 }]),
+      });
+      expect(result.success).toBe(false);
+    }
+  });
 });

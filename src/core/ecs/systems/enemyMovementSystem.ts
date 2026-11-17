@@ -79,86 +79,90 @@ export const runEnemyMovementSystem = (
 
       // A path-swap in its telegraph window: the enemy stands still until the
       // PathSwapSystem performs the jump (its `telegraphReadyAt` is then in the
-      // past). This is a dedicated freeze — a slow (which an Unstoppable enemy
-      // can resist) would not reliably hold it.
+      // past). This is a dedicated freeze on path advancement — a slow (which
+      // an Unstoppable enemy can resist) would not reliably hold it. Regen
+      // below still runs while frozen, so a healing boss keeps healing during
+      // the wind-up.
       const pathSwap = entity.get(PathSwap);
-      if (pathSwap && pathSwap.telegraphReadyAt > effectiveTime) return;
+      const frozen = !!pathSwap && pathSwap.telegraphReadyAt > effectiveTime;
 
-      // Reads the slow state written by the ApplySlowSystem (which runs
-      // first in the frame). The enemy carries the EnemySlow trait only while
-      // a slow is in effect, so absence means full speed. `until > effectiveTime`
-      // (effectiveTime >= 0) already implies the slow is not expired.
-      const slow = entity.get(EnemySlow);
-      const effectiveSpeed =
-        slow && slow.until > effectiveTime && slow.multiplier < 1
-          ? state.speed * slow.multiplier
-          : state.speed;
+      if (!frozen) {
+        // Reads the slow state written by the ApplySlowSystem (which runs
+        // first in the frame). The enemy carries the EnemySlow trait only while
+        // a slow is in effect, so absence means full speed. `until > effectiveTime`
+        // (effectiveTime >= 0) already implies the slow is not expired.
+        const slow = entity.get(EnemySlow);
+        const effectiveSpeed =
+          slow && slow.until > effectiveTime && slow.multiplier < 1
+            ? state.speed * slow.multiplier
+            : state.speed;
 
-      const path = pathWaypoints[state.pathIndex];
-      const pathLength = path ? getPathLength(path) : 0;
-      if (pathLength > 0) {
-        motion.pathProgress += (effectiveSpeed * delta) / pathLength;
-      }
+        const path = pathWaypoints[state.pathIndex];
+        const pathLength = path ? getPathLength(path) : 0;
+        if (pathLength > 0) {
+          motion.pathProgress += (effectiveSpeed * delta) / pathLength;
+        }
 
-      // Keep the facing aligned to the direction of travel so the enemy always
-      // faces down the path (refreshed here so corner turns and mid-path spawns
-      // stay correct; spawnEnemy sets the initial value too).
-      const direction = path
-        ? getPathDirection(path, motion.pathProgress)
-        : { x: 1, z: 0 };
-      facing.x = direction.x;
-      facing.z = direction.z;
+        // Keep the facing aligned to the direction of travel so the enemy
+        // always faces down the path (refreshed here so corner turns and
+        // mid-path spawns stay correct; spawnEnemy sets the initial value too).
+        const direction = path
+          ? getPathDirection(path, motion.pathProgress)
+          : { x: 1, z: 0 };
+        facing.x = direction.x;
+        facing.z = direction.z;
 
-      if (isAtPathEnd(motion.pathProgress)) {
-        // Clamp the motion to the path end. The hasReachedEnd flag (hot
-        // trait) guards the one-shot end effect and removal against
-        // re-firing every frame — mirroring the old per-entity ref.
-        const endPos = getPositionAlongMultiplePaths(
+        if (isAtPathEnd(motion.pathProgress)) {
+          // Clamp the motion to the path end. The hasReachedEnd flag (hot
+          // trait) guards the one-shot end effect and removal against
+          // re-firing every frame — mirroring the old per-entity ref.
+          const endPos = getPositionAlongMultiplePaths(
+            pathWaypoints,
+            state.pathIndex,
+            1
+          );
+          motion.pathProgress = 1;
+          position.x = endPos.x;
+          position.y = endPos.y;
+          position.z = endPos.z;
+
+          // Deferred end while paused: the enemy is clamped but the end
+          // (effect + base damage) settles on the first resumable frame.
+          if (!canFinish || motion.hasReachedEnd) return;
+
+          motion.hasReachedEnd = true;
+
+          flatFieldToSphereSurface(
+            endPos.x,
+            endPos.z,
+            radius,
+            scratchSurface,
+            scratchNormal
+          );
+          scratchEndPos
+            .copy(scratchSurface)
+            .addScaledVector(scratchNormal, endPos.y + 0.1);
+          effectActions(world).requestSpawnEffect(
+            [scratchEndPos.x, scratchEndPos.y, scratchEndPos.z],
+            state.color,
+            "end"
+          );
+
+          if (onEnemyReachEnd) {
+            reachedEndIds.push(state.id);
+          }
+          return;
+        }
+
+        const waypoint = getPositionAlongMultiplePaths(
           pathWaypoints,
           state.pathIndex,
-          1
+          motion.pathProgress
         );
-        motion.pathProgress = 1;
-        position.x = endPos.x;
-        position.y = endPos.y;
-        position.z = endPos.z;
-
-        // Deferred end while paused: the enemy is clamped but the end
-        // (effect + base damage) settles on the first resumable frame.
-        if (!canFinish || motion.hasReachedEnd) return;
-
-        motion.hasReachedEnd = true;
-
-        flatFieldToSphereSurface(
-          endPos.x,
-          endPos.z,
-          radius,
-          scratchSurface,
-          scratchNormal
-        );
-        scratchEndPos
-          .copy(scratchSurface)
-          .addScaledVector(scratchNormal, endPos.y + 0.1);
-        effectActions(world).requestSpawnEffect(
-          [scratchEndPos.x, scratchEndPos.y, scratchEndPos.z],
-          state.color,
-          "end"
-        );
-
-        if (onEnemyReachEnd) {
-          reachedEndIds.push(state.id);
-        }
-        return;
+        position.x = waypoint.x;
+        position.y = waypoint.y;
+        position.z = waypoint.z;
       }
-
-      const waypoint = getPositionAlongMultiplePaths(
-        pathWaypoints,
-        state.pathIndex,
-        motion.pathProgress
-      );
-      position.x = waypoint.x;
-      position.y = waypoint.y;
-      position.z = waypoint.z;
 
       // Regeneration: discrete ticks on the cold trait. The first pass
       // (lastRegenTick = -1) only establishes the baseline at the current

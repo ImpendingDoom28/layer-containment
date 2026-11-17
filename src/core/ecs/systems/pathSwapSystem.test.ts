@@ -6,6 +6,7 @@ import { enemyActions } from "../actions/enemyActions";
 import { EnemyMotion, EnemyState } from "../traits/enemy";
 import { spawnEffectRequest } from "../traits/effect";
 import { PathSwap } from "../traits/pathSwap";
+import { Position } from "../traits/position";
 import { testWorld } from "../world";
 import type { Enemy, PathWaypoint } from "../../../core/types/game";
 
@@ -78,8 +79,11 @@ describe("pathSwapSystem", () => {
       { atProgress: SWAP_PROGRESS, targetPathIndex: 1 },
     ]
   ) => {
+    // Spawn at the enemy's real path position so the initial Position trait
+    // (seeded from x/z) matches where the enemy is on its route.
+    const point = getPositionAlongMultiplePaths(pathWaypoints, pathIndex, progress);
     const entity = enemyActions(testWorld).spawnEnemy(
-      makeEnemy(1, { pathProgress: progress, pathIndex })
+      makeEnemy(1, { pathProgress: progress, pathIndex, x: point.x, z: point.z })
     );
     entity.add(PathSwap({ swaps, nextSwap: 0, telegraphReadyAt: 0 }));
     return entity;
@@ -247,5 +251,35 @@ describe("pathSwapSystem", () => {
     );
     run(0);
     expect(entity.get(EnemyState)!.pathIndex).toBe(0);
+  });
+
+  it("re-places the enemy on the new path the moment it jumps (chained telegraph)", () => {
+    const swaps = [
+      { atProgress: 0.36, targetPathIndex: 1 },
+      { atProgress: 0.361, targetPathIndex: 0 },
+    ];
+
+    // Both rules are already due: the first is telegraphed, jumped to, and the
+    // second is telegraphed on the same pass — so the movement pass then skips
+    // the frozen enemy and would never re-place it. The jump itself must.
+    const entity = spawnWithSwap(0.45, 0, swaps);
+    run(0);
+    expect(entity.get(EnemyState)!.pathIndex).toBe(0);
+    // Still on path A (the outer left lane, x = -6.5) while the first
+    // telegraph is up.
+    const onA = getPositionAlongMultiplePaths(pathWaypoints, 0, 0.45);
+    expect(entity.get(Position)!.x).toBeCloseTo(onA.x, 2);
+
+    // After the first jump the enemy is visibly on path B (the arrival point),
+    // even though the second telegraph is already freezing it.
+    run(TELEGRAPH);
+    expect(entity.get(EnemyState)!.pathIndex).toBe(1);
+    const onB = getPositionAlongMultiplePaths(pathWaypoints, 1, 0.45);
+    expect(entity.get(Position)!.x).toBeCloseTo(onB.x, 2);
+    expect(entity.get(Position)!.z).toBeCloseTo(onB.z, 2);
+
+    run(2 * TELEGRAPH);
+    expect(entity.get(EnemyState)!.pathIndex).toBe(0);
+    expect(entity.has(PathSwap)).toBe(false);
   });
 });

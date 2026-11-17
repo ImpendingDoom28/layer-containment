@@ -2,11 +2,16 @@ import type { World } from "koota";
 import { Vector3 } from "three";
 
 import { flatFieldToSphereSurface } from "../../../utils/planetSurfaceMapping";
-import { getPositionAlongMultiplePaths } from "../../../utils/pathUtils";
+import {
+  getPathDirection,
+  getPositionAlongMultiplePaths,
+} from "../../../utils/pathUtils";
 import type { PathWaypoint } from "../../types/game";
 import { effectActions } from "../actions/effectActions";
 import { EnemyMotion, EnemyState } from "../traits/enemy";
+import { FacingDirection } from "../traits/facing";
 import { PathSwap } from "../traits/pathSwap";
+import { Position } from "../traits/position";
 
 // Module-level scratch vectors: a single world, single system instance, so
 // they are safe to share (mirrors the enemy movement system).
@@ -59,17 +64,19 @@ export type PathSwapSystemOptions = {
  * walking until that rule's threshold.
  *
  * The movement system derives the enemy's `Position` and `FacingDirection`
- * from `(pathIndex, pathProgress)` every frame, so the cross only rewrites
- * `pathIndex`; the enemy is on the new route when it moves (the system runs
- * just before the movement pass).
+ * from `(pathIndex, pathProgress)` every frame, so the cross normally only
+ * rewrites `pathIndex`; the enemy is on the new route when it moves (the
+ * system runs just before the movement pass). The cross also re-places the
+ * enemy itself on the jump, because a chained telegraph (the next rule already
+ * due) freezes the enemy before the movement pass can re-derive its position.
  *
  * Each rule fires at most once; the trait is removed as soon as the last rule
  * is consumed (or the enemy reaches the path end), so the ability is one-shot
  * per rule and a re-spawned enemy does not inherit it. `EnemyState`/
- * `EnemyMotion` are read (not iterated) here, so their in-place writes are not
- * dropped by koota's "no writes on an iterated trait" rule; `PathSwap` is the
- * iterated trait and is removed when done (the same pattern the slow system
- * uses to consume its request).
+ * `EnemyMotion`, `Position` and `FacingDirection` are queried alongside
+ * `PathSwap` so the cross can write them in place (the path re-assignment and
+ * the landing re-place); `PathSwap` is removed when done (the same pattern the
+ * slow system uses to consume its request).
  */
 export const runPathSwapSystem = (
   world: World,
@@ -77,90 +84,114 @@ export const runPathSwapSystem = (
 ): void => {
   const { pathWaypoints, radius, simulationTimeSeconds } = options;
 
-  world.query(PathSwap).updateEach(([swap], entity) => {
-    const state = entity.get(EnemyState);
-    const motion = entity.get(EnemyMotion);
-    if (!state || !motion) return;
-    if (state.health <= 0) {
-      entity.remove(PathSwap);
-      return;
-    }
+  // EnemyState/EnemyMotion are queried so they can be written in place (the
+  // cross re-assigns pathIndex); Position/FacingDirection are queried so the
+  // jump can re-place the enemy in place (spawnEnemy always adds all four).
+  world
+    .query(PathSwap, EnemyState, EnemyMotion, Position, FacingDirection)
+    .updateEach(([swap, state, motion, position, facing], entity) => {
+      if (state.health <= 0) {
+        entity.remove(PathSwap);
+        return;
+      }
 
-    // No rules left (including an empty list): drop the ability.
-    if (swap.nextSwap >= swap.swaps.length) {
-      entity.remove(PathSwap);
-      return;
-    }
+      // No rules left (including an empty list): drop the ability.
+      if (swap.nextSwap >= swap.swaps.length) {
+        entity.remove(PathSwap);
+        return;
+      }
 
-    // At the path end no further cross is possible: drop the ability.
-    if (motion.pathProgress >= 1) {
-      entity.remove(PathSwap);
-      return;
-    }
+      // At the path end no further cross is possible: drop the ability.
+      if (motion.pathProgress >= 1) {
+        entity.remove(PathSwap);
+        return;
+      }
 
-    // A telegraph is in flight: when its timestamp is reached, perform the
-    // pending cross. (Not yet reached, the enemy holds its ground — the
-    // movement system skips it this frame — and this pass only counts down.)
-    if (swap.telegraphReadyAt > 0) {
-      if (simulationTimeSeconds < swap.telegraphReadyAt) return;
+      // A telegraph is in flight: when its timestamp is reached, perform the
+      // pending cross. (Not yet reached, the enemy holds its ground — the
+      // movement system skips it this frame — and this pass only counts down.)
+      if (swap.telegraphReadyAt > 0) {
+        if (simulationTimeSeconds < swap.telegraphReadyAt) return;
 
-      const rule = swap.swaps[swap.nextSwap];
-      const targetPathIndex = rule.targetPathIndex;
-      const valid =
-        targetPathIndex >= 0 &&
-        targetPathIndex < pathWaypoints.length &&
-        targetPathIndex !== state.pathIndex;
+        const rule = swap.swaps[swap.nextSwap];
+        const targetPathIndex = rule.targetPathIndex;
+        const valid =
+          targetPathIndex >= 0 &&
+          targetPathIndex < pathWaypoints.length &&
+          targetPathIndex !== state.pathIndex;
 
-      // Consume the rule; the telegraph is spent either way. An invalid or
-      // no-op re-assignment (a target equal to the current path, e.g.
-      // post-merge) is skipped without moving.
-      swap.nextSwap += 1;
-      swap.telegraphReadyAt = 0;
+        // Consume the rule; the telegraph is spent either way. An invalid or
+        // no-op re-assignment (a target equal to the current path, e.g.
+        // post-merge) is skipped without moving.
+        swap.nextSwap += 1;
+        swap.telegraphReadyAt = 0;
 
-      if (valid) {
-        // Re-assign to the target path, keeping the current progress
-        // fraction. On mirror-symmetric approaches this is the mirrored
-        // position.
-        state.pathIndex = targetPathIndex;
-        // Raise an arrival burst at the new position (flat field → planet
-        // surface) so the landing reads as a short teleport.
+        if (valid) {
+          // Re-assign to the target path, keeping the current progress
+          // fraction. On mirror-symmetric approaches this is the mirrored
+          // position.
+          state.pathIndex = targetPathIndex;
+
+          // Place the enemy at the new location right away (position + facing).
+          // If the next rule is already due, its telegraph starts on this very
+          // pass and the movement pass then skips the frozen enemy, so without
+          // this the enemy would keep rendering on the old path while standing
+          // (and the telegraph ring would play) on the new one — a chained
+          // 0 → 1 → 0 cross would never visibly show the middle path.
+          const point = getPositionAlongMultiplePaths(
+            pathWaypoints,
+            targetPathIndex,
+            motion.pathProgress
+          );
+          position.x = point.x;
+          position.y = point.y;
+          position.z = point.z;
+          const direction = getPathDirection(
+            pathWaypoints[targetPathIndex],
+            motion.pathProgress
+          );
+          facing.x = direction.x;
+          facing.z = direction.z;
+
+          // Raise an arrival burst at the new position (flat field → planet
+          // surface) so the landing reads as a short teleport.
+          requestSwapBurst(
+            world,
+            pathWaypoints,
+            radius,
+            targetPathIndex,
+            motion.pathProgress,
+            state.color
+          );
+        }
+      }
+
+      // If the next rule is already due (freshly crossed, or caught up on
+      // after the jump above), open its telegraph: the enemy holds its ground
+      // for TELEGRAPH_SECONDS while a ring burst plays at its standing
+      // position, so the cross is telegraphed rather than a surprise jump.
+      if (
+        swap.telegraphReadyAt === 0 &&
+        swap.nextSwap < swap.swaps.length &&
+        motion.pathProgress >= swap.swaps[swap.nextSwap].atProgress
+      ) {
+        swap.telegraphReadyAt = simulationTimeSeconds + TELEGRAPH_SECONDS;
         requestSwapBurst(
           world,
           pathWaypoints,
           radius,
-          targetPathIndex,
+          state.pathIndex,
           motion.pathProgress,
-          state.color
+          state.color,
+          TELEGRAPH_SECONDS
         );
       }
-    }
 
-    // If the next rule is already due (freshly crossed, or caught up on after
-    // the jump above), open its telegraph: the enemy holds its ground for
-    // TELEGRAPH_SECONDS while a ring burst plays at its standing position, so
-    // the cross is telegraphed rather than a surprise jump.
-    if (
-      swap.telegraphReadyAt === 0 &&
-      swap.nextSwap < swap.swaps.length &&
-      motion.pathProgress >= swap.swaps[swap.nextSwap].atProgress
-    ) {
-      swap.telegraphReadyAt = simulationTimeSeconds + TELEGRAPH_SECONDS;
-      requestSwapBurst(
-        world,
-        pathWaypoints,
-        radius,
-        state.pathIndex,
-        motion.pathProgress,
-        state.color,
-        TELEGRAPH_SECONDS
-      );
-    }
-
-    // The ability is one-shot per rule; drop it once the last is consumed.
-    if (swap.nextSwap >= swap.swaps.length) {
-      entity.remove(PathSwap);
-    }
-  });
+      // The ability is one-shot per rule; drop it once the last is consumed.
+      if (swap.nextSwap >= swap.swaps.length) {
+        entity.remove(PathSwap);
+      }
+    });
 };
 
 /**

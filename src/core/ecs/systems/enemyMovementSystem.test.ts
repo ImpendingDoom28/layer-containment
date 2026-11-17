@@ -336,4 +336,27 @@ describe("enemyMovementSystem", () => {
       5
     );
   });
+
+  it("keeps regeneration ticking while a path-swap telegraph is freezing movement", () => {
+    const entity = enemyActions(testWorld).spawnEnemy(
+      makeEnemy(1, { health: 50, regeneration: 10, pathProgress: 0, x: 0 })
+    );
+    // A pending cross: the jump fires at t = 0.2, so the enemy stands still
+    // until then (and would otherwise keep walking).
+    entity.add(PathSwap({ swaps: [], nextSwap: 0, telegraphReadyAt: 0.2 }));
+
+    // t=0: frozen, establishes the regen baseline (no heal).
+    run(0.2, 0);
+    expect(motionOf(entity).pathProgress).toBe(0);
+    expect(stateOf(entity).health).toBe(50);
+
+    // t=0.1: still frozen — the enemy holds, but healing keeps ticking.
+    run(0.2, 0.1);
+    expect(motionOf(entity).pathProgress).toBe(0);
+    expect(stateOf(entity).health).toBeCloseTo(51); // 10 * 0.1s
+
+    // The freeze ends at t=0.2: the enemy walks again.
+    run(0.2, 0.3);
+    expect(motionOf(entity).pathProgress).toBeGreaterThan(0);
+  });
 });

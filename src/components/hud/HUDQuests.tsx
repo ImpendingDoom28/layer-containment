@@ -10,7 +10,11 @@ import {
   useQuestStore,
 } from "../../core/stores/useQuestStore";
 import type { EnemyType } from "../../core/types/game";
-import type { QuestConfig, QuestProgress } from "../../core/types/quests";
+import type {
+  QuestConfig,
+  QuestCounters,
+  QuestProgress,
+} from "../../core/types/quests";
 
 type QuestRowProps = {
   quest: QuestConfig;
@@ -86,19 +90,27 @@ const QuestRow: FC<QuestRowProps> = ({ quest, progress, additional }) => {
   );
 };
 
-/**
- * The level's objectives card: main quests first, a divider, then the
- * additional (bonus) quests in a de-emphasised style. Fully transparent
- * (no panel or card), a checkbox per quest that checks off on completion and
- * shows a red X once failed, with a `current/target` count. Rendered right
- * below the game stats card (`HUDGameStats`). Returns `null` for levels
- * without quests.
- */
-export const HUDQuests: FC = () => {
-  const { t } = useTranslation();
-  const quests = useQuestStore(questsSelector);
-  const counters = useQuestStore(questCountersSelector);
+const FALLBACK_PROGRESS: QuestProgress = {
+  current: 0,
+  target: 0,
+  complete: false,
+  failed: false,
+};
 
+type QuestListProps = {
+  quests: QuestConfig[];
+  counters: QuestCounters;
+};
+
+/**
+ * The level's objectives as a fully transparent list: main quests first, a
+ * divider, then the additional (bonus) quests de-emphasised. One checkbox per
+ * quest — checked and struck through when complete, a red X when failed —
+ * plus a `current/target` count. Shared by the in-game card (`HUDQuests`)
+ * and the game-over modal so the same rows read identically in both.
+ */
+export const QuestList: FC<QuestListProps> = ({ quests, counters }) => {
+  const { t } = useTranslation();
   if (quests.length === 0) {
     return null;
   }
@@ -106,15 +118,9 @@ export const HUDQuests: FC = () => {
   const progress = getQuestsProgress(quests, counters);
   const mainQuests = quests.filter((quest) => !quest.additional);
   const additionalQuests = quests.filter((quest) => quest.additional);
-  const fallbackProgress: QuestProgress = {
-    current: 0,
-    target: 0,
-    complete: false,
-    failed: false,
-  };
 
   return (
-    <div data-testid="quests-card" className="w-80">
+    <div data-testid="quests-list" className="w-full">
       <div
         data-testid="quests-main"
         className="flex flex-col gap-1.5"
@@ -127,7 +133,7 @@ export const HUDQuests: FC = () => {
           <QuestRow
             key={quest.id}
             quest={quest}
-            progress={progress.get(quest.id) ?? fallbackProgress}
+            progress={progress.get(quest.id) ?? FALLBACK_PROGRESS}
             additional={false}
           />
         ))}
@@ -146,12 +152,30 @@ export const HUDQuests: FC = () => {
             <QuestRow
               key={quest.id}
               quest={quest}
-              progress={progress.get(quest.id) ?? fallbackProgress}
+              progress={progress.get(quest.id) ?? FALLBACK_PROGRESS}
               additional
             />
           ))}
         </div>
       )}
+    </div>
+  );
+};
+
+/**
+ * The in-game objectives card, rendered right below the game stats card
+ * (`HUDGameStats`) and reading the live quest store. Returns `null` for
+ * levels without quests.
+ */
+export const HUDQuests: FC = () => {
+  const quests = useQuestStore(questsSelector);
+  const counters = useQuestStore(questCountersSelector);
+  if (quests.length === 0) {
+    return null;
+  }
+  return (
+    <div data-testid="quests-card" className="w-80">
+      <QuestList quests={quests} counters={counters} />
     </div>
   );
 };

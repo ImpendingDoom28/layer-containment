@@ -16,10 +16,15 @@ const baseCounters = (overrides: Partial<QuestCounters> = {}): QuestCounters => 
   ...overrides,
 });
 
-const quest = (counters: QuestConfig["counters"], id = "q"): QuestConfig => ({
+const quest = (
+  counters: QuestConfig["counters"],
+  id = "q",
+  deferred?: boolean
+): QuestConfig => ({
   id,
   labelKey: "quests.kills",
   counters,
+  ...(deferred !== undefined ? { deferred } : {}),
 });
 
 describe("getQuestProgress", () => {
@@ -212,5 +217,106 @@ describe("getQuestsProgress", () => {
     const progress = getQuestsProgress(quests, baseCounters({ kills: 10, killsByType: { tank: 1 } }));
     expect(progress.get("a")).toEqual({ current: 10, target: 10, complete: true, failed: false });
     expect(progress.get("b")).toEqual({ current: 1, target: 2, complete: false, failed: false });
+  });
+});
+
+describe("deferred quests (settled only at the end of the run)", () => {
+  it("keeps a held leak cap open mid-run even though the condition holds", () => {
+    expect(getQuestProgress(quest({ leaks: 3 }, "q", true), baseCounters({ leaks: 0 }))).toEqual({
+      current: 3,
+      target: 3,
+      complete: false,
+      failed: false,
+    });
+    expect(getQuestProgress(quest({ leaks: 3 }, "q", true), baseCounters({ leaks: 2 }))).toEqual({
+      current: 1,
+      target: 3,
+      complete: false,
+      failed: false,
+    });
+  });
+
+  it("completes a held leak cap when the run is won (cap holding at the end)", () => {
+    expect(getQuestProgress(quest({ leaks: 3 }, "q", true), baseCounters({ leaks: 0, victory: true }))).toEqual({
+      current: 3,
+      target: 3,
+      complete: true,
+      failed: false,
+    });
+    expect(getQuestProgress(quest({ leaks: 3 }, "q", true), baseCounters({ leaks: 3, victory: true }))).toEqual({
+      current: 0,
+      target: 3,
+      complete: true,
+      failed: false,
+    });
+  });
+
+  it("fails a deferred leak cap when the run is lost", () => {
+    expect(getQuestProgress(quest({ leaks: 3 }, "q", true), baseCounters({ leaks: 0, runOver: true }))).toEqual({
+      current: 3,
+      target: 3,
+      complete: false,
+      failed: true,
+    });
+  });
+
+  it("fails a deferred leak cap mid-run the moment the cap is exceeded (before game over)", () => {
+    expect(getQuestProgress(quest({ leaks: 3 }, "q", true), baseCounters({ leaks: 4 }))).toEqual({
+      current: 0,
+      target: 3,
+      complete: false,
+      failed: true,
+    });
+  });
+
+  it("keeps an already-broken deferred leak cap failed even after a win", () => {
+    expect(getQuestProgress(quest({ leaks: 3 }, "q", true), baseCounters({ leaks: 4, victory: true }))).toEqual({
+      current: 0,
+      target: 3,
+      complete: false,
+      failed: true,
+    });
+  });
+
+  it("settles a deferred accumulator only at the end of the run", () => {
+    const q = quest({ kills: 5 }, "q", true);
+    // Reached mid-run: still open.
+    expect(getQuestProgress(q, baseCounters({ kills: 5 }))).toEqual({
+      current: 5,
+      target: 5,
+      complete: false,
+      failed: false,
+    });
+    // Reached and won: complete.
+    expect(getQuestProgress(q, baseCounters({ kills: 5, victory: true }))).toEqual({
+      current: 5,
+      target: 5,
+      complete: true,
+      failed: false,
+    });
+    // Reached but lost: failed, not both complete and failed.
+    expect(getQuestProgress(q, baseCounters({ kills: 5, runOver: true }))).toEqual({
+      current: 5,
+      target: 5,
+      complete: false,
+      failed: true,
+    });
+    // Unreached and won: open (a won run does not fail unmet quests).
+    expect(getQuestProgress(q, baseCounters({ kills: 2, victory: true }))).toEqual({
+      current: 2,
+      target: 5,
+      complete: false,
+      failed: false,
+    });
+  });
+
+  it("never defers the victory quest: it completes as soon as the run is won", () => {
+    const q = quest({ victory: true }, "q", true);
+    expect(getQuestProgress(q, baseCounters({ victory: true }))).toEqual({
+      current: 1,
+      target: 1,
+      complete: true,
+      failed: false,
+    });
   });
 });

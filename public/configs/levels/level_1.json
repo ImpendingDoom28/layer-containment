@@ -358,7 +358,8 @@
       },
       "counters": {
         "leaks": 3
-      }
+      },
+      "deferred": true
     },
     {
       "id": "kill-3-tanks",

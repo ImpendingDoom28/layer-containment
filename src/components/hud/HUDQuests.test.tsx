@@ -29,6 +29,7 @@ const QUESTS: QuestConfig[] = [
     labelKey: "quests.noLeaks",
     labelParams: { count: 3 },
     counters: { leaks: 3 },
+    deferred: true,
   },
   {
     id: "kill-3-tanks",
@@ -211,6 +212,16 @@ describe("HUDQuests", () => {
     expect(holdRow?.querySelector('[data-state="failed"]')).not.toBeNull();
   });
 
+  it("keeps a deferred leak cap open mid-run even while the cap holds", () => {
+    mount();
+    // hold-front is deferred (level 1): holding the cap is not yet a win.
+    const holdRow = container.querySelector(
+      '[data-testid="quest-row-hold-front"]'
+    );
+    expect(holdRow?.getAttribute("data-state")).toBe("open");
+    expect(holdRow?.textContent).toContain("3/3");
+  });
+
   it("fails every incomplete quest when the run is lost", () => {
     mount();
     act(() => {
@@ -228,10 +239,12 @@ describe("HUDQuests", () => {
       '[data-testid="quest-row-start-2-waves"]'
     );
     expect(startRow?.getAttribute("data-state")).toBe("complete");
+    // hold-front is deferred: a lost run means the line was not held to the
+    // end, so the still-open cap quest fails (it is not "complete" anymore).
     const holdRow = container.querySelector(
       '[data-testid="quest-row-hold-front"]'
     );
-    expect(holdRow?.getAttribute("data-state")).toBe("complete");
+    expect(holdRow?.getAttribute("data-state")).toBe("failed");
   });
 
   it("keeps incomplete quests uncompleted (not failed) when the run is won", () => {
@@ -248,6 +261,11 @@ describe("HUDQuests", () => {
     expect(
       placeRow?.querySelector('[data-state="failed"]')
     ).toBeNull();
+    // The deferred leak cap completes on the win (the line was held to the end).
+    const holdRow = container.querySelector(
+      '[data-testid="quest-row-hold-front"]'
+    );
+    expect(holdRow?.getAttribute("data-state")).toBe("complete");
   });
 
   it("exposes the quest selectors over the store state", () => {

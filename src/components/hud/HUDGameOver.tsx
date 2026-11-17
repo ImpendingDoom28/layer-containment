@@ -17,6 +17,11 @@ import {
   totalWavesSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
+import {
+  questCountersSelector,
+  questsSelector,
+  useQuestStore,
+} from "../../core/stores/useQuestStore";
 import { UIButton } from "../ui/buttons/UIButton";
 import {
   UICard,
@@ -30,6 +35,7 @@ import { UITable, UITableCell, UITableRow } from "../ui/UITable";
 import { UITypography } from "../ui/UITypography";
 import { cn } from "../ui/lib/twUtils";
 import { HUDOverlay } from "./HUDOverlay";
+import { QuestList } from "./HUDQuests";
 
 // Damage totals grow into the thousands over a full run; trim them so the
 // stats table stays readable (980 -> "980", 1234 -> "1.2k", 45678 -> "46k").
@@ -71,6 +77,8 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
   const towerTypes = useGameStore(towerTypesSelector);
   const enemyTypes = useGameStore(enemyTypesSelector);
   const totalWaves = useLevelStore(totalWavesSelector);
+  const questConfigs = useQuestStore(questsSelector);
+  const questCounters = useQuestStore(questCountersSelector);
 
   // Keep the overlay mounted through its exit animation: `hasOpened` stays
   // true while the card slides out, then everything resets and it unmounts.
@@ -85,6 +93,8 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
     money,
     enemiesKilled,
     stats,
+    quests: questConfigs,
+    counters: questCounters,
     isWin: false,
   });
 
@@ -98,6 +108,8 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
         money,
         enemiesKilled,
         stats,
+        quests: questConfigs,
+        counters: questCounters,
         isWin: gameStatus === "won",
       });
       setHasOpened(true);
@@ -114,6 +126,8 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
     money,
     enemiesKilled,
     stats,
+    questConfigs,
+    questCounters,
   ]);
 
   const handleCardAnimationEnd = (event: AnimationEvent<HTMLDivElement>) => {
@@ -127,7 +141,7 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
 
   if (!hasOpened) return null;
 
-  const { isWin } = frozen;
+  const { isWin, quests, counters } = frozen;
   const runStats = frozen.stats;
 
   // Types come from the config so new tower/enemy types appear automatically.
@@ -151,7 +165,9 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
   return (
     <HUDOverlay
       className={cn(closing && "pointer-events-none")}
-      contentClassName={cn(closing && "pointer-events-none")}
+      // The result screen carries stats plus the quest summary, so it gets a
+      // wider content box than the overlay default.
+      contentClassName={cn("max-w-xl md:max-w-2xl", closing && "pointer-events-none")}
     >
       <UICard
         className={cn(
@@ -222,6 +238,11 @@ export const HUDGameOver: FC<HUDGameOverProps> = ({
               </UITypography>
             </div>
           </div>
+
+          {/* The level's objectives and how the run settled them (from the
+              frozen snapshot, so the verdicts stay stable during the exit
+              animation). */}
+          <QuestList quests={quests} counters={counters} />
 
           {activeTowerTypes.length > 0 && (
             <div className="overflow-x-auto">

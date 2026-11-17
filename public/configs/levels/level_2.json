@@ -504,7 +504,8 @@
       },
       "counters": {
         "leaks": 4
-      }
+      },
+      "deferred": true
     },
     {
       "id": "kill-4-tanks",

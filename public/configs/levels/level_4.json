@@ -501,7 +501,8 @@
       },
       "counters": {
         "leaks": 3
-      }
+      },
+      "deferred": true
     },
     {
       "id": "kill-15-wraiths",

@@ -76,16 +76,29 @@ describe("levelConfigSchema", () => {
 });
 
 describe("levelConfigSchema quests", () => {
-  const quest = (counters: Record<string, unknown>, id = "q") => ({
+  const quest = (
+    counters: Record<string, unknown>,
+    id = "q",
+    extra: Record<string, unknown> = {}
+  ) => ({
     id,
     labelKey: "quests.kills",
     counters,
+    ...extra,
   });
 
   it("accepts a quest with exactly one counter", () => {
     const result = parseLevelConfigData({
       ...makeLevel([]),
       quests: [quest({ kills: 5 })],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a quest with the optional deferred flag", () => {
+    const result = parseLevelConfigData({
+      ...makeLevel([]),
+      quests: [quest({ leaks: 3 }, "q", { deferred: true })],
     });
     expect(result.success).toBe(true);
   });

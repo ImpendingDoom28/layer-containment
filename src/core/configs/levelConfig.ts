@@ -173,6 +173,12 @@ export const questConfigSchema: z.ZodType<QuestConfig> = z.object({
   labelKey: z.string().min(1),
   labelParams: z.record(z.union([z.string(), z.number()])).optional(),
   counters: questCountersSchema,
+  /**
+   * Settled only at the end of the run (e.g. a leak cap): the quest stays
+   * open while the run goes on and completes only on a win with the
+   * condition holding.
+   */
+  deferred: z.boolean().optional(),
 });
 
 const buildingSchema: z.ZodType<Building> = z.object({

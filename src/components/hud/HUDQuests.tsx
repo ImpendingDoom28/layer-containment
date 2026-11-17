@@ -49,6 +49,15 @@ const QuestRow: FC<QuestRowProps> = ({ quest, progress, additional }) => {
 
   const failed = progress.failed;
   const complete = progress.complete;
+  // The row's state (open / complete / failed) is only visual, so it is
+  // appended as localized text to the accessible name — a failed quest must
+  // be distinguishable from an open one by assistive technology.
+  const stateKey = failed
+    ? "quests.stateFailed"
+    : complete
+      ? "quests.stateComplete"
+      : "quests.stateOpen";
+  const accessibleLabel = `${label} — ${t(stateKey)}`;
 
   return (
     <div
@@ -60,7 +69,7 @@ const QuestRow: FC<QuestRowProps> = ({ quest, progress, additional }) => {
         checked={complete}
         failed={failed}
         disabled
-        aria-label={label}
+        aria-label={accessibleLabel}
         className="border-white/40"
       />
       <UITypography

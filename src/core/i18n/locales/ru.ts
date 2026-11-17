@@ -144,6 +144,9 @@ const ruValues = {
     gold: "Заработайте {{count}} золота",
     noLeaks: "Не дайте больше {{count}} врагов прорваться",
     victory: "Выиграйте уровень",
+    stateOpen: "В процессе",
+    stateComplete: "Выполнено",
+    stateFailed: "Провалено",
   },
   gameOver: {
     victory: "Победа!",

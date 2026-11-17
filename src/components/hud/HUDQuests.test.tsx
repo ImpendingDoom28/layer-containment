@@ -150,6 +150,24 @@ describe("HUDQuests", () => {
     expect(tankRow?.textContent).toContain("Tankee");
   });
 
+  it("exposes each quest's state as localized text in the accessible name", () => {
+    mount();
+    // kill-3-tanks is complete -> "... — Completed".
+    const tankBox = container.querySelector(
+      '[data-testid="quest-row-kill-3-tanks"]'
+    )?.querySelector("button");
+    expect(tankBox?.getAttribute("aria-label")).toBe(
+      "Defeat 3 Tankee — Completed"
+    );
+    // place-2-towers is open (1/2) -> "... — In progress".
+    const placeBox = container.querySelector(
+      '[data-testid="quest-row-place-2-towers"]'
+    )?.querySelector("button");
+    expect(placeBox?.getAttribute("aria-label")).toBe(
+      "Place 2 towers — In progress"
+    );
+  });
+
   it("strikethroughs a completed quest label", () => {
     mount();
     const startLabel =

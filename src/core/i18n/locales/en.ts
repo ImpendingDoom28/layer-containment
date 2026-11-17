@@ -122,6 +122,9 @@ export const en = {
     gold: "Earn {{count}} gold",
     noLeaks: "Let no more than {{count}} enemies through",
     victory: "Win the level",
+    stateOpen: "In progress",
+    stateComplete: "Completed",
+    stateFailed: "Failed",
   },
   gameOver: {
     victory: "Victory!",

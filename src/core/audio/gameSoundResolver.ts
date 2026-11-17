@@ -52,6 +52,7 @@ export const resolveGameSoundBuffer = async (
     case GameEvent.PROJECTILE_EXPLOSION:
     case GameEvent.BASE_DAMAGE_TAKEN:
     case GameEvent.MONEY_CHANGED:
+    case GameEvent.MONEY_EARNED:
     case GameEvent.COMET_IMPACT:
       return null;
     // The comet strike's whoosh spans the whole descent, dying into the

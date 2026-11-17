@@ -12,14 +12,23 @@ const state = () => useLevelStore.getState();
 
 describe("useLevelStore money events", () => {
   let offMoneyChanged: (() => void) | null;
+  let offMoneyEarned: (() => void) | null;
   const events: MoneyChangedData[] = [];
+  const earned: Array<{ amount: number }> = [];
 
   beforeEach(() => {
     events.length = 0;
+    earned.length = 0;
     offMoneyChanged = gameEvents.on<MoneyChangedData>(
       GameEvent.MONEY_CHANGED,
       (data) => {
         events.push(data);
+      }
+    );
+    offMoneyEarned = gameEvents.on<{ amount: number }>(
+      GameEvent.MONEY_EARNED,
+      (data) => {
+        earned.push(data);
       }
     );
     useLevelStore.setState({ money: 100 });
@@ -28,6 +37,8 @@ describe("useLevelStore money events", () => {
   afterEach(() => {
     offMoneyChanged?.();
     offMoneyChanged = null;
+    offMoneyEarned?.();
+    offMoneyEarned = null;
     useLevelStore.setState({ money: 0 });
     vi.restoreAllMocks();
   });
@@ -42,6 +53,16 @@ describe("useLevelStore money events", () => {
     state().spendMoney(40);
     expect(state().money).toBe(60);
     expect(events).toEqual([{ amount: 60, direction: "decrease" }]);
+  });
+
+  it("raises MONEY_EARNED with the gain (not the balance) on addMoney", () => {
+    state().addMoney(30);
+    expect(earned).toEqual([{ amount: 30 }]);
+  });
+
+  it("raises no MONEY_EARNED on spendMoney", () => {
+    state().spendMoney(40);
+    expect(earned).toHaveLength(0);
   });
 
   it("raises no event when the spend is unaffordable", () => {

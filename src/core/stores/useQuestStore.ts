@@ -99,15 +99,13 @@ export const connectQuestCounters = (): void => {
     bump((counters) => ({ towersSold: counters.towersSold + 1 }));
   });
 
-  gameEvents.on<{ amount: number; direction: "increase" | "decrease" }>(
-    GameEvent.MONEY_CHANGED,
-    (data) => {
-      if (data.direction !== "increase") return;
-      bump((counters) => ({
-        totalGoldEarned: counters.totalGoldEarned + data.amount,
-      }));
-    }
-  );
+  // `MONEY_CHANGED.amount` is the new balance, not the gain, so the "earned
+  // gold" counter sums `MONEY_EARNED` (the gain itself) instead.
+  gameEvents.on<{ amount: number }>(GameEvent.MONEY_EARNED, (data) => {
+    bump((counters) => ({
+      totalGoldEarned: counters.totalGoldEarned + data.amount,
+    }));
+  });
 
   gameEvents.on(GameEvent.GAME_WON, () => {
     bump(() => ({ victory: true }));

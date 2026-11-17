@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { gameEvents } from "../../utils/eventEmitter";
 import { GameEvent } from "../types/enums/events";
+import { useLevelStore } from "./useLevelStore";
 import { connectQuestCounters, useQuestStore } from "./useQuestStore";
 
 const state = () => useQuestStore.getState();
@@ -33,8 +34,9 @@ describe("useQuestStore + connectQuestCounters", () => {
     gameEvents.emit(GameEvent.ENEMY_REACHED_END);
     gameEvents.emit(GameEvent.TOWER_PLACED);
     gameEvents.emit(GameEvent.TOWER_SOLD);
-    gameEvents.emit(GameEvent.MONEY_CHANGED, { amount: 50, direction: "increase" });
-    gameEvents.emit(GameEvent.MONEY_CHANGED, { amount: 30, direction: "decrease" });
+    gameEvents.emit(GameEvent.MONEY_EARNED, { amount: 25 });
+    gameEvents.emit(GameEvent.MONEY_EARNED, { amount: 5 });
+    gameEvents.emit(GameEvent.MONEY_CHANGED, { amount: 130, direction: "decrease" });
     gameEvents.emit(GameEvent.GAME_WON);
 
     expect(state().counters).toEqual({
@@ -45,14 +47,27 @@ describe("useQuestStore + connectQuestCounters", () => {
       towersSold: 1,
       kills: 2,
       killsByType: { tank: 1, fast: 1 },
-      totalGoldEarned: 50,
+      totalGoldEarned: 30,
     });
   });
 
-  it("ignores money spends for totalGoldEarned (gains only)", () => {
+  it("ignores money changes for totalGoldEarned (gains only)", () => {
     connectQuestCounters();
-    gameEvents.emit(GameEvent.MONEY_CHANGED, { amount: 40, direction: "decrease" });
+    gameEvents.emit(GameEvent.MONEY_CHANGED, { amount: 130, direction: "increase" });
+    gameEvents.emit(GameEvent.MONEY_CHANGED, { amount: 90, direction: "decrease" });
     expect(state().counters.totalGoldEarned).toBe(0);
+  });
+
+  // Regression: `MONEY_CHANGED` carries the new balance, not the gain, so
+  // totalGoldEarned must sum the gains themselves (two +5 from a 10 balance
+  // is 10 earned, not 15+20).
+  it("counts only the gold actually earned, independent of the balance", () => {
+    connectQuestCounters();
+    useLevelStore.setState({ money: 10 });
+    useLevelStore.getState().addMoney(5);
+    useLevelStore.getState().addMoney(5);
+    expect(useLevelStore.getState().money).toBe(20);
+    expect(state().counters.totalGoldEarned).toBe(10);
   });
 
   it("resets quests and counters", () => {

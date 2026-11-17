@@ -130,18 +130,42 @@ const waveConfigSchema: z.ZodType<WaveConfig> = z.object({
   enemies: z.array(waveEnemyGroupSchema),
 });
 
-const questCountersSchema = z.object({
-  /** Cap on enemies allowed to reach the base (a quest on a *cap* counter). */
-  leaks: z.number().int().min(0).optional(),
-  /** Completes when the run is won. */
-  victory: z.literal(true).optional(),
-  wavesStarted: z.number().int().min(1).optional(),
-  towersPlaced: z.number().int().min(1).optional(),
-  towersSold: z.number().int().min(1).optional(),
-  kills: z.number().int().min(1).optional(),
-  killsByType: z.record(enemyTypeSchema, z.number().int().min(1)).optional(),
-  totalGoldEarned: z.number().int().min(1).optional(),
-});
+// A quest is built from exactly one live counter (the evaluator reads the
+// first one it finds), so the schema rejects a spec with zero or several
+// counters rather than silently ignoring the extras. `killsByType` counts as
+// a single counter but must itself name exactly one enemy type.
+const questCountersSchema = z
+  .object({
+    /** Cap on enemies allowed to reach the base (a quest on a *cap* counter). */
+    leaks: z.number().int().min(0).optional(),
+    /** Completes when the run is won. */
+    victory: z.literal(true).optional(),
+    wavesStarted: z.number().int().min(1).optional(),
+    towersPlaced: z.number().int().min(1).optional(),
+    towersSold: z.number().int().min(1).optional(),
+    kills: z.number().int().min(1).optional(),
+    killsByType: z
+      .record(enemyTypeSchema, z.number().int().min(1))
+      .refine((types) => Object.keys(types).length === 1, {
+        message: "killsByType must target exactly one enemy type",
+      })
+      .optional(),
+    totalGoldEarned: z.number().int().min(1).optional(),
+  })
+  .refine(
+    (counters) =>
+      [
+        counters.leaks,
+        counters.victory,
+        counters.wavesStarted,
+        counters.towersPlaced,
+        counters.towersSold,
+        counters.kills,
+        counters.killsByType,
+        counters.totalGoldEarned,
+      ].filter((value) => value !== undefined).length === 1,
+    { message: "a quest must define exactly one counter" }
+  );
 
 export const questConfigSchema: z.ZodType<QuestConfig> = z.object({
   id: z.string().min(1),
@@ -269,7 +293,14 @@ export const levelConfigSchema = z.object({
    * a level with no quest card. The quest system resolves the counters from
    * live gameplay events, so levels stay pure data.
    */
-  quests: z.array(questConfigSchema).default([]),
+  quests: z
+    .array(questConfigSchema)
+    .default([])
+    .refine(
+      (quests) =>
+        new Set(quests.map((quest) => quest.id)).size === quests.length,
+      { message: "quest ids must be unique within a level" }
+    ),
   /** Per-level boss definition; absent = no boss waves for this level. */
   boss: bossConfigSchema.optional(),
   buildings: z.array(buildingSchema),

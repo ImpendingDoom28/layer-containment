@@ -300,6 +300,7 @@ export const useLevelStore = create<LevelStore>((set) => ({
       amount: money,
       direction: "increase",
     });
+    gameEvents.emit(GameEvent.MONEY_EARNED, { amount });
   },
 
   incrementEnemiesKilled: () => {

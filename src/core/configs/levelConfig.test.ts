@@ -74,3 +74,59 @@ describe("levelConfigSchema", () => {
     expect(result.data.enemyWeights).toEqual({ basic: 10, splitter: 2 });
   });
 });
+
+describe("levelConfigSchema quests", () => {
+  const quest = (counters: Record<string, unknown>, id = "q") => ({
+    id,
+    labelKey: "quests.kills",
+    counters,
+  });
+
+  it("accepts a quest with exactly one counter", () => {
+    const result = parseLevelConfigData({
+      ...makeLevel([]),
+      quests: [quest({ kills: 5 })],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a quest with a single-entry killsByType counter", () => {
+    const result = parseLevelConfigData({
+      ...makeLevel([]),
+      quests: [quest({ killsByType: { tank: 5 } })],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a quest with no counters", () => {
+    const result = parseLevelConfigData({
+      ...makeLevel([]),
+      quests: [quest({})],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a quest with two counters", () => {
+    const result = parseLevelConfigData({
+      ...makeLevel([]),
+      quests: [quest({ kills: 5, towersPlaced: 3 })],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a killsByType counter naming more than one enemy type", () => {
+    const result = parseLevelConfigData({
+      ...makeLevel([]),
+      quests: [quest({ killsByType: { tank: 5, fast: 3 } })],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects duplicate quest ids within a level", () => {
+    const result = parseLevelConfigData({
+      ...makeLevel([]),
+      quests: [quest({ kills: 5 }, "dup"), quest({ towersPlaced: 3 }, "dup")],
+    });
+    expect(result.success).toBe(false);
+  });
+});

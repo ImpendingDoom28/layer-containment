@@ -56,9 +56,14 @@ export const getQuestProgress = (
   }
 
   if (key === "killsByType") {
-    const [type, target] = Object.entries(
-      spec.killsByType as Record<EnemyType, number>
-    )[0] as [EnemyType, number];
+    const byType = spec.killsByType;
+    const entry = byType
+      ? (Object.entries(byType)[0] as [EnemyType, number] | undefined)
+      : undefined;
+    if (!entry) {
+      return { current: 0, target: 0, complete: false };
+    }
+    const [type, target] = entry;
     const current = Math.min(target, counters.killsByType[type] ?? 0);
     return { current, target, complete: current >= target };
   }

@@ -65,6 +65,14 @@ describe("getQuestProgress", () => {
     });
   });
 
+  it("leaves a quest with an empty killsByType incomplete (no crash)", () => {
+    expect(getQuestProgress(quest({ killsByType: {} }), baseCounters())).toEqual({
+      current: 0,
+      target: 0,
+      complete: false,
+    });
+  });
+
   it("completes a leak cap while leaks stay within the limit", () => {
     const q = quest({ leaks: 3 });
     expect(getQuestProgress(q, baseCounters({ leaks: 0 }))).toEqual({

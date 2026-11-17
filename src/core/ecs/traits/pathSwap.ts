@@ -23,11 +23,20 @@ export type PathSwapData = {
   swaps: PathSwapRule[];
   /** Index into `swaps` of the next pending rule; `swaps.length` = all done. */
   nextSwap: number;
+  /**
+   * The simulation timestamp at which the pending swap's jump actually
+   * happens (0 = no telegraph in flight). While it is greater than the current
+   * simulation time the enemy stands still — a short, visible wind-up — so the
+   * player sees the cross coming and knows when it will happen. The
+   * movement system skips advancing any enemy in this state.
+   */
+  telegraphReadyAt: number;
 };
 
 const createDefaultPathSwap = (): PathSwapData => ({
   swaps: [],
   nextSwap: 0,
+  telegraphReadyAt: 0,
 });
 
 /**
@@ -41,9 +50,13 @@ const createDefaultPathSwap = (): PathSwapData => ({
  * `pathProgress` lands the boss on the mirrored lane of the other path — a
  * clean cross that never pops it into water or a building.
  *
- * The PathSwapSystem drives `nextSwap` and removes the trait once every rule
- * has fired (or the enemy reaches the path end), so the ability is one-shot
- * per rule and a re-spawned enemy does not inherit it.
+ * Each swap is telegraphed: the PathSwapSystem sets `telegraphReadyAt`
+ * (one second ahead of the current simulation time) and plays a "spawn" ring
+ * burst at the standing position, and the enemy stays in place until that
+ * timestamp — then it performs the cross and plays an arrival burst. The
+ * system drives `nextSwap` and removes the trait once every rule has fired
+ * (or the enemy reaches the path end), so the ability is one-shot per rule
+ * and a re-spawned enemy does not inherit it.
  *
  * AoS (callback) rather than SoA: `swaps` is an array, and SoA traits only
  * hold primitive fields (the same reason the enemy state/motion are split).

@@ -6,6 +6,7 @@ import { enemyActions } from "../actions/enemyActions";
 import { getEnemySnapshots } from "../selectors/enemySnapshots";
 import { EnemyMotion, EnemyState } from "../traits/enemy";
 import { EnemySlow } from "../traits/slow";
+import { PathSwap } from "../traits/pathSwap";
 import { Position } from "../traits/position";
 import { FacingDirection } from "../traits/facing";
 import { spawnEffectRequest } from "../traits/effect";
@@ -316,5 +317,23 @@ describe("enemyMovementSystem", () => {
     run(0.2, 0.2, options);
     expect(countEndRequests()).toBe(1);
     expect(getEnemySnapshots(testWorld)).toHaveLength(1);
+  });
+
+  it("holds an enemy in place while a path-swap telegraph is in flight", () => {
+    const entity = enemyActions(testWorld).spawnEnemy(makeEnemy(1));
+    // A pending cross: the jump fires at t = 1, so the enemy stands still until
+    // then (and would otherwise keep walking).
+    entity.add(PathSwap({ swaps: [], nextSwap: 0, telegraphReadyAt: 1 }));
+
+    run(0.2, 0.2);
+    expect(motionOf(entity).pathProgress).toBe(0);
+    expect(positionOf(entity).x).toBe(0);
+
+    // At the jump time the telegraph has expired, so the enemy moves again.
+    run(0.2, 1.2);
+    expect(motionOf(entity).pathProgress).toBeCloseTo(
+      (10 * 0.2) / 10,
+      5
+    );
   });
 });

@@ -3,6 +3,7 @@ import { Vector3 } from "three";
 
 import { EnemyMotion, EnemyState } from "../traits/enemy";
 import { EnemySlow } from "../traits/slow";
+import { PathSwap } from "../traits/pathSwap";
 import { Position } from "../traits/position";
 import { FacingDirection } from "../traits/facing";
 import { effectActions } from "../actions/effectActions";
@@ -75,6 +76,13 @@ export const runEnemyMovementSystem = (
     .query(EnemyState, EnemyMotion, Position, FacingDirection)
     .updateEach(([state, motion, position, facing], entity) => {
       if (state.health <= 0) return;
+
+      // A path-swap in its telegraph window: the enemy stands still until the
+      // PathSwapSystem performs the jump (its `telegraphReadyAt` is then in the
+      // past). This is a dedicated freeze — a slow (which an Unstoppable enemy
+      // can resist) would not reliably hold it.
+      const pathSwap = entity.get(PathSwap);
+      if (pathSwap && pathSwap.telegraphReadyAt > effectiveTime) return;
 
       // Reads the slow state written by the ApplySlowSystem (which runs
       // first in the frame). The enemy carries the EnemySlow trait only while

@@ -177,12 +177,13 @@ export const createGameSession = ({
     applyEffects: () => runApplyEffectSystem(world),
     settleEnemyDeaths: (time: number) => runEnemyDeathSystem(world, time),
     splitEnemies: () => runEnemySplitSystem(world, getNextEnemyId),
-    pathSwap: () => {
+    pathSwap: (time: number) => {
       const { pathWaypoints, gridSize } = useLevelStore.getState();
       const { tileSize } = useGameStore.getState();
       runPathSwapSystem(world, {
         pathWaypoints,
         radius: getPlanetRadius(gridSize, tileSize),
+        simulationTimeSeconds: time,
       });
     },
     moveEnemies: (frame: SimulationFrame) => {

@@ -188,17 +188,21 @@ boss a **roaming threat that flips front** as it goes.
   other gets punished hard.
 - **Impl sketch (as implemented):** a generic, boss-agnostic `PathSwap` trait
   (a list of rules — trigger progress, target pathIndex — plus a `nextSwap`
-  cursor) and a `PathSwapSystem` that, when an enemy's `pathProgress` crosses a
-  rule's `atProgress`, re-assigns it to the rule's `targetPathIndex` while
+  cursor and a `telegraphReadyAt` countdown) and a `PathSwapSystem` that, when
+  an enemy's `pathProgress` crosses a rule's `atProgress`, **telegraphs** the
+  cross: it stands the enemy still for ~1s while a ring burst plays at its
+  standing position, then re-assigns it to the rule's `targetPathIndex` while
   keeping the same `pathProgress` (the approaches are mirrors, so the same
-  fraction lands on the other front's corresponding row) and plays the
-  cross-over "spawn" burst at the new position. The trait is one-shot per rule
-  and drops when the last rule is consumed or the enemy reaches the end of its
-  path. Because it is generic, any future enemy — not just a boss — can carry
-  the same trait; the boss-specific scaling (one rule on appearance 1, a second
-  from appearance 2, both gated to the pre-merge segment) lives in
-  `BossConfig.pathSwap` and is filtered in the wave system before the trait is
-  attached. The speed burst called for in the curve was **not** implemented.
+  fraction lands on the other front's corresponding row) and plays an arrival
+  "spawn" burst at the new position — so the player sees the jump coming and
+  knows when it will happen, instead of the boss silently vanishing from one
+  front. The trait is one-shot per rule and drops when the last rule is
+  consumed or the enemy reaches the end of its path. Because it is generic, any
+  future enemy — not just a boss — can carry the same trait; the boss-specific
+  scaling (one rule on appearance 1, a second from appearance 2, both gated to
+  the pre-merge segment) lives in `BossConfig.pathSwap` and is filtered in the
+  wave system before the trait is attached. The speed burst called for in the
+  curve was **not** implemented.
   This is the first variant that touches `EnemyMotion`/path assignment directly;
   keeping the swap on the mirrored pre-merge segment means the boss always
   lands on a valid lane. Medium cost, highest thematic payoff for *this* map.

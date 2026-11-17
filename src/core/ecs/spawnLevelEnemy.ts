@@ -142,7 +142,13 @@ export const spawnLevelEnemy = (
     entity.add(IsBoss);
   }
   if (overrides?.pathSwap) {
-    entity.add(PathSwap({ swaps: overrides.pathSwap.swaps, nextSwap: 0 }));
+    entity.add(
+      PathSwap({
+        swaps: overrides.pathSwap.swaps,
+        nextSwap: 0,
+        telegraphReadyAt: 0,
+      })
+    );
   }
   return enemy;
 };

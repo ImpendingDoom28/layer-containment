@@ -38,6 +38,8 @@ const pathB: PathWaypoint[] = [
 const pathWaypoints = [pathA, pathB];
 // The z = -1.5 row is at 12/33 ≈ 0.3636 of the path (pre-merge approach).
 const SWAP_PROGRESS = 12 / 33;
+// The telegraph wind-up (the enemy stands still this long before the jump).
+const TELEGRAPH = 1;
 
 const makeEnemy = (id: number, overrides: Partial<Enemy> = {}): Enemy => ({
   id,
@@ -58,7 +60,8 @@ const makeEnemy = (id: number, overrides: Partial<Enemy> = {}): Enemy => ({
   ...overrides,
 });
 
-const run = () => runPathSwapSystem(testWorld, { pathWaypoints, radius: 50 });
+const run = (time: number) =>
+  runPathSwapSystem(testWorld, { pathWaypoints, radius: 50, simulationTimeSeconds: time });
 
 describe("pathSwapSystem", () => {
   beforeEach(() => {
@@ -78,66 +81,100 @@ describe("pathSwapSystem", () => {
     const entity = enemyActions(testWorld).spawnEnemy(
       makeEnemy(1, { pathProgress: progress, pathIndex })
     );
-    entity.add(PathSwap({ swaps, nextSwap: 0 }));
+    entity.add(PathSwap({ swaps, nextSwap: 0, telegraphReadyAt: 0 }));
     return entity;
   };
 
-  it("fires a pending rule when progress crosses the threshold, keeping progress", () => {
+  it("telegraphs, holds, then jumps when the threshold is crossed", () => {
     const entity = spawnWithSwap(SWAP_PROGRESS + 0.001);
-    run();
 
+    // Threshold crossed: the telegraph opens (no jump yet) and a wind-up ring
+    // plays at the standing position.
+    run(0);
+    expect(entity.get(EnemyState)!.pathIndex).toBe(0);
+    expect(entity.has(PathSwap)).toBe(true);
+    expect(entity.get(PathSwap)!.telegraphReadyAt).toBeCloseTo(TELEGRAPH);
+
+    // Mid-telegraph: the enemy still holds its ground.
+    run(0.5);
+    expect(entity.get(EnemyState)!.pathIndex).toBe(0);
+    expect(entity.has(PathSwap)).toBe(true);
+
+    // The telegraph is up: the cross fires, keeping the progress.
+    run(TELEGRAPH);
     expect(entity.get(EnemyState)!.pathIndex).toBe(1);
-    // The enemy keeps its progress, so it sits on the other front's lane.
     expect(entity.get(EnemyMotion)!.pathProgress).toBeCloseTo(SWAP_PROGRESS);
-    const mirrored = getPositionAlongMultiplePaths(
-      pathWaypoints,
-      1,
-      SWAP_PROGRESS
-    );
-    // Path A at 12/33 is the inner lane on the z = -1.5 row; the same
-    // fraction on path B is the (slightly non-mirror, the paths are 33 vs 34
-    // long) counterpart on the same row — a valid position on the other front.
-    expect(mirrored.z).toBeCloseTo(-1.5);
-    expect(mirrored.x).toBeCloseTo(2.86, 1);
+    const landed = getPositionAlongMultiplePaths(pathWaypoints, 1, SWAP_PROGRESS);
+    // Path A at 12/33 is the inner lane on the z = -1.5 row; the same fraction
+    // on path B is the (slightly non-mirror, the paths are 33 vs 34 long)
+    // counterpart on the same row — a valid position on the other front.
+    expect(landed.z).toBeCloseTo(-1.5);
+    expect(landed.x).toBeCloseTo(2.86, 1);
+    // One-shot: the ability is consumed.
     expect(entity.has(PathSwap)).toBe(false);
   });
 
-  it("does not fire before the threshold", () => {
+  it("does not open a telegraph before the threshold", () => {
     const entity = spawnWithSwap(SWAP_PROGRESS - 0.05);
-    run();
 
+    run(0);
     expect(entity.get(EnemyState)!.pathIndex).toBe(0);
     expect(entity.has(PathSwap)).toBe(true);
+    expect(entity.get(PathSwap)!.telegraphReadyAt).toBe(0);
+
+    run(0.5);
+    expect(entity.get(EnemyState)!.pathIndex).toBe(0);
+    expect(entity.get(PathSwap)!.telegraphReadyAt).toBe(0);
   });
 
-  it("fires once and does not re-fire on later passes", () => {
+  it("does not re-fire once the cross is done", () => {
     const entity = spawnWithSwap(SWAP_PROGRESS + 0.001);
-    run();
+    run(0);
+    run(TELEGRAPH);
     expect(entity.get(EnemyState)!.pathIndex).toBe(1);
     expect(entity.has(PathSwap)).toBe(false);
 
     // A later pass (enemy has moved on) must not touch the path again.
-    run();
+    run(TELEGRAPH + 0.5);
     expect(entity.get(EnemyState)!.pathIndex).toBe(1);
   });
 
-  it("applies multiple rules in order as progress advances", () => {
+  it("opens the next telegraph only once its threshold is reached", () => {
     const swaps = [
       { atProgress: 0.36, targetPathIndex: 1 },
       { atProgress: 0.4, targetPathIndex: 0 },
     ];
 
-    // Past only the first rule: it fires, the second stays pending.
+    // Past only the first rule: it is telegraphed, then jumped to. The second
+    // rule (0.4) is not yet reached, so no second telegraph opens.
     let entity = spawnWithSwap(0.38, 0, swaps);
-    run();
+    run(0);
+    expect(entity.get(PathSwap)!.telegraphReadyAt).toBeCloseTo(TELEGRAPH);
+    run(TELEGRAPH);
     expect(entity.get(EnemyState)!.pathIndex).toBe(1);
     expect(entity.has(PathSwap)).toBe(true);
+    expect(entity.get(PathSwap)!.telegraphReadyAt).toBe(0);
+  });
 
-    // Past both rules: the second fires (back to path 0) and the ability is
-    // consumed.
-    enemyActions(testWorld).clearAllEnemies();
-    entity = spawnWithSwap(0.45, 0, swaps);
-    run();
+  it("telegraphs and performs both crosses when both are due", () => {
+    const swaps = [
+      { atProgress: 0.36, targetPathIndex: 1 },
+      { atProgress: 0.4, targetPathIndex: 0 },
+    ];
+
+    // Past both rules: the first is telegraphed, jumped to, and (already past
+    // the second threshold) the second is telegraphed right away.
+    const entity = spawnWithSwap(0.45, 0, swaps);
+    run(0);
+    expect(entity.get(EnemyState)!.pathIndex).toBe(0);
+    expect(entity.get(PathSwap)!.telegraphReadyAt).toBeCloseTo(TELEGRAPH);
+
+    run(TELEGRAPH);
+    expect(entity.get(EnemyState)!.pathIndex).toBe(1);
+    expect(entity.has(PathSwap)).toBe(true);
+    expect(entity.get(PathSwap)!.telegraphReadyAt).toBeCloseTo(2 * TELEGRAPH);
+
+    run(2 * TELEGRAPH);
     expect(entity.get(EnemyState)!.pathIndex).toBe(0);
     expect(entity.has(PathSwap)).toBe(false);
   });
@@ -150,10 +187,11 @@ describe("pathSwapSystem", () => {
       PathSwap({
         swaps: [{ atProgress: 0.5, targetPathIndex: 1 }],
         nextSwap: 0,
+        telegraphReadyAt: 0,
       })
     );
 
-    run();
+    run(0);
     expect(entity.get(EnemyState)!.pathIndex).toBe(0);
     expect(entity.has(PathSwap)).toBe(false);
   });
@@ -164,35 +202,50 @@ describe("pathSwapSystem", () => {
       { atProgress: 0.6, targetPathIndex: 1 },
     ];
 
-    // Past only the (invalid) first rule: it is consumed, the path is
-    // unchanged, and the ability remains (the second rule is still pending).
+    // Past the (invalid) first rule: it is telegraphed, then consumed on the
+    // jump without moving the enemy.
     let entity = spawnWithSwap(0.5, 0, swaps);
-    run();
+    run(0);
+    expect(entity.get(PathSwap)!.telegraphReadyAt).toBeCloseTo(TELEGRAPH);
+    run(TELEGRAPH);
     expect(entity.get(EnemyState)!.pathIndex).toBe(0);
     expect(entity.has(PathSwap)).toBe(true);
+    expect(entity.get(PathSwap)!.telegraphReadyAt).toBe(0);
 
-    // Past both rules: the second (valid) rule fires.
+    // Past both rules: the second (valid) rule fires after its own telegraph.
     enemyActions(testWorld).clearAllEnemies();
     entity = spawnWithSwap(0.65, 0, swaps);
-    run();
+    run(0);
+    run(TELEGRAPH);
+    run(2 * TELEGRAPH);
     expect(entity.get(EnemyState)!.pathIndex).toBe(1);
     expect(entity.has(PathSwap)).toBe(false);
   });
 
-  it("raises a spawn burst at the new position", () => {
+  it("plays a wind-up ring while standing and an arrival ring after the jump", () => {
     spawnWithSwap(SWAP_PROGRESS + 0.001);
-    run();
 
-    const requests = [...testWorld.query(spawnEffectRequest)];
+    // Telegraph ring: a 1s "spawn" burst at the standing position.
+    run(0);
+    let requests = [...testWorld.query(spawnEffectRequest)];
     expect(requests).toHaveLength(1);
     expect(requests[0]!.get(spawnEffectRequest)!.type).toBe("spawn");
+    expect(requests[0]!.get(spawnEffectRequest)!.duration).toBeCloseTo(TELEGRAPH);
+
+    // Arrival ring: a second "spawn" burst at the new position.
+    run(TELEGRAPH);
+    requests = [...testWorld.query(spawnEffectRequest)];
+    expect(requests).toHaveLength(2);
+    const arrival = requests[1]!.get(spawnEffectRequest)!;
+    expect(arrival.type).toBe("spawn");
+    expect(arrival.duration).toBe(0); // default (per-type) arrival length
   });
 
   it("leaves enemies without the trait alone", () => {
     const entity = enemyActions(testWorld).spawnEnemy(
       makeEnemy(1, { pathProgress: SWAP_PROGRESS + 0.001 })
     );
-    run();
+    run(0);
     expect(entity.get(EnemyState)!.pathIndex).toBe(0);
   });
 });

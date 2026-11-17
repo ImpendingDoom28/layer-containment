@@ -303,6 +303,23 @@ export type WaveEnemyGroup = {
 };
 
 /**
+ * One path-swap rule for a boss: when the boss's `pathProgress` first crosses
+ * `atProgress`, it is re-assigned onto `targetPathIndex` (keeping its
+ * progress — on mirror-symmetric approaches that is the mirrored lane).
+ */
+export type BossPathSwapRule = {
+  atProgress: number;
+  targetPathIndex: number;
+  /**
+   * 1-based boss appearance (wave number / everyNthWave) from which this rule
+   * is active; earlier appearances skip it. Lets the boss gain extra crosses
+   * as it scales (Sector 2: one cross on appearance 1, two on appearance 2).
+   * Defaults to 1 (active from the first appearance).
+   */
+  minAppearance?: number;
+};
+
+/**
  * Per-level boss definition (the level JSON's `boss`). Every `N`-th wave
  * (`everyNthWave`, default 4) spawns the boss alongside the regular wave.
  *
@@ -318,6 +335,10 @@ export type WaveEnemyGroup = {
  * `name` is the boss's display name (shown on the boss bar and in the
  * almanac); `model` is the GLB the boss body renders (absent = the tankee
  * model).
+ *
+ * `pathSwap` optionally grants the boss the generic front-crossing ability
+ * (the "Ferryman" mechanic); see `BossPathSwapRule`. Absent = the boss walks
+ * one front like a plain boss.
  */
 export type BossConfig = {
   name: string;
@@ -335,6 +356,13 @@ export type BossConfig = {
     url: string;
     node: string;
   };
+  /**
+   * Optional path-swap ability for the boss (the "Ferryman" mechanic): a list
+   * of one-shot rules, applied in order as the boss's `pathProgress` crosses
+   * each rule's `atProgress`. Absent or empty = the boss never crosses paths.
+   * The boss always spawns on path 0.
+   */
+  pathSwap?: BossPathSwapRule[];
 };
 
 // Wave configuration

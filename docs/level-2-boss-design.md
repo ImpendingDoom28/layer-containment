@@ -1,10 +1,14 @@
-# Level 2 Boss Design — "The Convergence Warden"
+# Level 2 Boss Design — "The Ferryman"
 
-> **Status:** design / proposal. Not implemented.
+> **Status:** **Variant B (The Ferryman) is implemented in this PR** — a
+> generic, boss-agnostic `PathSwap` trait + `PathSwapSystem` carries the
+> front-crossing mechanic, wired into Sector 2's boss via `BossConfig.pathSwap`.
+> The other variants (C, D, E) and the Sector 3 sketch below remain proposals.
 > **Scope:** the boss for **Sector 2: The Convergence** (level 2), with a set of
 > distinct gameplay implementation variants, plus the level's difficulty curve
 > around it. A short section at the end sketches (does **not** implement) boss
-> ideas for **Sector 3: The Coil** (level 3).
+> ideas for **Sector 3: The Coil** (level 3). The boss below is the **Ferryman**
+> (Variant B); "The Convergence Warden" was the pre-decision placeholder name.
 
 ---
 
@@ -106,10 +110,10 @@ curve), what it tests in the player's build, and a sketch of the implementation
 surface (new traits/systems). All of them keep the existing `IsBoss` tag, boss
 bar, banner, preview, and HP-growth plumbing — only the *behavior* changes.
 
-> Naming: I keep the existing **"The Convergence Warden"** name as the default,
-> since it fits the map and the placeholder already uses it. Each variant
-> suggests an epithet so the two beats (wave 4 / wave 8) can read as one boss
-> escalating rather than two different creatures.
+> Naming: the placeholder boss was called **"The Convergence Warden"**, which
+> fits the map. The shipped boss took **Variant B's** epithet — **"The
+> Ferryman"** — so the two beats (wave 4 / wave 8) read as one boss escalating
+> rather than two different creatures.
 
 ---
 
@@ -182,14 +186,22 @@ boss a **roaming threat that flips front** as it goes.
 - **Tests:** placement across **both pre-merge approaches** (the design intent
   of the map). A player who over-invests in one outer pocket and neglects the
   other gets punished hard.
-- **Impl sketch:** a `BossPathSwap` trait (remaining swap count, trigger
-  progress, target pathIndex); a `BossPathSwapSystem` that, when the boss's
-  progress crosses the trigger *and* it is still pre-merge, sets a new
-  `pathIndex` (keeping the same `pathProgress`, since the approaches are
-  mirrors) and plays the cross-over effect. This is the first variant that
-  touches `EnemyMotion`/path assignment directly; keeping the swap on the
-  mirrored pre-merge segment means the boss always lands on a valid lane.
-  Medium cost, highest thematic payoff for *this* map.
+- **Impl sketch (as implemented):** a generic, boss-agnostic `PathSwap` trait
+  (a list of rules — trigger progress, target pathIndex — plus a `nextSwap`
+  cursor) and a `PathSwapSystem` that, when an enemy's `pathProgress` crosses a
+  rule's `atProgress`, re-assigns it to the rule's `targetPathIndex` while
+  keeping the same `pathProgress` (the approaches are mirrors, so the same
+  fraction lands on the other front's corresponding row) and plays the
+  cross-over "spawn" burst at the new position. The trait is one-shot per rule
+  and drops when the last rule is consumed or the enemy reaches the end of its
+  path. Because it is generic, any future enemy — not just a boss — can carry
+  the same trait; the boss-specific scaling (one rule on appearance 1, a second
+  from appearance 2, both gated to the pre-merge segment) lives in
+  `BossConfig.pathSwap` and is filtered in the wave system before the trait is
+  attached. The speed burst called for in the curve was **not** implemented.
+  This is the first variant that touches `EnemyMotion`/path assignment directly;
+  keeping the swap on the mirrored pre-merge segment means the boss always
+  lands on a valid lane. Medium cost, highest thematic payoff for *this* map.
 
 *Verdict:* the most level-2-specific variant. It turns the two-front geometry
 into an active challenge. Risk: the trigger must be gated to the pre-merge
@@ -490,11 +502,15 @@ rule that scales naturally with the boss's existing HP growth) or **idea 3
 
 ---
 
-## 5. Appendix: current boss config (level 2)
+## 5. Appendix: shipped boss config (level 2)
+
+The Ferryman (Variant B) as it ships in this PR — the `pathSwap` list gives it
+one front-cross on wave 4 (appearance 1) and a second, back-cross from wave 8
+(`minAppearance: 2`):
 
 ```jsonc
 "boss": {
-  "name": "The Convergence Warden",
+  "name": "The Ferryman",
   "everyNthWave": 4,
   "baseStats": {
     "health": 1200,
@@ -503,7 +519,11 @@ rule that scales naturally with the boss's existing HP growth) or **idea 3
     "healthLoss": 5,
     "reward": 300
   },
-  "hpGrowthPerAppearance": 1.5
+  "hpGrowthPerAppearance": 1.5,
+  "pathSwap": [
+    { "atProgress": 0.3636, "targetPathIndex": 1 },
+    { "atProgress": 0.6, "targetPathIndex": 0, "minAppearance": 2 }
+  ]
 }
 ```
 

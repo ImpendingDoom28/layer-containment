@@ -122,6 +122,15 @@ const bossConfigSchema: z.ZodType<
   }),
   hpGrowthPerAppearance: z.number().positive().optional(),
   model: bossModelSchema.optional(),
+  pathSwap: z
+    .array(
+      z.object({
+        atProgress: z.number().min(0).max(1),
+        targetPathIndex: z.number().int().min(0),
+        minAppearance: z.number().int().min(1).optional(),
+      })
+    )
+    .optional(),
 });
 
 const waveConfigSchema: z.ZodType<WaveConfig> = z.object({

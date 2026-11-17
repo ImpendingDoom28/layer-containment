@@ -18,6 +18,7 @@ import type {
 } from "../types/game";
 import { enemyActions } from "./actions/enemyActions";
 import { IsBoss } from "./traits/enemy";
+import { PathSwap } from "./traits/pathSwap";
 
 /**
  * Base-stat overrides for a spawn. Lets a caller (the boss) keep an enemy
@@ -32,6 +33,15 @@ export type SpawnLevelEnemyOverrides = Partial<
 > & {
   /** Tags the spawned entity with `IsBoss` (the HUD boss bar watches for it). */
   isBoss?: boolean;
+  /**
+   * Grants the spawned enemy the generic `PathSwap` ability: one-shot rules
+   * re-assigning it onto `targetPathIndex` (keeping its `pathProgress`) as its
+   * `pathProgress` crosses each rule's `atProgress`. Absent = no path-swap.
+   * The Sector 2 "Ferryman" boss uses this to cross the front.
+   */
+  pathSwap?: {
+    swaps: { atProgress: number; targetPathIndex: number }[];
+  };
 };
 
 export const spawnLevelEnemy = (
@@ -130,6 +140,9 @@ export const spawnLevelEnemy = (
   const entity = enemyActions(world).spawnEnemy(enemy);
   if (overrides?.isBoss) {
     entity.add(IsBoss);
+  }
+  if (overrides?.pathSwap) {
+    entity.add(PathSwap({ swaps: overrides.pathSwap.swaps, nextSwap: 0 }));
   }
   return enemy;
 };

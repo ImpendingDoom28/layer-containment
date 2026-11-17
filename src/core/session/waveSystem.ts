@@ -32,6 +32,14 @@ type BossSpawnStats = {
   size: number;
   healthLoss: number;
   reward: number;
+  /**
+   * Generic `PathSwap` rules granted to the boss on spawn (already filtered
+   * for this appearance; absent = none): the boss re-assigns onto each rule's
+   * `targetPathIndex` as its `pathProgress` crosses its `atProgress` — the
+   * Sector 2 "Ferryman" boss uses this to cross the front between the two
+   * portal approaches.
+   */
+  pathSwap?: { atProgress: number; targetPathIndex: number }[];
 };
 
 type SpawnQueueItem = {
@@ -123,10 +131,25 @@ export const createWaveSystem = ({
     // is stronger: its base HP is scaled by `hpGrowthPerAppearance` per
     // appearance, so the boss keeps scaling without a new mechanic.
     if (boss && isBossWave(boss, currentWave)) {
-      const { baseStats, name } = boss;
+      const { baseStats, name, pathSwap } = boss;
+      // A rule is active only from its `minAppearance`-th boss appearance
+      // (1-based), so later appearances gain extra crosses without affecting
+      // the earlier, simpler ones.
+      const appearance = currentWave / boss.everyNthWave;
+      const activePathSwap = pathSwap
+        ? pathSwap
+            .filter((rule) => (rule.minAppearance ?? 1) <= appearance)
+            .map((rule) => ({
+              atProgress: rule.atProgress,
+              targetPathIndex: rule.targetPathIndex,
+            }))
+        : undefined;
       spawnQueue.unshift({
         type: "tank",
         delaySeconds: 0,
+        // The boss always emerges from path 0 (the Ferryman's first cross then
+        // goes 0 → targetPathIndex).
+        pathIndex: 0,
         upgrades: waveUpgrades,
         boss: {
           name,
@@ -135,6 +158,9 @@ export const createWaveSystem = ({
           size: baseStats.size,
           healthLoss: baseStats.healthLoss,
           reward: baseStats.reward,
+          ...(activePathSwap && activePathSwap.length > 0
+            ? { pathSwap: activePathSwap }
+            : {}),
         },
       });
     }
@@ -300,6 +326,9 @@ export const createWaveSystem = ({
               healthLoss: nextSpawn.boss.healthLoss,
               reward: nextSpawn.boss.reward,
               isBoss: true,
+              ...(nextSpawn.boss.pathSwap
+                ? { pathSwap: { swaps: nextSpawn.boss.pathSwap } }
+                : {}),
             }
           : undefined
       );

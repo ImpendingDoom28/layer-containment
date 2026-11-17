@@ -15,6 +15,7 @@ import {
   type EnemyModelSpec,
 } from "../../constants/models";
 import type { EnemyType } from "../../core/types/game";
+import { bakeStaticModel } from "../../utils/bakeStaticModel";
 import { ModelLoader } from "./ModelLoader";
 
 // Shared, cached scratch vectors for the one-time recenter math (enemies
@@ -25,12 +26,27 @@ const _offset = new Vector3();
 const _quat = new Quaternion();
 const _euler = new Euler();
 
+// The walk rig animates the leg pivots by rotation, so the legs must stay
+// unmerged (and unrenamed): any mesh under a `Leg_L` / `Leg_R` node is kept
+// as-is.
+const isUnderLegPivot = (object: Object3D): boolean => {
+  let node: Object3D | null = object;
+  while (node !== null) {
+    if (node.name.startsWith("Leg_L") || node.name.startsWith("Leg_R")) {
+      return true;
+    }
+    node = node.parent;
+  }
+  return false;
+};
+
 /**
  * Rescales a model so its largest span equals `size`, recenters it on the
  * origin, then yaws it so the nose points down the group's local +X (the
- * enemy's direction of travel). The source node is cloned, so the cached GLTF
- * (shared by every enemy) is never mutated; the clone only *references* the
- * shared geometry/material, so it needs no dispose on unmount.
+ * enemy's direction of travel). The source node is baked (same-material static
+ * meshes merged, legs excluded) and cloned, so the cached GLTF (shared by
+ * every enemy) is never mutated; the clone only *references* the shared
+ * geometry/material, so it needs no dispose on unmount.
  */
 const prepareModel = (
   source: Object3D,
@@ -54,7 +70,7 @@ const prepareModel = (
   group.position.copy(_offset);
   group.quaternion.copy(_quat);
   group.scale.setScalar(scale);
-  const clone = source.clone();
+  const clone = bakeStaticModel(source, isUnderLegPivot);
   // Enemy models are physical, so let them cast and receive shadows like the
   // other enemy bodies (the plain sphere fallback gets the same flags in Enemy).
   clone.traverse((child) => {

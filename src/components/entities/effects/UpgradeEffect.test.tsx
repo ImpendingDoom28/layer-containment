@@ -128,9 +128,10 @@ describe("UpgradeEffect", () => {
     );
 
     try {
-      // ExtrudeGeometry is only used for the shield plates.
-      expect(countGeometry(tier1, "ExtrudeGeometry")).toBe(1);
-      expect(countGeometry(tier3, "ExtrudeGeometry")).toBe(3);
+      // The shield plates are merged into one BufferGeometry mesh per enemy
+      // (the merged geometry is a plain BufferGeometry, so count by that).
+      expect(countGeometry(tier1, "BufferGeometry")).toBe(1);
+      expect(countGeometry(tier3, "BufferGeometry")).toBe(1);
     } finally {
       tier1.unmount();
       tier3.unmount();
@@ -211,9 +212,10 @@ describe("UpgradeEffect", () => {
     );
 
     try {
-      // PlaneGeometry is only used for the swift straps.
-      expect(countGeometry(tier1, "PlaneGeometry")).toBe(1);
-      expect(countGeometry(tier3, "PlaneGeometry")).toBe(3);
+      // The swift straps are merged into one BufferGeometry mesh per enemy
+      // regardless of tier (the merged geometry is a plain BufferGeometry).
+      expect(countGeometry(tier1, "BufferGeometry")).toBe(1);
+      expect(countGeometry(tier3, "BufferGeometry")).toBe(1);
     } finally {
       tier1.unmount();
       tier3.unmount();

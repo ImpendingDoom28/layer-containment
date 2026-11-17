@@ -5,9 +5,12 @@ import {
   ConeGeometry,
   CylinderGeometry,
   Quaternion,
+  RingGeometry,
   SphereGeometry,
   Vector3,
   type BufferGeometry,
+  MeshBasicMaterial,
+  MeshStandardMaterial,
 } from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
@@ -18,10 +21,11 @@ import {
 import type { Projectile as ProjectileInstance } from "../../core/types/game";
 
 // Shared unit geometries, scaled per instance: a unit sphere (single/aoe
-// projectiles) and a unit cylinder (beam/chain bolts), so the four static
-// showcase projectiles allocate no per-instance geometry.
+// projectiles), a unit cylinder (beam/chain bolts) and a unit ring (aoe blast
+// radius, 0.85 inner radius — the constant ratio the ring used to bake in).
 const unitSphere = new SphereGeometry(1, 16, 16);
 const unitCylinder = new CylinderGeometry(1, 1, 1, 8);
+const unitRing = new RingGeometry(0.85, 1, 32);
 
 // Shared rocket body (body + nose + two fins, authored along +Y), matching the
 // in-game rocket pool, so a static showcase rocket reads as a rocket.
@@ -40,6 +44,49 @@ const buildStaticRocketGeometry = (): BufferGeometry => {
 const rocketGeometry = buildStaticRocketGeometry();
 
 const UP = new Vector3(0, 1, 0);
+
+// One material per (shape kind, colour) instead of one per projectile mesh;
+// the kinds differ only in emissive strength and transparency, so the cache
+// key is the kind plus the colour. Never disposed (same lifetime as the
+// shared unit geometries).
+type MaterialKind = "beam" | "chain" | "rocket" | "sphere" | "ring";
+
+const materialCache = new Map<string, MeshStandardMaterial | MeshBasicMaterial>();
+const getStaticProjectileMaterial = (
+  kind: MaterialKind,
+  color: string
+): MeshStandardMaterial | MeshBasicMaterial => {
+  const key = `${kind}|${color}`;
+  const entry = materialCache.get(key);
+  if (entry) return entry;
+
+  let material: MeshStandardMaterial | MeshBasicMaterial;
+  if (kind === "ring") {
+    material = new MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.3,
+      side: 2,
+      depthWrite: false,
+    });
+  } else {
+    const isBolt = kind === "beam" || kind === "chain";
+    const emissiveIntensity =
+      kind === "beam" ? 1.5 : kind === "chain" || kind === "rocket" ? 2 : 0.8;
+    material = new MeshStandardMaterial({
+      color,
+      emissive: color,
+      emissiveIntensity,
+      transparent: isBolt,
+      opacity: isBolt ? 0.9 : 1,
+      toneMapped: false,
+      depthWrite: !isBolt,
+    });
+  }
+
+  materialCache.set(key, material);
+  return material;
+};
 
 type StaticProjectilesProps = {
   /** Floor height the showcase projectiles float just above. */
@@ -87,6 +134,17 @@ const StaticProjectile: FC<StaticProjectileProps> = memo(
       [projectile.startX, projectile.startY, projectile.startZ, yOffset]
     );
 
+    const renderRing = (aoeRadius: number) => (
+      <mesh
+        position={[start.x, 0.02, start.z]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        scale={aoeRadius}
+        geometry={unitRing}
+        material={getStaticProjectileMaterial("ring", projectile.color)}
+        raycast={() => null}
+      />
+    );
+
     if (projectile.projectileType === "beam" || projectile.projectileType === "chain") {
       const target = new Vector3(
         projectile.targetX,
@@ -104,7 +162,6 @@ const StaticProjectile: FC<StaticProjectileProps> = memo(
       // Beam (laser) is a chunkier, more transparent column; chain is a thin
       // bright bolt — matching the in-game pool radii.
       const radius = projectile.projectileType === "beam" ? 0.06 : 0.03;
-      const emissiveIntensity = projectile.projectileType === "beam" ? 1.5 : 2;
 
       return (
         <mesh
@@ -112,18 +169,12 @@ const StaticProjectile: FC<StaticProjectileProps> = memo(
           quaternion={quaternion}
           scale={[radius, length, radius]}
           geometry={unitCylinder}
+          material={getStaticProjectileMaterial(
+            projectile.projectileType,
+            projectile.color
+          )}
           raycast={() => null}
-        >
-          <meshStandardMaterial
-            color={projectile.color}
-            emissive={projectile.color}
-            emissiveIntensity={emissiveIntensity}
-            transparent
-            opacity={0.9}
-            toneMapped={false}
-            depthWrite={false}
-          />
-        </mesh>
+        />
       );
     }
 
@@ -135,35 +186,13 @@ const StaticProjectile: FC<StaticProjectileProps> = memo(
           <mesh
             position={start}
             geometry={rocketGeometry}
+            material={getStaticProjectileMaterial("rocket", projectile.color)}
             castShadow
             receiveShadow
             raycast={() => null}
-          >
-            <meshStandardMaterial
-              color={projectile.color}
-              emissive={projectile.color}
-              emissiveIntensity={2}
-              toneMapped={false}
-            />
-          </mesh>
-          {projectile.aoeRadius !== undefined && (
-            <mesh
-              position={[start.x, 0.02, start.z]}
-              rotation={[-Math.PI / 2, 0, 0]}
-              raycast={() => null}
-            >
-              <ringGeometry
-                args={[projectile.aoeRadius * 0.85, projectile.aoeRadius, 32]}
-              />
-              <meshBasicMaterial
-                color={projectile.color}
-                transparent
-                opacity={0.3}
-                side={2}
-                depthWrite={false}
-              />
-            </mesh>
-          )}
+          />
+          {projectile.aoeRadius !== undefined &&
+            renderRing(projectile.aoeRadius)}
         </>
       );
     }
@@ -176,37 +205,15 @@ const StaticProjectile: FC<StaticProjectileProps> = memo(
           position={start}
           scale={radius}
           geometry={unitSphere}
+          material={getStaticProjectileMaterial("sphere", projectile.color)}
           castShadow
           receiveShadow
           raycast={() => null}
-        >
-          <meshStandardMaterial
-            color={projectile.color}
-            emissive={projectile.color}
-            emissiveIntensity={0.8}
-            toneMapped={false}
-          />
-        </mesh>
+        />
         {/* AoE shots mark their blast radius with a ring on the ground. */}
         {projectile.projectileType === "aoe" &&
-          projectile.aoeRadius !== undefined && (
-            <mesh
-              position={[start.x, 0.02, start.z]}
-              rotation={[-Math.PI / 2, 0, 0]}
-              raycast={() => null}
-            >
-              <ringGeometry
-                args={[projectile.aoeRadius * 0.85, projectile.aoeRadius, 32]}
-              />
-              <meshBasicMaterial
-                color={projectile.color}
-                transparent
-                opacity={0.3}
-                side={2}
-                depthWrite={false}
-              />
-            </mesh>
-          )}
+          projectile.aoeRadius !== undefined &&
+          renderRing(projectile.aoeRadius)}
       </>
     );
   }

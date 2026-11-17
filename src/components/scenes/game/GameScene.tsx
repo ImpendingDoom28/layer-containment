@@ -3,6 +3,7 @@ import { AudioListenerSync } from "@webgamedevkit/audio-engine/r3f";
 
 import { Bridge } from "../../entities/Bridge";
 import { CanyonBasin } from "../../entities/CanyonBasin";
+import { CanyonBoulders } from "../../entities/CanyonBoulders";
 import { Grid } from "../../entities/Grid";
 import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
 import { PlacementDenialRipple } from "../../entities/PlacementDenialRipple";
@@ -120,6 +121,13 @@ export const GameScene: React.FC<GameSceneProps> = ({
       ))}
 
       <Grid placeTower={placeTower} occupancy={occupancy} canyonBBox={canyonBBox} />
+
+      <CanyonBoulders
+        canyons={canyons}
+        gridSize={gridSize}
+        tileSize={tileSize}
+        canyonBBox={canyonBBox}
+      />
 
       {/* Bridge support structure (rails + piers) over each path that crosses
           a canyon. The deck itself is the elevated path strip rendered by

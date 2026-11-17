@@ -124,21 +124,33 @@ const makeGhostMaterial = (original: Material, invalid: boolean): Material => {
  * Builds a translucent ghost material for every mesh of `source` (a clone, so
  * the shared GLTF's materials are never mutated), in the same traverse order
  * the prepared group's meshes appear in — so the clones can be re-attached by
- * index. `invalid` tints the ghost the destructive colour. Pure: no caching,
- * no DOM access beyond the single `getCssColorValue` lookup for the red tint.
+ * index. When the GLB reuses one material on several meshes, the ghost clone
+ * is made once per distinct source material (keyed by uuid) and shared across
+ * those slots, instead of one clone per mesh. `invalid` tints the ghost the
+ * destructive colour. Pure: no caching, no DOM access beyond the single
+ * `getCssColorValue` lookup for the red tint.
  */
 export const buildGhostMaterials = (
   source: Object3D,
   invalid: boolean,
 ): GhostMaterials => {
   const result: GhostMaterials = [];
+  const bySource = new Map<Material, Material>();
+  const ghostOf = (original: Material): Material => {
+    let ghost = bySource.get(original);
+    if (!ghost) {
+      ghost = makeGhostMaterial(original, invalid);
+      bySource.set(original, ghost);
+    }
+    return ghost;
+  };
   source.traverse((obj) => {
     const mesh = obj as Mesh;
     if (!mesh.isMesh) return;
     if (Array.isArray(mesh.material)) {
-      result.push(mesh.material.map((m) => makeGhostMaterial(m, invalid)));
+      result.push(mesh.material.map(ghostOf));
     } else if (mesh.material) {
-      result.push(makeGhostMaterial(mesh.material, invalid));
+      result.push(ghostOf(mesh.material));
     }
   });
   return result;

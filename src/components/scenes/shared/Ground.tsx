@@ -315,6 +315,11 @@ export const Ground: FC<GroundProps> = memo(
     });
   }, []);
 
+  // Stable for the component's lifetime: dispose only on unmount.
+  useEffect(() => {
+    return () => material.dispose();
+  }, [material]);
+
   const meshRef = useRef<Mesh>(null);
   useLayoutEffect(() => {
     if (meshRef.current) freezeSubtree(meshRef.current);

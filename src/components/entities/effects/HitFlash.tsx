@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -6,7 +7,15 @@ import {
   type ReactNode,
 } from "react";
 import { useFrame } from "@react-three/fiber";
-import { type Group, type Material, type Mesh, type Object3D } from "three";
+import {
+  BufferGeometry,
+  Matrix4,
+  Mesh,
+  type Group,
+  type Material,
+  type Object3D,
+} from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 // The hit marker is a slightly larger copy of the body, re-pointed at the
 // per-enemy flash material, so its shape always matches the body: a sphere
@@ -14,7 +23,17 @@ import { type Group, type Material, type Mesh, type Object3D } from "three";
 // model a box — no per-model support code.
 const FLASH_SCALE = 1.12;
 
-const buildFlashClone = (body: Object3D, flashMaterial: Material): Object3D => {
+type FlashMarker = {
+  root: Object3D;
+  // New buffers created by the build (one merged geometry per distinct source
+  // geometry); the body's shared geometries are only referenced, never owned.
+  geometries: BufferGeometry[];
+};
+
+const _toLocal = new Matrix4();
+const _partMatrix = new Matrix4();
+
+const buildFlashMarker = (body: Object3D, flashMaterial: Material): FlashMarker => {
   const clone = body.clone(true);
   // Scale the whole rendered transform (position + scale) about the body
   // center so the envelope grows around the body. For the Wraith the body
@@ -22,13 +41,43 @@ const buildFlashClone = (body: Object3D, flashMaterial: Material): Object3D => {
   // would leave the offset unscaled and shift the shell off-center.
   clone.position.multiplyScalar(FLASH_SCALE);
   clone.scale.multiplyScalar(FLASH_SCALE);
+  clone.updateWorldMatrix(true, true);
+
+  // The marker is static for its whole lifetime (the parent only toggles
+  // `visible` and drives the shared material's opacity), so it is merged at
+  // build time: each distinct source geometry's meshes are baked into one
+  // geometry (Bridge pattern — temp parts disposed after the merge) and the
+  // marker holds one mesh per source geometry. The parts are baked in the
+  // clone's LOCAL space (relative to its own transform), so the merged marker
+  // follows the enemy exactly like the original clone did; the clone's own
+  // (scaled) transform is kept on the root.
+  _toLocal.copy(clone.matrixWorld).invert();
+  const byGeometry = new Map<BufferGeometry, BufferGeometry[]>();
   clone.traverse((object) => {
-    if ((object as Partial<Mesh>).isMesh) {
-      (object as Mesh).material = flashMaterial;
+    if (!(object as Partial<Mesh>).isMesh) return;
+    const mesh = object as Mesh;
+    _partMatrix.multiplyMatrices(_toLocal, mesh.matrixWorld);
+    const part = mesh.geometry.clone().applyMatrix4(_partMatrix);
+    const parts = byGeometry.get(mesh.geometry);
+    if (parts) {
+      parts.push(part);
+    } else {
+      byGeometry.set(mesh.geometry, [part]);
     }
   });
+
+  clone.clear();
+  const geometries: BufferGeometry[] = [];
+  for (const parts of byGeometry.values()) {
+    const merged = parts.length === 1 ? parts[0] : mergeGeometries(parts);
+    // The single-part case reuses the (already baked) clone as the merged
+    // geometry, so only genuinely temporary parts are disposed here.
+    if (parts.length > 1) parts.forEach((part) => part.dispose());
+    geometries.push(merged);
+    clone.add(new Mesh(merged, flashMaterial));
+  }
   clone.visible = false;
-  return clone;
+  return { root: clone, geometries };
 };
 
 type HitFlashProps = {
@@ -40,18 +89,19 @@ type HitFlashProps = {
 };
 
 /**
- * Wraps an enemy body and provides its hit-flash marker: a hidden clone of the
- * body's rendered subtree, re-pointed at `flashMaterial` and scaled slightly
+ * Wraps an enemy body and provides its hit-flash marker: a hidden merge of the
+ * body's rendered meshes, re-pointed at `flashMaterial` and scaled slightly
  * larger about the body center. The parent animates `flashMaterial.opacity` on
  * a hit and toggles the marker's `visible` (the marker is the body's own shape,
  * so no per-model marker code is needed).
  *
- * The clone is rebuilt only when the body's rendered node changes — detected
+ * The marker is rebuilt only when the body's rendered node changes — detected
  * by comparing the node's uuid — so it tracks a Suspense body falling back to
  * (and later resolving to) its model; steady-state frames just compare. The
- * clone *references* the body's shared geometry, so the primitive is mounted
- * with `dispose={null}`: R3F must not free the shared buffers when the marker
- * is rebuilt or the enemy unmounts.
+ * build clones the body's shared geometries into new merged buffers (the
+ * merged mesh needs its own buffers), so the marker owns and disposes them on
+ * rebuild/unmount; the body's own buffers are never touched, which is why the
+ * primitive mounts with `dispose={null}`.
  */
 export const HitFlash: FC<HitFlashProps> = ({
   body,
@@ -60,7 +110,7 @@ export const HitFlash: FC<HitFlashProps> = ({
 }) => {
   const bodyContainerRef = useRef<Group>(null);
   const markerRefLocal = useRef<Object3D>(null);
-  const [marker, setMarker] = useState<Object3D | null>(null);
+  const [marker, setMarker] = useState<FlashMarker | null>(null);
   const bodyKeyRef = useRef("");
 
   const rebuildMarker = () => {
@@ -69,7 +119,7 @@ export const HitFlash: FC<HitFlashProps> = ({
     const bodyNode = container.children[0];
     if (bodyNode.uuid === bodyKeyRef.current) return;
     bodyKeyRef.current = bodyNode.uuid;
-    setMarker(() => buildFlashClone(bodyNode, flashMaterial));
+    setMarker(() => buildFlashMarker(bodyNode, flashMaterial));
   };
 
   // Runs after the body's commit so the marker can be built from the body
@@ -88,6 +138,13 @@ export const HitFlash: FC<HitFlashProps> = ({
     if (bodyNode.uuid !== bodyKeyRef.current) rebuildMarker();
   });
 
+  useEffect(() => {
+    if (!marker) return;
+    return () => {
+      marker.geometries.forEach((geometry) => geometry.dispose());
+    };
+  }, [marker]);
+
   const attachMarker = (node: Object3D | null) => {
     markerRefLocal.current = node;
     if (markerRef) markerRef.current = node;
@@ -97,7 +154,7 @@ export const HitFlash: FC<HitFlashProps> = ({
     <>
       <group ref={bodyContainerRef}>{body}</group>
       {marker && (
-        <primitive ref={attachMarker} object={marker} dispose={null} />
+        <primitive ref={attachMarker} object={marker.root} dispose={null} />
       )}
     </>
   );

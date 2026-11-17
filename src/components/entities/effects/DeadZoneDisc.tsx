@@ -1,5 +1,10 @@
 import { FC, memo } from "react";
-import { Color, Quaternion } from "three";
+import {
+  CircleGeometry,
+  Color,
+  MeshBasicMaterial,
+  Quaternion,
+} from "three";
 
 import { getCssColorValue } from "../../ui/lib/cssUtils";
 
@@ -42,6 +47,37 @@ export const getDeadZoneColor = (): string => {
   return cachedDeadZoneColor;
 };
 
+// At most two live instances at a time (the selected tower and the placement
+// preview), so the disc geometry and material are shared per varying-prop set
+// instead of allocated per mount (never disposed — the scene's lifetime).
+const deadZoneDiscGeometryCache = new Map<string, CircleGeometry>();
+const getDeadZoneDiscGeometry = (
+  radius: number,
+  radialSegments: number
+): CircleGeometry => {
+  const key = `${radius}|${radialSegments}`;
+  const entry = deadZoneDiscGeometryCache.get(key);
+  if (entry) return entry;
+  const geometry = new CircleGeometry(radius, radialSegments);
+  deadZoneDiscGeometryCache.set(key, geometry);
+  return geometry;
+};
+
+const deadZoneDiscMaterialCache = new Map<number, MeshBasicMaterial>();
+const getDeadZoneDiscMaterial = (opacity: number): MeshBasicMaterial => {
+  const entry = deadZoneDiscMaterialCache.get(opacity);
+  if (entry) return entry;
+  const material = new MeshBasicMaterial({
+    color: getDeadZoneColor(),
+    transparent: true,
+    opacity,
+    side: 2,
+    depthWrite: false,
+  });
+  deadZoneDiscMaterialCache.set(opacity, material);
+  return material;
+};
+
 /**
  * Filled disc marking a tower's minimum-effective-range dead zone — the area
  * it refuses to shoot at (a BRL rocket needs room to arc). Rendered together
@@ -63,17 +99,10 @@ export const DeadZoneDisc: FC<DeadZoneDiscProps> = memo(
         quaternion ? undefined : (rotation ?? DEAD_ZONE_DEFAULT_ROTATION)
       }
       quaternion={quaternion}
+      geometry={getDeadZoneDiscGeometry(radius, radialSegments)}
+      material={getDeadZoneDiscMaterial(opacity)}
       raycast={() => null}
-    >
-      <circleGeometry args={[radius, radialSegments]} />
-      <meshBasicMaterial
-        color={getDeadZoneColor()}
-        transparent
-        opacity={opacity}
-        side={2}
-        depthWrite={false}
-      />
-    </mesh>
+    />
   )
 );
 

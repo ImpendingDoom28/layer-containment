@@ -1,10 +1,15 @@
-import { FC, useRef, useEffect, memo } from "react";
+import { FC, useMemo, useRef, memo } from "react";
 import { useFrame } from "@react-three/fiber";
-import type { Mesh } from "three";
-import { MeshStandardMaterial } from "three";
+import type { Mesh, MeshStandardMaterial } from "three";
 
 import { EmissiveParticleSphere } from "./primitives/EmissiveParticleSphere";
 import { EmissiveTorus } from "./primitives/EmissiveTorus";
+import {
+  EFFECT_TORUS_INNER_GEOMETRY,
+  EFFECT_TORUS_OUTER_GEOMETRY,
+  getParticleMaterial,
+  PARTICLE_SPHERE_05_GEOMETRY,
+} from "./primitives/sharedEffectAssets";
 import {
   EFFECT_DUAL_RING_BURST_SPEC,
   applyDualRingBurst,
@@ -17,12 +22,22 @@ type EffectProps = {
   onComplete?: () => void;
 };
 
+const PARTICLE_COUNT = 8;
+
 export const Effect: FC<EffectProps> = memo(
   ({ position, color, duration = 0.5, onComplete }) => {
     const ring1Ref = useRef<Mesh>(null);
     const ring2Ref = useRef<Mesh>(null);
-    const particlesRef = useRef<Mesh[]>([]);
+    const particlesRef = useRef<(Mesh | null)[]>(
+      Array.from({ length: PARTICLE_COUNT }, () => null)
+    );
     const startTimeRef = useRef<number | null>(null);
+    // All 8 particles share one material (identical props; opacity is driven
+    // per frame) and the module-level 0.05 sphere.
+    const particleMaterial = useMemo(
+      () => getParticleMaterial(color, 0.8, 1),
+      [color]
+    );
 
     useFrame((state) => {
       startTimeRef.current ??= state.clock.elapsedTime;
@@ -55,15 +70,12 @@ export const Effect: FC<EffectProps> = memo(
       });
     });
 
-    useEffect(() => {
-      particlesRef.current = Array.from({ length: 8 }, () => null) as [];
-    }, []);
-
     return (
       <group position={position}>
         <EmissiveTorus
           ref={ring1Ref}
           torusArgs={[0.3, 0.05, 8, 32]}
+          geometry={EFFECT_TORUS_OUTER_GEOMETRY}
           color={color}
           emissiveIntensity={0.5}
           opacity={0.6}
@@ -71,6 +83,7 @@ export const Effect: FC<EffectProps> = memo(
         <EmissiveTorus
           ref={ring2Ref}
           torusArgs={[0.25, 0.03, 8, 32]}
+          geometry={EFFECT_TORUS_INNER_GEOMETRY}
           color={color}
           emissiveIntensity={0.3}
           opacity={0.4}
@@ -82,6 +95,8 @@ export const Effect: FC<EffectProps> = memo(
               if (el) particlesRef.current[index] = el;
             }}
             radius={0.05}
+            geometry={PARTICLE_SPHERE_05_GEOMETRY}
+            material={particleMaterial}
             color={color}
             emissiveIntensity={0.8}
             opacity={1}

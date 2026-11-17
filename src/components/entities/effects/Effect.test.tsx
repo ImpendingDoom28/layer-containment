@@ -35,12 +35,14 @@ describe("Effect", () => {
 
     try {
       const effectGroup = renderer.scene.findByType("Group");
-      const ringMeshes = renderer.scene.findAll(
+      const meshes = renderer.scene.findAll(
         (instance) => instance.type === "Mesh"
       );
 
       expect(effectGroup.props["position"]).toEqual([1, 2, 3]);
-      expect(ringMeshes).toHaveLength(2);
+      // 2 rings + the 8 orbiting particles (the particles mount on the first
+      // render now, not after a re-render).
+      expect(meshes).toHaveLength(10);
     } finally {
       renderer.unmount();
     }

@@ -181,6 +181,20 @@ describe("buildGhostMaterials", () => {
     }
   });
 
+  it("shares one ghost clone across meshes that reuse a source material", () => {
+    const source = new Group();
+    const shared = new MeshStandardMaterial();
+    const a = new Mesh(new BoxGeometry(1, 1, 1), shared);
+    const b = new Mesh(new BoxGeometry(1, 1, 1), shared);
+    const c = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial());
+    source.add(a, b, c);
+    source.updateWorldMatrix(true, true);
+    const ghost = buildGhostMaterials(source, false);
+    expect(ghost.length).toBe(3);
+    expect(ghost[0]).toBe(ghost[1]);
+    expect(ghost[0]).not.toBe(ghost[2]);
+  });
+
   it("clones each material in a multi-material mesh individually", () => {
     const source = new Group();
     const matA = new MeshStandardMaterial({ color: "#ff0000" });

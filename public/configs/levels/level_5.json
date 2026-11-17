@@ -795,6 +795,49 @@
       "totalEnemies": 82
     }
   ],
+  "quests": [
+    {
+      "id": "start-5-waves",
+      "labelKey": "quests.startWave",
+      "labelParams": {
+        "count": 5
+      },
+      "counters": {
+        "wavesStarted": 5
+      }
+    },
+    {
+      "id": "hold-line",
+      "labelKey": "quests.noLeaks",
+      "labelParams": {
+        "count": 2
+      },
+      "counters": {
+        "leaks": 2
+      }
+    },
+    {
+      "id": "kill-6-tanks",
+      "additional": true,
+      "labelKey": "quests.defeatType",
+      "counters": {
+        "killsByType": {
+          "tank": 6
+        }
+      }
+    },
+    {
+      "id": "earn-1500",
+      "additional": true,
+      "labelKey": "quests.gold",
+      "labelParams": {
+        "count": 1500
+      },
+      "counters": {
+        "totalGoldEarned": 1500
+      }
+    }
+  ],
   "buildings": [
     {
       "id": 1,

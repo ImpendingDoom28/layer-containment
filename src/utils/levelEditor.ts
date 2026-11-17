@@ -204,6 +204,7 @@ export const createEmptyLevelConfig = (
     canyons: [],
     pathWaypoints: [[]],
     waveConfigs: [],
+    quests: [],
     buildings: [],
     towers: [],
     enemies: [],

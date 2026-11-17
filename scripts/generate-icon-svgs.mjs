@@ -96,6 +96,7 @@ const COLOR_VARIANTS = {
   AlertCircle: ["amber"],
   AlertTriangle: ["destructive"],
   ArrowRight: ["muted"],
+  Check: ["green", "muted"],
   CheckCircle2: ["emerald"],
   ChevronDown: ["muted"],
   ChevronUp: ["muted"],

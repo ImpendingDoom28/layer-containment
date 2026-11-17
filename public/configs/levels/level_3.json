@@ -385,6 +385,49 @@
       "totalEnemies": 64
     }
   ],
+  "quests": [
+    {
+      "id": "start-4-waves",
+      "labelKey": "quests.startWave",
+      "labelParams": {
+        "count": 4
+      },
+      "counters": {
+        "wavesStarted": 4
+      }
+    },
+    {
+      "id": "kill-100",
+      "labelKey": "quests.kills",
+      "labelParams": {
+        "count": 100
+      },
+      "counters": {
+        "kills": 100
+      }
+    },
+    {
+      "id": "kill-5-tanks",
+      "additional": true,
+      "labelKey": "quests.defeatType",
+      "counters": {
+        "killsByType": {
+          "tank": 5
+        }
+      }
+    },
+    {
+      "id": "place-3-towers",
+      "additional": true,
+      "labelKey": "quests.placeTowers",
+      "labelParams": {
+        "count": 3
+      },
+      "counters": {
+        "towersPlaced": 3
+      }
+    }
+  ],
   "buildings": [
     {
       "id": 1,

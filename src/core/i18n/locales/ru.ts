@@ -117,6 +117,18 @@ const ruValues = {
     enemies: "Враги",
     startNextWave: "Начать волну",
   },
+  quests: {
+    objectives: "Цели",
+    bonus: "Бонус",
+    defeatType: "Уничтожьте {{count}} {{type}}",
+    startWave: "Начните {{count}} волн",
+    placeTowers: "Постройте {{count}} башен",
+    sellTowers: "Продайте {{count}} башен",
+    kills: "Уничтожьте {{count}} врагов",
+    gold: "Заработайте {{count}} золота",
+    noLeaks: "Не дайте больше {{count}} врагов прорваться",
+    victory: "Выиграйте уровень",
+  },
   gameOver: {
     victory: "Победа!",
     gameOver: "Игра окончена",

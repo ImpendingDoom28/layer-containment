@@ -14,6 +14,7 @@ import type {
   WaterBodyConfig,
   WaveConfig,
 } from "../types/game";
+import type { QuestConfig } from "../types/quests";
 
 const towerTypeSchema = z.enum([
   "basic",
@@ -129,6 +130,27 @@ const waveConfigSchema: z.ZodType<WaveConfig> = z.object({
   enemies: z.array(waveEnemyGroupSchema),
 });
 
+const questCountersSchema = z.object({
+  /** Cap on enemies allowed to reach the base (a quest on a *cap* counter). */
+  leaks: z.number().int().min(0).optional(),
+  /** Completes when the run is won. */
+  victory: z.literal(true).optional(),
+  wavesStarted: z.number().int().min(1).optional(),
+  towersPlaced: z.number().int().min(1).optional(),
+  towersSold: z.number().int().min(1).optional(),
+  kills: z.number().int().min(1).optional(),
+  killsByType: z.record(enemyTypeSchema, z.number().int().min(1)).optional(),
+  totalGoldEarned: z.number().int().min(1).optional(),
+});
+
+export const questConfigSchema: z.ZodType<QuestConfig> = z.object({
+  id: z.string().min(1),
+  additional: z.boolean().optional(),
+  labelKey: z.string().min(1),
+  labelParams: z.record(z.union([z.string(), z.number()])).optional(),
+  counters: questCountersSchema,
+});
+
 const buildingSchema: z.ZodType<Building> = z.object({
   id: z.number(),
   gridX: z.number(),
@@ -242,6 +264,12 @@ export const levelConfigSchema = z.object({
   canyons: z.array(canyonConfigSchema).default([]),
   pathWaypoints: z.array(z.array(pathWaypointSchema)),
   waveConfigs: z.array(waveConfigSchema),
+  /**
+   * Declarative quest definitions (main objectives + side quests). Absent =
+   * a level with no quest card. The quest system resolves the counters from
+   * live gameplay events, so levels stay pure data.
+   */
+  quests: z.array(questConfigSchema).default([]),
   /** Per-level boss definition; absent = no boss waves for this level. */
   boss: bossConfigSchema.optional(),
   buildings: z.array(buildingSchema),

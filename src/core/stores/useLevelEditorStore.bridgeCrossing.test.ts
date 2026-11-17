@@ -36,6 +36,7 @@ const CROSSING_LEVEL: LevelConfigData = {
   towers: [],
   enemies: [],
   projectiles: [],
+  quests: [],
   enemyWeights: null,
 };
 

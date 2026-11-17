@@ -58,6 +58,7 @@ import {
 import { WaterClockProvider } from "../../core/contexts/WaterClockContext";
 import { useEntityIds } from "../../core/contexts/EntityIdContext";
 import { createGameSession } from "../../core/session/gameSession";
+import { connectQuestCounters } from "../../core/stores/useQuestStore";
 import { GameSessionSystem } from "../systems/GameSessionSystem";
 
 type GamePageProps = {
@@ -144,6 +145,10 @@ export const GamePage: FC<GamePageProps> = ({
   // mutate the shared world/stores from another route; invalidating it here
   // drops the stale load instead.
   useEffect(() => session.dispose, [session]);
+
+  // Quest counters accumulate from the global game event stream; connect once
+  // (idempotent) so the quest card tracks the run as it plays.
+  useEffect(() => connectQuestCounters(), []);
 
   const gameMenuClose = useHeldClose();
 

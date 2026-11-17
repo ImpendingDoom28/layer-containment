@@ -107,6 +107,18 @@ export const en = {
     enemies: "Enemies",
     startNextWave: "Start next wave",
   },
+  quests: {
+    objectives: "Objectives",
+    bonus: "Bonus",
+    defeatType: "Defeat {{count}} {{type}}",
+    startWave: "Start {{count}} waves",
+    placeTowers: "Place {{count}} towers",
+    sellTowers: "Sell {{count}} towers",
+    kills: "Defeat {{count}} enemies",
+    gold: "Earn {{count}} gold",
+    noLeaks: "Let no more than {{count}} enemies through",
+    victory: "Win the level",
+  },
   gameOver: {
     victory: "Victory!",
     gameOver: "Game Over",

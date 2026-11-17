@@ -35,14 +35,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { Canvas } from "@react-three/fiber";
 import { Stats } from "@react-three/drei";
 import { useActions, useWorld, WorldProvider } from "koota/react";
 
 import { GameScene } from "../../src/components/scenes/game/GameScene";
 import { ShaderReadyGate } from "../../src/components/systems/ShaderReadyGate";
 import { GameSessionSystem } from "../../src/components/systems/GameSessionSystem";
-import { GAME_CANVAS_GL, GAME_CANVAS_STYLE } from "../../src/constants/canvas";
 import { getAreModelsLoaded } from "../../src/constants/models";
 import { worldBaseActions } from "../../src/core/ecs/actions/baseActions";
 import {
@@ -68,6 +66,7 @@ import { FrameStats } from "./types/frameStats";
 import { StressCameraRig } from "./components/StressCameraRig";
 import { StressAutoDriver } from "./components/StressAutoDriver";
 import { StressDebugBridge } from "./components/StressDebugBridge";
+import { AppCanvas } from "../../src/components/scenes/shared/AppCanvas";
 
 const STRESS_LEVEL_ID = "stress" as const;
 const STRESS_BASE_HEALTH = 1_000_000;
@@ -253,11 +252,7 @@ const StressTestGame = () => {
 
   return (
     <div className="fixed inset-0">
-      <Canvas
-        data-testid="game-canvas"
-        style={GAME_CANVAS_STYLE}
-        gl={GAME_CANVAS_GL}
-      >
+      <AppCanvas testId="game-canvas">
         <ShaderReadyGate
           key={
             isGameConfigLoaded && isLevelConfigLoaded && areModelsReady
@@ -321,7 +316,7 @@ const StressTestGame = () => {
             <StressAutoDriver startWave={session.startWave} restart={restart} />
           </Suspense>
         )}
-      </Canvas>
+      </AppCanvas>
 
       <StressOverlay statsRef={statsRef} runCount={runCount} />
 

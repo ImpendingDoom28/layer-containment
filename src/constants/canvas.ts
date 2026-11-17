@@ -1,3 +1,4 @@
+import { GLProps } from "@react-three/fiber";
 import type { CSSProperties } from "react";
 
 /** Keeps drei's Html overlays below the HUD (z-50); default drei range is [16777271, 0]. */
@@ -8,4 +9,6 @@ export const GAME_CANVAS_STYLE: CSSProperties = {
   height: "100%",
 };
 
-export const GAME_CANVAS_GL = { antialias: true };
+export const GAME_CANVAS_GL: GLProps = { antialias: true };
+
+export const GAME_CANVAS_DPR: [number, number] = [1, 1.5];

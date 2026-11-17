@@ -2,7 +2,6 @@ import { FC, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useWorld } from "koota/react";
 import { Stats } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
 
 import { cn } from "../ui/lib/twUtils";
 import { GameScene } from "../scenes/game/GameScene";
@@ -29,7 +28,6 @@ import { KeyboardHandlingSystem } from "../systems/KeyboardHandlingSystem";
 import { PostFX } from "../scenes/shared/PostFX";
 import { ShaderReadyGate } from "../systems/ShaderReadyGate";
 import { BackgroundGameLoopSystem } from "../systems/BackgroundGameLoopSystem";
-import { GAME_CANVAS_GL, GAME_CANVAS_STYLE } from "../../constants/canvas";
 import {
   PLAYABLE_LEVEL_IDS,
   type PlayableLevelId,
@@ -48,7 +46,10 @@ import {
 import { PageWrapper } from "./PageWrapper";
 import { getAreModelsLoaded } from "../../constants/models";
 
-import { updateStatusSelector, useUpdateStore } from "../../core/pwa/useUpdateStore";
+import {
+  updateStatusSelector,
+  useUpdateStore,
+} from "../../core/pwa/useUpdateStore";
 import { getRunStats } from "../../core/ecs/selectors/runStats";
 import { SimulationClockProvider } from "../../core/contexts/SimulationClockContext";
 import {
@@ -59,6 +60,7 @@ import { WaterClockProvider } from "../../core/contexts/WaterClockContext";
 import { useEntityIds } from "../../core/contexts/EntityIdContext";
 import { createGameSession } from "../../core/session/gameSession";
 import { GameSessionSystem } from "../systems/GameSessionSystem";
+import { AppCanvas } from "../scenes/shared/AppCanvas";
 
 type GamePageProps = {
   onOpenLevelEditor: () => void;
@@ -257,33 +259,33 @@ export const GamePage: FC<GamePageProps> = ({
         <HUDLevelLoadError message={levelLoadError} onRetry={retryLevelLoad} />
       )}
 
-      <Canvas
-        data-testid="game-canvas"
-        style={GAME_CANVAS_STYLE}
-        gl={GAME_CANVAS_GL}
-      >
-        <SimulationClockProvider>
-          <WaterClockProvider>
-            <BackgroundGameLoopSystem />
+      <KeyboardHandlingSystem onGameMenuEscape={gameMenuClose.startClose} />
 
-            {/* Selection-indicator shader prewarm: the range wall (additive
+      <AppCanvas testId="game-canvas">
+        {/* Selection-indicator shader prewarm: the range wall (additive
                 alpha-vertex-colour quads) and the focus dim (custom shader)
                 only appear on a tower selection, so their programs would
                 otherwise compile on the first selection and hitch that frame.
                 Hidden stand-ins keep the programs in the scene graph so the
                 ShaderReadyGate's compileAsync covers them during the loading
                 screen (first selection, first placement preview, first dim). */}
-            <RangeFadeWallPrewarm />
-            <FocusDimPrewarm />
+        <RangeFadeWallPrewarm />
+        <FocusDimPrewarm />
 
-            {shaderGateKey !== null && (
-              <ShaderReadyGate
-                key={shaderGateKey}
-                compileKey={shaderGateKey}
-                onReadyChange={setAreShadersReady}
-              />
-            )}
+        <PostFX />
 
+        <BackgroundGameLoopSystem />
+
+        {shaderGateKey !== null && (
+          <ShaderReadyGate
+            key={shaderGateKey}
+            compileKey={shaderGateKey}
+            onReadyChange={setAreShadersReady}
+          />
+        )}
+
+        <SimulationClockProvider>
+          <WaterClockProvider>
             <GameSessionSystem session={session}>
               <Suspense fallback={<HUDLoading message={loadingMessage} />}>
                 {isGameConfigLoaded && isMenu && <MainMenuScene />}
@@ -313,17 +315,11 @@ export const GamePage: FC<GamePageProps> = ({
                     />
                   </>
                 )}
-
-                <KeyboardHandlingSystem
-                  onGameMenuEscape={gameMenuClose.startClose}
-                />
               </Suspense>
             </GameSessionSystem>
-
-            <PostFX />
           </WaterClockProvider>
         </SimulationClockProvider>
-      </Canvas>
+      </AppCanvas>
 
       {isGameReady && isMenu && (
         <HUDMainMenu

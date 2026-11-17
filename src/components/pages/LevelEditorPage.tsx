@@ -1,17 +1,16 @@
 import { Suspense, useCallback } from "react";
-import { Canvas } from "@react-three/fiber";
 import { useTranslation } from "react-i18next";
 
 import { HUDLoading } from "../hud/HUDLoading";
 import { HUDLevelEditor } from "../hud/HUDLevelEditor";
 import { LevelEditorScene } from "../scenes/editor/LevelEditorScene";
 import { PostFX } from "../scenes/shared/PostFX";
-import { GAME_CANVAS_GL, GAME_CANVAS_STYLE } from "../../constants/canvas";
 import { useGameSystem } from "../../core/hooks/useGameSystem";
 import { useLoadingTransition } from "../../core/hooks/useLoadingTransition";
 import { SimulationClockProvider } from "../../core/contexts/SimulationClockContext";
 import { WaterClockProvider } from "../../core/contexts/WaterClockContext";
 import { PageWrapper } from "./PageWrapper";
+import { AppCanvas } from "../scenes/shared/AppCanvas";
 
 type LevelEditorPageProps = {
   onBackToGame: () => void;
@@ -43,11 +42,7 @@ export const LevelEditorPage = ({ onBackToGame }: LevelEditorPageProps) => {
         />
       )}
 
-      <Canvas
-        data-testid="editor-canvas"
-        style={GAME_CANVAS_STYLE}
-        gl={GAME_CANVAS_GL}
-      >
+      <AppCanvas testId="editor-canvas">
         <SimulationClockProvider>
           <WaterClockProvider>
             <Suspense fallback={null}>
@@ -57,7 +52,7 @@ export const LevelEditorPage = ({ onBackToGame }: LevelEditorPageProps) => {
             <PostFX />
           </WaterClockProvider>
         </SimulationClockProvider>
-      </Canvas>
+      </AppCanvas>
 
       {isGameConfigLoaded ? (
         <HUDLevelEditor onBackToGame={onNavigateBack} />

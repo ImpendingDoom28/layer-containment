@@ -65,7 +65,7 @@ describe("PathSwapEffect", () => {
       );
       expect(blueTori.length).toBe(3);
     } finally {
-      renderer.unmount();
+      await renderer.unmount();
     }
   });
 
@@ -88,7 +88,7 @@ describe("PathSwapEffect", () => {
         .sort((a, b) => b - a);
       expect(outerScales[0]).toBeCloseTo(1.3 * 1.5, 5);
     } finally {
-      renderer.unmount();
+      await renderer.unmount();
     }
   });
 });

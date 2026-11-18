@@ -51,6 +51,7 @@ const levelData: LevelConfigData = {
   towers: [],
   enemies: [],
   projectiles: [],
+  quests: [],
   enemyWeights: null,
 };
 

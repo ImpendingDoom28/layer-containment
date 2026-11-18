@@ -20,6 +20,8 @@ import type {
 } from "../../core/types/game";
 import type { RunStatsSnapshot } from "../../core/ecs/selectors/runStats";
 import { useGameStore } from "../../core/stores/useGameStore";
+import { useQuestStore } from "../../core/stores/useQuestStore";
+import type { QuestConfig, QuestCounters } from "../../core/types/quests";
 import { HUDGameOver } from "./HUDGameOver";
 
 (globalThis as unknown as Record<string, unknown>)["IS_REACT_ACT_ENVIRONMENT"] =
@@ -74,6 +76,43 @@ const statsWithUsage = (): RunStatsSnapshot => ({
   },
 });
 
+const QUESTS: QuestConfig[] = [
+  {
+    id: "hold-front",
+    labelKey: "quests.noLeaks",
+    labelParams: { count: 3 },
+    counters: { leaks: 3 },
+    deferred: true,
+  },
+  {
+    id: "start-2-waves",
+    labelKey: "quests.startWave",
+    labelParams: { count: 2 },
+    counters: { wavesStarted: 2 },
+  },
+  {
+    id: "kill-3-tanks",
+    additional: true,
+    labelKey: "quests.defeatType",
+    counters: { killsByType: { tank: 3 } },
+  },
+];
+
+const terminalCounters = (
+  overrides: Partial<QuestCounters> = {}
+): QuestCounters => ({
+  leaks: 0,
+  victory: false,
+  runOver: false,
+  wavesStarted: 0,
+  towersPlaced: 0,
+  towersSold: 0,
+  kills: 0,
+  killsByType: {},
+  totalGoldEarned: 0,
+  ...overrides,
+});
+
 describe("HUDGameOver", () => {
   let container: HTMLDivElement;
   let root: ReturnType<typeof createRoot>;
@@ -84,6 +123,7 @@ describe("HUDGameOver", () => {
   });
 
   beforeEach(() => {
+    useQuestStore.getState().resetQuests();
     // The stats table derives its rows from the config in the store.
     useGameStore.setState({
       towerTypes: {
@@ -107,6 +147,7 @@ describe("HUDGameOver", () => {
     act(() => {
       root.unmount();
     });
+    useQuestStore.getState().resetQuests();
     useGameStore.setState({ towerTypes: null, enemyTypes: null });
   });
 
@@ -236,5 +277,87 @@ describe("HUDGameOver", () => {
       nextButton!.click();
     });
     expect(onNextLevel).toHaveBeenCalledTimes(1);
+  });
+
+  it("summarises the level's quests in the modal (main + bonus)", () => {
+    root = createRoot(container);
+    act(() => {
+      useQuestStore.setState({
+        quests: QUESTS,
+        counters: terminalCounters({ wavesStarted: 2, killsByType: { tank: 3 } }),
+      });
+    });
+    mountOverlay(statsWithUsage(), "gameOver");
+
+    const overlay = container.querySelector("[data-game-camera-block]")!;
+    expect(
+      overlay.querySelector('[data-testid="quests-list"]')
+    ).not.toBeNull();
+    const main = overlay.querySelector('[data-testid="quests-main"]');
+    const bonus = overlay.querySelector('[data-testid="quests-additional"]');
+    expect(main?.querySelectorAll('[data-testid^="quest-row-"]').length).toBe(2);
+    expect(bonus?.querySelectorAll('[data-testid^="quest-row-"]').length).toBe(1);
+  });
+
+  it("shows no quest list for a level without quests", () => {
+    root = createRoot(container);
+    mountOverlay(statsWithUsage(), "won");
+    const overlay = container.querySelector("[data-game-camera-block]")!;
+    expect(
+      overlay.querySelector('[data-testid="quests-list"]')
+    ).toBeNull();
+  });
+
+  it("settles the deferred leak cap on the outcome of the run", () => {
+    // Won with zero leaks: the line was held to the end -> complete.
+    root = createRoot(container);
+    act(() => {
+      useQuestStore.setState({
+        quests: QUESTS,
+        counters: terminalCounters({ victory: true }),
+      });
+    });
+    mountOverlay(statsWithUsage(), "won");
+    let holdRow = container.querySelector(
+      '[data-testid="quest-row-hold-front"]'
+    );
+    expect(holdRow?.getAttribute("data-state")).toBe("complete");
+
+    // Defeated: the line could not be held to the end -> failed.
+    act(() => {
+      root.unmount();
+    });
+    root = createRoot(container);
+    act(() => {
+      useQuestStore.setState({
+        quests: QUESTS,
+        counters: terminalCounters({ runOver: true }),
+      });
+    });
+    mountOverlay(statsWithUsage(), "gameOver");
+    holdRow = container.querySelector(
+      '[data-testid="quest-row-hold-front"]'
+    );
+    expect(holdRow?.getAttribute("data-state")).toBe("failed");
+  });
+
+  it("enlarges the modal so the stats and the quest summary both fit", () => {
+    root = createRoot(container);
+    act(() => {
+      useQuestStore.setState({
+        quests: QUESTS,
+        counters: terminalCounters(),
+      });
+    });
+    mountOverlay(statsWithUsage(), "gameOver");
+    const overlay = container.querySelector("[data-game-camera-block]")!;
+    // The content box carries the enlarged width classes.
+    const content = overlay.firstElementChild as HTMLElement;
+    expect(content.className).toContain("max-w-xl");
+    expect(content.className).toContain("md:max-w-2xl");
+    // ...and the quest summary still renders inside it.
+    expect(
+      overlay.querySelector('[data-testid="quests-list"]')
+    ).not.toBeNull();
   });
 });

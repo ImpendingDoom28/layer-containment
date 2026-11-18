@@ -339,6 +339,50 @@
       "totalEnemies": 42
     }
   ],
+  "quests": [
+    {
+      "id": "start-2-waves",
+      "labelKey": "quests.startWave",
+      "labelParams": {
+        "count": 2
+      },
+      "counters": {
+        "wavesStarted": 2
+      }
+    },
+    {
+      "id": "hold-front",
+      "labelKey": "quests.noLeaks",
+      "labelParams": {
+        "count": 3
+      },
+      "counters": {
+        "leaks": 3
+      },
+      "deferred": true
+    },
+    {
+      "id": "kill-3-tanks",
+      "additional": true,
+      "labelKey": "quests.defeatType",
+      "counters": {
+        "killsByType": {
+          "tank": 3
+        }
+      }
+    },
+    {
+      "id": "place-2-towers",
+      "additional": true,
+      "labelKey": "quests.placeTowers",
+      "labelParams": {
+        "count": 2
+      },
+      "counters": {
+        "towersPlaced": 2
+      }
+    }
+  ],
   "boss": {
     "name": "Colossus",
     "everyNthWave": 4,

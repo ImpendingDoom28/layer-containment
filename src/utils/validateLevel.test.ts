@@ -33,6 +33,7 @@ const makeLevel = (
   towers: [],
   enemies: [],
   projectiles: [],
+  quests: [],
   enemyWeights: null,
   ...overrides,
 });

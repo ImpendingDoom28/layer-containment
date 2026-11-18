@@ -14,6 +14,7 @@ import type {
   WaterBodyConfig,
   WaveConfig,
 } from "../types/game";
+import type { QuestConfig } from "../types/quests";
 
 const towerTypeSchema = z.enum([
   "basic",
@@ -129,6 +130,57 @@ const waveConfigSchema: z.ZodType<WaveConfig> = z.object({
   enemies: z.array(waveEnemyGroupSchema),
 });
 
+// A quest is built from exactly one live counter (the evaluator reads the
+// first one it finds), so the schema rejects a spec with zero or several
+// counters rather than silently ignoring the extras. `killsByType` counts as
+// a single counter but must itself name exactly one enemy type.
+const questCountersSchema = z
+  .object({
+    /** Cap on enemies allowed to reach the base (a quest on a *cap* counter). */
+    leaks: z.number().int().min(0).optional(),
+    /** Completes when the run is won. */
+    victory: z.literal(true).optional(),
+    wavesStarted: z.number().int().min(1).optional(),
+    towersPlaced: z.number().int().min(1).optional(),
+    towersSold: z.number().int().min(1).optional(),
+    kills: z.number().int().min(1).optional(),
+    killsByType: z
+      .record(enemyTypeSchema, z.number().int().min(1))
+      .refine((types) => Object.keys(types).length === 1, {
+        message: "killsByType must target exactly one enemy type",
+      })
+      .optional(),
+    totalGoldEarned: z.number().int().min(1).optional(),
+  })
+  .refine(
+    (counters) =>
+      [
+        counters.leaks,
+        counters.victory,
+        counters.wavesStarted,
+        counters.towersPlaced,
+        counters.towersSold,
+        counters.kills,
+        counters.killsByType,
+        counters.totalGoldEarned,
+      ].filter((value) => value !== undefined).length === 1,
+    { message: "a quest must define exactly one counter" }
+  );
+
+export const questConfigSchema: z.ZodType<QuestConfig> = z.object({
+  id: z.string().min(1),
+  additional: z.boolean().optional(),
+  labelKey: z.string().min(1),
+  labelParams: z.record(z.union([z.string(), z.number()])).optional(),
+  counters: questCountersSchema,
+  /**
+   * Settled only at the end of the run (e.g. a leak cap): the quest stays
+   * open while the run goes on and completes only on a win with the
+   * condition holding.
+   */
+  deferred: z.boolean().optional(),
+});
+
 const buildingSchema: z.ZodType<Building> = z.object({
   id: z.number(),
   gridX: z.number(),
@@ -242,6 +294,19 @@ export const levelConfigSchema = z.object({
   canyons: z.array(canyonConfigSchema).default([]),
   pathWaypoints: z.array(z.array(pathWaypointSchema)),
   waveConfigs: z.array(waveConfigSchema),
+  /**
+   * Declarative quest definitions (main objectives + side quests). Absent =
+   * a level with no quest card. The quest system resolves the counters from
+   * live gameplay events, so levels stay pure data.
+   */
+  quests: z
+    .array(questConfigSchema)
+    .default([])
+    .refine(
+      (quests) =>
+        new Set(quests.map((quest) => quest.id)).size === quests.length,
+      { message: "quest ids must be unique within a level" }
+    ),
   /** Per-level boss definition; absent = no boss waves for this level. */
   boss: bossConfigSchema.optional(),
   buildings: z.array(buildingSchema),

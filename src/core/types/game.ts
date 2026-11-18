@@ -40,6 +40,15 @@ export type MoneyChangedData = {
   direction: "increase" | "decrease";
 };
 
+/**
+ * Payload of the `MONEY_EARNED` event: the amount of gold just gained (a gain
+ * only — a kill reward or a tower sell). Unlike `MoneyChangedData.amount`,
+ * this is the change itself, not the resulting balance.
+ */
+export type MoneyEarnedData = {
+  amount: number;
+};
+
 export type EnemyType = "basic" | "fast" | "tank" | "medic" | "splitter";
 
 export type HealPulseConfig = {

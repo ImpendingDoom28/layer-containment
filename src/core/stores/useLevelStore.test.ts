@@ -6,19 +6,29 @@ import type { LevelConfigData } from "../configs/levelConfig";
 import type { MoneyChangedData } from "../types/game";
 import { useGameStore } from "./useGameStore";
 import { useLevelStore } from "./useLevelStore";
+import { useQuestStore } from "./useQuestStore";
 
 const state = () => useLevelStore.getState();
 
 describe("useLevelStore money events", () => {
   let offMoneyChanged: (() => void) | null;
+  let offMoneyEarned: (() => void) | null;
   const events: MoneyChangedData[] = [];
+  const earned: Array<{ amount: number }> = [];
 
   beforeEach(() => {
     events.length = 0;
+    earned.length = 0;
     offMoneyChanged = gameEvents.on<MoneyChangedData>(
       GameEvent.MONEY_CHANGED,
       (data) => {
         events.push(data);
+      }
+    );
+    offMoneyEarned = gameEvents.on<{ amount: number }>(
+      GameEvent.MONEY_EARNED,
+      (data) => {
+        earned.push(data);
       }
     );
     useLevelStore.setState({ money: 100 });
@@ -27,6 +37,8 @@ describe("useLevelStore money events", () => {
   afterEach(() => {
     offMoneyChanged?.();
     offMoneyChanged = null;
+    offMoneyEarned?.();
+    offMoneyEarned = null;
     useLevelStore.setState({ money: 0 });
     vi.restoreAllMocks();
   });
@@ -41,6 +53,16 @@ describe("useLevelStore money events", () => {
     state().spendMoney(40);
     expect(state().money).toBe(60);
     expect(events).toEqual([{ amount: 60, direction: "decrease" }]);
+  });
+
+  it("raises MONEY_EARNED with the gain (not the balance) on addMoney", () => {
+    state().addMoney(30);
+    expect(earned).toEqual([{ amount: 30 }]);
+  });
+
+  it("raises no MONEY_EARNED on spendMoney", () => {
+    state().spendMoney(40);
+    expect(earned).toHaveLength(0);
   });
 
   it("raises no event when the spend is unaffordable", () => {
@@ -94,6 +116,7 @@ const levelData: LevelConfigData = {
   towers: [],
   enemies: [],
   projectiles: [],
+  quests: [],
   enemyWeights: null,
 };
 
@@ -185,6 +208,22 @@ describe("useLevelStore comet reveal", () => {
     ).not.toThrow();
     expect(received.length).toBe(1);
     expect(received[0].portalPositions).toEqual([{ x: 1, z: 2 }]);
+  });
+
+  it("loads the level's quests into the quest store and clears them on reset", () => {
+    seedGameConfig();
+    const quest = {
+      id: "start-1",
+      labelKey: "quests.startWave",
+      labelParams: { count: 1 },
+      counters: { wavesStarted: 1 },
+    };
+    useLevelStore.getState().initializeLevelState({ ...levelData, quests: [quest] }, 1);
+    expect(useQuestStore.getState().quests).toEqual([quest]);
+    expect(useQuestStore.getState().counters.wavesStarted).toBe(0);
+
+    useLevelStore.getState().resetLevelState();
+    expect(useQuestStore.getState().quests).toEqual([]);
   });
 });
 

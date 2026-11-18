@@ -482,6 +482,50 @@
       "totalEnemies": 66
     }
   ],
+  "quests": [
+    {
+      "id": "start-3-waves",
+      "labelKey": "quests.startWave",
+      "labelParams": {
+        "count": 3
+      },
+      "counters": {
+        "wavesStarted": 3
+      }
+    },
+    {
+      "id": "hold-gorge",
+      "labelKey": "quests.noLeaks",
+      "labelParams": {
+        "count": 3
+      },
+      "counters": {
+        "leaks": 3
+      },
+      "deferred": true
+    },
+    {
+      "id": "kill-15-wraiths",
+      "additional": true,
+      "labelKey": "quests.defeatType",
+      "counters": {
+        "killsByType": {
+          "fast": 15
+        }
+      }
+    },
+    {
+      "id": "earn-800",
+      "additional": true,
+      "labelKey": "quests.gold",
+      "labelParams": {
+        "count": 800
+      },
+      "counters": {
+        "totalGoldEarned": 800
+      }
+    }
+  ],
   "buildings": [
     {
       "id": 1,

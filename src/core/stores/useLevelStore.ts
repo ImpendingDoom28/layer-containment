@@ -32,6 +32,7 @@ import { splitRequest } from "../ecs/traits/split";
 import { world } from "../ecs/world";
 import type { TileData } from "../types/utils";
 import { useGameStore } from "./useGameStore";
+import { useQuestStore } from "./useQuestStore";
 
 /**
  * A comet reveal in progress for a given run: `phase` `armed` hides the
@@ -175,6 +176,7 @@ export const useLevelStore = create<LevelStore>((set) => ({
       waters,
       startingMoney,
       waveConfigs,
+      quests,
       boss,
       projectiles,
       enemyWeights,
@@ -260,6 +262,10 @@ export const useLevelStore = create<LevelStore>((set) => ({
     // that mounts *after* this load (the game flow) re-arms the strike on
     // mount from `cometReveal` (a `null` or other-run armed reveal) and skips
     // one that has already completed.
+    // Fresh quest state per load: the level's declarative quests and a clean
+    // counter set (the counters are rebuilt from the run's events).
+    useQuestStore.getState().setQuests(quests);
+
     set((state) => ({
       isLevelConfigLoaded: true,
       enemiesKilled: 0,
@@ -294,6 +300,7 @@ export const useLevelStore = create<LevelStore>((set) => ({
       amount: money,
       direction: "increase",
     });
+    gameEvents.emit(GameEvent.MONEY_EARNED, { amount });
   },
 
   incrementEnemiesKilled: () => {
@@ -397,6 +404,7 @@ export const useLevelStore = create<LevelStore>((set) => ({
     for (const entity of world.query(splitRequest)) {
       if (entity.isAlive()) entity.destroy();
     }
+    useQuestStore.getState().resetQuests();
     set((state) => ({
       ...DEFAULT_STATE,
       // Keep the load id monotonic across resets so every (re)load gets a

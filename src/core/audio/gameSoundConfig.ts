@@ -9,6 +9,7 @@ import type { CameraMove } from "../../core/keybindingsConstants";
 import type {
   EnemyType,
   MoneyChangedData,
+  MoneyEarnedData,
   ProjectileType,
   TowerType,
   UiActionDeniedData,
@@ -70,6 +71,12 @@ export const SOUND_CONFIGS = defineSoundConfigs(
     // HUD-only money feedback (tween + card flash, no audio); registered so
     // the `GameEvent` map is complete.
     [GameEvent.MONEY_CHANGED]: {
+      category: "sfx",
+      spatial: false,
+    },
+    // HUD-only "earned gold" counter (no audio); registered so the `GameEvent`
+    // map stays complete.
+    [GameEvent.MONEY_EARNED]: {
       category: "sfx",
       spatial: false,
     },
@@ -175,6 +182,7 @@ export type AudioEventDataMap = {
     worldPosition?: WorldPosition;
   };
   money_changed: MoneyChangedData;
+  money_earned: MoneyEarnedData;
   level_entered: {
     run: number;
     portalPositions: { x: number; z: number }[];

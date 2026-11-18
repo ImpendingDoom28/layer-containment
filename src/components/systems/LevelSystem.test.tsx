@@ -42,6 +42,7 @@ const minimalLevelData: LevelConfigData = {
   towers: [],
   enemies: [],
   projectiles: [],
+  quests: [],
   enemyWeights: null,
 };
 

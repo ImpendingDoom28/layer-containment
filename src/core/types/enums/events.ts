@@ -28,6 +28,12 @@ export const GameEvent = {
    */
   MONEY_CHANGED: "money_changed",
   /**
+   * The player earned gold (a gain only — a kill reward or a tower sell).
+   * `amount` is the gain itself, not the new balance, so accumulators such as
+   * the "earned N gold" quest counter can sum it directly. HUD-only (no audio).
+   */
+  MONEY_EARNED: "money_earned",
+  /**
    * A level's state was (re)initialized — a new run or a restart. Carries the
    * load's unique id (`run`) and the spawn portals' flat-field positions, so
    * the scene's `CometStrike` orchestrator can arm its one-shot load comet

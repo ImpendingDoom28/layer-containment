@@ -123,6 +123,18 @@ const bossConfigSchema: z.ZodType<
   }),
   hpGrowthPerAppearance: z.number().positive().optional(),
   model: bossModelSchema.optional(),
+  pathSwap: z
+    .array(
+      z.object({
+        // Strictly below the movement system's path-end threshold (0.99):
+        // at/above it the enemy is removed at the path end before the swap
+        // can ever observe the threshold, so the rule could never fire.
+        atProgress: z.number().min(0).lt(0.99),
+        targetPathIndex: z.number().int().min(0),
+        minAppearance: z.number().int().min(1).optional(),
+      })
+    )
+    .optional(),
 });
 
 const waveConfigSchema: z.ZodType<WaveConfig> = z.object({

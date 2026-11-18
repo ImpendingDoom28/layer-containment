@@ -46,9 +46,11 @@ import { EnemyMotion, EnemyState } from "../../core/ecs/traits/enemy";
 import { FacingDirection } from "../../core/ecs/traits/facing";
 import { EnemySlow } from "../../core/ecs/traits/slow";
 import { Position } from "../../core/ecs/traits/position";
+import { PathSwap } from "../../core/ecs/traits/pathSwap";
 import { useSimulationClock } from "../../core/contexts/SimulationClockContext";
 import { HitFlash } from "./effects/HitFlash";
 import { MedicHealBurstEffect } from "./effects/MedicHealBurstEffect";
+import { PathSwapEffect } from "./effects/PathSwapEffect";
 import { SlowEffect } from "./effects/SlowEffect";
 import { UpgradeEffect } from "./effects/UpgradeEffect";
 import { EnemyLocomotion } from "./EnemyLocomotion";
@@ -191,6 +193,11 @@ export const Enemy: FC<EnemyProps> = memo(
     const hasTriggeredSpawnEffect = useRef(false);
     const [isSlowed, setIsSlowed] = useState(false);
     const isSlowedRef = useRef(false);
+    // The path-swap effect is mounted only while the PathSwap trait is present
+    // (a wind-up in flight, or the arrival burst still playing after a cross),
+    // mirroring the isSlowed slow-effect mount.
+    const [hasPathSwap, setHasPathSwap] = useState(false);
+    const hasPathSwapRef = useRef(false);
     const prevHealthRef = useRef(snapshot?.health ?? 0);
     const hitFlashRef = useRef(0);
 
@@ -277,6 +284,15 @@ export const Enemy: FC<EnemyProps> = memo(
       const live = entity.get(EnemyState);
       const pos = entity.get(Position);
       if (!live || !pos) return;
+
+      // Mount the path-swap wind-up/arrival visual only while the trait is
+      // present (a telegraph in flight, or the arrival burst still playing).
+      const swap = entity.get(PathSwap);
+      const hasPathSwapNow = !!swap;
+      if (hasPathSwapRef.current !== hasPathSwapNow) {
+        hasPathSwapRef.current = hasPathSwapNow;
+        setHasPathSwap(hasPathSwapNow);
+      }
 
       // Dead splitter in its pre-burst window: the ECS holds the entity back
       // for the squash-stretch anticipation before the split and the burst,
@@ -395,6 +411,18 @@ export const Enemy: FC<EnemyProps> = memo(
         isSlowedRef.current = currentlySlowed;
         setIsSlowed(currentlySlowed);
       }
+
+      // While a path-swap telegraph is in flight, blink the body: toggle
+      // visibility on the simulation clock (~2 Hz over the 1 s wind-up) so the
+      // boss visibly "charges up" before the cross. Full visibility is
+      // restored the moment the wind-up ends (the cross) or the trait is gone.
+      const windingUp =
+        !!swap &&
+        swap.telegraphReadyAt > 0 &&
+        swap.telegraphReadyAt > adjustedTime;
+      const bodyVisible =
+        !windingUp || Math.sin(adjustedTime * Math.PI * 4) > 0;
+      if (bodyModelRef.current) bodyModelRef.current.visible = bodyVisible;
     });
 
     if (!snapshot) return null;
@@ -411,6 +439,13 @@ export const Enemy: FC<EnemyProps> = memo(
 
         {/* Slow effect indicator */}
         {isSlowed && <SlowEffect enemySize={size} />}
+
+        {/* Path-swap wind-up / arrival visual (mounted while the trait is
+            present: a telegraph in flight, or the arrival burst still playing).
+            The body blinks in sync with the wind-up (see useFrame below). */}
+        {hasPathSwap && (
+          <PathSwapEffect entity={entity} enemySize={size} />
+        )}
 
         {snapshot.healPulse && (
           <MedicHealBurstEffect

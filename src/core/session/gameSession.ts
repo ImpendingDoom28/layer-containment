@@ -15,6 +15,7 @@ import { runEnemyMovementSystem } from "../ecs/systems/enemyMovementSystem";
 import { runEnemySplitSystem } from "../ecs/systems/enemySplitSystem";
 import { runBaseDefeatSystem } from "../ecs/systems/gameProcessSystem";
 import { runMedicHealPulseSystem } from "../ecs/systems/medicHealPulseSystem";
+import { runPathSwapSystem } from "../ecs/systems/pathSwapSystem";
 import { runSlowSystem } from "../ecs/systems/slowSystem";
 import { runStatsSystem } from "../ecs/systems/statsSystem";
 import { isBase, requestBaseDefeat } from "../ecs/traits/base";
@@ -176,6 +177,13 @@ export const createGameSession = ({
     applyEffects: () => runApplyEffectSystem(world),
     settleEnemyDeaths: (time: number) => runEnemyDeathSystem(world, time),
     splitEnemies: () => runEnemySplitSystem(world, getNextEnemyId),
+    pathSwap: (time: number) => {
+      const { pathWaypoints } = useLevelStore.getState();
+      runPathSwapSystem(world, {
+        pathWaypoints,
+        simulationTimeSeconds: time,
+      });
+    },
     moveEnemies: (frame: SimulationFrame) => {
       const { pathWaypoints, gridSize } = useLevelStore.getState();
       const { tileSize } = useGameStore.getState();

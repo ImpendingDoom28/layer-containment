@@ -632,7 +632,7 @@
   "projectiles": [],
   "enemyWeights": null,
   "boss": {
-    "name": "The Convergence Warden",
+    "name": "The Ferryman",
     "everyNthWave": 4,
     "baseStats": {
       "health": 1200,
@@ -641,6 +641,10 @@
       "healthLoss": 5,
       "reward": 300
     },
-    "hpGrowthPerAppearance": 1.5
+    "hpGrowthPerAppearance": 1.5,
+    "pathSwap": [
+      { "atProgress": 0.3636, "targetPathIndex": 1 },
+      { "atProgress": 0.6, "targetPathIndex": 0, "minAppearance": 2 }
+    ]
   }
 }

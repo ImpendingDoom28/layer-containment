@@ -5,6 +5,7 @@ export type SimulationPipelineSystems = {
   applyEffects: () => void;
   settleEnemyDeaths: (simulationTimeSeconds: number) => void;
   splitEnemies: () => void;
+  pathSwap: (simulationTimeSeconds: number) => void;
   moveEnemies: (frame: SimulationFrame) => void;
   healEnemies: (simulationTimeSeconds: number) => void;
   fireTowers: (frame: SimulationFrame) => void;
@@ -27,6 +28,7 @@ export const runSimulationPipeline = (
   systems.applyEffects();
   systems.settleEnemyDeaths(frame.simulationTimeSeconds);
   systems.splitEnemies();
+  systems.pathSwap(frame.simulationTimeSeconds);
   systems.moveEnemies(frame);
   if (frame.canResolveGameplay) {
     systems.fireTowers(frame);

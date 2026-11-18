@@ -287,7 +287,8 @@ export const Enemy: FC<EnemyProps> = memo(
 
       // Mount the path-swap wind-up/arrival visual only while the trait is
       // present (a telegraph in flight, or the arrival burst still playing).
-      const hasPathSwapNow = entity.has(PathSwap);
+      const swap = entity.get(PathSwap);
+      const hasPathSwapNow = !!swap;
       if (hasPathSwapRef.current !== hasPathSwapNow) {
         hasPathSwapRef.current = hasPathSwapNow;
         setHasPathSwap(hasPathSwapNow);
@@ -410,6 +411,18 @@ export const Enemy: FC<EnemyProps> = memo(
         isSlowedRef.current = currentlySlowed;
         setIsSlowed(currentlySlowed);
       }
+
+      // While a path-swap telegraph is in flight, blink the body: toggle
+      // visibility on the simulation clock (~2 Hz over the 1 s wind-up) so the
+      // boss visibly "charges up" before the cross. Full visibility is
+      // restored the moment the wind-up ends (the cross) or the trait is gone.
+      const windingUp =
+        !!swap &&
+        swap.telegraphReadyAt > 0 &&
+        swap.telegraphReadyAt > adjustedTime;
+      const bodyVisible =
+        !windingUp || Math.sin(adjustedTime * Math.PI * 4) > 0;
+      if (bodyModelRef.current) bodyModelRef.current.visible = bodyVisible;
     });
 
     if (!snapshot) return null;
@@ -428,9 +441,10 @@ export const Enemy: FC<EnemyProps> = memo(
         {isSlowed && <SlowEffect enemySize={size} />}
 
         {/* Path-swap wind-up / arrival visual (mounted while the trait is
-            present: a telegraph in flight, or the arrival burst still playing). */}
+            present: a telegraph in flight, or the arrival burst still playing).
+            The body blinks in sync with the wind-up (see useFrame below). */}
         {hasPathSwap && (
-          <PathSwapEffect entity={entity} enemySize={size} color={snapshot.color} />
+          <PathSwapEffect entity={entity} enemySize={size} />
         )}
 
         {snapshot.healPulse && (

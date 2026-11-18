@@ -43,16 +43,27 @@ describe("PathSwapEffect", () => {
   it("renders a wind-up double ring, an arrival burst, and rising particles", async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <SimulationClockProvider>
-        <PathSwapEffect entity={makeFakeEntity()} enemySize={1.5} color="#ff4400" />
+        <PathSwapEffect entity={makeFakeEntity()} enemySize={1.5} />
       </SimulationClockProvider>
     );
 
     try {
-      // Four tori: the wind-up double ring (boss-colored) and the arrival
-      // burst's two rings (boss + white).
+      // Four tori: the wind-up double ring (light blue) and the arrival
+      // burst's two rings (light blue + white).
       expect(countGeometry(renderer, "TorusGeometry")).toBe(4);
       // Six rising particles gather around the wind-up ring.
       expect(countGeometry(renderer, "SphereGeometry")).toBe(6);
+      // The wind-up plays in light blue (sky-300), not the enemy's own color.
+      const tori = getMeshes(renderer).filter(
+        (mesh) => mesh.geometry.type === "TorusGeometry"
+      );
+      const blueTori = tori.filter(
+        (mesh) =>
+          (mesh.material as {
+            color?: { getHex?: () => number };
+          }).color?.getHex?.() === 0x7dd3fc
+      );
+      expect(blueTori.length).toBe(3);
     } finally {
       renderer.unmount();
     }
@@ -61,7 +72,7 @@ describe("PathSwapEffect", () => {
   it("scales the ring with the enemy size", async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <SimulationClockProvider>
-        <PathSwapEffect entity={makeFakeEntity()} enemySize={1.5} color="#ff4400" />
+        <PathSwapEffect entity={makeFakeEntity()} enemySize={1.5} />
       </SimulationClockProvider>
     );
 

@@ -20,8 +20,12 @@ import {
 type PathSwapEffectProps = {
   entity: Entity;
   enemySize: number;
-  color: string;
 };
+
+// The path-swap telegraph plays in light blue (sky-300) — distinct from the
+// enemy's own color and from the other effects, so the wind-up reads as the
+// boss "charging up" the front-cross. The body blinks in sync (Enemy.tsx).
+const PATH_SWAP_COLOR = "#7dd3fc";
 
 // Particles that gather around the ring while the wind-up plays.
 const WIND_UP_PARTICLE_COUNT = 6;
@@ -77,7 +81,7 @@ const hide = (mesh: Mesh | null): void => setOpacity(mesh, 0);
  * be) visible.
  */
 export const PathSwapEffect: FC<PathSwapEffectProps> = memo(
-  ({ entity, enemySize, color }) => {
+  ({ entity, enemySize }) => {
     const { getSimulationTime, getTimeScale } = useSimulationClock();
 
     const windupRingRef = useRef<Mesh>(null);
@@ -185,7 +189,7 @@ export const PathSwapEffect: FC<PathSwapEffectProps> = memo(
             torusArgs={TORUS_ARGS}
             position={[0, 0.08 * enemySize, 0]}
             scale={RING_RADIUS * enemySize}
-            color={color}
+            color={PATH_SWAP_COLOR}
             emissiveIntensity={1.2}
             opacity={0}
           />
@@ -194,7 +198,7 @@ export const PathSwapEffect: FC<PathSwapEffectProps> = memo(
             torusArgs={TORUS_ARGS}
             position={[0, 0.06 * enemySize, 0]}
             scale={RING_RADIUS * enemySize * 0.72}
-            color={color}
+            color={PATH_SWAP_COLOR}
             emissiveIntensity={0.9}
             opacity={0}
           />
@@ -205,7 +209,7 @@ export const PathSwapEffect: FC<PathSwapEffectProps> = memo(
                 if (el) windupParticleRefs.current[index] = el;
               }}
               radius={0.12}
-              color={color}
+              color={PATH_SWAP_COLOR}
               emissiveIntensity={1.5}
               opacity={0}
             />
@@ -218,7 +222,7 @@ export const PathSwapEffect: FC<PathSwapEffectProps> = memo(
           torusArgs={TORUS_ARGS}
           position={[0, 0.08 * enemySize, 0]}
           scale={RING_RADIUS * enemySize}
-          color={color}
+          color={PATH_SWAP_COLOR}
           emissiveIntensity={1.4}
           opacity={0}
         />

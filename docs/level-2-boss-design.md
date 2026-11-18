@@ -200,12 +200,15 @@ boss a **roaming threat that flips front** as it goes.
   from one front. The visuals are **enemy-anchored, not ground-anchored**: a
   ground-level ring burst would be hidden under the boss's size-1.5 model, so
   instead a `PathSwapEffect` view (a child of the enemy `<group>`, exactly like
-  the upgrade and slow visuals) renders a boss-colored pulsing double ring plus
-  rising particles while the telegraph is in flight (the wind-up), and an
-  expanding dual ring (the same shape as the medic heal burst) right after the
-  cross (the arrival). Both are scaled by the enemy size and driven in
-  `useFrame` on the pause-aware simulation clock (the wind-up freezes with the
-  game), with no per-frame React state. The trait is one-shot per rule and
+  the upgrade and slow visuals) renders a **light-blue** pulsing double ring
+  plus rising particles while the telegraph is in flight (the wind-up), and
+  the **enemy body blinks in sync** — its model flickers visible/hidden on
+  the simulation clock over the 1 s wind-up so the boss visibly "charges up",
+  fully restored the moment the cross fires — and an expanding dual ring
+  (the same shape as the medic heal burst) right after the cross (the
+  arrival). Both are scaled by the enemy size and driven in `useFrame` on the
+  pause-aware simulation clock (the wind-up freezes with the game), with no
+  per-frame React state. The trait is one-shot per rule and
   lingers for the ~0.45s arrival burst after the final cross (it is dropped
   once the last rule is consumed and the burst has played, or when the enemy
   reaches the end of its path). Because it is generic, any future enemy — not

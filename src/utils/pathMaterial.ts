@@ -59,10 +59,12 @@ float pathCracks( vec2 p ) {
  * `a_i * 2.13^i * u'(f)` with `u' = 6 f (1 - f)` — the test checks it against
  * finite differences). The cracks add dark hairlines with their own bump
  * (central differences, since ridged noise has no closed form) and a bright
- * top-lit edge so they read as real fissures instead of printed lines. One
- * GLSL program is shared by every path in the scene (`customProgramCacheKey`);
- * all the variation rides on the world coordinates, so the material is created
- * once per level load.
+ * top-lit edge so they read as real fissures instead of printed lines. The
+ * mineral flecks and grit use lattice-interpolated (band-limited) noise rather
+ * than a thresholded raw hash, so the specks read as soft grains and do not
+ * flicker when the camera pans. One GLSL program is shared by every path in
+ * the scene (`customProgramCacheKey`); all the variation rides on the world
+ * coordinates, so the material is created once per level load.
  */
 export const createPathMaterial = (
   params: CreatePathMaterialParams
@@ -147,8 +149,12 @@ export const createPathMaterial = (
  	vec2 pp = vPathWorldPos.xz;
  	float grain = pathFbm( pp * 2.2 );
  	float mottle = pathFbm( pp * 0.55 + vec2( 7.3, 3.1 ) );
- 	float fleck = smoothstep( 0.82, 0.95, pathHash( pp * 5.0 ) );
- 	float grit = smoothstep( 0.9, 0.985, pathHash( pp * 12.0 + vec2( 3.7, 9.2 ) ) );
+ 	// Lattice-interpolated (band-limited) noise instead of the raw per-cell
+ 	// hash, so the specks read as soft grains and do not flicker when the
+ 	// camera pans. The color and the roughness mask sample the same fleck
+ 	// field, so the bright grain and its glassy specular stay in register.
+ 	float fleck = smoothstep( 0.28, 0.44, pathValueNoise( pp * 4.0 ) );
+ 	float grit = smoothstep( 0.32, 0.46, pathValueNoise( pp * 11.0 + vec2( 3.7, 9.2 ) ) );
  	float cracks = pathCracks( pp * 1.7 );
  	float crackEdge = pathCracks( pp * 1.7 + vec2( 0.06, 0.0 ) ) - cracks;
  	diffuseColor.rgb *= 0.9 + 0.2 * ( 0.5 + grain * 0.5 + mottle * 0.35 );
@@ -166,15 +172,17 @@ export const createPathMaterial = (
       `#include <roughnessmap_fragment>
  {
  	vec2 rp = vPathWorldPos.xz;
- 	float rFleck = smoothstep( 0.82, 0.95, pathHash( rp * 5.0 ) );
+ 	float rFleck = smoothstep( 0.28, 0.44, pathValueNoise( rp * 4.0 ) );
  	float rGrain = pathFbm( rp * 2.2 );
  	roughnessFactor = roughnessFactor * ( 0.85 + 0.2 * ( 0.5 + rGrain * 0.5 ) ) - rFleck * 0.45;
  }`
     );
 
-    // Bump: tilt the fragment normal against the field slopes (the minus,
-    // like the water ripple, is what makes light travel across the surface)
-    // and push the crack crests in toward their shadowed center.
+    // Bump: tilt the fragment normal against the grain's slope (the minus,
+    // like the water ripple, is what makes light travel across the surface).
+    // The crack field peaks at the fissure center, so its gradient is ADDED —
+    // a negative-height bump, the opposite sign of the raised grain/water — to
+    // carve the fissure in instead of embossing it out.
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <normal_fragment_maps>",
       `#include <normal_fragment_maps>
@@ -183,7 +191,7 @@ export const createPathMaterial = (
  	vec3 pathWorldGrad = pathFbmGradient( bp * 2.2 ) * 2.2;
  	vec3 pathViewGrad = ( viewMatrix * vec4( pathWorldGrad, 0.0 ) ).xyz;
  	vec3 crackViewGrad = ( viewMatrix * vec4( pathCrackGradient( bp * 1.7 ), 0.0 ) ).xyz;
- 	normal = normalize( normal - 0.10 * pathViewGrad - 0.45 * crackViewGrad );
+ 	normal = normalize( normal - 0.10 * pathViewGrad + 0.45 * crackViewGrad );
  }`
     );
   };

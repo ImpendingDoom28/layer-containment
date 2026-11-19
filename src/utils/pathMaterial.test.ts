@@ -80,6 +80,18 @@ describe("createPathMaterial", () => {
     // Color terms: mottling, grain, flecks, grit, dark cracks, lit edges.
     expect(shader.fragmentShader).toContain("uPathHighlight, fleck * 0.22");
     expect(shader.fragmentShader).toContain("uPathShadow, grit * 0.28");
+    // The speckle masks are band-limited (lattice-interpolated noise), not a
+    // thresholded raw per-cell hash — otherwise they alias and flicker when
+    // the camera pans. The color and roughness flecks share one field.
+    expect(shader.fragmentShader).toContain(
+      "smoothstep( 0.28, 0.44, pathValueNoise( pp * 4.0 ) )"
+    );
+    expect(shader.fragmentShader).toContain(
+      "smoothstep( 0.28, 0.44, pathValueNoise( rp * 4.0 ) )"
+    );
+    expect(shader.fragmentShader).toContain(
+      "smoothstep( 0.32, 0.46, pathValueNoise( pp * 11.0 + vec2( 3.7, 9.2 ) ) )"
+    );
     expect(shader.fragmentShader).toContain("uPathShadow, cracks * 0.45");
     expect(shader.fragmentShader).toContain("uPathHighlight * crackEdge * 0.25");
 
@@ -88,14 +100,15 @@ describe("createPathMaterial", () => {
       "roughnessFactor * ( 0.85 + 0.2 * ( 0.5 + rGrain * 0.5 ) ) - rFleck * 0.45"
     );
 
-    // Bump: the normal tilts AGAINST the slope (minus sign, like the water
-    // ripple) along the closed-form FBM gradient plus the crack central
-    // difference, both rotated into view space.
+    // Bump: the grain tilts the normal AGAINST the slope (minus sign, like
+    // the water ripple) along the closed-form FBM gradient; the crack is a
+    // negative-height bump, so its central-difference gradient is ADDED (the
+    // fissure center is a depression, carved in rather than embossed out).
     expect(shader.fragmentShader).toContain(
       "pathViewGrad = ( viewMatrix * vec4( pathWorldGrad, 0.0 ) ).xyz"
     );
     expect(shader.fragmentShader).toContain(
-      "normal = normalize( normal - 0.10 * pathViewGrad - 0.45 * crackViewGrad );"
+      "normal = normalize( normal - 0.10 * pathViewGrad + 0.45 * crackViewGrad );"
     );
   });
 });
@@ -208,6 +221,31 @@ describe("path stone field", () => {
       );
     }
     expect(maxErr).toBeLessThan(0.02);
+  });
+
+  it("keeps the band-limited speckle masks sparse (lattice noise, not raw hash)", () => {
+    const ss = (e0: number, e1: number, x: number) => {
+      const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0)));
+      return t * t * (3 - 2 * t);
+    };
+    let count = 0;
+    let sum = 0;
+    let maxVal = 0;
+    for (let x = -20; x <= 20; x += 0.25) {
+      for (let y = -20; y <= 20; y += 0.25) {
+        sum += ss(0.28, 0.44, pathValueNoise(x * 4.0, y * 4.0));
+        maxVal = Math.max(
+          maxVal,
+          ss(0.28, 0.44, pathValueNoise(x * 4.0, y * 4.0))
+        );
+        count += 1;
+      }
+    }
+    expect(maxVal).toBeLessThanOrEqual(1);
+    // A fraction of the surface carries a visible grain — present but not the
+    // whole field (a thresholded raw hash would cover a far larger share).
+    expect(sum / count).toBeGreaterThan(0.02);
+    expect(sum / count).toBeLessThan(0.25);
   });
 
   it("keeps the crack field within [0, 1] and sparse (only ridge crests)", () => {

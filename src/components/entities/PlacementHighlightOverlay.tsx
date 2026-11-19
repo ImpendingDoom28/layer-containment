@@ -5,6 +5,7 @@ import {
   Color,
   Matrix4,
   MeshBasicMaterial,
+  MeshStandardMaterial,
   type Group,
   type Quaternion,
   Vector3,
@@ -51,6 +52,10 @@ const OVERLAY_OPACITY = 0.27;
 const unitPlane = new PlaneGeometry(1, 1);
 const scratchMatrix = new Matrix4();
 const scratchScale = new Vector3(1, 1, 1);
+
+// The cursor cell's own highlight: one shared plane moved per hover move
+// (never re-created), so the tiles stay unmarked while placing.
+const hoverPlane = new PlaneGeometry(1, 1);
 
 type OverlayCell = {
   key: string;
@@ -102,6 +107,33 @@ export const PlacementHighlightOverlay: FC = memo(() => {
     [validColor, invalidColor]
   );
 
+  // The cursor cell's highlight keeps the tile's original orange/red hover
+  // colour (brighter than the buildability tints). One material per state,
+  // shared for the component's lifetime; the mesh only moves per hover.
+  const hoverMaterials = useMemo(
+    () => ({
+      canPlace: new MeshStandardMaterial({
+        color: getCssColorValue("primary"),
+        emissive: getCssColorValue("primary"),
+        emissiveIntensity: 0.45,
+        transparent: true,
+        opacity: 0.55,
+        depthWrite: false,
+        depthTest: true,
+      }),
+      cannotPlace: new MeshStandardMaterial({
+        color: getCssColorValue("destructive"),
+        emissive: getCssColorValue("destructive"),
+        emissiveIntensity: 0.45,
+        transparent: true,
+        opacity: 0.55,
+        depthWrite: false,
+        depthTest: true,
+      }),
+    }),
+    []
+  );
+
   const planetRadius = useMemo(
     () => getPlanetRadius(gridSize, tileSize),
     [gridSize, tileSize]
@@ -110,6 +142,62 @@ export const PlacementHighlightOverlay: FC = memo(() => {
   const heightAlongNormal = pathYOffset + PLACEMENT_OVERLAY_Y_EPSILON;
   const planeSize = tileSize * PLANE_INSET;
 
+  // The hovered cell's plane pose, computed only while a cell is actually
+  // under the cursor (null otherwise). The shared `hoverPlane` mesh is moved
+  // here per hover — no per-tile work, no re-merge.
+  const hoverPose = useMemo(() => {
+    if (!hoveredTile) return null;
+    const placementState = getTilePlacementState({
+      gridX: hoveredTile.gridX,
+      gridZ: hoveredTile.gridZ,
+      blockage: tileBlockage,
+      towers,
+    });
+    const canPlace = !placementState.isBlocked;
+    const wx = tileToWorldCoordinate(
+      hoveredTile.gridX,
+      gridSize,
+      tileSize
+    );
+    const wz = tileToWorldCoordinate(
+      hoveredTile.gridZ,
+      gridSize,
+      tileSize
+    );
+    // A hair above the cell tints (same offset the range ring uses) so the
+    // two coplanar transparent planes can't fight at the shared cell face.
+    const { position, quaternion } = flatFieldToSphereOverlayPlanePose(
+      wx,
+      wz,
+      planetRadius,
+      heightAlongNormal + 0.004
+    );
+    return {
+      position: [position.x, position.y, position.z] as [
+        number,
+        number,
+        number,
+      ],
+      quaternion: [
+        quaternion.x,
+        quaternion.y,
+        quaternion.z,
+        quaternion.w,
+      ] as [number, number, number, number],
+      scale: planeSize,
+      canPlace,
+    };
+  }, [
+    hoveredTile,
+    tileBlockage,
+    towers,
+    gridSize,
+    tileSize,
+    planetRadius,
+    heightAlongNormal,
+    planeSize,
+  ]);
+
   const cells = useMemo<OverlayCell[]>(() => {
     if (!selectedTowerType) return [];
 
@@ -117,10 +205,9 @@ export const PlacementHighlightOverlay: FC = memo(() => {
 
     for (let gridX = 0; gridX < gridSize; gridX++) {
       for (let gridZ = 0; gridZ < gridSize; gridZ++) {
-        if (hoveredTile?.gridX === gridX && hoveredTile?.gridZ === gridZ) {
-          continue;
-        }
-
+        // The hovered cell is included: the merged geometry then never
+        // depends on the cursor, so it bakes once per level instead of
+        // re-merging and re-disposing the whole grid on every pointer move.
         // Static blockage is precomputed per level load, so this whole grid
         // pass is O(1) mask lookups plus one tower scan per tile.
         const placementState = getTilePlacementState({
@@ -152,7 +239,6 @@ export const PlacementHighlightOverlay: FC = memo(() => {
     return items;
   }, [
     selectedTowerType,
-    hoveredTile,
     gridSize,
     tileSize,
     tileBlockage,
@@ -161,10 +247,10 @@ export const PlacementHighlightOverlay: FC = memo(() => {
     heightAlongNormal,
   ]);
 
-  // The per-tile planes are static once the grid pass runs, so they bake into
-  // one geometry per tint: the whole board is two draw calls instead of one
-  // mesh per cell (the hover cell is excluded, so the merge re-runs on every
-  // hover move — the same cost `Bridge` pays when its inputs change).
+  // The per-tile planes are static for the level, so they bake into one
+  // geometry per tint: the whole board is two draw calls instead of one mesh
+  // per cell, and the bake runs once per level (the cells no longer depend on
+  // the cursor, so no per-hover re-merge or geometry disposal).
   const merged = useMemo(() => {
     const validParts: BufferGeometry[] = [];
     const invalidParts: BufferGeometry[] = [];
@@ -191,8 +277,9 @@ export const PlacementHighlightOverlay: FC = memo(() => {
   useEffect(
     () => () => {
       Object.values(materials).forEach((m) => m.dispose());
+      Object.values(hoverMaterials).forEach((m) => m.dispose());
     },
-    [materials]
+    [materials, hoverMaterials]
   );
 
   useEffect(
@@ -333,6 +420,24 @@ export const PlacementHighlightOverlay: FC = memo(() => {
           position={rangeRing.position}
           quaternion={rangeRing.quaternion}
           radialSegments={48}
+        />
+      )}
+      {/* The single cursor-cell highlight: one shared plane moved per hover
+          move (the tiles themselves stay unmarked), drawn over the cell
+          tints and not raycast so tiles keep the pointer events. */}
+      {hoverPose && (
+        <mesh
+          geometry={hoverPlane}
+          material={
+            hoverPose.canPlace
+              ? hoverMaterials.canPlace
+              : hoverMaterials.cannotPlace
+          }
+          position={hoverPose.position}
+          quaternion={hoverPose.quaternion}
+          scale={hoverPose.scale}
+          renderOrder={1}
+          raycast={() => null}
         />
       )}
     </group>

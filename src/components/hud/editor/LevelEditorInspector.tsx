@@ -23,7 +23,8 @@ const TOOL_TO_MODE: Record<LevelEditorTool, LevelEditorMode> = {
 };
 
 export const LevelEditorInspector = () => {
-  const { activeTool, selected } = useLevelEditorStore();
+  const activeTool = useLevelEditorStore((state) => state.activeTool);
+  const selected = useLevelEditorStore((state) => state.selected);
   const activeMode = TOOL_TO_MODE[activeTool];
 
   const showPath =

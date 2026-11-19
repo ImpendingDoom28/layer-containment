@@ -6,7 +6,7 @@ import { useLevelEditorStore } from "../../../core/stores/useLevelEditorStore";
 
 export const LevelEditorSelectionHeader = () => {
   const { t } = useTranslation();
-  const { selected } = useLevelEditorStore();
+  const selected = useLevelEditorStore((state) => state.selected);
 
   const selectionLabel = useMemo(() => {
     if (!selected) return null;

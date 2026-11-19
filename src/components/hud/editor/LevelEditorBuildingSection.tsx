@@ -17,8 +17,17 @@ import { EditorEmptyState } from "./EditorEmptyState";
 export const LevelEditorBuildingSection = () => {
   const { t } = useTranslation();
   const tileSize = useGameStore(tileSizeSelector);
-  const { draftLevel, selected, updateSelectedBuilding, removeSelectedBuilding } =
-    useLevelEditorStore();
+  // Atomic selectors (no full-store destructure): the store mutates on every
+  // pointer move (`hoveredTile`), so a whole-store subscription would
+  // re-render this panel on every hover.
+  const draftLevel = useLevelEditorStore((state) => state.draftLevel);
+  const selected = useLevelEditorStore((state) => state.selected);
+  const updateSelectedBuilding = useLevelEditorStore(
+    (state) => state.updateSelectedBuilding
+  );
+  const removeSelectedBuilding = useLevelEditorStore(
+    (state) => state.removeSelectedBuilding
+  );
 
   const selectedBuilding =
     selected?.type === "building"

@@ -19,14 +19,21 @@ import { EditorEmptyState } from "./EditorEmptyState";
 export const LevelEditorWaveSection = () => {
   const { t } = useTranslation();
   const enemyTypeOptions = useEnemyTypeOptions();
-  const {
-    draftLevel,
-    addWave,
-    removeWave,
-    addWaveEnemyGroup,
-    updateWaveEnemyGroup,
-    removeWaveEnemyGroup,
-  } = useLevelEditorStore();
+  // Atomic selectors (no full-store destructure): the store mutates on every
+  // pointer move (`hoveredTile`), so a whole-store subscription would
+  // re-render this panel on every hover.
+  const draftLevel = useLevelEditorStore((state) => state.draftLevel);
+  const addWave = useLevelEditorStore((state) => state.addWave);
+  const removeWave = useLevelEditorStore((state) => state.removeWave);
+  const addWaveEnemyGroup = useLevelEditorStore(
+    (state) => state.addWaveEnemyGroup
+  );
+  const updateWaveEnemyGroup = useLevelEditorStore(
+    (state) => state.updateWaveEnemyGroup
+  );
+  const removeWaveEnemyGroup = useLevelEditorStore(
+    (state) => state.removeWaveEnemyGroup
+  );
 
   const pathCount = draftLevel.pathWaypoints.length;
 

@@ -24,10 +24,14 @@ import {
   useGameStore,
 } from "../../core/stores/useGameStore";
 import {
-  hoveredTileSelector,
+  createTileHoveredSelector,
   setHoveredTileSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
+import {
+  createEditorTileHoveredSelector,
+  useLevelEditorStore,
+} from "../../core/stores/useLevelEditorStore";
 import { useWaterClock } from "../../core/contexts/WaterClockContext";
 import { createWaterMaterial, WATER_AMPLITUDE } from "../../utils/waterMaterial";
 import {
@@ -92,8 +96,19 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
     const tileSize = useGameStore(tileSizeSelector);
     const selectedTowerToPlace = useGameStore(selectedTowerTypeToPlaceSelector);
 
-    const hoveredTile = useLevelStore(hoveredTileSelector);
+    // The editor passes `onHover` (and the game omits it), so the tile can
+    // tell which store to read: in the game it tracks the game store's hover,
+    // in the editor the editor store's — each through a per-tile primitive
+    // flag, so only the hovered tile re-renders on pointer moves.
+    const isGameTileHovered = useLevelStore(
+      createTileHoveredSelector(gridX, gridZ)
+    );
+    const isEditorTileHovered = useLevelEditorStore(
+      createEditorTileHoveredSelector(gridX, gridZ)
+    );
     const setHoveredTile = useLevelStore(setHoveredTileSelector);
+    const isEditorMode = onHover != null;
+    const isTileHovered = isEditorMode ? isEditorTileHovered : isGameTileHovered;
 
     const waterClock = useWaterClock();
     const radius = getPlanetRadius(gridSize, tileSize);
@@ -101,11 +116,15 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
     const worldX = tileToWorldCoordinate(gridX, gridSize, tileSize);
     const worldZ = tileToWorldCoordinate(gridZ, gridSize, tileSize);
 
+    // The tile tints from its own per-tile flag: the editor only when the
+    // active tool can act on the cell (`canPlace` is the scene's
+    // `canHighlightEditorAction`), the game only while a tower type is
+    // selected for placement.
     const isHovered =
       isHoveredProp ??
-      (hoveredTile?.gridX === gridX &&
-        hoveredTile?.gridZ === gridZ &&
-        selectedTowerToPlace !== null);
+      (isEditorMode
+        ? isTileHovered && canPlace
+        : isTileHovered && selectedTowerToPlace !== null);
 
     // The tile's features sit at the basin floor — the planet surface at this
     // tile lowered by the full depth, so the canyon reads as a bowl you can

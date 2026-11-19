@@ -63,17 +63,20 @@ export const LevelEditorScene = () => {
   const tileSize = useGameStore(tileSizeSelector);
   const pathWidth = useGameStore(pathWidthSelector);
   const pathYOffset = useGameStore(pathYOffsetSelector);
-  const {
-    draftLevel,
-    activeTool,
-    hoveredTile,
-    selected,
-    selectedPathIndex,
-    handleTileAction,
-    setHoveredTile,
-    selectBuilding,
-    selectWaypoint,
-  } = useLevelEditorStore();
+  // Atomic selectors (no full-store destructure): `hoveredTile` mutates on
+  // every pointer move, so a whole-store subscription would re-render the
+  // entire scene (every tile) instead of letting the tiles track it
+  // individually.
+  const draftLevel = useLevelEditorStore((state) => state.draftLevel);
+  const activeTool = useLevelEditorStore((state) => state.activeTool);
+  const selected = useLevelEditorStore((state) => state.selected);
+  const selectedPathIndex = useLevelEditorStore(
+    (state) => state.selectedPathIndex
+  );
+  const handleTileAction = useLevelEditorStore((state) => state.handleTileAction);
+  const setHoveredTile = useLevelEditorStore((state) => state.setHoveredTile);
+  const selectBuilding = useLevelEditorStore((state) => state.selectBuilding);
+  const selectWaypoint = useLevelEditorStore((state) => state.selectWaypoint);
 
   const gridOffset = useMemo(
     () => getLevelGridOffset(draftLevel.gridSize, tileSize),
@@ -117,9 +120,8 @@ export const LevelEditorScene = () => {
     canyons: draftLevel.canyons,
   });
 
-  // Bridge tiles per path, memoized so hover-only re-renders (the editor's
-  // `hoveredTile` changes per tile) reuse the same arrays and the `Bridge`
-  // memo holds instead of re-merging its geometry.
+  // Bridge tiles per path, memoized so the same arrays (and the `Bridge`
+  // memo) are reused when the scene re-renders on draft/selection changes.
   const bridgeTilesByPath = useMemo(
     () =>
       draftLevel.canyons.length === 0
@@ -268,8 +270,6 @@ export const LevelEditorScene = () => {
             blockage: draftBlockage,
             towers: [],
           });
-          const isHovered =
-            hoveredTile?.gridX === gridX && hoveredTile?.gridZ === gridZ;
           const canPlaceBuilding =
             activeTool === "placeBuilding" && !placementState.isBlocked;
           const canPaintWater =
@@ -283,8 +283,6 @@ export const LevelEditorScene = () => {
             canPlaceBuilding ||
             (activeTool === "water" && canPaintWater) ||
             canPaintCanyon;
-          const showActionHighlight =
-            isHovered && canHighlightEditorAction;
           const baseTileColor =
             draftLevel.tileColor ?? getCssColorValue("editor-default-tile");
 
@@ -292,7 +290,10 @@ export const LevelEditorScene = () => {
           // other cell the game's `Tile` (water reads as the same animated
           // surface the game runs). The editor keeps its thin flat land
           // `EditorSphereTile` only where neither applies, so water and
-          // canyons render exactly like the game, not a flat slab.
+          // canyons render exactly like the game, not a flat slab. Each tile
+          // tracks the editor's `hoveredTile` itself through a per-tile
+          // primitive selector; the scene no longer re-renders on hover, so
+          // the callbacks below stay referentially stable for its lifetime.
           if (placementState.isCanyon) {
             return (
               <CanyonTile
@@ -302,8 +303,7 @@ export const LevelEditorScene = () => {
                 gridSize={draftLevel.gridSize}
                 canyonBBox={canyonBBox!}
                 isWater={placementState.isWater}
-                isHovered={showActionHighlight ? true : undefined}
-                canPlace={showActionHighlight}
+                canPlace={canHighlightEditorAction}
                 onHover={() => onTileHover(gridX, gridZ)}
                 onHoverEnd={onTileHoverEnd}
                 onClick={() => onTileClick(gridX, gridZ)}
@@ -320,8 +320,7 @@ export const LevelEditorScene = () => {
                 gridSize={draftLevel.gridSize}
                 isWater
                 isOnPath={placementState.isOnPath}
-                canPlace={showActionHighlight}
-                isHovered={showActionHighlight ? true : undefined}
+                canPlace={canHighlightEditorAction}
                 onHover={() => onTileHover(gridX, gridZ)}
                 onHoverEnd={onTileHoverEnd}
                 onClick={() => onTileClick(gridX, gridZ)}
@@ -338,7 +337,6 @@ export const LevelEditorScene = () => {
               tileSize={tileSize}
               landBaseColor={baseTileColor}
               placementState={placementState}
-              isHovered={isHovered}
               canHighlightEditorAction={canHighlightEditorAction}
               activeTool={activeTool}
               canyonBBox={canyonBBox}

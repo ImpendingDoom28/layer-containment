@@ -16,6 +16,10 @@ import {
 } from "../../../utils/planetSurfaceMapping";
 import { createPlanetTileMaterial } from "../../../utils/planetTileMaterial";
 import { hashGrid2D } from "../../../core/tileGridHash";
+import {
+  createEditorTileHoveredSelector,
+  useLevelEditorStore,
+} from "../../../core/stores/useLevelEditorStore";
 
 /** The editor tile slab height. The editor has no `pathYOffset` (it is a
     design surface), so tiles use a thin fixed slab; canyon tiles are pushed
@@ -86,7 +90,6 @@ type EditorSphereTileProps = {
   tileSize: number;
   landBaseColor: string;
   placementState: TilePlacementState;
-  isHovered: boolean;
   canHighlightEditorAction: boolean;
   activeTool: LevelEditorTool;
   /** The canyon's world bbox; null when the level has no canyons. A canyon
@@ -105,7 +108,6 @@ export const EditorSphereTile: FC<EditorSphereTileProps> = memo(
     tileSize,
     landBaseColor,
     placementState,
-    isHovered,
     canHighlightEditorAction,
     activeTool,
     canyonBBox,
@@ -113,6 +115,15 @@ export const EditorSphereTile: FC<EditorSphereTileProps> = memo(
     onTileHover,
     onTileHoverEnd,
   }) => {
+    // The tile tracks the editor's `hoveredTile` itself through a primitive
+    // per-tile flag, so only the hovered tile re-renders on pointer moves
+    // (the scene no longer re-renders at all). The material below picks the
+    // can-place tint or the active tool's preview colour from
+    // `canHighlightEditorAction`, exactly as the old `isHovered` prop did.
+    const isHovered = useLevelEditorStore(
+      createEditorTileHoveredSelector(gridX, gridZ)
+    );
+
     const radius = useMemo(
       () => getPlanetRadius(gridSize, tileSize),
       [gridSize, tileSize]

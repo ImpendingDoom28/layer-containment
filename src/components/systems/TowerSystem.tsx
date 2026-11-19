@@ -1,10 +1,7 @@
 import { FC, memo, useCallback, useMemo } from "react";
 
 import { getEffectiveTowerCombatStats } from "../../core/relayBuffs";
-import type {
-  Tower as TowerInstance,
-  TowerType,
-} from "../../core/types/game";
+import type { Tower as TowerInstance, TowerType } from "../../core/types/game";
 import type { TileData } from "../../core/types/utils";
 import type { TilePlacementState } from "../../utils/tilePlacement";
 import { Tower } from "../entities/Tower";
@@ -123,7 +120,7 @@ export const TowerSystem: FC<TowerSystemProps> = memo(
                 tower={tower}
                 effectiveRange={effectiveStats.range}
                 isSelected={selectedTower?.id === tower.id}
-                onClick={() => onTowerClick?.(tower)}
+                onTowerClick={onTowerClick ?? undefined}
                 onTurretNode={onTurretNode}
                 playPlacementFX={playPlacementFX}
               />

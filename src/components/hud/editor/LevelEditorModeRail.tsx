@@ -46,7 +46,8 @@ type LevelEditorModeRailProps = {
 
 export const LevelEditorModeRail = ({ onBackToGame }: LevelEditorModeRailProps) => {
   const { t } = useTranslation();
-  const { activeTool, setActiveTool } = useLevelEditorStore();
+  const activeTool = useLevelEditorStore((state) => state.activeTool);
+  const setActiveTool = useLevelEditorStore((state) => state.setActiveTool);
   const activeMode = TOOL_TO_MODE[activeTool];
 
   return (

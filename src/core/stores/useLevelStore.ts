@@ -457,6 +457,17 @@ export const updateTowerSelector = (state: LevelStore) => state.updateTower;
 export const resetLevelStateSelector = (state: LevelStore) =>
   state.resetLevelState;
 export const hoveredTileSelector = (state: LevelStore) => state.hoveredTile;
+/**
+ * Per-tile primitive hover flag. `hoveredTile` is a fresh object on every
+ * `setHoveredTile` call, so subscribing to it re-renders every consumer on
+ * every pointer move; this selector returns a boolean that only flips when
+ * the cursor crosses `this` cell, so a tile that subscribes to its own
+ * selector re-renders only when the cursor enters or leaves it.
+ */
+export const createTileHoveredSelector =
+  (gridX: number, gridZ: number) =>
+  (state: LevelStore) =>
+    state.hoveredTile?.gridX === gridX && state.hoveredTile?.gridZ === gridZ;
 export const setHoveredTileSelector = (state: LevelStore) =>
   state.setHoveredTile;
 export const tileBlockageSelector = (state: LevelStore) => state.tileBlockage;

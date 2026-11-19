@@ -19,16 +19,18 @@ import {
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import {
   pathYOffsetSelector,
-  selectedTowerTypeToPlaceSelector,
   tileSizeSelector,
   useGameStore,
 } from "../../core/stores/useGameStore";
 import {
   gridSizeSelector,
-  hoveredTileSelector,
   setHoveredTileSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
+import {
+  createEditorTileHoveredSelector,
+  useLevelEditorStore,
+} from "../../core/stores/useLevelEditorStore";
 import { hashGrid2D } from "../../core/tileGridHash";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
 import { createPlanetTileMaterial } from "../../utils/planetTileMaterial";
@@ -119,8 +121,9 @@ type TileProps = {
   /** The board size; defaults to the published level. The editor passes its
       draft grid so the tile sits on the matching sphere. */
   gridSize?: number;
-  /** The editor drives hover from its own store; pass this (with the hover
-      callbacks) to override the game-store hover. Omitted in the game. */
+  /** Optional manual hover override. In the editor the tile resolves hover
+      itself from the editor store (see `onHover`); in the game the overlay
+      owns placement feedback, so this is omitted there too. */
   isHovered?: boolean;
   onHover?: () => void;
   onHoverEnd?: () => void;
@@ -141,20 +144,26 @@ export const Tile: FC<TileProps> = memo(
   }) => {
     const tileSize = useGameStore(tileSizeSelector);
     const pathYOffset = useGameStore(pathYOffsetSelector);
-    const selectedTowerToPlace = useGameStore(selectedTowerTypeToPlaceSelector);
 
+    // The editor passes `onHover` (the game omits it): the editor's water
+    // cells tint themselves from the editor store's per-tile hover flag, so
+    // only the hovered tile re-renders on pointer moves. In the game the
+    // overlay owns all placement feedback, so the tile stays unmarked.
+    const isEditorMode = onHover != null;
+    const isEditorTileHovered = useLevelEditorStore(
+      createEditorTileHoveredSelector(gridX, gridZ)
+    );
     const storeGridSize = useLevelStore(gridSizeSelector);
-    const hoveredTile = useLevelStore(hoveredTileSelector);
     const setHoveredTile = useLevelStore(setHoveredTileSelector);
 
     const waterClock = useWaterClock();
     const gridSize = gridSizeProp ?? storeGridSize;
 
+    // In the editor the water cell tints only when the active tool can act on
+    // it (`canPlace` is the scene's `canHighlightEditorAction`); the game never
+    // tints water from here (the overlay covers it).
     const isHovered =
-      isHoveredProp ??
-      (hoveredTile?.gridX === gridX &&
-        hoveredTile.gridZ === gridZ &&
-        selectedTowerToPlace !== null);
+      isHoveredProp ?? (isEditorMode && isEditorTileHovered && canPlace);
 
     const placementHoverKey = useMemo<PlacementHoverKey>(() => {
       if (!isHovered) return "idle";

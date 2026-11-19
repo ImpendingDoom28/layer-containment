@@ -95,7 +95,9 @@ const getBaseGeometry = (
 type TowerProps = {
   tower: TowerInstance | null;
   isSelected?: boolean;
-  onClick?: () => void;
+  /** Receives the clicked tower; the system passes its own stable callback
+      through, so the tower's memo does not break on per-tower closures. */
+  onTowerClick?: (tower: TowerInstance) => void;
   isPreview?: boolean;
   isInvalidPlacement?: boolean;
   /**
@@ -117,7 +119,7 @@ type TowerProps = {
 export const Tower: FC<TowerProps> = memo(
   ({
     tower,
-    onClick,
+    onTowerClick,
     isSelected = false,
     isPreview = false,
     isInvalidPlacement = false,
@@ -424,7 +426,7 @@ export const Tower: FC<TowerProps> = memo(
             ? undefined
             : (e: ThreeEvent<MouseEvent>) => {
                 e.stopPropagation();
-                onClick?.();
+                onTowerClick?.(tower);
               }
         }
       >

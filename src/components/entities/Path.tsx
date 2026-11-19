@@ -3,6 +3,7 @@ import { FC, memo, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import {
   BoxGeometry,
   BufferGeometry,
+  Color,
   Matrix4,
   MeshStandardMaterial,
   Object3D,
@@ -12,6 +13,7 @@ import {
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 import { freezeSubtree } from "../../utils/freezeSubtree";
+import { createPathMaterial } from "../../utils/pathMaterial";
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import { GUINextWavePreview } from "../gui/GUINextWavePreview";
 import {
@@ -49,6 +51,7 @@ import { Portal } from "./Portal";
 import { EndBuilding } from "./EndBuilding";
 
 const UNIT_SCALE = new Vector3(1, 1, 1);
+const WHITE = new Color("#ffffff");
 
 type PathProps = {
   pathIndex: number;
@@ -215,13 +218,34 @@ export const Path: FC<PathProps> = memo(
       };
     }, [path, radius]);
 
+    // Worn-stone materials: the same two gray tokens as before, now carrying a
+    // procedural surface (tonal mottling, grain, mineral flecks, hairline
+    // cracks) in world space. The tint extremes are derived from each base
+    // tone (no new color token), so a theme that redefines the grays
+    // re-tints the path automatically.
     const pathMaterials = useMemo(
       () => ({
-        gray500: new MeshStandardMaterial({
+        gray500: createPathMaterial({
           color: getCssColorValue("scene-gray-500"),
+          highlight: new Color(getCssColorValue("scene-gray-500"))
+            .clone()
+            .lerp(WHITE, 0.55)
+            .getStyle(),
+          shadow: new Color(getCssColorValue("scene-gray-500"))
+            .clone()
+            .multiplyScalar(0.45)
+            .getStyle(),
         }),
-        gray600: new MeshStandardMaterial({
+        gray600: createPathMaterial({
           color: getCssColorValue("scene-gray-600"),
+          highlight: new Color(getCssColorValue("scene-gray-600"))
+            .clone()
+            .lerp(WHITE, 0.55)
+            .getStyle(),
+          shadow: new Color(getCssColorValue("scene-gray-600"))
+            .clone()
+            .multiplyScalar(0.45)
+            .getStyle(),
         }),
       }),
       []

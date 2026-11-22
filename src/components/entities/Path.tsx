@@ -218,11 +218,10 @@ export const Path: FC<PathProps> = memo(
       };
     }, [path, radius]);
 
-    // Worn-stone materials: the same two gray tokens as before, now carrying a
-    // procedural surface (tonal mottling, grain, mineral flecks, hairline
-    // cracks) in world space. The tint extremes are derived from each base
-    // tone (no new color token), so a theme that redefines the grays
-    // re-tints the path automatically.
+    // Procedural surface materials: the same two gray tokens as before, now
+    // carrying a world-space pattern (the tint extremes are derived from each
+    // base tone — no new color token — so a theme that redefines the grays
+    // re-tints the path automatically).
     const pathMaterials = useMemo(
       () => ({
         gray500: createPathMaterial({

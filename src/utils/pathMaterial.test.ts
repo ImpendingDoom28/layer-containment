@@ -14,11 +14,11 @@ type ShaderStub = Pick<
 const minimalShaderForHook: ShaderStub = {
   uniforms: {},
   vertexShader: `#include <common>
- #include <project_vertex>`,
+  #include <project_vertex>`,
   fragmentShader: `#include <common>
- #include <color_fragment>
- #include <roughnessmap_fragment>
- #include <normal_fragment_maps>`,
+  #include <color_fragment>
+  #include <roughnessmap_fragment>
+  #include <normal_fragment_maps>`,
 };
 
 const sampleParams = {
@@ -39,7 +39,7 @@ describe("createPathMaterial", () => {
     expect(b.customProgramCacheKey?.()).toBe(a.customProgramCacheKey?.());
   });
 
-  it("injects the stone terms with the expected uniforms and world-space sampling", () => {
+  it("injects the worn-stone terms with the expected uniforms and world-space sampling", () => {
     const mat = createPathMaterial(sampleParams);
     const shader: ShaderStub = {
       uniforms: { ...minimalShaderForHook.uniforms },
@@ -70,54 +70,49 @@ describe("createPathMaterial", () => {
     expect(shader.fragmentShader).toContain("varying vec3 vPathWorldPos;");
     expect(shader.fragmentShader).toContain("vPathWorldPos.xz");
 
-    for (const fn of ["pathHash", "pathValueNoise", "pathFbm", "pathCracks"]) {
+    for (const fn of ["pathHash", "pathValueNoise", "pathFbm", "pathFbmGradient"]) {
       expect(shader.fragmentShader).toContain(fn);
     }
     // The injected noise field must be the exact shared source, so the GLSL
     // and the JS port in this file can never drift apart.
     expect(shader.fragmentShader).toContain(PATH_GLSL_NOISE);
 
-    // Color terms: mottling, grain, flecks, grit, dark cracks, lit edges.
-    expect(shader.fragmentShader).toContain("uPathHighlight, fleck * 0.22");
-    expect(shader.fragmentShader).toContain("uPathShadow, grit * 0.28");
+    // Color terms: mottling, grain, sparse specks, dark grit. No crack web —
+    // at the game's camera distance it read as scribbled lines, so the
+    // surface is a painted stone ground instead.
+    expect(shader.fragmentShader).toContain("uPathHighlight, fleck * 0.10");
+    expect(shader.fragmentShader).toContain("uPathShadow, grit * 0.20");
     // The speckle masks are band-limited (lattice-interpolated noise), not a
     // thresholded raw per-cell hash — otherwise they alias and flicker when
-    // the camera pans. The color and roughness flecks share one field.
+    // the camera pans.
     expect(shader.fragmentShader).toContain(
-      "smoothstep( 0.28, 0.44, pathValueNoise( pp * 4.0 ) )"
+      "smoothstep( 0.30, 0.44, pathValueNoise( pp * 12.0 ) )"
     );
     expect(shader.fragmentShader).toContain(
-      "smoothstep( 0.28, 0.44, pathValueNoise( rp * 4.0 ) )"
-    );
-    expect(shader.fragmentShader).toContain(
-      "smoothstep( 0.32, 0.46, pathValueNoise( pp * 11.0 + vec2( 3.7, 9.2 ) ) )"
-    );
-    expect(shader.fragmentShader).toContain("uPathShadow, cracks * 0.45");
-    expect(shader.fragmentShader).toContain("uPathHighlight * crackEdge * 0.25");
-
-    // Roughness terms: matte ground with glassy mineral flecks.
-    expect(shader.fragmentShader).toContain(
-      "roughnessFactor * ( 0.85 + 0.2 * ( 0.5 + rGrain * 0.5 ) ) - rFleck * 0.45"
+      "smoothstep( 0.34, 0.46, pathValueNoise( pp * 22.0 + vec2( 3.7, 9.2 ) ) )"
     );
 
-    // Bump: the grain tilts the normal AGAINST the slope (minus sign, like
-    // the water ripple) along the closed-form FBM gradient; the crack is a
-    // negative-height bump, so its central-difference gradient is ADDED (the
-    // fissure center is a depression, carved in rather than embossed out).
+    // Roughness: a matte ground whose grain breathes the specular slightly.
+    expect(shader.fragmentShader).toContain(
+      "roughnessFactor *= 0.9 + 0.1 * ( 0.5 + rGrain * 0.5 );"
+    );
+
+    // Bump: the grain tilts the normal against the slope (the minus, like the
+    // water ripple) along the closed-form FBM gradient, kept small.
     expect(shader.fragmentShader).toContain(
       "pathViewGrad = ( viewMatrix * vec4( pathWorldGrad, 0.0 ) ).xyz"
     );
     expect(shader.fragmentShader).toContain(
-      "normal = normalize( normal - 0.10 * pathViewGrad + 0.45 * crackViewGrad );"
+      "normal = normalize( normal - 0.06 * pathViewGrad );"
     );
   });
 });
 
-// JS port of the GLSL field (same constants as PATH_GLSL_NOISE / the crack
-// field) so the tests can check its numerical behavior: the FBM must stay
-// bounded in [-1, 1] for the color/roughness mixes, and its gradient must
-// match finite differences (a wrong analytic derivative would tilt the
-// surface against the actual grain).
+// JS port of the GLSL field (same constants as PATH_GLSL_NOISE) so the tests
+// can check its numerical behavior: the FBM must stay bounded in [-1, 1] for
+// the color/roughness mixes, and its gradient must match finite differences
+// (a wrong analytic derivative would tilt the surface against the actual
+// grain).
 const pathHash = (x: number, y: number) => {
   const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
   return s - Math.floor(s);
@@ -199,8 +194,7 @@ describe("path stone field", () => {
     let maxErr = 0;
     // Sample away from the value-noise cell boundaries: there the field is
     // C0 (its derivative jumps), so no finite difference can agree with the
-    // analytic one — the bump reads as a sharp ridge edge, which is exactly
-    // what a cracky surface wants.
+    // analytic one.
     for (const [x, y] of [
       [0.31, 0.47],
       [1.72, 0.83],
@@ -233,38 +227,18 @@ describe("path stone field", () => {
     let maxVal = 0;
     for (let x = -20; x <= 20; x += 0.25) {
       for (let y = -20; y <= 20; y += 0.25) {
-        sum += ss(0.28, 0.44, pathValueNoise(x * 4.0, y * 4.0));
+        sum += ss(0.3, 0.44, pathValueNoise(x * 12.0, y * 12.0));
         maxVal = Math.max(
           maxVal,
-          ss(0.28, 0.44, pathValueNoise(x * 4.0, y * 4.0))
+          ss(0.3, 0.44, pathValueNoise(x * 12.0, y * 12.0))
         );
         count += 1;
       }
     }
     expect(maxVal).toBeLessThanOrEqual(1);
-    // A fraction of the surface carries a visible grain — present but not the
+    // A fraction of the surface carries a visible speck — present but not the
     // whole field (a thresholded raw hash would cover a far larger share).
     expect(sum / count).toBeGreaterThan(0.02);
     expect(sum / count).toBeLessThan(0.25);
-  });
-
-  it("keeps the crack field within [0, 1] and sparse (only ridge crests)", () => {
-    let maxVal = 0;
-    let sum = 0;
-    let count = 0;
-    for (let x = -12; x <= 12; x += 0.2) {
-      for (let y = -12; y <= 12; y += 0.2) {
-        const r = 1 - Math.abs(pathFbm(x * 1.7, y * 1.7));
-        // GLSL's smoothstep(0.985, 1.0, r), clamped outside [0, 1].
-        const t = Math.min(1, Math.max(0, (r - 0.985) / (1.0 - 0.985)));
-        const cracks = t * t * (3 - 2 * t);
-        maxVal = Math.max(maxVal, cracks);
-        sum += cracks;
-        count += 1;
-      }
-    }
-    expect(maxVal).toBeLessThanOrEqual(1);
-    // Cracks are a fraction of the surface, not the whole thing.
-    expect(sum / count).toBeLessThan(0.15);
   });
 });

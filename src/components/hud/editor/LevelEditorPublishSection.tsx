@@ -68,14 +68,23 @@ export const LevelEditorPublishSection = () => {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [showAllIssues, setShowAllIssues] = useState(false);
 
-  const {
-    draftLevel,
-    validationIssues,
-    hasUnsavedChanges,
-    resetDraftLevel,
-    loadDraftLevel,
-    validateDraftLevel,
-  } = useLevelEditorStore();
+  // Atomic selectors (no full-store destructure): the store mutates on every
+  // pointer move (`hoveredTile`), so a whole-store subscription would
+  // re-render this panel on every hover.
+  const draftLevel = useLevelEditorStore((state) => state.draftLevel);
+  const validationIssues = useLevelEditorStore(
+    (state) => state.validationIssues
+  );
+  const hasUnsavedChanges = useLevelEditorStore(
+    (state) => state.hasUnsavedChanges
+  );
+  const resetDraftLevel = useLevelEditorStore(
+    (state) => state.resetDraftLevel
+  );
+  const loadDraftLevel = useLevelEditorStore((state) => state.loadDraftLevel);
+  const validateDraftLevel = useLevelEditorStore(
+    (state) => state.validateDraftLevel
+  );
 
   const publishState = getPublishState(validationIssues, hasUnsavedChanges);
   const config = PUBLISH_CONFIG[publishState];

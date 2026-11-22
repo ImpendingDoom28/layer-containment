@@ -28,16 +28,21 @@ export const LevelEditorLevelSection = () => {
   const { t } = useTranslation();
   const tileSize = useGameStore(tileSizeSelector);
   const enemyTypeOptions = useEnemyTypeOptions();
-  const {
-    draftLevel,
-    setLevelName,
-    setLabel,
-    setDescription,
-    setStartingHealth,
-    setStartingMoney,
-    setGridSize,
-    setEnemyWeight,
-  } = useLevelEditorStore();
+  // Atomic selectors (no full-store destructure): the store mutates on every
+  // pointer move (`hoveredTile`), so a whole-store subscription would
+  // re-render this panel on every hover.
+  const draftLevel = useLevelEditorStore((state) => state.draftLevel);
+  const setLevelName = useLevelEditorStore((state) => state.setLevelName);
+  const setLabel = useLevelEditorStore((state) => state.setLabel);
+  const setDescription = useLevelEditorStore((state) => state.setDescription);
+  const setStartingHealth = useLevelEditorStore(
+    (state) => state.setStartingHealth
+  );
+  const setStartingMoney = useLevelEditorStore(
+    (state) => state.setStartingMoney
+  );
+  const setGridSize = useLevelEditorStore((state) => state.setGridSize);
+  const setEnemyWeight = useLevelEditorStore((state) => state.setEnemyWeight);
 
   return (
     <UIAccordionItem value="level">

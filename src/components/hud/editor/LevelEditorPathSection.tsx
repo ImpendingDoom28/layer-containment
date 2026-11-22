@@ -41,18 +41,27 @@ export const LevelEditorPathSection = () => {
   const { t } = useTranslation();
   const tileSize = useGameStore(tileSizeSelector);
   const pathWidth = useGameStore(pathWidthSelector);
-  const {
-    draftLevel,
-    activeTool,
-    selected,
-    selectedPathIndex,
-    setActiveTool,
-    addPath,
-    selectPath,
-    removeSelectedPath,
-    updateSelectedWaypoint,
-    removeSelectedWaypoint,
-  } = useLevelEditorStore();
+  // Atomic selectors (no full-store destructure): the store mutates on every
+  // pointer move (`hoveredTile`), so a whole-store subscription would
+  // re-render this panel on every hover.
+  const draftLevel = useLevelEditorStore((state) => state.draftLevel);
+  const activeTool = useLevelEditorStore((state) => state.activeTool);
+  const selected = useLevelEditorStore((state) => state.selected);
+  const selectedPathIndex = useLevelEditorStore(
+    (state) => state.selectedPathIndex
+  );
+  const setActiveTool = useLevelEditorStore((state) => state.setActiveTool);
+  const addPath = useLevelEditorStore((state) => state.addPath);
+  const selectPath = useLevelEditorStore((state) => state.selectPath);
+  const removeSelectedPath = useLevelEditorStore(
+    (state) => state.removeSelectedPath
+  );
+  const updateSelectedWaypoint = useLevelEditorStore(
+    (state) => state.updateSelectedWaypoint
+  );
+  const removeSelectedWaypoint = useLevelEditorStore(
+    (state) => state.removeSelectedWaypoint
+  );
 
   const selectedPath = draftLevel.pathWaypoints[selectedPathIndex] ?? [];
 

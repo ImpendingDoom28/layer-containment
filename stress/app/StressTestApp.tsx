@@ -35,19 +35,14 @@ import {
   useRef,
   useState,
 } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Stats } from "@react-three/drei";
 import { useActions, useWorld, WorldProvider } from "koota/react";
 
 import { GameScene } from "../../src/components/scenes/game/GameScene";
 import { ShaderReadyGate } from "../../src/components/systems/ShaderReadyGate";
 import { GameSessionSystem } from "../../src/components/systems/GameSessionSystem";
-import { GAME_CANVAS_GL, GAME_CANVAS_STYLE } from "../../src/constants/canvas";
 import { getAreModelsLoaded } from "../../src/constants/models";
 import { worldBaseActions } from "../../src/core/ecs/actions/baseActions";
-import { isBase } from "../../src/core/ecs/traits/base";
-import { HealthInfo } from "../../src/core/ecs/traits/health";
-import { enemyActions } from "../../src/core/ecs/actions/enemyActions";
 import {
   EntityIdProvider,
   useEntityIds,
@@ -63,14 +58,19 @@ import {
   useGameStore,
 } from "../../src/core/stores/useGameStore";
 import { useLevelStore } from "../../src/core/stores/useLevelStore";
-import { useUpgradeStore } from "../../src/core/stores/useUpgradeStore";
 
 import { settleModelStatuses } from "./modelSettlement";
+import { StressOverlay } from "./components/StressOverlay";
+import { StressStatsCollector } from "./components/StressStatsCollector";
+import { FrameStats } from "./types/frameStats";
+import { StressCameraRig } from "./components/StressCameraRig";
+import { StressAutoDriver } from "./components/StressAutoDriver";
+import { StressDebugBridge } from "./components/StressDebugBridge";
+import { AppCanvas } from "../../src/components/scenes/shared/AppCanvas";
 
 const STRESS_LEVEL_ID = "stress" as const;
 const STRESS_BASE_HEALTH = 1_000_000;
-/** How long (seconds) the average-metrics window stays open per run. */
-const METRICS_WINDOW_SECONDS = 30;
+
 /**
  * How long to keep waiting for models to settle *after* the shared load
  * promise resolves (which itself caps at 15s). A load still in flight when the
@@ -81,45 +81,6 @@ const METRICS_WINDOW_SECONDS = 30;
 const MODEL_SETTLE_EXTRA_MS = 60_000;
 /** Poll interval for the model-settlement check. */
 const MODEL_SETTLE_POLL_MS = 250;
-
-type FrameStats = {
-  fps: number;
-  frameMs: number;
-  drawCalls: number;
-  triangles: number;
-  programs: number;
-  /** Rolling counters used to average FPS every ~0.25s. */
-  frameCount: number;
-  frameTime: number;
-  /** Windowed averages, measured from when the scene became ready. */
-  windowFps: number;
-  windowFrameMs: number;
-  windowDrawCalls: number;
-  windowTriangles: number;
-  windowPrograms: number;
-  windowElapsed: number;
-  /** Frames accumulated since the window opened. */
-  windowFrames: number;
-  windowTime: number;
-  windowCallSum: number;
-  windowTriSum: number;
-  windowProgSum: number;
-  /** True once the 30s window has elapsed; freezes the averages until restart. */
-  windowDone: boolean;
-  /**
-   * True once every required 3D model has *settled* (loaded or failed) after
-   * the shared load promise resolved. Until then the run is still "loading"
-   * and must not be reported as valid or measured.
-   */
-  modelsSettled: boolean;
-  /**
-   * True only when every model settled to a loaded parse (the 15s cap on the
-   * shared promise absorbs failures, so it is checked separately). A run that
-   * settles on primitive fallbacks is not a valid baseline and its average
-   * window is skipped. Both are exposed on the overlay for the tests.
-   */
-  runValid: boolean;
-};
 
 const createFrameStats = (): FrameStats => ({
   fps: 0,
@@ -158,269 +119,6 @@ const resetMetricsWindow = (s: FrameStats) => {
   s.windowTriSum = 0;
   s.windowProgSum = 0;
   s.windowDone = false;
-};
-
-/** JS heap in MB, when the browser exposes it (Chromium); "-" otherwise. */
-const heapLabel = (): string => {
-  const memory = (
-    performance as Performance & {
-      memory?: { usedJSHeapSize?: number; totalJSHeapSize?: number };
-    }
-  ).memory;
-  if (memory && typeof memory.usedJSHeapSize === "number") {
-    const used = memory.usedJSHeapSize / 1024 / 1024;
-    const total =
-      typeof memory.totalJSHeapSize === "number"
-        ? memory.totalJSHeapSize / 1024 / 1024
-        : used;
-    return `${used.toFixed(0)}/${total.toFixed(0)} MB`;
-  }
-  return "-";
-};
-
-/**
- * Collects per-frame renderer stats into a plain mutable ref so the DOM
- * overlay can read them without triggering React re-reads. While the scene is
- * actually rendering (`readyRef`), the models have settled, and the run is
- * valid, it also accumulates averages over a fixed METRICS_WINDOW_SECONDS
- * window for baseline metrics.
- */
-const StressStatsCollector = ({
-  statsRef,
-  readyRef,
-  runValidRef,
-}: {
-  statsRef: { current: FrameStats };
-  readyRef: { current: boolean };
-  runValidRef: { current: boolean };
-}) => {
-  useFrame((state, delta) => {
-    const s = statsRef.current;
-    s.frameMs = delta * 1000;
-    s.frameCount += 1;
-    s.frameTime += delta;
-    if (s.frameTime >= 0.25) {
-      s.fps = s.frameCount / s.frameTime;
-      s.frameCount = 0;
-      s.frameTime = 0;
-    }
-    s.drawCalls = state.gl.info.render.calls;
-    s.triangles = state.gl.info.render.triangles;
-    s.programs = state.gl.info.programs?.length ?? 0;
-
-    // The average window opens only once the models have settled (the scene is
-    // mounted) and the run is valid; a run on placeholder fallbacks is not a
-    // valid baseline, and a run whose models are still loading is not a
-    // settled workload, so neither is measured.
-    if (
-      statsRef.current.modelsSettled &&
-      runValidRef.current &&
-      readyRef.current &&
-      !s.windowDone
-    ) {
-      s.windowFrames += 1;
-      s.windowTime += delta;
-      s.windowCallSum += s.drawCalls;
-      s.windowTriSum += s.triangles;
-      s.windowProgSum += s.programs;
-      s.windowElapsed = s.windowTime;
-      if (s.windowTime >= METRICS_WINDOW_SECONDS) {
-        s.windowDone = true;
-      }
-      if (s.windowFrames > 0 && s.windowTime > 0) {
-        s.windowFps = s.windowFrames / s.windowTime;
-        s.windowFrameMs = (s.windowTime / s.windowFrames) * 1000;
-        s.windowDrawCalls = s.windowCallSum / s.windowFrames;
-        s.windowTriangles = s.windowTriSum / s.windowFrames;
-        s.windowPrograms = s.windowProgSum / s.windowFrames;
-      }
-    }
-  });
-  return null;
-};
-
-/**
- * Exposes the three scene and renderer on `window` so external profiling
- * scripts (Playwright/CDP) can toggle named scene roots and read gl.info
- * without React. Stress-entry only.
- */
-const SceneDebugBridge = () => {
-  const { scene, gl } = useThree();
-  const { getLivingEnemyCount } = useActions(enemyActions);
-  // The default directional shadow camera only covers a ~10x10-unit patch at
-  // the origin of this ~32-unit planet, so the shadow pass costs a full extra
-  // render of every scene mesh for almost no visible effect. Stress run only:
-  // disable it once the light has mounted.
-  const shadowDisabledRef = useRef(false);
-  useEffect(() => {
-    const w = window as unknown as Record<string, unknown>;
-    w.__stressScene = scene;
-    w.__stressGl = gl;
-    w.__stressGameStore = useGameStore;
-    w.__stressLevelStore = useLevelStore;
-    w.__stressUpgradeStore = useUpgradeStore;
-    w.__stressLivingCount = getLivingEnemyCount;
-  }, [scene, gl, getLivingEnemyCount]);
-  useFrame(() => {
-    if (shadowDisabledRef.current) return;
-    const light = scene.getObjectByName("shadow-light");
-    if (light) {
-      (light as unknown as { castShadow: boolean }).castShadow = false;
-      shadowDisabledRef.current = true;
-    }
-  });
-  return null;
-};
-
-/**
- * Unattended driver: auto-picks upgrade gates, auto-starts waves, and
- * restarts the run forever after a win (or a defeat, just in case).
- */
-const StressAutoDriver = ({
-  startWave,
-  restart,
-}: {
-  startWave: () => void;
-  restart: () => void;
-}) => {
-  useFrame(() => {
-    const gameStatus = useGameStore.getState().gameStatus;
-
-    if (gameStatus === "won" || gameStatus === "gameOver") {
-      restart();
-      return;
-    }
-    if (gameStatus !== "playing") {
-      return;
-    }
-
-    const { pendingEnemyUpgradeGate, upgradeChoiceOptions } =
-      useUpgradeStore.getState();
-    if (pendingEnemyUpgradeGate && upgradeChoiceOptions.length > 0) {
-      useUpgradeStore
-        .getState()
-        .confirmEnemyUpgradePick(upgradeChoiceOptions[0]);
-      return;
-    }
-    if (pendingEnemyUpgradeGate) {
-      // Gate is open but has no options; unblock it defensively.
-      useUpgradeStore.getState().resetLevelEnemyUpgrades();
-      return;
-    }
-
-    // startWave() is a no-op unless the wave is actually ready to start,
-    // so it is safe to call every frame.
-    startWave();
-  });
-  return null;
-};
-
-/**
- * DOM overlay showing live stress metrics. Reads stores and the shared stats
- * ref inside a rAF loop and writes plain text (no React re-renders per frame).
- */
-const StressOverlay = ({
-  statsRef,
-  runCount,
-}: {
-  statsRef: { current: FrameStats };
-  runCount: number;
-}) => {
-  const textRef = useRef<HTMLPreElement>(null);
-  const { getLivingEnemyCount } = useActions(enemyActions);
-
-  useEffect(() => {
-    let raf = 0;
-    const tick = () => {
-      const s = statsRef.current;
-      const gameStatus = useGameStore.getState().gameStatus;
-      const level = useLevelStore.getState();
-      const upgrade = useUpgradeStore.getState();
-      const enemiesAlive = getLivingEnemyCount();
-      const base = world.queryFirst(isBase);
-      const baseHealth = base ? base.get(HealthInfo) : undefined;
-
-      const lines = [
-        `STATUS       ${gameStatus}`,
-        `RUN          ${runCount + 1}`,
-        `WAVE         ${level.currentWave}/${level.totalWaves}`,
-        `ENEMIES      ${enemiesAlive} alive`,
-        `KILLED       ${level.enemiesKilled}`,
-        `TOWERS       ${level.towers.length}`,
-        `PROJECTILES  ${level.projectiles.length}`,
-        `BASE HP      ${
-          baseHealth
-            ? `${baseHealth.currentHealth}/${baseHealth.maxHealth}`
-            : "-"
-        }`,
-        `UPGRADE GATE ${upgrade.pendingEnemyUpgradeGate ? "open" : "-"}`,
-        // Model settlement state: "loading" until every model has settled
-        // (loaded or failed), then "valid" (all loaded) or "invalid" (some
-        // settled on their primitive fallback, so the average window is
-        // skipped). Exposed for the stress e2e tests.
-        `MODELS       ${
-          s.modelsSettled ? (s.runValid ? "valid" : "invalid") : "loading"
-        }`,
-        `FPS          ${s.fps.toFixed(1)}`,
-        `FRAME        ${s.frameMs.toFixed(2)} ms`,
-        `DRAW CALLS   ${s.drawCalls}`,
-        `TRIANGLES    ${s.triangles}`,
-        `PROGRAMS     ${s.programs}`,
-        `JS HEAP      ${heapLabel()}`,
-        ...(s.windowDone
-          ? [
-              `--- AVG (last 30s) ---`,
-              `AVG FPS      ${s.windowFps.toFixed(1)}`,
-              `AVG FRAME    ${s.windowFrameMs.toFixed(2)} ms`,
-              `AVG DRAW     ${s.windowDrawCalls.toFixed(1)}`,
-              `AVG TRI      ${Math.round(s.windowTriangles).toLocaleString(
-                "en-US"
-              )}`,
-              `AVG PROGRAMS ${Math.round(s.windowPrograms)}`,
-            ]
-          : [
-              `AVG WINDOW   ${Math.min(
-                s.windowElapsed,
-                METRICS_WINDOW_SECONDS
-              ).toFixed(0)}/${METRICS_WINDOW_SECONDS}s`,
-            ]),
-      ];
-      if (textRef.current) {
-        textRef.current.textContent = lines.join("\n");
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [getLivingEnemyCount, runCount, statsRef]);
-
-  return (
-    <pre
-      ref={textRef}
-      data-testid="stress-stats-overlay"
-      className="pointer-events-none fixed left-3 top-3 z-50 m-0 select-none font-mono text-[11px] leading-tight text-gray-200 [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
-    />
-  );
-};
-
-/**
- * Pins the camera at the far end of the map for the whole run by re-setting
- * its position and aim every frame. The vantage (0, 40, 80) sits past the
- * board's +z end, looks back at the center, and is far enough (~89 units)
- * that the entire 64x64 board fits on screen at the 40-degree fov — the whole
- * map renders in one frame (maximum stressing) — while staying well inside
- * the skybox (radius 100). The camera is also locked (`shouldStopCamera`),
- * so GameCamera's movement frame never clamps it back inside the field.
- */
-const STRESS_CAMERA_POSITION: [number, number, number] = [0, 40, 80];
-
-const StressCameraRig = () => {
-  const { camera } = useThree();
-  useFrame(() => {
-    camera.position.set(...STRESS_CAMERA_POSITION);
-    camera.lookAt(0, 0, 0);
-  });
-  return null;
 };
 
 const StressTestGame = () => {
@@ -554,11 +252,7 @@ const StressTestGame = () => {
 
   return (
     <div className="fixed inset-0">
-      <Canvas
-        data-testid="game-canvas"
-        style={GAME_CANVAS_STYLE}
-        gl={GAME_CANVAS_GL}
-      >
+      <AppCanvas testId="game-canvas">
         <ShaderReadyGate
           key={
             isGameConfigLoaded && isLevelConfigLoaded && areModelsReady
@@ -577,7 +271,7 @@ const StressTestGame = () => {
           readyRef={readyRef}
           runValidRef={runValidRef}
         />
-        <SceneDebugBridge />
+        <StressDebugBridge />
 
         {isGameConfigLoaded && isLevelConfigLoaded && (
           <Suspense
@@ -587,17 +281,13 @@ const StressTestGame = () => {
               </div>
             }
           >
+            <StressCameraRig />
             {areModelsReady && (
               // WaterClockProvider drives the shared ripple uniform every
               // frame, which is what animates the 500 water bodies; without it
               // `useWaterClock` falls back to a frozen uniform and the water
               // is static.
               <WaterClockProvider>
-                {/* Holds the camera at the map's far end so the whole 64x64
-                    board renders in one frame. The camera is locked
-                    (shouldStopCamera) so GameCamera's movement frame never
-                    clamps it back inside the field — the rig owns the view. */}
-                <StressCameraRig />
                 <SimulationClockProvider>
                   <GameSessionSystem session={session}>
                     <GameScene
@@ -626,7 +316,7 @@ const StressTestGame = () => {
             <StressAutoDriver startWave={session.startWave} restart={restart} />
           </Suspense>
         )}
-      </Canvas>
+      </AppCanvas>
 
       <StressOverlay statsRef={statsRef} runCount={runCount} />
 

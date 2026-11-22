@@ -1174,3 +1174,14 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
     set({ validationIssues: [] });
   },
 }));
+
+/**
+ * Per-tile primitive hover flag for the editor. `hoveredTile` is a fresh
+ * object on every `setHoveredTile`, so a tile that compares its own cell
+ * against a boolean selector re-renders only when the cursor crosses it
+ * instead of the whole tile grid on every pointer move.
+ */
+export const createEditorTileHoveredSelector =
+  (gridX: number, gridZ: number) =>
+  (state: LevelEditorStore) =>
+    state.hoveredTile?.gridX === gridX && state.hoveredTile?.gridZ === gridZ;

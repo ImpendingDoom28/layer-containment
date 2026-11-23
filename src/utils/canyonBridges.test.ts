@@ -151,26 +151,27 @@ describe("buildCanyonBridgePaths", () => {
     expect(buildCanyonBridgePaths(paths, [], [], GRID, TILE)).toBe(paths);
   });
 
-  it("raises only the span over open water (canyon spans stay flush)", () => {
+  it("keeps the deck flat over the water span, ramping only at the shore", () => {
     // Path runs down column 9; a 3-tile water pool at gridZ 8..10 (gridX 9).
     const path = column(9, 4, 12); // gridZ 4..15
     const waters = [water(9, 8), water(9, 9), water(9, 10)];
     const [result] = buildCanyonBridgePaths([path], [], waters, GRID, TILE);
 
-    // The water tiles sit a full `WATER_BRIDGE_ELEVATION` above the ground so
-    // the deck clears the pool...
-    expect(result[8 - 4].y).toBe(WATER_BRIDGE_ELEVATION);
-    expect(result[9 - 4].y).toBe(WATER_BRIDGE_ELEVATION);
-    expect(result[10 - 4].y).toBe(WATER_BRIDGE_ELEVATION);
+    // Two shore-edge waypoints (one per shore) mark the ramp ends, so the
+    // path gains exactly two points.
+    expect(result).toHaveLength(path.length + 2);
 
-    // ...while the rest of the path stays flat at ground level.
-    for (let z = 4; z <= 15; z++) {
-      if (z >= 8 && z <= 10) continue;
-      expect(result[z - 4].y).toBe(0);
-    }
+    const yAt = (z: number) => result.find((p) => p.z === z)?.y;
+    expect(yAt(7 - 9.5)).toBe(0); // last land tile before the pool
+    expect(yAt(7.5 - 9.5)).toBe(WATER_BRIDGE_ELEVATION); // near shore edge
+    expect(yAt(8 - 9.5)).toBe(WATER_BRIDGE_ELEVATION); // flat over the pool
+    expect(yAt(9 - 9.5)).toBe(WATER_BRIDGE_ELEVATION);
+    expect(yAt(10 - 9.5)).toBe(WATER_BRIDGE_ELEVATION);
+    expect(yAt(10.5 - 9.5)).toBe(WATER_BRIDGE_ELEVATION); // far shore edge
+    expect(yAt(11 - 9.5)).toBe(0); // back on land
   });
 
-  it("mixes flush canyon tiles and raised water tiles on one path", () => {
+  it("mixes flush canyon tiles and a flat water span on one path", () => {
     // Path runs down column 9: a canyon at gridZ 6..7 and water at gridZ 9..10.
     const path = column(9, 4, 12); // gridZ 4..15
     const canyons = [canyon(9, 6), canyon(9, 7)];
@@ -183,11 +184,14 @@ describe("buildCanyonBridgePaths", () => {
       TILE
     );
 
-    expect(result[6 - 4].y).toBe(BRIDGE_ELEVATION); // canyon
-    expect(result[7 - 4].y).toBe(BRIDGE_ELEVATION); // canyon
-    expect(result[9 - 4].y).toBe(WATER_BRIDGE_ELEVATION); // water
-    expect(result[10 - 4].y).toBe(WATER_BRIDGE_ELEVATION); // water
-    expect(result[8 - 4].y).toBe(0); // gap between the spans
+    const yAt = (z: number) => result.find((p) => p.z === z)?.y;
+    expect(yAt(6 - 9.5)).toBe(BRIDGE_ELEVATION); // canyon
+    expect(yAt(7 - 9.5)).toBe(BRIDGE_ELEVATION); // canyon
+    expect(yAt(8 - 9.5)).toBe(0); // gap between the spans
+    expect(yAt(8.5 - 9.5)).toBe(WATER_BRIDGE_ELEVATION); // near shore edge
+    expect(yAt(9 - 9.5)).toBe(WATER_BRIDGE_ELEVATION); // water
+    expect(yAt(10 - 9.5)).toBe(WATER_BRIDGE_ELEVATION); // water
+    expect(yAt(10.5 - 9.5)).toBe(WATER_BRIDGE_ELEVATION); // far shore edge
   });
 });
 

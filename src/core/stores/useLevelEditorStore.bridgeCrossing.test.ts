@@ -119,10 +119,18 @@ describe("useLevelEditorStore: bridge crossing rule", () => {
     store().loadDraftLevel(WATER_FREE_LEVEL, TILE_SIZE);
     // A fresh path drawn straight across the water tile at (5,5) is legal:
     // the bridge deck is raised over the pool at load, so the editor no longer
-    // forbids a waypoint on a water tile.
+    // forbids a waypoint on a water tile. The middle click lands *on* the
+    // water tile itself, so the path carries a waypoint over the pool — the
+    // regression this guards is one that rejects a water waypoint while still
+    // letting a segment pass over the water.
     startPath(0, { gridX: 2, gridZ: 5 });
+    store().handleTileAction({ gridX: 5, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
     store().handleTileAction({ gridX: 6, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
-    expect(store().draftLevel.pathWaypoints[0]).toEqual([wp(2, 5), wp(6, 5)]);
+    expect(store().draftLevel.pathWaypoints[0]).toEqual([
+      wp(2, 5),
+      wp(5, 5),
+      wp(6, 5),
+    ]);
   });
 
   it("blocks two paths crossing the same water tile (two bridges)", () => {

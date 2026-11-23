@@ -189,9 +189,18 @@ export const Bridge: FC<BridgeProps> = memo(
             let footWorld: Vector3;
             if (isWaterSpan) {
               // Vertical piling: straight down from the deck to the water
-              // surface. The pool sits at the tile's ground level, so the
-              // piling's foot is the surface point at the same (x, z).
-              footWorld = surface.clone();
+              // surface. The foot keeps the top's along-path + lateral
+              // offset (so the piling is vertical, directly below the deck
+              // edge) but its local height is 0 — the pool surface.
+              footWorld = surface
+                .clone()
+                .add(
+                  new Vector3(
+                    sign * half * 0.3,
+                    0,
+                    side * railOffset
+                  ).applyQuaternion(quaternion)
+                );
             } else {
               footWorld = surface
                 .clone()

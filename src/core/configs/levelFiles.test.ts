@@ -6,7 +6,6 @@ import { describe, expect, it } from "vitest";
 import { PLAYABLE_LEVEL_IDS } from "../../constants/playableLevels";
 import {
   computeWaveTotalEnemies,
-  waypointToTile,
   waypointToTileUnclamped,
 } from "../../utils/levelEditor";
 import { MIN_GRID_SIZE } from "../../utils/gridSizeLimits";
@@ -77,7 +76,7 @@ describe("playable level files", () => {
       }
     });
 
-    it(`${id}: buildings and water never sit on the path`, () => {
+    it(`${id}: buildings never sit on the path`, () => {
       const level = loadLevel(id);
       const gridOffset = -(level.gridSize * TILE_SIZE) / 2;
       const isOnPath = (gridX: number, gridZ: number) =>
@@ -95,18 +94,9 @@ describe("playable level files", () => {
           `building ${building.id} at ${building.gridX},${building.gridZ} is on the path`
         ).toBe(false);
       }
-      const canyonKeys = new Set(
-        (level.canyons ?? []).map((c) => `${c.gridX},${c.gridZ}`)
-      );
-      for (const water of level.waters) {
-        // Water is allowed on the path only over a canyon (a river the path
-        // bridges): the bridge deck runs above the water.
-        if (canyonKeys.has(`${water.gridX},${water.gridZ}`)) continue;
-        expect(
-          isOnPath(water.gridX, water.gridZ),
-          `water ${water.id} at ${water.gridX},${water.gridZ} is on the path`
-        ).toBe(false);
-      }
+      // Water on the path is legal: the crossing is bridged at load (the deck
+      // is flush over the span, like a canyon), so no per-tile prohibition is
+      // needed.
     });
 
     it(`${id}: path segments are axis-aligned`, () => {
@@ -136,32 +126,6 @@ describe("playable level files", () => {
       expect(new Set(waterKeys).size).toBe(waterKeys.length);
       for (const key of waterKeys) {
         expect(buildingKeys).not.toContain(key);
-      }
-    });
-
-    it(`${id}: path waypoints never sit on water (except over a canyon)`, () => {
-      const level = loadLevel(id);
-      const waterKeys = new Set(
-        level.waters.map((w) => `${w.gridX},${w.gridZ}`)
-      );
-      const canyonKeys = new Set(
-        (level.canyons ?? []).map((c) => `${c.gridX},${c.gridZ}`)
-      );
-      for (const path of level.pathWaypoints) {
-        for (const waypoint of path) {
-          const { gridX, gridZ } = waypointToTile(
-            waypoint,
-            level.gridSize,
-            TILE_SIZE
-          );
-          // Over a canyon the path bridges the water in the gorge, so a
-          // waypoint there sits above the water rather than in it.
-          const onWaterOverCanyon = canyonKeys.has(`${gridX},${gridZ}`);
-          expect(
-            waterKeys.has(`${gridX},${gridZ}`) && !onWaterOverCanyon,
-            `path waypoint at grid ${gridX},${gridZ} sits on water`
-          ).toBe(false);
-        }
       }
     });
 
@@ -214,17 +178,20 @@ describe("playable level files", () => {
       expect(new Set(canyonKeys).size).toBe(canyonKeys.length);
     });
 
-    it(`${id}: no two paths cross the same canyon tile (overlapping bridges)`, () => {
+    it(`${id}: no two paths cross the same bridgeable tile (overlapping bridges)`, () => {
       const level = loadLevel(id);
       const crossings = findBridgeCrossings(
         level.pathWaypoints,
         level.canyons ?? [],
+        level.waters,
         level.gridSize,
         TILE_SIZE
       );
       expect(
         crossings,
-        `paths cross over the same canyon tile: ${JSON.stringify(crossings)}`
+        `paths cross over the same bridgeable tile: ${JSON.stringify(
+          crossings
+        )}`
       ).toEqual([]);
     });
 

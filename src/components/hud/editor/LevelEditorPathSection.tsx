@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 
 import { Icon } from "../../ui/Icon";
 import {
-  pathWidthSelector,
   tileSizeSelector,
   useGameStore,
 } from "../../../core/stores/useGameStore";
@@ -40,7 +39,6 @@ const getPathButtonKey = (pathIndex: number, pathLength: number) =>
 export const LevelEditorPathSection = () => {
   const { t } = useTranslation();
   const tileSize = useGameStore(tileSizeSelector);
-  const pathWidth = useGameStore(pathWidthSelector);
   // Atomic selectors (no full-store destructure): the store mutates on every
   // pointer move (`hoveredTile`), so a whole-store subscription would
   // re-render this panel on every hover.
@@ -199,15 +197,13 @@ export const LevelEditorPathSection = () => {
               onChangeGridX={(gridX) =>
                 updateSelectedWaypoint(
                   { gridX, gridZ: selectedWaypointTile.gridZ },
-                  tileSize,
-                  pathWidth
+                  tileSize
                 )
               }
               onChangeGridZ={(gridZ) =>
                 updateSelectedWaypoint(
                   { gridX: selectedWaypointTile.gridX, gridZ },
-                  tileSize,
-                  pathWidth
+                  tileSize
                 )
               }
             />

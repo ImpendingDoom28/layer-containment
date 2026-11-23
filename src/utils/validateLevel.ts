@@ -5,7 +5,6 @@ import {
 import type { LevelEditorValidationIssue } from "../core/types/editor";
 import { MAX_GRID_SIZE, MIN_GRID_SIZE } from "./gridSizeLimits";
 import { findBridgeCrossings } from "./canyonBridges";
-import { waypointToTile } from "./levelEditor";
 
 /**
  * Validate a level with the exact rules the level editor runs
@@ -82,33 +81,18 @@ export const validateLevel = (
   const waters = level.waters ?? [];
   const canyons = level.canyons ?? [];
 
-  level.pathWaypoints.forEach((path, pathIndex) => {
-    path.forEach((waypoint, waypointIndex) => {
-      const tile = waypointToTile(waypoint, level.gridSize, tileSize);
-      const onWater = waters.some(
-        (w) => w.gridX === tile.gridX && w.gridZ === tile.gridZ
-      );
-      // Water is only allowed under a bridge (on a canyon tile): the path
-      // bridges over the canyon floor, so a waypoint there sits above the
-      // water rather than in it.
-      const onCanyon = canyons.some(
-        (c) => c.gridX === tile.gridX && c.gridZ === tile.gridZ
-      );
-      if (onWater && !onCanyon) {
-        customIssues.push({
-          path: `pathWaypoints.${pathIndex}.${waypointIndex}`,
-          message: "Waypoint cannot be on water (except over a canyon).",
-        });
-      }
-    });
-  });
+  // A path may run over water or a canyon: the crossing is bridged at load
+  // (the path is elevated over the span), so a waypoint sitting on a water or
+  // canyon tile is valid — the bridge deck carries it.
 
-  // Two paths crossing the same canyon tile at a right angle each draw a
-  // bridge deck with rails over that tile, so the decks and fences would
-  // overlap. (A collinear merge over the canyon shares one deck and is fine.)
+  // Two paths crossing the same bridgeable tile (canyon or water) at a right
+  // angle each draw a bridge deck with rails over that tile, so the decks and
+  // fences would overlap. (A collinear merge over the tile shares one deck and
+  // is fine.)
   findBridgeCrossings(
     level.pathWaypoints,
     canyons,
+    waters,
     level.gridSize,
     tileSize
   ).forEach((crossing) => {
@@ -119,9 +103,9 @@ export const validateLevel = (
       path: `pathWaypoints.${crossing.pathIndexA}`,
       message: `Paths ${crossing.pathIndexA + 1} and ${
         crossing.pathIndexB + 1
-      } both bridge the same canyon tile${
+      } both bridge the same tile${
         crossing.tiles.length > 1 ? "s" : ""
-      } ${tiles} — two bridges cannot share a canyon tile.`,
+      } ${tiles} — two bridges cannot share a tile.`,
     });
   });
 

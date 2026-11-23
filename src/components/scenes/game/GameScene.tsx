@@ -90,14 +90,15 @@ export const GameScene: React.FC<GameSceneProps> = ({
 
   // Bridge tiles per path, memoized so unrelated re-renders reuse the same
   // arrays and the `Bridge` memo holds (its geometry would otherwise re-merge).
+  // A path bridges over canyons (flush) and open water (raised).
   const bridgeTilesByPath = useMemo(
     () =>
-      canyons.length === 0
+      canyons.length === 0 && waters.length === 0
         ? []
         : pathWaypoints.map((path) =>
-            getBridgeTiles(path, canyons, gridSize, tileSize)
+            getBridgeTiles(path, canyons, waters, gridSize, tileSize)
           ),
-    [pathWaypoints, canyons, gridSize, tileSize]
+    [pathWaypoints, canyons, waters, gridSize, tileSize]
   );
 
   return (
@@ -130,8 +131,9 @@ export const GameScene: React.FC<GameSceneProps> = ({
       />
 
       {/* Bridge support structure (rails + piers) over each path that crosses
-          a canyon. The deck itself is the elevated path strip rendered by
-          `Path`, so the bridge draws only the raised-walkway framing. */}
+          a canyon or open water. The deck itself is the elevated path strip
+          rendered by `Path`, so the bridge draws only the raised-walkway
+          framing. */}
       {bridgeTilesByPath.map((bridgeTiles, index) =>
         bridgeTiles.length === 0 ? null : (
           <Bridge

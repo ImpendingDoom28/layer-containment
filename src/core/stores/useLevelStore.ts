@@ -183,13 +183,15 @@ export const useLevelStore = create<LevelStore>((set) => ({
     } = levelData;
 
     const gridOffset = getLevelGridOffset(gridSize, tileSize);
-    // Bake a bridge elevation into any path that crosses a canyon. This is the
-    // single point of change: enemies (position.y = waypoint.y), tower aiming
-    // (targetPathPos.y), and the path strip render (yBase + pathYOffset) all
-    // read these waypoints, so they all follow the bridge height automatically.
+    // Bake a bridge elevation into any path that crosses a canyon (flush) or
+    // open water (raised). This is the single point of change: enemies
+    // (position.y = waypoint.y), tower aiming (targetPathPos.y), and the path
+    // strip render (yBase + pathYOffset) all read these waypoints, so they all
+    // follow the bridge height automatically.
     const pathWaypoints = buildCanyonBridgePaths(
       rawPathWaypoints,
       levelData.canyons ?? [],
+      waters,
       gridSize,
       tileSize
     );

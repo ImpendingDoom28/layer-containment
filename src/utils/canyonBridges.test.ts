@@ -5,6 +5,7 @@ import {
   BRIDGE_ELEVATION,
   CANON_BASIN_DEPTH,
   CANON_BASIN_RIM_FADE,
+  buildBridgeMasks,
   buildCanyonBridgePaths,
   buildCanyonMask,
   findBridgeCrossings,
@@ -14,6 +15,7 @@ import {
   getCanyonWorldBBox,
   pathCanyonTiles,
   sampleBasinFloorY,
+  WATER_BRIDGE_ELEVATION,
 } from "./canyonBridges";
 import {
   flatFieldToSphereSurface,
@@ -43,6 +45,8 @@ const canyon = (gridX: number, gridZ: number, id?: number): CanyonConfig => ({
   gridZ,
 });
 
+const water = (gridX: number, gridZ: number) => ({ gridX, gridZ });
+
 describe("buildCanyonMask", () => {
   it("marks only the given canyon tiles", () => {
     const mask = buildCanyonMask([canyon(3, 4), canyon(9, 9)], GRID);
@@ -53,18 +57,35 @@ describe("buildCanyonMask", () => {
   });
 });
 
+describe("buildBridgeMasks", () => {
+  it("separates canyon and water tiles into independent masks", () => {
+    const { canyon: canyonMask, water: waterMask } = buildBridgeMasks(
+      [canyon(3, 4)],
+      [water(9, 9)],
+      GRID
+    );
+    expect(canyonMask[4 * GRID + 3]).toBe(1);
+    expect(waterMask[9 * GRID + 9]).toBe(1);
+    // A canyon tile is not in the water mask and vice versa.
+    expect(waterMask[4 * GRID + 3]).toBe(0);
+    expect(canyonMask[9 * GRID + 9]).toBe(0);
+    expect(canyonMask[0]).toBe(0);
+    expect(waterMask[0]).toBe(0);
+  });
+});
+
 describe("buildCanyonBridgePaths", () => {
   it("returns the input unchanged when there are no canyons", () => {
     const path = column(5, 2, 10);
     const paths = [path];
-    expect(buildCanyonBridgePaths(paths, [], GRID, TILE)).toBe(paths);
+    expect(buildCanyonBridgePaths(paths, [], [], GRID, TILE)).toBe(paths);
   });
 
   it("keeps the bridge span flush with the ground (no elevation)", () => {
     // Path runs down column 9; a 3-tile canyon at gridZ 8..10 (gridX 9).
     const path = column(9, 4, 12); // gridZ 4..15
     const canyons = [canyon(9, 8), canyon(9, 9), canyon(9, 10)];
-    const [result] = buildCanyonBridgePaths([path], canyons, GRID, TILE);
+    const [result] = buildCanyonBridgePaths([path], canyons, [], GRID, TILE);
 
     // The run tiles sit flush at the bridge level (ground)...
     expect(result[8 - 4].y).toBe(BRIDGE_ELEVATION);
@@ -79,7 +100,7 @@ describe("buildCanyonBridgePaths", () => {
   it("preserves path shape and length when bridging", () => {
     const path = column(9, 4, 12);
     const canyons = [canyon(9, 8), canyon(9, 9), canyon(9, 10)];
-    const [result] = buildCanyonBridgePaths([path], canyons, GRID, TILE);
+    const [result] = buildCanyonBridgePaths([path], canyons, [], GRID, TILE);
     // Same tile count (resampled per tile) and identical x/z footprint.
     expect(result).toHaveLength(path.length);
     result.forEach((point, i) => {
@@ -91,7 +112,7 @@ describe("buildCanyonBridgePaths", () => {
   it("keeps the path flat when it does not cross the canyon", () => {
     const path = column(15, 4, 12); // far from the canyon column
     const canyons = [canyon(9, 8), canyon(9, 9), canyon(9, 10)];
-    const [result] = buildCanyonBridgePaths([path], canyons, GRID, TILE);
+    const [result] = buildCanyonBridgePaths([path], canyons, [], GRID, TILE);
     expect(result.every((point) => point.y === 0)).toBe(true);
   });
 
@@ -104,7 +125,7 @@ describe("buildCanyonBridgePaths", () => {
       { x: 4.3, y: 2.5, z: 5.2 },
     ];
     const canyons = [canyon(9, 8), canyon(9, 9), canyon(9, 10)];
-    const [result] = buildCanyonBridgePaths([authored], canyons, GRID, TILE);
+    const [result] = buildCanyonBridgePaths([authored], canyons, [], GRID, TILE);
     expect(result).toBe(authored);
   });
 
@@ -115,6 +136,7 @@ describe("buildCanyonBridgePaths", () => {
     const [resultCrossing, resultOff] = buildCanyonBridgePaths(
       [crossing, off],
       canyons,
+      [],
       GRID,
       TILE
     );
@@ -122,13 +144,58 @@ describe("buildCanyonBridgePaths", () => {
     expect(resultCrossing[4].y).toBe(BRIDGE_ELEVATION); // canyon tile
     expect(resultOff).toBe(off);
   });
+
+  it("returns the input unchanged when there are neither canyons nor water", () => {
+    const path = column(5, 2, 10);
+    const paths = [path];
+    expect(buildCanyonBridgePaths(paths, [], [], GRID, TILE)).toBe(paths);
+  });
+
+  it("raises only the span over open water (canyon spans stay flush)", () => {
+    // Path runs down column 9; a 3-tile water pool at gridZ 8..10 (gridX 9).
+    const path = column(9, 4, 12); // gridZ 4..15
+    const waters = [water(9, 8), water(9, 9), water(9, 10)];
+    const [result] = buildCanyonBridgePaths([path], [], waters, GRID, TILE);
+
+    // The water tiles sit a full `WATER_BRIDGE_ELEVATION` above the ground so
+    // the deck clears the pool...
+    expect(result[8 - 4].y).toBe(WATER_BRIDGE_ELEVATION);
+    expect(result[9 - 4].y).toBe(WATER_BRIDGE_ELEVATION);
+    expect(result[10 - 4].y).toBe(WATER_BRIDGE_ELEVATION);
+
+    // ...while the rest of the path stays flat at ground level.
+    for (let z = 4; z <= 15; z++) {
+      if (z >= 8 && z <= 10) continue;
+      expect(result[z - 4].y).toBe(0);
+    }
+  });
+
+  it("mixes flush canyon tiles and raised water tiles on one path", () => {
+    // Path runs down column 9: a canyon at gridZ 6..7 and water at gridZ 9..10.
+    const path = column(9, 4, 12); // gridZ 4..15
+    const canyons = [canyon(9, 6), canyon(9, 7)];
+    const waters = [water(9, 9), water(9, 10)];
+    const [result] = buildCanyonBridgePaths(
+      [path],
+      canyons,
+      waters,
+      GRID,
+      TILE
+    );
+
+    expect(result[6 - 4].y).toBe(BRIDGE_ELEVATION); // canyon
+    expect(result[7 - 4].y).toBe(BRIDGE_ELEVATION); // canyon
+    expect(result[9 - 4].y).toBe(WATER_BRIDGE_ELEVATION); // water
+    expect(result[10 - 4].y).toBe(WATER_BRIDGE_ELEVATION); // water
+    expect(result[8 - 4].y).toBe(0); // gap between the spans
+  });
 });
 
 describe("getBridgeTiles", () => {
   it("returns one tile per canyon cell the path crosses, tagged with run ends", () => {
     const path = column(9, 4, 12);
     const canyons = [canyon(9, 8), canyon(9, 9), canyon(9, 10)];
-    const tiles = getBridgeTiles(path, canyons, GRID, TILE);
+    const tiles = getBridgeTiles(path, canyons, [], GRID, TILE);
 
     expect(tiles).toHaveLength(3);
     expect(tiles.map((t) => t.gridZ)).toEqual([8, 9, 10]);
@@ -136,15 +203,29 @@ describe("getBridgeTiles", () => {
     expect(tiles[0].isRunEnd).toBe(false);
     expect(tiles[2].isRunStart).toBe(false);
     expect(tiles[2].isRunEnd).toBe(true);
+    // Every tile is a canyon span.
+    expect(tiles.every((t) => t.terrain === "canyon")).toBe(true);
     // Direction is along the path (down +z here).
     expect(tiles[1].dirZ).toBeCloseTo(1);
     expect(tiles[1].dirX).toBeCloseTo(0);
   });
 
+  it("tags water spans with `water` terrain and run ends", () => {
+    const path = column(9, 4, 12);
+    const waters = [water(9, 8), water(9, 9), water(9, 10)];
+    const tiles = getBridgeTiles(path, [], waters, GRID, TILE);
+
+    expect(tiles).toHaveLength(3);
+    expect(tiles.map((t) => t.gridZ)).toEqual([8, 9, 10]);
+    expect(tiles.every((t) => t.terrain === "water")).toBe(true);
+    expect(tiles[0].isRunStart).toBe(true);
+    expect(tiles[2].isRunEnd).toBe(true);
+  });
+
   it("returns no tiles when the path avoids the canyon", () => {
     const path = column(15, 4, 12);
     const canyons = [canyon(9, 8), canyon(9, 9), canyon(9, 10)];
-    expect(getBridgeTiles(path, canyons, GRID, TILE)).toHaveLength(0);
+    expect(getBridgeTiles(path, canyons, [], GRID, TILE)).toHaveLength(0);
   });
 });
 
@@ -277,7 +358,7 @@ describe("pathCanyonTiles", () => {
   it("lists the canyon tiles a path crosses, with segment direction", () => {
     const path = column(5, 2, 4); // tiles (5,2),(5,3),(5,4),(5,5)
     expect(
-      pathCanyonTiles(path, [canyon(5, 3), canyon(5, 4)], GRID, TILE)
+      pathCanyonTiles(path, [canyon(5, 3), canyon(5, 4)], [], GRID, TILE)
     ).toEqual([
       { gridX: 5, gridZ: 3, dirX: 0, dirZ: 1 },
       { gridX: 5, gridZ: 4, dirX: 0, dirZ: 1 },
@@ -286,7 +367,17 @@ describe("pathCanyonTiles", () => {
 
   it("is empty when the path avoids every canyon", () => {
     const path = column(5, 2, 3);
-    expect(pathCanyonTiles(path, [canyon(9, 9)], GRID, TILE)).toEqual([]);
+    expect(pathCanyonTiles(path, [canyon(9, 9)], [], GRID, TILE)).toEqual([]);
+  });
+
+  it("lists the water tiles a path crosses (bridgeable = canyon ∪ water)", () => {
+    const path = column(5, 2, 4); // tiles (5,2)..(5,5)
+    expect(
+      pathCanyonTiles(path, [], [water(5, 3), water(5, 4)], GRID, TILE)
+    ).toEqual([
+      { gridX: 5, gridZ: 3, dirX: 0, dirZ: 1 },
+      { gridX: 5, gridZ: 4, dirX: 0, dirZ: 1 },
+    ]);
   });
 });
 
@@ -317,6 +408,7 @@ describe("findBridgeCrossings", () => {
     const crossings = findBridgeCrossings(
       [vertical, horizontal],
       [canyon(5, 4)],
+      [],
       GRID,
       TILE
     );
@@ -335,6 +427,7 @@ describe("findBridgeCrossings", () => {
     const crossings = findBridgeCrossings(
       [a, b],
       [canyon(5, 4), canyon(5, 5)],
+      [],
       GRID,
       TILE
     );
@@ -345,17 +438,17 @@ describe("findBridgeCrossings", () => {
     const a = column(5, 2, 3);
     const b = column(6, 2, 3);
     expect(
-      findBridgeCrossings([a, b], [canyon(5, 3), canyon(6, 3)], GRID, TILE)
+      findBridgeCrossings([a, b], [canyon(5, 3), canyon(6, 3)], [], GRID, TILE)
     ).toEqual([]);
   });
 
   it("ignores ground-level crossings (no canyon at the crossing tile)", () => {
     const vertical = column(5, 2, 5);
     const horizontal = [wp(2, 4), wp(6, 4)];
-    // Crossing at (5,4), but no canyon there -> not a bridge crossing.
-    expect(findBridgeCrossings([vertical, horizontal], [], GRID, TILE)).toEqual(
-      []
-    );
+    // Crossing at (5,4), but no canyon or water there -> not a bridge crossing.
+    expect(
+      findBridgeCrossings([vertical, horizontal], [], [], GRID, TILE)
+    ).toEqual([]);
   });
 
   it("flags a path that turns at a canyon tile against a perpendicular path", () => {
@@ -368,11 +461,31 @@ describe("findBridgeCrossings", () => {
     const crossings = findBridgeCrossings(
       [turning, straight],
       [canyon(5, 5)],
+      [],
       GRID,
       TILE
     );
     expect(crossings).toEqual([
       { pathIndexA: 0, pathIndexB: 1, tiles: [{ gridX: 5, gridZ: 5 }] },
+    ]);
+  });
+
+  it("reports two paths crossing the same water tile at a right angle", () => {
+    const vertical = column(5, 2, 5); // down column 5, tiles z=2..6
+    const horizontal = [wp(2, 4), wp(3, 4), wp(4, 4), wp(5, 4), wp(6, 4)];
+    const crossings = findBridgeCrossings(
+      [vertical, horizontal],
+      [],
+      [water(5, 4)],
+      GRID,
+      TILE
+    );
+    expect(crossings).toEqual([
+      {
+        pathIndexA: 0,
+        pathIndexB: 1,
+        tiles: [{ gridX: 5, gridZ: 4 }],
+      },
     ]);
   });
 
@@ -386,6 +499,7 @@ describe("findBridgeCrossings", () => {
     const crossings = findBridgeCrossings(
       [a, b],
       [canyon(5, 7), canyon(5, 8)],
+      [],
       GRID,
       TILE
     );

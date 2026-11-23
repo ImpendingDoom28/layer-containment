@@ -66,7 +66,7 @@ describe("validateLevel", () => {
     expect(issues.some((issue) => issue.path === "pathWaypoints.0")).toBe(true);
   });
 
-  it("reports a waypoint placed on water", () => {
+  it("allows a waypoint over open water (the crossing is bridged)", () => {
     const level = makeLevel();
     const [firstWaypoint] = level.pathWaypoints[0];
     const tile = waypointToTile(firstWaypoint, level.gridSize, TILE_SIZE);
@@ -84,13 +84,11 @@ describe("validateLevel", () => {
       }),
       TILE_SIZE
     );
+    // A waypoint on a water tile is legal: the bridge deck is raised over the
+    // pool at load, so the path is no longer prohibited from crossing water.
     expect(
-      issues.some(
-        (issue) =>
-          issue.message ===
-          "Waypoint cannot be on water (except over a canyon)."
-      )
-    ).toBe(true);
+      issues.some((issue) => issue.message.includes("water"))
+    ).toBe(false);
   });
 
   it("allows a waypoint over water that sits on a canyon tile (bridge)", () => {
@@ -139,7 +137,40 @@ describe("validateLevel", () => {
     const issues = validateLevel(crossing, TILE_SIZE);
     expect(
       issues.some((issue) =>
-        issue.message.includes("two bridges cannot share a canyon tile")
+        issue.message.includes("two bridges cannot share a tile")
+      )
+    ).toBe(true);
+  });
+
+  it("reports two paths crossing the same water tile (two bridges)", () => {
+    // Grid 10, tileSize 1: world (x,z) maps to grid (x+5, z+5).
+    // Path 0 runs down column 5, path 1 runs across row 5, crossing at
+    // grid (5,5) over a water tile there.
+    const crossing = makeLevel({
+      pathWaypoints: [
+        [
+          { x: 0, y: 0, z: -3 }, // (5, 2)
+          { x: 0, y: 0, z: 3 }, // (5, 8)
+        ],
+        [
+          { x: -3, y: 0, z: 0 }, // (2, 5)
+          { x: 3, y: 0, z: 0 }, // (8, 5)
+        ],
+      ],
+      waters: [
+        {
+          id: 1,
+          gridX: 5,
+          gridZ: 5,
+          shape: "box",
+          color: "#0e7490",
+        },
+      ],
+    });
+    const issues = validateLevel(crossing, TILE_SIZE);
+    expect(
+      issues.some((issue) =>
+        issue.message.includes("two bridges cannot share a tile")
       )
     ).toBe(true);
   });
@@ -166,7 +197,7 @@ describe("validateLevel", () => {
     const issues = validateLevel(merging, TILE_SIZE);
     expect(
       issues.some((issue) =>
-        issue.message.includes("two bridges cannot share a canyon tile")
+        issue.message.includes("two bridges cannot share a tile")
       )
     ).toBe(false);
   });

@@ -47,6 +47,24 @@ const GROUND_LEVEL: LevelConfigData = {
   pathWaypoints: [[wp(5, 2), wp(5, 8)]],
 };
 
+// Like CROSSING_LEVEL but a water tile (instead of a canyon) at the crossing:
+// the crossing is bridged over the water, so it is legal.
+const WATER_LEVEL: LevelConfigData = {
+  ...CROSSING_LEVEL,
+  canyons: [],
+  waters: [{ id: 1, gridX: 5, gridZ: 5, shape: "box", color: "#0e7490" }],
+  pathWaypoints: [[wp(5, 2), wp(5, 8)]],
+};
+
+// A single water tile at the crossing, but no path over it yet: used to check
+// that a *new* path may be drawn over water (the crossing is bridged at load).
+const WATER_FREE_LEVEL: LevelConfigData = {
+  ...CROSSING_LEVEL,
+  canyons: [],
+  waters: [{ id: 1, gridX: 5, gridZ: 5, shape: "box", color: "#0e7490" }],
+  pathWaypoints: [],
+};
+
 const store = () => useLevelEditorStore.getState();
 
 const startPath = (
@@ -97,6 +115,25 @@ describe("useLevelEditorStore: bridge crossing rule", () => {
     expect(store().draftLevel.pathWaypoints[1]).toEqual([wp(2, 5), wp(6, 5)]);
   });
 
+  it("allows drawing a path over open water (the crossing is bridged)", () => {
+    store().loadDraftLevel(WATER_FREE_LEVEL, TILE_SIZE);
+    // A fresh path drawn straight across the water tile at (5,5) is legal:
+    // the bridge deck is raised over the pool at load, so the editor no longer
+    // forbids a waypoint on a water tile.
+    startPath(0, { gridX: 2, gridZ: 5 });
+    store().handleTileAction({ gridX: 6, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
+    expect(store().draftLevel.pathWaypoints[0]).toEqual([wp(2, 5), wp(6, 5)]);
+  });
+
+  it("blocks two paths crossing the same water tile (two bridges)", () => {
+    store().loadDraftLevel(WATER_LEVEL, TILE_SIZE);
+    startPath(1, { gridX: 2, gridZ: 5 });
+    // Path 1 crosses path 0's water bridge at (5,5): two perpendicular decks
+    // would overlap, so the segment is blocked.
+    store().handleTileAction({ gridX: 6, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
+    expect(store().draftLevel.pathWaypoints[1]).toHaveLength(1);
+  });
+
   it("blocks dragging a waypoint so its segment crosses a bridge", () => {
     store().loadDraftLevel(CROSSING_LEVEL, TILE_SIZE);
     startPath(1, { gridX: 2, gridZ: 5 });
@@ -105,7 +142,7 @@ describe("useLevelEditorStore: bridge crossing rule", () => {
     // Drag path 1's last waypoint from (4,5) to (6,5): the new segment
     // crosses path 0's bridge at (5,5).
     store().selectWaypoint(1, 1);
-    store().updateSelectedWaypoint({ gridX: 6, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
+    store().updateSelectedWaypoint({ gridX: 6, gridZ: 5 }, TILE_SIZE);
     expect(store().draftLevel.pathWaypoints[1]).toEqual([wp(2, 5), wp(4, 5)]);
   });
 

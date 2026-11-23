@@ -84,8 +84,9 @@ describe("validateLevel", () => {
       }),
       TILE_SIZE
     );
-    // A waypoint on a water tile is legal: the bridge deck is raised over the
-    // pool at load, so the path is no longer prohibited from crossing water.
+    // A waypoint on a water tile is legal: the crossing is bridged at load
+    // (the deck is flush over the span, like a canyon), so the path is no
+    // longer prohibited from crossing water.
     expect(
       issues.some((issue) => issue.message.includes("water"))
     ).toBe(false);

@@ -94,8 +94,9 @@ describe("playable level files", () => {
           `building ${building.id} at ${building.gridX},${building.gridZ} is on the path`
         ).toBe(false);
       }
-      // Water on the path is legal: the crossing is bridged at load (the path
-      // strip is raised over the span), so no per-tile prohibition is needed.
+      // Water on the path is legal: the crossing is bridged at load (the deck
+      // is flush over the span, like a canyon), so no per-tile prohibition is
+      // needed.
     });
 
     it(`${id}: path segments are axis-aligned`, () => {

@@ -118,11 +118,11 @@ describe("useLevelEditorStore: bridge crossing rule", () => {
   it("allows drawing a path over open water (the crossing is bridged)", () => {
     store().loadDraftLevel(WATER_FREE_LEVEL, TILE_SIZE);
     // A fresh path drawn straight across the water tile at (5,5) is legal:
-    // the bridge deck is raised over the pool at load, so the editor no longer
-    // forbids a waypoint on a water tile. The middle click lands *on* the
-    // water tile itself, so the path carries a waypoint over the pool — the
-    // regression this guards is one that rejects a water waypoint while still
-    // letting a segment pass over the water.
+    // the crossing is bridged at load (the walkway stays flush over the pool),
+    // so the editor no longer forbids a waypoint on a water tile. The middle
+    // click lands *on* the water tile itself, so the path carries a waypoint
+    // over the pool — the regression this guards is one that rejects a water
+    // waypoint while still letting a segment pass over the water.
     startPath(0, { gridX: 2, gridZ: 5 });
     store().handleTileAction({ gridX: 5, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);
     store().handleTileAction({ gridX: 6, gridZ: 5 }, TILE_SIZE, PATH_WIDTH);

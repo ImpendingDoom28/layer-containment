@@ -3,21 +3,14 @@ import { tileToWorldCoordinate, waypointToTile } from "./levelEditor";
 import { flatFieldToSphereSurface } from "./planetSurfaceMapping";
 
 /**
- * How high (above the ground surface) a bridge deck sits over a canyon. Kept
- * at 0: the walkway is flush with the path on either side of the canyon (it
- * lines up with the path entering and leaving it), and the basin floor below
- * sits `CANON_BASIN_DEPTH` below the deck. The visible deck top is
- * `BRIDGE_ELEVATION + pathYOffset` (see `Path.tsx`).
+ * How high (above the ground surface) a bridge deck sits over a canyon or
+ * open water. Kept at 0 for both: the walkway is flush with the path on
+ * either side of the span (it lines up with the path entering and leaving
+ * it), and whatever is below — the basin floor or the pool — stays under the
+ * deck. The visible deck top is `BRIDGE_ELEVATION + pathYOffset` (see
+ * `Path.tsx`).
  */
 export const BRIDGE_ELEVATION = 0;
-
-/**
- * How high (above the ground surface) a bridge deck sits over open water. The
- * canyon deck is flush with the ground (`BRIDGE_ELEVATION` is 0) because the
- * basin floor is far below; a water deck must clear the pool, so it is raised
- * by this much (the visible deck top is `WATER_BRIDGE_ELEVATION + pathYOffset`).
- */
-export const WATER_BRIDGE_ELEVATION = 0.5;
 
 /**
  * Per-tile canyon occupancy as a flat bitmask (1 = canyon, 0 = free), indexed
@@ -150,16 +143,14 @@ const samplePathToTilePoints = (
  * keeping the waypoints at the bridge level here makes enemies, towers, and
  * the deck render stay consistent with no per-entity changes.
  *
- * A canyon span is flush with the ground (`BRIDGE_ELEVATION` is 0, the basin
- * floor sits far below). A water span is raised (`WATER_BRIDGE_ELEVATION`, the
- * deck clears the pool) and stays **flat over the whole pool**: the deck ramps
- * up over the last land tile before the run and back down over the first land
- * tile after it, so the elevated walkway sits level above the water (see
- * `buildBridgePathPoints`). Each path is re-sampled per tile (orthogonal paths,
- * so shape/length are preserved) to match the bridge span's per-tile footprint.
- * Paths that never cross a bridgeable tile are returned unchanged, so their
- * authored (possibly off-center or elevated) waypoints are preserved whether or
- * not the level has any canyon or water.
+ * The deck is flush with the ground for both terrain kinds (`BRIDGE_ELEVATION`
+ * is 0): over a canyon the basin floor is far below, and over open water the
+ * pool sits in the ground, so the walkway simply crosses at ground level with
+ * no ramp. Each path is re-sampled per tile (orthogonal paths, so shape/length
+ * are preserved) to match the bridge span's per-tile footprint. Paths that
+ * never cross a bridgeable tile are returned unchanged, so their authored
+ * (possibly off-center or elevated) waypoints are preserved whether or not the
+ * level has any canyon or water.
  */
 export const buildCanyonBridgePaths = (
   pathWaypoints: PathWaypoint[][],
@@ -173,68 +164,18 @@ export const buildCanyonBridgePaths = (
 
   return pathWaypoints.map((path) => {
     const points = samplePathToTilePoints(path, gridSize, tileSize);
-    const isCanyon = points.map(
-      (p) => canyon[p.gridZ * gridSize + p.gridX] === 1
+    const isBridge = points.map(
+      (p) =>
+        canyon[p.gridZ * gridSize + p.gridX] === 1 ||
+        water[p.gridZ * gridSize + p.gridX] === 1
     );
-    const isWater = points.map(
-      (p) => water[p.gridZ * gridSize + p.gridX] === 1
-    );
-    if (!points.some((_, i) => isCanyon[i] || isWater[i])) return path;
-    return buildBridgePathPoints(points, isCanyon, isWater);
+    if (!isBridge.some(Boolean)) return path;
+    return points.map((p, i) => ({
+      x: p.x,
+      y: isBridge[i] ? BRIDGE_ELEVATION : 0,
+      z: p.z,
+    }));
   });
-};
-
-/**
- * Bake the deck height into the resampled tile points of one path.
- *
- * A canyon span is flush (`BRIDGE_ELEVATION`, the basin is far below) with no
- * ramp. A water span is raised (`WATER_BRIDGE_ELEVATION`) and is kept **flat
- * over the whole pool**: the deck ramps up over the last land tile before the
- * run and ramps down over the first land tile after it, so the elevated walkway
- * sits level above the water and the `Bridge` framing (which is flat over the
- * run) stays aligned with the deck. Two shore-edge waypoints at the deck height
- * mark the ramp endpoints (each is the tile edge between a land tile and a
- * water tile); the water tiles between them are flat.
- */
-const buildBridgePathPoints = (
-  points: SampledTilePoint[],
-  isCanyon: boolean[],
-  isWater: boolean[]
-): PathWaypoint[] => {
-  const out: PathWaypoint[] = [];
-  const n = points.length;
-
-  const boundary = (a: SampledTilePoint, b: SampledTilePoint): PathWaypoint => ({
-    x: (a.x + b.x) / 2,
-    y: WATER_BRIDGE_ELEVATION,
-    z: (a.z + b.z) / 2,
-  });
-
-  let i = 0;
-  while (i < n) {
-    if (isWater[i]) {
-      // A water run: find its extent, then emit the near shore edge (deck
-      // height), the flat run, and the far shore edge.
-      let j = i;
-      while (j < n && isWater[j]) j += 1;
-      const runEnd = j - 1;
-      if (i > 0) out.push(boundary(points[i - 1], points[i]));
-      for (let k = i; k <= runEnd; k += 1) {
-        const q = points[k];
-        out.push({ x: q.x, y: WATER_BRIDGE_ELEVATION, z: q.z });
-      }
-      if (j < n) out.push(boundary(points[runEnd], points[j]));
-      i = j;
-    } else if (isCanyon[i]) {
-      out.push({ x: points[i].x, y: BRIDGE_ELEVATION, z: points[i].z });
-      i += 1;
-    } else {
-      out.push({ x: points[i].x, y: 0, z: points[i].z });
-      i += 1;
-    }
-  }
-
-  return out;
 };
 
 /**
@@ -397,11 +338,11 @@ export const findBridgeCrossings = (
 
 /**
  * A single bridge tile: a canyon or water cell the path crosses, with the
- * direction the path travels through it and the terrain under it. The renderer
- * uses the world center + direction to place the deck (the path strip), the
- * side rails, and — on a run's first and last tile — the support pillars that
- * anchor the span: to the canyon's cliff wall for a canyon run, or down into
- * the water for a water run.
+ * direction the path travels through it. The renderer uses the world center +
+ * direction to place the deck (the path strip), the side rails, and — on a
+ * run's first and last tile — the support pillars that anchor the span
+ * (leaning onto the gorge wall when the basin is present, dropping to the
+ * surface otherwise).
  */
 export type BridgeTile = {
   gridX: number;
@@ -410,8 +351,6 @@ export type BridgeTile = {
   worldZ: number;
   dirX: number;
   dirZ: number;
-  /** The terrain the deck crosses here (the strut anchoring follows it). */
-  terrain: "canyon" | "water";
   /** True on the first tile of a bridge run (the path leaves the ground). */
   isRunStart: boolean;
   /** True on the last tile of a bridge run (the path returns to the ground). */
@@ -420,8 +359,7 @@ export type BridgeTile = {
 
 /**
  * The bridge tiles a path crosses (the canyon/water cells under its span), in
- * path order, each tagged with the direction through the cell, the terrain
- * under it (canyon spans are flush, water spans are raised), and whether it is
+ * path order, each tagged with the direction through the cell and whether it is
  * at the start or end of a run (so the renderer can anchor the support pillars
  * at the run's edges instead of every tile).
  */
@@ -434,13 +372,11 @@ export const getBridgeTiles = (
 ): BridgeTile[] => {
   const { canyon, water } = buildBridgeMasks(canyons, waters, gridSize);
   const points = samplePathToTilePoints(path, gridSize, tileSize);
-  const isCanyon = points.map(
-    (p) => canyon[p.gridZ * gridSize + p.gridX] === 1
+  const isBridge = points.map(
+    (p) =>
+      canyon[p.gridZ * gridSize + p.gridX] === 1 ||
+      water[p.gridZ * gridSize + p.gridX] === 1
   );
-  const isWater = points.map(
-    (p) => water[p.gridZ * gridSize + p.gridX] === 1
-  );
-  const isBridge = isCanyon.map((v, i) => v || isWater[i]);
   const out: BridgeTile[] = [];
 
   for (let i = 0; i < points.length; i++) {
@@ -467,7 +403,6 @@ export const getBridgeTiles = (
       worldZ: p.z,
       dirX,
       dirZ,
-      terrain: isCanyon[i] ? "canyon" : "water",
       isRunStart: i === 0 || !isBridge[i - 1],
       isRunEnd: i === points.length - 1 || !isBridge[i + 1],
     });

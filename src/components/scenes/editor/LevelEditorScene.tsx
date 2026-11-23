@@ -12,10 +12,8 @@ import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
 import { Tile } from "../../entities/Tile";
 import {
   BRIDGE_ELEVATION,
-  buildBridgeMasks,
   getCanyonWorldBBox,
   getBridgeTiles,
-  WATER_BRIDGE_ELEVATION,
 } from "../../../utils/canyonBridges";
 import { Light } from "../shared/Light";
 import { Skybox } from "../shared/Skybox";
@@ -36,7 +34,7 @@ import {
   getPlanetRadius,
   getSurfaceQuaternion,
 } from "../../../utils/planetSurfaceMapping";
-import { getLevelGridOffset, waypointToTile } from "../../../utils/levelEditor";
+import { getLevelGridOffset } from "../../../utils/levelEditor";
 import { useTileOccupancyMasks } from "../../../core/hooks/utils/useTileOccupancyMasks";
 import { getCssColorValue } from "../../ui/lib/cssUtils";
 import { LevelEditorCamera } from "./LevelEditorCamera";
@@ -145,13 +143,6 @@ export const LevelEditorScene = () => {
       draftLevel.gridSize,
       tileSize,
     ]
-  );
-
-  // Per-tile water mask (grid coordinates) so the waypoint markers can be
-  // lifted clear of the raised deck over water.
-  const waterMask = useMemo(
-    () => buildBridgeMasks(draftLevel.canyons, draftLevel.waters, draftLevel.gridSize).water,
-    [draftLevel.canyons, draftLevel.waters, draftLevel.gridSize]
   );
 
   // The canyon's world bbox drives the basin (carved bowl + the cut in the
@@ -407,27 +398,9 @@ export const LevelEditorScene = () => {
                   waypoint.z,
                   radius
                 );
-                // Over a water span the raised deck (Bridge) would hide the
-                // marker, so lift it above the deck top there; on land and
-                // over canyons the deck is flush and the usual offset stands.
-                const onWater =
-                  (() => {
-                    const tile = waypointToTile(
-                      waypoint,
-                      draftLevel.gridSize,
-                      tileSize
-                    );
-                    return (
-                      waterMask[tile.gridZ * draftLevel.gridSize + tile.gridX] ===
-                      1
-                    );
-                  })();
-                const markerHeight = onWater
-                  ? WATER_BRIDGE_ELEVATION + pathYOffset + 0.18
-                  : 0.18;
                 const position = surfacePoint.clone().addScaledVector(
                   normal,
-                  markerHeight
+                  0.18
                 );
 
                 return (

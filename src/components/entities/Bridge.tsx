@@ -19,7 +19,6 @@ import {
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 import {
-  WATER_BRIDGE_ELEVATION,
   sampleBasinFloorY,
   type BridgeTile,
   type CanyonWorldBBox,
@@ -34,8 +33,8 @@ import { getCssColorValue } from "../ui/lib/cssUtils";
 
 type BridgeProps = {
   tiles: BridgeTile[];
-  /** Deck height above the planet surface for a canyon span (the path `yBase`
-      over the canyon; water spans raise themselves by `WATER_BRIDGE_ELEVATION`). */
+  /** The deck height above the planet surface for the span (the path `yBase`
+      over it; both terrain kinds are flush, see `BRIDGE_ELEVATION`). */
   deckHeight: number;
   /** Extra clearance from the deck to its top face (the path `pathYOffset`). */
   pathYOffset: number;
@@ -139,13 +138,9 @@ export const Bridge: FC<BridgeProps> = memo(
           radius
         );
 
-        // The deck top is per-tile: a water span is raised `WATER_BRIDGE_ELEVATION`
-        // (to clear the pool) over the canyon base, so the whole span (deck,
-        // rails, posts, struts) of that tile sits higher than the canyon ones.
-        const tileDeckTop =
-          (tile.terrain === "water"
-            ? WATER_BRIDGE_ELEVATION + deckHeight
-            : deckHeight) + pathYOffset;
+        // The deck is flush with the path for every span (canyon and water
+        // alike), so the framing height is the same for each tile.
+        const tileDeckTop = deckHeight + pathYOffset;
 
         if (renderDeck) {
           deck.push(bake([tileSize, 0.08, pathWidth + 0.08], new Vector3(0, tileDeckTop - 0.04, 0), quaternion, surface));
@@ -166,14 +161,11 @@ export const Bridge: FC<BridgeProps> = memo(
           }
         }
 
-        // Support struts at the two ends of the span. A canyon span braces its
-        // deck with diagonal struts leaning down and outward onto the cliff
-        // wall (like a bridge resting on the rim; on flat terrain with no wall
-        // they just drop to the surface). A water span instead stands on
-        // vertical pilings that drop from the deck straight down into the
-        // pool — there is no wall to lean on, only the water below.
+        // Support struts at the two ends of the span. They brace the deck
+        // with diagonal struts leaning down and outward onto the cliff wall
+        // (like a bridge resting on the rim); where there is no basin (a water
+        // span, or flat terrain) they just drop to the surface.
         if (tile.isRunStart || tile.isRunEnd) {
-          const isWaterSpan = tile.terrain === "water";
           const sign = tile.isRunStart ? -1 : 1; // toward the land/rim side
           for (const side of [1, -1]) {
             const topWorld = surface
@@ -186,39 +178,22 @@ export const Bridge: FC<BridgeProps> = memo(
                 ).applyQuaternion(quaternion)
               );
 
-            let footWorld: Vector3;
-            if (isWaterSpan) {
-              // Vertical piling: straight down from the deck to the water
-              // surface. The foot keeps the top's along-path + lateral
-              // offset (so the piling is vertical, directly below the deck
-              // edge) but its local height is 0 — the pool surface.
-              footWorld = surface
-                .clone()
-                .add(
-                  new Vector3(
-                    sign * half * 0.3,
-                    0,
-                    side * railOffset
-                  ).applyQuaternion(quaternion)
-                );
-            } else {
-              footWorld = surface
-                .clone()
-                .add(
-                  new Vector3(
-                    sign * (half + (canyonBBox ? STRUT_LEAN : 0)),
-                    0,
-                    side * railOffset
-                  ).applyQuaternion(quaternion)
-                );
-              if (canyonBBox) {
-                // Follow the basin's bowl down: the foot lands on the bank
-                // (it braces the wall, not the floor).
-                footWorld.y = Math.min(
-                  footWorld.y,
-                  sampleBasinFloorY(footWorld.x, footWorld.z, canyonBBox, radius)
-                );
-              }
+            const footWorld = surface
+              .clone()
+              .add(
+                new Vector3(
+                  sign * (half + (canyonBBox ? STRUT_LEAN : 0)),
+                  0,
+                  side * railOffset
+                ).applyQuaternion(quaternion)
+              );
+            if (canyonBBox) {
+              // Follow the basin's bowl down: the foot lands on the bank
+              // (it braces the wall, not the floor).
+              footWorld.y = Math.min(
+                footWorld.y,
+                sampleBasinFloorY(footWorld.x, footWorld.z, canyonBBox, radius)
+              );
             }
 
             const vec = new Vector3().subVectors(footWorld, topWorld);

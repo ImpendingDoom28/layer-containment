@@ -1,14 +1,12 @@
 import {
   FC,
   memo,
-  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
 } from "react";
 
-import type { ThreeEvent } from "@react-three/fiber";
 import { BoxGeometry, Mesh, MeshStandardMaterial, Vector3 } from "three";
 
 import {
@@ -24,7 +22,6 @@ import {
 } from "../../core/stores/useGameStore";
 import {
   gridSizeSelector,
-  setHoveredTileSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
 import {
@@ -117,16 +114,17 @@ type TileProps = {
   isWater: boolean;
   isOnPath: boolean;
   canPlace: boolean;
-  onClick: () => void;
   /** The board size; defaults to the published level. The editor passes its
       draft grid so the tile sits on the matching sphere. */
   gridSize?: number;
-  /** Optional manual hover override. In the editor the tile resolves hover
-      itself from the editor store (see `onHover`); in the game the overlay
-      owns placement feedback, so this is omitted there too. */
+  /** The board's pointer input now arrives through the shared pick surface
+      (see `BoardPickSurface`), not per-tile handlers. In the editor the tile
+      resolves hover itself from the editor store's per-tile hover flag, so
+      only the hovered tile re-renders on pointer moves; in the game the
+      overlay owns all placement feedback, so this is omitted there too. */
+  editorMode?: boolean;
+  /** Optional manual hover override. */
   isHovered?: boolean;
-  onHover?: () => void;
-  onHoverEnd?: () => void;
 };
 
 export const Tile: FC<TileProps> = memo(
@@ -136,25 +134,20 @@ export const Tile: FC<TileProps> = memo(
     isWater,
     isOnPath,
     canPlace,
-    onClick,
     gridSize: gridSizeProp,
     isHovered: isHoveredProp,
-    onHover,
-    onHoverEnd,
+    editorMode = false,
   }) => {
     const tileSize = useGameStore(tileSizeSelector);
     const pathYOffset = useGameStore(pathYOffsetSelector);
 
-    // The editor passes `onHover` (the game omits it): the editor's water
-    // cells tint themselves from the editor store's per-tile hover flag, so
-    // only the hovered tile re-renders on pointer moves. In the game the
-    // overlay owns all placement feedback, so the tile stays unmarked.
-    const isEditorMode = onHover != null;
+    // In the editor the water cell tints itself from the editor store's
+    // per-tile hover flag; in the game the overlay owns placement feedback,
+    // so the tile stays unmarked.
     const isEditorTileHovered = useLevelEditorStore(
       createEditorTileHoveredSelector(gridX, gridZ)
     );
     const storeGridSize = useLevelStore(gridSizeSelector);
-    const setHoveredTile = useLevelStore(setHoveredTileSelector);
 
     const waterClock = useWaterClock();
     const gridSize = gridSizeProp ?? storeGridSize;
@@ -163,7 +156,7 @@ export const Tile: FC<TileProps> = memo(
     // it (`canPlace` is the scene's `canHighlightEditorAction`); the game never
     // tints water from here (the overlay covers it).
     const isHovered =
-      isHoveredProp ?? (isEditorMode && isEditorTileHovered && canPlace);
+      isHoveredProp ?? (editorMode && isEditorTileHovered && canPlace);
 
     const placementHoverKey = useMemo<PlacementHoverKey>(() => {
       if (!isHovered) return "idle";
@@ -289,38 +282,6 @@ export const Tile: FC<TileProps> = memo(
       [material, shared]
     );
 
-    const onPointerOver = useCallback(
-      (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        if (onHover) {
-          onHover();
-          return;
-        }
-        setHoveredTile({ gridX, gridZ });
-      },
-      [onHover, setHoveredTile, gridX, gridZ]
-    );
-
-    const onPointerOut = useCallback(
-      (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        if (onHoverEnd) {
-          onHoverEnd();
-          return;
-        }
-        setHoveredTile(null);
-      },
-      [onHoverEnd, setHoveredTile]
-    );
-
-    const onInnerClick = useCallback(
-      (e: ThreeEvent<MouseEvent>) => {
-        e.stopPropagation();
-        onClick?.();
-      },
-      [onClick]
-    );
-
     return (
       <mesh
         ref={meshRef}
@@ -330,9 +291,6 @@ export const Tile: FC<TileProps> = memo(
         material={material}
         castShadow
         receiveShadow
-        onClick={onInnerClick}
-        onPointerOver={onPointerOver}
-        onPointerOut={onPointerOut}
       />
     );
   }

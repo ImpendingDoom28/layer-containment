@@ -1,6 +1,5 @@
-import { FC, memo, useCallback, useEffect, useMemo } from "react";
+import { FC, memo, useEffect, useMemo } from "react";
 
-import type { ThreeEvent } from "@react-three/fiber";
 import { BoxGeometry, MeshStandardMaterial } from "three";
 
 import { getCssColorValue, type ColorToken } from "../../ui/lib/cssUtils";
@@ -59,27 +58,14 @@ const getEditorTileMaterial = (color: string, isHovered: boolean) => {
   return material;
 };
 
-// Fixed-arg slab and hitbox geometries, shared across all tiles of a grid
-// size (never disposed — the scene's lifetime).
+// Fixed-arg slab geometries, shared across all tiles of a grid size
+// (never disposed — the scene's lifetime).
 const slabGeometryCache = new Map<number, BoxGeometry>();
 const getSlabGeometry = (tileSize: number): BoxGeometry => {
   const entry = slabGeometryCache.get(tileSize);
   if (entry) return entry;
   const geometry = new BoxGeometry(tileSize, LEVEL_EDITOR_TILE_HEIGHT, tileSize);
   slabGeometryCache.set(tileSize, geometry);
-  return geometry;
-};
-
-const hitboxGeometryCache = new Map<number, BoxGeometry>();
-const getHitboxGeometry = (tileSize: number): BoxGeometry => {
-  const entry = hitboxGeometryCache.get(tileSize);
-  if (entry) return entry;
-  const geometry = new BoxGeometry(
-    tileSize,
-    LEVEL_EDITOR_TILE_HEIGHT + 0.2,
-    tileSize
-  );
-  hitboxGeometryCache.set(tileSize, geometry);
   return geometry;
 };
 
@@ -95,9 +81,6 @@ type EditorSphereTileProps = {
   /** The canyon's world bbox; null when the level has no canyons. A canyon
       tile's slab sits at the basin floor instead of the surface. */
   canyonBBox: CanyonWorldBBox | null;
-  onTileClick: () => void;
-  onTileHover: () => void;
-  onTileHoverEnd: () => void;
 };
 
 export const EditorSphereTile: FC<EditorSphereTileProps> = memo(
@@ -111,9 +94,6 @@ export const EditorSphereTile: FC<EditorSphereTileProps> = memo(
     canHighlightEditorAction,
     activeTool,
     canyonBBox,
-    onTileClick,
-    onTileHover,
-    onTileHoverEnd,
   }) => {
     // The tile tracks the editor's `hoveredTile` itself through a primitive
     // per-tile flag, so only the hovered tile re-renders on pointer moves
@@ -220,22 +200,6 @@ export const EditorSphereTile: FC<EditorSphereTileProps> = memo(
       [material, shared]
     );
 
-    const onPointerOver = useCallback(
-      (event: ThreeEvent<PointerEvent>) => {
-        event.stopPropagation();
-        onTileHover();
-      },
-      [onTileHover]
-    );
-
-    const onPointerOut = useCallback(
-      (event: ThreeEvent<PointerEvent>) => {
-        event.stopPropagation();
-        onTileHoverEnd();
-      },
-      [onTileHoverEnd]
-    );
-
     return (
       <group
         position={surfacePose.position}
@@ -248,17 +212,6 @@ export const EditorSphereTile: FC<EditorSphereTileProps> = memo(
           geometry={getSlabGeometry(tileSize)}
           material={material}
           receiveShadow
-        />
-
-        {/* Invisible hitbox at the surface: three raycasts it regardless of
-            visibility, so a click over the (lowered) canyon still registers
-            on this tile — mirroring the game's `CanyonTile`. */}
-        <mesh
-          visible={false}
-          geometry={getHitboxGeometry(tileSize)}
-          onClick={onTileClick}
-          onPointerOver={onPointerOver}
-          onPointerOut={onPointerOut}
         />
       </group>
     );

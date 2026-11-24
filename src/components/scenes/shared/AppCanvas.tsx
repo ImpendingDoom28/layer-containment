@@ -14,7 +14,7 @@ type AppCanvasProps = PropsWithChildren<{
 export const AppCanvas: FC<AppCanvasProps> = memo(({ testId, children }) => {
   return (
     <Canvas
-      data-testis={testId}
+      data-testid={testId}
       style={GAME_CANVAS_STYLE}
       gl={GAME_CANVAS_GL}
       dpr={GAME_CANVAS_DPR}

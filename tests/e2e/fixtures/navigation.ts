@@ -16,7 +16,12 @@ type OnOpenGameOptions = {
 
 export const onOpenMainMenu = async (page: Page) => {
   await page.goto("/");
-  await page.waitForTimeout(2000);
+  // The menu must be up before the click: on hosts without a GPU (SwiftShader
+  // fallback) the shader-gate can take well over 2 s to resolve, and a click
+  // on the "Preparing graphics..." screen does nothing.
+  await page
+    .getByRole("button", { name: "Play" })
+    .waitFor({ timeout: 60_000 });
   await page.click("body");
 };
 

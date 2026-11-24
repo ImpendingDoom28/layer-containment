@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 import { UIAccordion } from "../../ui/UIAccordion";
 import { UICard, UICardContent } from "../../ui/UICard";
 import { useLevelEditorStore } from "../../../core/stores/useLevelEditorStore";
@@ -36,10 +38,27 @@ export const LevelEditorInspector = () => {
   const showBuilding = selected?.type === "building";
   const showWater = activeMode === "water";
 
+  // Accordion open state. defaultValue is read only on mount, and the
+  // inspector stays mounted across tool changes, so the state is controlled
+  // and the active mode's section is (re)opened whenever the mode or
+  // selection changes; sections the user closed stay closed until then.
   const defaultOpen = ["level", "waves", "publish"];
   if (showPath) defaultOpen.push("path");
   if (showBuilding) defaultOpen.push("building");
   if (showWater) defaultOpen.push("water");
+
+  const [open, setOpen] = useState<string[]>(defaultOpen);
+  const modeSection = showPath
+    ? "path"
+    : showBuilding
+      ? "building"
+      : showWater
+        ? "water"
+        : null;
+  useEffect(() => {
+    if (!modeSection) return;
+    setOpen((prev) => (prev.includes(modeSection) ? prev : [...prev, modeSection]));
+  }, [modeSection]);
 
   return (
     <HUDWrapper className="pointer-events-none">
@@ -53,7 +72,11 @@ export const LevelEditorInspector = () => {
           <UICard className="h-full w-full py-0">
             <LevelEditorSelectionHeader />
             <UICardContent className="min-h-0 flex-1 overflow-y-auto">
-              <UIAccordion type="multiple" defaultValue={defaultOpen}>
+              <UIAccordion
+                type="multiple"
+                value={open}
+                onValueChange={setOpen}
+              >
                 <LevelEditorLevelSection />
                 {showPath ? <LevelEditorPathSection /> : null}
                 {showBuilding ? <LevelEditorBuildingSection /> : null}

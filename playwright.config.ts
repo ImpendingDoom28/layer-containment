@@ -12,14 +12,15 @@ const serverCommand = new URL(baseURL).port
 
 const isCi = !!process.env.CI;
 
-// Opt-in software GL (SwiftShader) for headless hosts without a GPU. On such
-// hosts the default hardware WebGL context never resolves, so the app stalls
-// at "Preparing graphics..." and every canvas-gated test fails. Set
-// PLAYWRIGHT_SWIFTSHADER=1 to render in software; it also serializes the
-// suite (concurrent SwiftShader compiles stall each other) and raises the
-// time budgets, since each WebGL canvas load takes ~20 s in software. Real
-// GPU machines and CI leave it unset and keep the fast hardware path.
-const useSwiftShader = !isCi && process.env.PLAYWRIGHT_SWIFTSHADER === "1";
+// Software GL (SwiftShader) for headless hosts without a GPU. On such hosts
+// the default hardware WebGL context never resolves, so the app stalls at
+// "Preparing graphics..." and every canvas-gated test fails — CI's
+// ubuntu-latest runners are one of these, so CI always renders in software.
+// Local hosts opt in with PLAYWRIGHT_SWIFTSHADER=1; real-GPU machines leave
+// it unset and keep the fast hardware path. SwiftShader serializes the suite
+// (concurrent shader compiles stall each other) and raises the time budgets,
+// since each WebGL canvas load takes ~20 s in software.
+const useSwiftShader = isCi || process.env.PLAYWRIGHT_SWIFTSHADER === "1";
 
 const SWIFTSHADER_ARGS = [
   "--use-gl=angle",

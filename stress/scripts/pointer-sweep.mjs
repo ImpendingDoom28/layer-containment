@@ -57,15 +57,22 @@ while (Date.now() - t0 < 120_000) {
 }
 if (!ready) {
   console.error("[sweep] stress run never reached 'playing'; run invalid");
-  await safeClose(browser);
+  // Set before safeClose: it ends the process with process.exitCode ?? 0, so
+  // a failure set afterwards would be lost (and the line after never runs).
   process.exitCode = 1;
+  await safeClose(browser);
   process.exit(1);
 }
 console.log(`[sweep] playing after ${((Date.now() - t0) / 1000 | 0)}s`);
 
-// rAF instrument, resettable per phase.
+// rAF instrument, resettable per phase. Exactly one sampler runs at a time:
+// arming a new phase cancels the previous phase's pending frame first —
+// otherwise the old loop keeps sampling (its `tick` closes over the
+// replaced `window.__frames` binding, so it appends into the new phase's
+// array too) and the phase is measured with two samplers.
 const armRAF = () =>
   page.evaluate(() => {
+    if (window.__rafId) cancelAnimationFrame(window.__rafId);
     window.__frames = [];
     let prev = performance.now();
     let c = 0;
@@ -73,9 +80,9 @@ const armRAF = () =>
       const now = performance.now();
       window.__frames.push(Math.round((now - prev) * 100) / 100);
       prev = now;
-      if (c++ < 40000) requestAnimationFrame(tick);
+      if (c++ < 40000) window.__rafId = requestAnimationFrame(tick);
     };
-    requestAnimationFrame(tick);
+    window.__rafId = requestAnimationFrame(tick);
   });
 
 const collectRAF = () => page.evaluate(() => window.__frames);

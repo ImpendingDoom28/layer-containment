@@ -53,10 +53,14 @@ const scratchPoint = new Vector3();
  * so the bowl is exactly the board sphere translated down by
  * `CANON_BASIN_DEPTH`. There the surface is carved away, so the resolver
  * re-intersects with that bowl and uses the bowl hit's cell instead — the cell
- * under the cursor on the visible floor. The bowl hit counts only while it
- * lands inside the canyon rectangle (where the floor really is that bowl);
- * a bowl hit outside the rectangle is below the terrain there, and the
- * surface cell wins.
+ * under the cursor on the visible floor. The bowl branch runs only while both
+ * the surface hit and the bowl hit land inside the canyon rectangle: the
+ * surface gate keeps a ray over untouched land from resolving to the bowl (its
+ * bowl hit can fall inside the rectangle while the surface hit is outside it —
+ * the ray crosses the land rim before reaching the carved floor, so the bowl
+ * is not visible); a bowl hit outside the rectangle is below the terrain there,
+ * and the surface cell wins. This mirrors the per-tile hitbox the canyon tiles
+ * used to carry, which covered exactly the canyon rectangle (not the rim fade).
  *
  * `null` when the ray misses the board entirely or its hit falls past the
  * field edge.
@@ -85,29 +89,36 @@ export const resolveBoardPickCell = (
   if (!cell) return null;
 
   if (canyonBBox) {
-    bowlSphere.center.set(0, centerY - CANON_BASIN_DEPTH, 0);
-    bowlSphere.radius = radius;
-    const bowlPoint = scratchRay.intersectSphere(bowlSphere, scratchPoint);
-    if (bowlPoint && bowlPoint.y < boardPointY - 1e-4) {
-      const bowlFlat = spherePointToFlatField(
-        bowlPoint,
-        bowlSphere.center,
-        radius
-      );
-      const bowlInCanyon =
-        bowlFlat !== null &&
-        bowlFlat.x >= canyonBBox.minX &&
-        bowlFlat.x <= canyonBBox.maxX &&
-        bowlFlat.z >= canyonBBox.minZ &&
-        bowlFlat.z <= canyonBBox.maxZ;
-      if (bowlInCanyon) {
-        const bowlCell = flatFieldToGridCell(
-          bowlFlat.x,
-          bowlFlat.z,
-          gridSize,
-          tileSize
+    const surfaceInCanyon =
+      flat.x >= canyonBBox.minX &&
+      flat.x <= canyonBBox.maxX &&
+      flat.z >= canyonBBox.minZ &&
+      flat.z <= canyonBBox.maxZ;
+    if (surfaceInCanyon) {
+      bowlSphere.center.set(0, centerY - CANON_BASIN_DEPTH, 0);
+      bowlSphere.radius = radius;
+      const bowlPoint = scratchRay.intersectSphere(bowlSphere, scratchPoint);
+      if (bowlPoint && bowlPoint.y < boardPointY - 1e-4) {
+        const bowlFlat = spherePointToFlatField(
+          bowlPoint,
+          bowlSphere.center,
+          radius
         );
-        if (bowlCell) return bowlCell;
+        const bowlInCanyon =
+          bowlFlat !== null &&
+          bowlFlat.x >= canyonBBox.minX &&
+          bowlFlat.x <= canyonBBox.maxX &&
+          bowlFlat.z >= canyonBBox.minZ &&
+          bowlFlat.z <= canyonBBox.maxZ;
+        if (bowlInCanyon) {
+          const bowlCell = flatFieldToGridCell(
+            bowlFlat.x,
+            bowlFlat.z,
+            gridSize,
+            tileSize
+          );
+          if (bowlCell) return bowlCell;
+        }
       }
     }
   }

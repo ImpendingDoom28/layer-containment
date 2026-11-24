@@ -167,6 +167,21 @@ describe("resolveBoardPickCell", () => {
     expect(cell).toEqual({ gridX: 10, gridZ: 11 });
   });
 
+  it("keeps the surface cell when the surface hit is outside the canyon rectangle", () => {
+    // An oblique ray aimed just up (north) of the canyon: the bowl hit lands
+    // inside the rectangle (cell (10, 8)), but the surface hit is outside it
+    // — the cursor is over the land rim, where the bowl is not visible. The
+    // surface cell (10, 7) wins.
+    const cell = resolveBoardPickCell(
+      obliqueRay([0, 300, -100], [0, 0.2, -2.5]),
+      RADIUS,
+      GRID,
+      TILE,
+      CANYON_BBOX
+    );
+    expect(cell).toEqual({ gridX: 10, gridZ: 7 });
+  });
+
   it("keeps the surface cell when the bowl hit lands outside the canyon rectangle", () => {
     // A single-cell canyon at (10, 10). An oblique ray aimed near its south
     // rim: the bowl hit projects past the rectangle (cell (10, 12) — under

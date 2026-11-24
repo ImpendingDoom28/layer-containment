@@ -22,13 +22,19 @@ type Vec2 = [number, number];
  * The water slab's top face is subdivided on an 8x8 grid (like the full-tile
  * box) so the vertex-displacement swell has vertices to move; the land slab's
  * top face is a flat fan (the regolith material is per-fragment and needs no
- * displacement). All faces are non-indexed with flat normals.
+ * displacement). The water slab's side walls are split at the same boundary
+ * vertices as its top face, so the shader's displaced top edge stays watertight
+ * against the walls (a straight chord between only the edge endpoints would
+ * leave a gap along the edge). All faces are non-indexed with flat normals.
  */
 
 type PartialVariant = Exclude<WaterVariant, "full">;
 
+// 8x8 subdivision of the water slab's top face (matches the full-tile box).
+const GRID_N = 8;
+
 // Water footprint (the wet half) for each partial variant, CCW in (u, v).
-const waterFootprint = (variant: PartialVariant, a: number): Vec2[] => {
+export const waterFootprint = (variant: PartialVariant, a: number): Vec2[] => {
   switch (variant) {
     case "half-n":
       return [[-a, 0], [a, 0], [a, a], [-a, a]];
@@ -123,6 +129,61 @@ const pushTri = (
   positions.push(r[0], y, -r[1]);
 };
 
+// The point where the segment p0->p1 crosses the grid line `axis = value`
+// (axis 0 = u, axis 1 = v), or null if the segment never crosses it.
+const gridLineCrossing = (
+  p0: Vec2,
+  p1: Vec2,
+  axis: 0 | 1,
+  value: number
+): Vec2 | null => {
+  const a0 = p0[axis];
+  const a1 = p1[axis];
+  if (a0 === a1) return null;
+  const t = (value - a0) / (a1 - a0);
+  if (t < -1e-9 || t > 1 + 1e-9) return null;
+  const tc = t < 0 ? 0 : t > 1 ? 1 : t;
+  return [p0[0] + tc * (p1[0] - p0[0]), p0[1] + tc * (p1[1] - p0[1])];
+};
+
+/**
+ * The points where each footprint edge crosses the 8x8 grid, grouped per edge
+ * and sorted along the edge. These are exactly the intermediate boundary
+ * vertices of the subdivided top face, so the side walls can be split at them
+ * and share the displaced top edge with the face.
+ */
+export const topBoundaryVertices = (
+  footprint: Vec2[],
+  tileSize: number
+): Vec2[][] => {
+  const a = tileSize / 2;
+  const cell = (2 * a) / GRID_N;
+  const edges: Vec2[][] = [];
+  for (let i = 0; i < footprint.length; i += 1) {
+    const p0 = footprint[i];
+    const p1 = footprint[(i + 1) % footprint.length];
+    const dirX = p1[0] - p0[0];
+    const dirY = p1[1] - p0[1];
+    const param = (p: Vec2) => (p[0] - p0[0]) * dirX + (p[1] - p0[1]) * dirY;
+    const pts: Vec2[] = [];
+    for (let g = 0; g <= GRID_N; g += 1) {
+      const line = -a + g * cell;
+      const cu = gridLineCrossing(p0, p1, 0, line);
+      const cv = gridLineCrossing(p0, p1, 1, line);
+      if (cu) pts.push(cu);
+      if (cv) pts.push(cv);
+    }
+    pts.sort((p, q) => param(p) - param(q));
+    const deduped: Vec2[] = [];
+    for (const p of pts) {
+      const last = deduped[deduped.length - 1];
+      if (!last || last[0] !== p[0] || last[1] !== p[1]) deduped.push(p);
+    }
+    edges.push(deduped);
+  }
+  return edges;
+};
+
 /**
  * Build a non-indexed slab for a CCW footprint (in tile-local u/v): a
  * grid-clipped top face when `subdivided` (water), a flat fan otherwise
@@ -139,10 +200,9 @@ const buildSlabGeometry = (
   const positions: number[] = [];
 
   if (subdivided) {
-    const n = 8;
-    const cell = (2 * a) / n;
-    for (let i = 0; i < n; i += 1) {
-      for (let j = 0; j < n; j += 1) {
+    const cell = (2 * a) / GRID_N;
+    for (let i = 0; i < GRID_N; i += 1) {
+      for (let j = 0; j < GRID_N; j += 1) {
         const u0 = -a + i * cell;
         const v0 = -a + j * cell;
         const u1 = u0 + cell;
@@ -172,18 +232,27 @@ const buildSlabGeometry = (
     pushTri(positions, footprint[0], footprint[k + 1], footprint[k], -halfH);
   }
 
-  // Side walls: two outward triangles per footprint edge, from bottom to top.
+  // Side walls: one outward quad per footprint edge, split at the top face's
+  // intermediate boundary vertices (the subdivided water slab only) so the
+  // wall's top edge coincides with the displaced top-face boundary. Bottom
+  // vertices stay fixed at -halfH.
+  const wallSplits = subdivided ? topBoundaryVertices(footprint, tileSize) : null;
   for (let i = 0; i < footprint.length; i += 1) {
-    const p0 = footprint[i];
-    const p1 = footprint[(i + 1) % footprint.length];
-    const ax = p0[0];
-    const az = -p0[1];
-    const bx = p1[0];
-    const bz = -p1[1];
-    // Triangle 1: (p0-bottom, p1-bottom, p1-top) — normal outward along the edge.
-    positions.push(ax, -halfH, az, bx, -halfH, bz, bx, halfH, bz);
-    // Triangle 2: (p0-bottom, p1-top, p0-top).
-    positions.push(ax, -halfH, az, bx, halfH, bz, ax, halfH, az);
+    const e0 = footprint[i];
+    const e1 = footprint[(i + 1) % footprint.length];
+    const along = wallSplits ? wallSplits[i] : [e0, e1];
+    for (let s = 0; s < along.length - 1; s += 1) {
+      const p0 = along[s];
+      const p1 = along[s + 1];
+      const ax = p0[0];
+      const az = -p0[1];
+      const bx = p1[0];
+      const bz = -p1[1];
+      // Triangle 1: (p0-bottom, p1-bottom, p1-top) — normal outward along the edge.
+      positions.push(ax, -halfH, az, bx, -halfH, bz, bx, halfH, bz);
+      // Triangle 2: (p0-bottom, p1-top, p0-top).
+      positions.push(ax, -halfH, az, bx, halfH, bz, ax, halfH, az);
+    }
   }
 
   const geometry = new BufferGeometry();

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { getWaterVariantSlabs, type WaterVariantSlabs } from "./tileVariantSlab";
+import {
+  getWaterVariantSlabs,
+  topBoundaryVertices,
+  waterFootprint,
+  type WaterVariantSlabs,
+} from "./tileVariantSlab";
 import type { WaterVariant } from "../core/types/game";
 
 const TILE_SIZE = 1;
@@ -124,5 +129,48 @@ describe("getWaterVariantSlabs", () => {
     const b = getWaterVariantSlabs("half-s", TILE_SIZE, HALF_H);
     expect(a.water).toBe(b.water);
     expect(a.land).toBe(b.land);
+  });
+
+  it("splits the water slab side walls at the top face's boundary vertices", () => {
+    // The water slab's side walls must share their top edge with the
+    // subdivided top face (the shader displaces both), so for every variant
+    // each footprint edge gets one wall segment per boundary vertex span:
+    // sum over edges of (vertices - 1) == total boundary vertices - edges.
+    for (const variant of PARTIALS) {
+      const slabs = getWaterVariantSlabs(variant, TILE_SIZE, HALF_H);
+      const positions =
+        slabs.water!.attributes["position"].array as Float32Array;
+
+      // A wall triangle spans both -halfH and +halfH (its two per-segment
+      // triangles are (2 bottom, 1 top) and (1 bottom, 2 top)); the top face
+      // sits entirely at +halfH and the bottom fan entirely at -halfH, so a
+      // triangle touching both levels is a wall segment triangle.
+      let wallTriangles = 0;
+      for (let i = 0; i < positions.length; i += 9) {
+        const ys = [positions[i + 1], positions[i + 4], positions[i + 7]];
+        const bottom = ys.filter((y) => Math.abs(y + HALF_H) < 1e-4).length;
+        const top = ys.filter((y) => Math.abs(y - HALF_H) < 1e-4).length;
+        if (bottom + top === 3 && bottom >= 1 && top >= 1) wallTriangles += 1;
+      }
+
+      const footprint = waterFootprint(variant, A);
+      const splits = topBoundaryVertices(footprint, TILE_SIZE);
+      const expectedSegments = splits.reduce(
+        (sum, edge) => sum + (edge.length - 1),
+        0
+      );
+      expect(wallTriangles, `wall segments for ${variant}`).toBe(
+        expectedSegments * 2
+      );
+
+      // And the split points must land on the footprint edge (on the grid
+      // lines within the edge), so the wall's top edge follows the boundary.
+      for (const edge of splits) {
+        for (const p of edge) {
+          expect(Math.abs(p[0])).toBeLessThanOrEqual(A + 1e-6);
+          expect(Math.abs(p[1])).toBeLessThanOrEqual(A + 1e-6);
+        }
+      }
+    }
   });
 });

@@ -397,6 +397,23 @@ export const DEFAULT_WATER_BODY_WIDTH = 1;
 export const DEFAULT_WATER_BODY_DEPTH = 1;
 export const DEFAULT_WATER_BODY_HEIGHT = 0.03;
 
+/**
+ * Footprint of a water pool within its grid tile. `full` (default) covers the
+ * whole tile; the other eight are partial footprints — four edge halves and
+ * four corners — built from one edge polygon and one corner polygon rotated
+ * clockwise, so any partial water still counts the whole tile as water.
+ */
+export type WaterVariant =
+  | "full"
+  | "half-n"
+  | "half-e"
+  | "half-s"
+  | "half-w"
+  | "corner-nw"
+  | "corner-ne"
+  | "corner-se"
+  | "corner-sw";
+
 /** Water pool in level JSON (grid layout; optional footprint — defaults applied in-game). */
 export type WaterBodyConfig = {
   id: number;
@@ -404,6 +421,7 @@ export type WaterBodyConfig = {
   gridZ: number;
   shape: "box" | "cylinder";
   color: string;
+  variant?: WaterVariant;
   width?: number;
   depth?: number;
 };
@@ -415,6 +433,7 @@ export type WaterBody = {
   gridZ: number;
   shape: "box" | "cylinder";
   color: string;
+  variant: WaterVariant;
   width: number;
   depth: number;
   height: number;

@@ -7,7 +7,13 @@ import type {
   LevelEditorTool,
   LevelEditorValidationIssue,
 } from "../types/editor";
-import type { CanyonConfig, EnemyType, PathWaypoint, WaveConfig } from "../types/game";
+import type {
+  CanyonConfig,
+  EnemyType,
+  PathWaypoint,
+  WaveConfig,
+  WaterVariant,
+} from "../types/game";
 import type { TileData } from "../types/utils";
 import {
   createTileBlockage,
@@ -50,6 +56,8 @@ type LevelEditorStoreState = {
   selectedPathIndex: number;
   validationIssues: LevelEditorValidationIssue[];
   hasUnsavedChanges: boolean;
+  /** The water footprint painted by the water tool; `R` rotates it clockwise. */
+  waterVariant: WaterVariant;
 };
 
 type LevelEditorStoreActions = {
@@ -92,6 +100,8 @@ type LevelEditorStoreActions = {
   removeWaveEnemyGroup: (waveIndex: number, enemyGroupIndex: number) => void;
   validateDraftLevel: (tileSize: number) => boolean;
   clearValidationIssues: () => void;
+  setWaterVariant: (variant: WaterVariant) => void;
+  rotateWaterVariant: () => void;
 };
 
 type LevelEditorStore = LevelEditorStoreState & LevelEditorStoreActions;
@@ -104,6 +114,7 @@ const DEFAULT_STATE: LevelEditorStoreState = {
   selectedPathIndex: 0,
   validationIssues: [],
   hasUnsavedChanges: false,
+  waterVariant: "full",
 };
 
 const getNextBuildingId = (level: LevelConfigData) => {
@@ -222,14 +233,28 @@ const createBuildingDefaults = (
 const createWaterDefaults = (
   gridX: number,
   gridZ: number,
-  level: LevelConfigData
+  level: LevelConfigData,
+  variant: WaterVariant
 ) => ({
   id: getNextWaterId(level),
   gridX,
   gridZ,
   shape: "box" as const,
   color: getCssColorValue("scene-water"),
+  variant,
 });
+
+/** Clockwise cycle over the eight partial water footprints (the palette grid). */
+const WATER_VARIANT_ROTATION: Partial<Record<WaterVariant, WaterVariant>> = {
+  "half-n": "half-e",
+  "half-e": "half-s",
+  "half-s": "half-w",
+  "half-w": "half-n",
+  "corner-nw": "corner-ne",
+  "corner-ne": "corner-se",
+  "corner-se": "corner-sw",
+  "corner-sw": "corner-nw",
+};
 
 // The draft's static blockage (paths, water, canyons, buildings), cached per
 // draft object and per tileSize/pathWidth: each edit produces a fresh
@@ -289,6 +314,7 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
       hoveredTile: null,
       validationIssues: [],
       hasUnsavedChanges: false,
+      waterVariant: "full",
     });
   },
 
@@ -824,7 +850,12 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
             )
           : [
               ...draftLevel.waters,
-              createWaterDefaults(tile.gridX, tile.gridZ, draftLevel),
+              createWaterDefaults(
+                tile.gridX,
+                tile.gridZ,
+                draftLevel,
+                get().waterVariant
+              ),
             ];
 
         return {
@@ -1148,6 +1179,18 @@ export const useLevelEditorStore = create<LevelEditorStore>((set, get) => ({
 
   clearValidationIssues: () => {
     set({ validationIssues: [] });
+  },
+
+  setWaterVariant: (variant) => {
+    set({ waterVariant: variant });
+  },
+
+  rotateWaterVariant: () => {
+    set((state) => {
+      const next = WATER_VARIANT_ROTATION[state.waterVariant];
+      if (!next) return state;
+      return { waterVariant: next };
+    });
   },
 }));
 

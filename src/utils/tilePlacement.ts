@@ -2,6 +2,7 @@ import type {
   Building,
   PathWaypoint,
   Tower,
+  WaterVariant,
 } from "../core/types/game";
 import {
   computeTileOccupancyMasks,
@@ -40,7 +41,7 @@ type TileBlockageInputs = {
   pathWaypoints: PathWaypoint[][];
   pathWidth: number;
   buildings: Building[];
-  waters: { gridX: number; gridZ: number }[];
+  waters: { gridX: number; gridZ: number; variant?: WaterVariant }[];
   canyons: { gridX: number; gridZ: number }[];
 };
 
@@ -48,7 +49,7 @@ export const createTileBlockage = (
   inputs: TileBlockageInputs
 ): TileBlockage => {
   const { gridSize, buildings, ...masksInputs } = inputs;
-  const { water, canyon, onPath } = computeTileOccupancyMasks({
+  const { water, waterVariant, canyon, onPath } = computeTileOccupancyMasks({
     ...masksInputs,
     gridSize,
   });
@@ -59,7 +60,7 @@ export const createTileBlockage = (
     if (idx >= 0 && idx < building.length) building[idx] = 1;
   }
 
-  return { gridSize, water, canyon, onPath, building };
+  return { gridSize, water, waterVariant, canyon, onPath, building };
 };
 
 type GetTilePlacementStateParams = {

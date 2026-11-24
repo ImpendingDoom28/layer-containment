@@ -9,12 +9,19 @@ import {
 } from "react";
 
 import type { ThreeEvent } from "@react-three/fiber";
-import { BoxGeometry, Mesh, MeshStandardMaterial, Vector3 } from "three";
+import {
+  BoxGeometry,
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+  Vector3,
+} from "three";
 
 import {
   flatFieldToSphereTilePose,
   getPlanetRadius,
 } from "../../utils/planetSurfaceMapping";
+import { getWaterVariantSlabs } from "../../utils/tileVariantSlab";
 
 import { getCssColorValue } from "../ui/lib/cssUtils";
 import {
@@ -33,6 +40,7 @@ import {
 } from "../../core/stores/useLevelEditorStore";
 import { hashGrid2D } from "../../core/tileGridHash";
 import { tileToWorldCoordinate } from "../../utils/levelEditor";
+import { WATER_VARIANTS } from "../../utils/tileOccupancy";
 import { createPlanetTileMaterial } from "../../utils/planetTileMaterial";
 import {
   createWaterMaterial,
@@ -111,11 +119,39 @@ const getSharedPathLandMaterial = () =>
     roughness: 0.88,
   });
 
+// The dry half of a partial water tile is the same seeded regolith as a land
+// tile: one material per (tile, slab height), disposed with the tile.
+const landRegolithMaterialCache = new Map<string, MeshStandardMaterial>();
+const getLandRegolithMaterial = (
+  gridX: number,
+  gridZ: number,
+  pathYOffset: number
+): MeshStandardMaterial => {
+  const key = `${gridX}-${gridZ}|${pathYOffset}`;
+  const entry = landRegolithMaterialCache.get(key);
+  if (entry) return entry;
+  const material = createPlanetTileMaterial({
+    baseColor: getCssColorValue("scene-gray-700"),
+    emissive: getCssColorValue("scene-black"),
+    emissiveIntensity: 0,
+    metalness: 0.05,
+    roughness: 0.88,
+    tileSeed: hashGrid2D(gridX, gridZ),
+    tileHalfHeight: pathYOffset / 2,
+    regolithHighlight: getCssColorValue("scene-regolith-highlight"),
+    regolithShadow: getCssColorValue("scene-regolith-shadow"),
+  });
+  landRegolithMaterialCache.set(key, material);
+  return material;
+};
+
 type TileProps = {
   gridX: number;
   gridZ: number;
   isWater: boolean;
   isOnPath: boolean;
+  /** The water tile's footprint code (`WATER_VARIANTS` index); 0 = full. */
+  waterVariantCode?: number;
   canPlace: boolean;
   onClick: () => void;
   /** The board size; defaults to the published level. The editor passes its
@@ -135,6 +171,7 @@ export const Tile: FC<TileProps> = memo(
     gridZ,
     isWater,
     isOnPath,
+    waterVariantCode = 0,
     canPlace,
     onClick,
     gridSize: gridSizeProp,
@@ -211,10 +248,44 @@ export const Tile: FC<TileProps> = memo(
       [isAnimatedWater, planetPose, WATER_BED_OFFSET]
     );
 
+    // A partial water tile (a non-full `variant`) is drawn as two slabs that
+    // partition the tile: a recessed animated water slab over the wet half,
+    // plus a shore-level regolith land slab over the dry half, so the water
+    // meets the ground at a crisp shore. `full` (the default) keeps the single
+    // full-tile box above.
+    const variantSlabs = useMemo(
+      () =>
+        isWater
+          ? getWaterVariantSlabs(
+              WATER_VARIANTS[waterVariantCode] ?? "full",
+              tileSize,
+              pathYOffset / 2
+            )
+          : null,
+      [isWater, waterVariantCode, tileSize, pathYOffset]
+    );
+    const isPartialWater = variantSlabs != null && variantSlabs.water != null;
+
+    const landSlab = useMemo(() => {
+      if (!isPartialWater) return null;
+      if (placementHoverKey === "canPlace") {
+        return { material: getLandHoverMaterial("canPlace"), shared: true };
+      }
+      if (placementHoverKey === "cannotPlace") {
+        return { material: getLandHoverMaterial("cannotPlace"), shared: true };
+      }
+      return {
+        material: getLandRegolithMaterial(gridX, gridZ, pathYOffset),
+        shared: false,
+      };
+    }, [isPartialWater, placementHoverKey, gridX, gridZ, pathYOffset]);
+
+    const groupRef = useRef<Group>(null);
     const meshRef = useRef<Mesh>(null);
     useLayoutEffect(() => {
-      if (meshRef.current) freezeSubtree(meshRef.current);
-    }, [waterMeshPosition]);
+      const root = isPartialWater ? groupRef.current : meshRef.current;
+      if (root) freezeSubtree(root);
+    }, [isPartialWater, waterMeshPosition]);
 
     // The hover tints and the path-land body are shared instances (they
     // outlive the tile, so they must not be disposed here); only the per-tile
@@ -289,6 +360,15 @@ export const Tile: FC<TileProps> = memo(
       [material, shared]
     );
 
+    // The dry half's per-tile regolith is tile-owned; the hover tints are
+    // shared and must not be disposed.
+    useEffect(
+      () => () => {
+        if (landSlab && !landSlab.shared) landSlab.material.dispose();
+      },
+      [landSlab]
+    );
+
     const onPointerOver = useCallback(
       (e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
@@ -320,6 +400,44 @@ export const Tile: FC<TileProps> = memo(
       },
       [onClick]
     );
+
+    // A partial water tile: the recessed wet half plus the shore-level dry
+    // half, grouped so one pointer handler covers the whole tile.
+    if (
+      isPartialWater &&
+      variantSlabs &&
+      variantSlabs.water != null &&
+      variantSlabs.land != null &&
+      landSlab
+    ) {
+      return (
+        <group
+          ref={groupRef}
+          position={planetPose.position}
+          quaternion={planetPose.quaternion}
+        >
+          <mesh
+            position={[0, -WATER_BED_OFFSET, 0]}
+            geometry={variantSlabs.water}
+            material={material}
+            castShadow
+            receiveShadow
+            onClick={onInnerClick}
+            onPointerOver={onPointerOver}
+            onPointerOut={onPointerOut}
+          />
+          <mesh
+            geometry={variantSlabs.land}
+            material={landSlab.material}
+            castShadow
+            receiveShadow
+            onClick={onInnerClick}
+            onPointerOver={onPointerOver}
+            onPointerOut={onPointerOut}
+          />
+        </group>
+      );
+    }
 
     return (
       <mesh

@@ -8,6 +8,7 @@ import { LevelEditorSelectionHeader } from "./LevelEditorSelectionHeader";
 import { LevelEditorLevelSection } from "./LevelEditorLevelSection";
 import { LevelEditorPathSection } from "./LevelEditorPathSection";
 import { LevelEditorBuildingSection } from "./LevelEditorBuildingSection";
+import { LevelEditorWaterSection } from "./LevelEditorWaterSection";
 import { LevelEditorWaveSection } from "./LevelEditorWaveSection";
 import { LevelEditorPublishSection } from "./LevelEditorPublishSection";
 
@@ -33,10 +34,12 @@ export const LevelEditorInspector = () => {
     selected?.type === "waypoint";
 
   const showBuilding = selected?.type === "building";
+  const showWater = activeMode === "water";
 
   const defaultOpen = ["level", "waves", "publish"];
   if (showPath) defaultOpen.push("path");
   if (showBuilding) defaultOpen.push("building");
+  if (showWater) defaultOpen.push("water");
 
   return (
     <HUDWrapper className="pointer-events-none">
@@ -54,6 +57,7 @@ export const LevelEditorInspector = () => {
                 <LevelEditorLevelSection />
                 {showPath ? <LevelEditorPathSection /> : null}
                 {showBuilding ? <LevelEditorBuildingSection /> : null}
+                {showWater ? <LevelEditorWaterSection /> : null}
                 <LevelEditorWaveSection />
                 <LevelEditorPublishSection />
               </UIAccordion>

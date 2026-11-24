@@ -57,4 +57,10 @@ test("opens the water section when water mode starts and honors closed sections"
   expect(eastBefore).toBe("false");
   expect(northAfter).toBe("false");
   expect(eastAfter).toBe("true");
+
+  // 5. A selected path must not block the water section: activate water while
+  //    a path is still selected and the water section opens anyway.
+  await page.getByRole("button", { name: "Path" }).click();
+  await page.locator('button[title="Water"]').click();
+  await expect(page.getByText("Water footprint")).toBeVisible();
 });

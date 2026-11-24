@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { UIAccordion } from "../../ui/UIAccordion";
 import { UICard, UICardContent } from "../../ui/UICard";
@@ -39,26 +39,31 @@ export const LevelEditorInspector = () => {
   const showWater = activeMode === "water";
 
   // Accordion open state. defaultValue is read only on mount, and the
-  // inspector stays mounted across tool changes, so the state is controlled
-  // and the active mode's section is (re)opened whenever the mode or
-  // selection changes; sections the user closed stay closed until then.
+  // inspector stays mounted across tool changes, so the state is controlled:
+  // a section opens the first time its visibility flag turns on (the water
+  // tool, a path/waypoint, or a building is selected) and a manual close is
+  // preserved while the flag stays on.
   const defaultOpen = ["level", "waves", "publish"];
   if (showPath) defaultOpen.push("path");
   if (showBuilding) defaultOpen.push("building");
   if (showWater) defaultOpen.push("water");
 
   const [open, setOpen] = useState<string[]>(defaultOpen);
-  const modeSection = showPath
-    ? "path"
-    : showBuilding
-      ? "building"
-      : showWater
-        ? "water"
-        : null;
+  // Each section opens when its visibility flag goes false -> true (a path is
+  // selected, a building is selected, or the water tool is activated) — tracked
+  // per section, so activating water still opens it even while a path or
+  // waypoint stays selected. A section the user closed while its flag stays
+  // true is not reopened; it reopens on the next false -> true transition.
+  const prevShow = useRef({ path: showPath, building: showBuilding, water: showWater });
   useEffect(() => {
-    if (!modeSection) return;
-    setOpen((prev) => (prev.includes(modeSection) ? prev : [...prev, modeSection]));
-  }, [modeSection]);
+    const flags = { path: showPath, building: showBuilding, water: showWater };
+    const toOpen = (Object.keys(flags) as ("path" | "building" | "water")[]).filter(
+      (section) => !prevShow.current[section] && flags[section]
+    );
+    prevShow.current = flags;
+    if (toOpen.length === 0) return;
+    setOpen((prev) => [...prev, ...toOpen.filter((section) => !prev.includes(section))]);
+  }, [showPath, showBuilding, showWater]);
 
   return (
     <HUDWrapper className="pointer-events-none">

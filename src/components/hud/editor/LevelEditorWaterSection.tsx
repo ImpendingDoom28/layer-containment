@@ -99,11 +99,25 @@ export const LevelEditorWaterSection = () => {
   );
 
   // R rotates the selected footprint clockwise. The section only mounts in
-  // water mode, so no further guard is needed; ignore repeats and other
-  // keys.
+  // water mode, so no further mode guard is needed; ignore repeats, other
+  // keys, events from editable targets (typing "r" must not rotate), and
+  // modifier combinations (Ctrl/Cmd+R reloads, Shift+R etc. are other
+  // shortcuts).
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.code !== "KeyR" || event.repeat) return;
+      if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey)
+        return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.isContentEditable ||
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT")
+      ) {
+        return;
+      }
       event.preventDefault();
       rotateWaterVariant();
     };

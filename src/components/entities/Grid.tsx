@@ -3,6 +3,7 @@ import { FC, memo, useCallback } from "react";
 import type { TileOccupancyMasks } from "../../utils/tileOccupancy";
 import type { CanyonWorldBBox } from "../../utils/canyonBridges";
 import { Tile } from "./Tile";
+import { WaterSurface } from "./WaterSurface";
 import { CanyonTile } from "./CanyonTile";
 import {
   gameStatusSelector,
@@ -86,14 +87,28 @@ export const Grid: FC<GridProps> = memo(({ placeTower, occupancy, canyonBBox }) 
             );
           }
 
+          if (occupancy.water[index] === 1) {
+            // Water cells render the animated surface (full or a partial
+            // variant) through `WaterSurface`; everything else is land or
+            // path through `Tile`.
+            return (
+              <WaterSurface
+                key={`${gridX}-${gridZ}`}
+                gridX={gridX}
+                gridZ={gridZ}
+                waterVariantCode={occupancy.waterVariant[index]}
+                canPlace={canPlace}
+                onClick={() => onTileClick(gridX, gridZ)}
+              />
+            );
+          }
+
           return (
             <Tile
               key={`${gridX}-${gridZ}`}
               gridX={gridX}
               gridZ={gridZ}
-              isWater={occupancy.water[index] === 1}
               isOnPath={occupancy.onPath[index] === 1}
-              waterVariantCode={occupancy.waterVariant[index]}
               canPlace={canPlace}
               onClick={() => onTileClick(gridX, gridZ)}
             />

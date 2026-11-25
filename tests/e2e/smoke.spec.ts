@@ -1,7 +1,6 @@
-import { expect, test } from "@playwright/test";
-
 import { onOpenGame, onOpenMainMenu } from "./fixtures/navigation";
 import { onPlaceMultipleBasicTowers } from "./fixtures/towerPlacement";
+import { expect, test } from "./test";
 
 const onWaitForMainMenuReady = async (
   page: import("@playwright/test").Page

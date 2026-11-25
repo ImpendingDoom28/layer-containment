@@ -1,6 +1,5 @@
-import { expect, test } from "@playwright/test";
-
 import { onOpenEditor } from "./fixtures/navigation";
+import { expect, test } from "./test";
 
 test("loads the level editor route", async ({ page }) => {
   await onOpenEditor(page);

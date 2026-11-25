@@ -1,6 +1,5 @@
-import { expect, test } from "@playwright/test";
-
 import { onOpenGame } from "./fixtures/navigation";
+import { expect, test } from "./test";
 
 test("cannot pause while waiting for the next wave, but can pause mid-wave", async ({
   page,

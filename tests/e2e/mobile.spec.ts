@@ -1,6 +1,7 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { type Locator, type Page } from "@playwright/test";
 
 import { onOpenGame, onOpenMainMenu } from "./fixtures/navigation";
+import { expect, test } from "./test";
 
 // Mobile layout checks at a typical phone portrait viewport. The HUD is
 // adaptive below the 768px `md` breakpoint, so every assertion here must hold

@@ -1,6 +1,4 @@
 import {
-  expect,
-  test,
   type BrowserContext,
   type Page,
   type Route,
@@ -8,6 +6,7 @@ import {
 
 import { PLAYABLE_LEVEL_IDS } from "../../src/constants/playableLevels";
 import { CONTROLS_INTRO_SEEN_KEY } from "./fixtures/navigation";
+import { expect, test } from "./test";
 
 // PWA: manifest + icon links in the shell, and service worker registration
 // in a production build. This suite runs against `vite preview` (see

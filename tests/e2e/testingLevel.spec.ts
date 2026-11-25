@@ -1,6 +1,5 @@
-import { expect, test } from "@playwright/test";
-
 import { onOpenMainMenu, onOpenTestingLevel } from "./fixtures/navigation";
+import { expect, test } from "./test";
 
 test("loads the testing level route", async ({ page }) => {
   await onOpenTestingLevel(page);

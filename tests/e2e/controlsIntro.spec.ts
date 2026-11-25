@@ -1,10 +1,9 @@
-import { expect, test } from "@playwright/test";
-
 import {
   CONTROLS_INTRO_SEEN_KEY,
   onOpenGame,
   onOpenGameOnFirstRun,
 } from "./fixtures/navigation";
+import { expect, test } from "./test";
 
 // The modal title is an h4 nested inside the Radix dialog title (an h2), so
 // target the text rather than the heading role, which would match both.

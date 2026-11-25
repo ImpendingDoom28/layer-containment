@@ -7,7 +7,23 @@ import type { Projectile } from "../types/game";
 
 export type SimulationFrame = {
   deltaSeconds: number;
+  /**
+   * The session's own simulation clock. Normally identical to the scene's
+   * (view) clock; under the e2e fast-forward (`SIM_SPEED` > 1) it advances
+   * faster than wall time so simulation-time-bound tests finish quickly.
+   */
   simulationTimeSeconds: number;
+  /**
+   * The scene's view (wall) clock, in seconds — for gates whose timestamps
+   * are stamped on the view clock rather than the simulation clock. The
+   * comet reveal's `revealedAt` (see `CometStrikeFX`) is the one such value:
+   * under fast-forward the simulation clock outruns it, so the wave-1
+   * "reveal has settled" gate must compare against the view clock or it
+   * would open while the comet is still in flight. Absent means the two
+   * clocks coincide (production), so callers fall back to
+   * `simulationTimeSeconds`.
+   */
+  viewTimeSeconds?: number;
   canResolveGameplay: boolean;
 };
 

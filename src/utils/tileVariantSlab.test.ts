@@ -124,6 +124,147 @@ describe("getWaterVariantSlabs", () => {
     }
   });
 
+  it("places water on the inner side of every partial tile", () => {
+    // Corrected 9-tile scheme: the water sits on the side facing the 3x3
+    // group's center — edge tiles are water on the inner half (cut at the
+    // tile midline) and corner tiles on the cut-off inner-corner triangle
+    // (right angle at the inner corner, hypotenuse through the midpoints of
+    // the two inner edges). Expected footprints in tile-local (u, v), CCW.
+    const expected: Record<Exclude<WaterVariant, "full">, [number, number][]> = {
+      "half-n": [
+        [-A, -A],
+        [A, -A],
+        [A, 0],
+        [-A, 0],
+      ],
+      "half-e": [
+        [-A, -A],
+        [0, -A],
+        [0, A],
+        [-A, A],
+      ],
+      "half-s": [
+        [-A, 0],
+        [A, 0],
+        [A, A],
+        [-A, A],
+      ],
+      "half-w": [
+        [0, -A],
+        [A, -A],
+        [A, A],
+        [0, A],
+      ],
+      "corner-nw": [
+        [A, -A],
+        [A, 0],
+        [0, -A],
+      ],
+      "corner-ne": [
+        [-A, -A],
+        [0, -A],
+        [-A, 0],
+      ],
+      "corner-se": [
+        [-A, A],
+        [-A, 0],
+        [0, A],
+      ],
+      "corner-sw": [
+        [A, A],
+        [0, A],
+        [A, 0],
+      ],
+    };
+    const normalize = (pts: [number, number][]) =>
+      [...pts]
+        .map((p) => [Math.round(p[0] * 1e6) / 1e6, Math.round(p[1] * 1e6) / 1e6])
+        .sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+    for (const variant of PARTIALS) {
+      expect(
+        normalize(waterFootprint(variant, A)),
+        `water footprint of ${variant}`
+      ).toEqual(normalize(expected[variant]));
+    }
+  });
+
+  it("forms one connected octagon across the 3x3 showcase", () => {
+    // Lay the showcase out at its level_testing positions (tile size 1) and
+    // check the union of all water regions is the designed octagon: every
+    // octagon corner lies on the union's boundary and the dry outer corners
+    // stay dry.
+    const layout: Record<string, [number, number]> = {
+      "corner-nw": [-1, 1],
+      "half-n": [0, 1],
+      "corner-ne": [1, 1],
+      "half-w": [-1, 0],
+      "half-e": [1, 0],
+      "corner-sw": [-1, -1],
+      "half-s": [0, -1],
+      "corner-se": [1, -1],
+    };
+    const inPoly = (p: [number, number], poly: [number, number][]) => {
+      let inside = false;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const [xi, yi] = poly[i];
+        const [xj, yj] = poly[j];
+        if (
+          yi > p[1] !== yj > p[1] &&
+          p[0] < ((xj - xi) * (p[1] - yi)) / (yj - yi) + xi
+        ) {
+          inside = !inside;
+        }
+      }
+      return inside;
+    };
+    const waters = (Object.keys(layout) as Exclude<WaterVariant, "full">[]).map(
+      (variant) => {
+        const [cx, cy] = layout[variant];
+        return waterFootprint(variant, A).map(
+          ([u, v]) => [u + cx, v + cy] as [number, number]
+        );
+      }
+    );
+    const inUnion = (p: [number, number]) =>
+      waters.some((w: [number, number][]) => inPoly(p, w));
+    // A point on the union's boundary can sit exactly on a footprint edge,
+    // so also accept a point nudged a hair toward the center.
+    const inOrOnUnion = (p: [number, number]) =>
+      inUnion(p) || inUnion([p[0] * 0.98, p[1] * 0.98]);
+
+    // The octagon's 8 corners (axis-parallel sides at the edge midlines,
+    // diagonals through the corner-tile edge midpoints).
+    const octagonCorners: [number, number][] = [
+      [-0.5, 1],
+      [0.5, 1],
+      [1, 0.5],
+      [1, -0.5],
+      [0.5, -1],
+      [-0.5, -1],
+      [-1, -0.5],
+      [-1, 0.5],
+    ];
+    for (const p of octagonCorners) {
+      expect(inOrOnUnion(p), `octagon corner ${p}`).toBe(true);
+    }
+    // A point inside the union (center of the north edge's water half).
+    expect(inUnion([0, 0.75])).toBe(true);
+    // The dry outer corners and the outer halves of the edge tiles.
+    const dryPoints: [number, number][] = [
+      [-1.25, 1.25],
+      [1.25, 1.25],
+      [1.25, -1.25],
+      [-1.25, -1.25],
+      [-1.25, 0],
+      [1.25, 0],
+      [0, 1.25],
+      [0, -1.25],
+    ];
+    for (const p of dryPoints) {
+      expect(inUnion(p), `dry point ${p}`).toBe(false);
+    }
+  });
+
   it("caches geometries per (variant, size)", () => {
     const a = getWaterVariantSlabs("half-s", TILE_SIZE, HALF_H);
     const b = getWaterVariantSlabs("half-s", TILE_SIZE, HALF_H);

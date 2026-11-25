@@ -33,47 +33,55 @@ type PartialVariant = Exclude<WaterVariant, "full">;
 // 8x8 subdivision of the water slab's top face (matches the full-tile box).
 const GRID_N = 8;
 
-// Water footprint (the wet half) for each partial variant, CCW in (u, v).
+// Water footprint for each partial variant, CCW in (u, v). The water always
+// sits on the side facing the center of a 3x3 group: edge variants are
+// water on the inner half (cut at the tile midline) and corner variants on
+// the cut-off inner-corner triangle (right angle at the inner corner,
+// hypotenuse through the midpoints of the two inner edges). Laid out as a
+// 3x3 showcase (center = full), the eight water regions join into one
+// connected octagon.
 export const waterFootprint = (variant: PartialVariant, a: number): Vec2[] => {
   switch (variant) {
     case "half-n":
-      return [[-a, 0], [a, 0], [a, a], [-a, a]];
-    case "half-s":
       return [[-a, -a], [a, -a], [a, 0], [-a, 0]];
+    case "half-s":
+      return [[-a, 0], [a, 0], [a, a], [-a, a]];
     case "half-e":
-      return [[0, -a], [a, -a], [a, a], [0, a]];
-    case "half-w":
       return [[-a, -a], [0, -a], [0, a], [-a, a]];
+    case "half-w":
+      return [[0, -a], [a, -a], [a, a], [0, a]];
     case "corner-nw":
-      return [[-a, a], [-a, -a], [a, a]];
+      return [[a, -a], [a, 0], [0, -a]];
     case "corner-ne":
-      return [[a, a], [-a, a], [a, -a]];
+      return [[-a, -a], [0, -a], [-a, 0]];
     case "corner-se":
-      return [[a, -a], [a, a], [-a, -a]];
+      return [[-a, a], [-a, 0], [0, a]];
     case "corner-sw":
-      return [[-a, -a], [a, -a], [-a, a]];
+      return [[a, a], [0, a], [a, 0]];
   }
 };
 
-// Land footprint (the dry half, the complement of the water footprint), CCW.
+// Land footprint (the dry side, the complement of the water footprint), CCW.
+// The complement of a corner's inner triangle is a pentagon (the outer
+// triangle plus the two half-edge squares), not a triangle.
 const landFootprint = (variant: PartialVariant, a: number): Vec2[] => {
   switch (variant) {
     case "half-n":
-      return [[-a, -a], [a, -a], [a, 0], [-a, 0]];
-    case "half-s":
       return [[-a, 0], [a, 0], [a, a], [-a, a]];
+    case "half-s":
+      return [[-a, -a], [a, -a], [a, 0], [-a, 0]];
     case "half-e":
-      return [[-a, -a], [0, -a], [0, a], [-a, a]];
-    case "half-w":
       return [[0, -a], [a, -a], [a, a], [0, a]];
+    case "half-w":
+      return [[-a, -a], [0, -a], [0, a], [-a, a]];
     case "corner-nw":
-      return [[a, -a], [a, a], [-a, -a]];
+      return [[-a, -a], [0, -a], [a, 0], [a, a], [-a, a]];
     case "corner-ne":
-      return [[-a, -a], [a, -a], [-a, a]];
+      return [[-a, a], [-a, 0], [0, -a], [a, -a], [a, a]];
     case "corner-se":
-      return [[-a, a], [-a, -a], [a, a]];
+      return [[a, a], [0, a], [-a, 0], [-a, -a], [a, -a]];
     case "corner-sw":
-      return [[a, a], [-a, a], [a, -a]];
+      return [[-a, a], [-a, -a], [a, -a], [a, 0], [0, a]];
   }
 };
 

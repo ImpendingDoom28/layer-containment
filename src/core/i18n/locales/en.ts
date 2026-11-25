@@ -51,6 +51,7 @@ export const en = {
     settings: "Settings",
     levelCreator: "Level Creator",
     testingLevel: "Testing Level",
+    stressLevel: "Stress Test",
     systemsOnline: "Systems Online",
     tagline: "you’re not winning a war; — you’re holding a boundary.",
     viewSource: "View source on GitHub",
@@ -416,6 +417,12 @@ export const en = {
     title: "3D Asset Showcase",
     description:
       "Every enemy, tower and projectile, plus buildings, water, the path, the spawn portal and the end building — and every enemy upgrade at all its tiers (armored, swift, slow-resistance, regenerating, missing-out) plus the reinforcements spawn portals — laid out one tile apart so the whole roster is visible at once. Drag to orbit, scroll to zoom.",
+    backToMenu: "Back to menu",
+  },
+  stressLevel: {
+    title: "Performance Stress Test",
+    description:
+      "A 64x64 board with 150 towers, 500 animated water tiles and 20 waves of ~4,260 enemies, run unattended from a pinned end-of-map camera. The overlay shows live FPS, frame time, draw calls and triangles; the run restarts itself forever.",
     backToMenu: "Back to menu",
   },
   rewardText: "+${{amount}}",

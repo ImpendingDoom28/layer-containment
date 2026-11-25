@@ -1,13 +1,13 @@
 import { useActions } from "koota/react";
 import { useEffect, useRef } from "react";
 
-import { enemyActions } from "../../../src/core/ecs/actions/enemyActions";
-import { useGameStore } from "../../../src/core/stores/useGameStore";
-import { useLevelStore } from "../../../src/core/stores/useLevelStore";
-import { useUpgradeStore } from "../../../src/core/stores/useUpgradeStore";
-import { world } from "../../../src/core/ecs/world";
-import { isBase } from "../../../src/core/ecs/traits/base";
-import { HealthInfo } from "../../../src/core/ecs/traits/health";
+import { enemyActions } from "../../../../core/ecs/actions/enemyActions";
+import { useGameStore } from "../../../../core/stores/useGameStore";
+import { useLevelStore } from "../../../../core/stores/useLevelStore";
+import { useUpgradeStore } from "../../../../core/stores/useUpgradeStore";
+import { world } from "../../../../core/ecs/world";
+import { isBase } from "../../../../core/ecs/traits/base";
+import { HealthInfo } from "../../../../core/ecs/traits/health";
 import type { FrameStats } from "../types/frameStats";
 import { METRICS_WINDOW_SECONDS } from "../constants/metrics";
 

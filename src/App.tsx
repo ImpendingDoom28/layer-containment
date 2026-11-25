@@ -21,6 +21,12 @@ const TestingLevelPage = lazy(() =>
   }))
 );
 
+const StressLevelPage = lazy(() =>
+  import("./components/pages/StressLevelPage").then((mod) => ({
+    default: mod.StressLevelPage,
+  }))
+);
+
 const AppRoutes: FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -37,6 +43,7 @@ const AppRoutes: FC = () => {
               <GamePage
               onOpenLevelEditor={() => navigate("/editor")}
               onOpenTestingLevel={() => navigate("/testing-level")}
+              onOpenStressLevel={() => navigate("/stress")}
             />
             </EntityIdProvider>
           </WorldProvider>
@@ -78,6 +85,21 @@ const AppRoutes: FC = () => {
               </Suspense>
             </EntityIdProvider>
           </WorldProvider>
+        }
+      />
+      <Route
+        path="/stress"
+        element={
+          <Suspense
+            fallback={
+              <HUDLoading
+                className="fixed inset-0"
+                message={t("common.loading")}
+              />
+            }
+          >
+            <StressLevelPage onBackToMenu={() => navigate("/")} />
+          </Suspense>
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />

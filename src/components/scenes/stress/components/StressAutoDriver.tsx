@@ -1,6 +1,6 @@
 import { useFrame } from "@react-three/fiber";
-import { useGameStore } from "../../../src/core/stores/useGameStore";
-import { useUpgradeStore } from "../../../src/core/stores/useUpgradeStore";
+import { useGameStore } from "../../../../core/stores/useGameStore";
+import { useUpgradeStore } from "../../../../core/stores/useUpgradeStore";
 
 /**
  * Unattended driver: auto-picks upgrade gates, auto-starts waves, and

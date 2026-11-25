@@ -19,6 +19,7 @@ import { GithubButton } from "./GithubButton";
 import { useBlurBackdrop } from "../../../core/hooks/utils/useBlurBackdrop";
 import { useHeldClose } from "../../../core/hooks/useHeldClose";
 import { useUpdateStore } from "../../../core/pwa/useUpdateStore";
+import { isDebugFlag } from "../../../core/flags/isDebugFlag";
 
 type HUDMainMenuProps = MenuActions;
 
@@ -31,16 +32,18 @@ type MenuAction = Omit<UIButtonProps, "children" | "onClick"> & {
     | "menu.almanac"
     | "menu.settings"
     | "menu.levelCreator"
-    | "menu.testingLevel";
+    | "menu.testingLevel"
+    | "menu.stressLevel";
   onClick: () => void;
 };
 
-// The 3D asset showcase is a developer aid: the /testing-level route stays
-// reachable in every build, but its menu entry only appears in dev builds.
-const isDevBuild = import.meta.env.DEV;
+// The 3D asset showcase and the stress-test scene are developer aids: their
+// routes stay reachable in every build, but their menu entries only appear
+// with the `?m=debug` URL flag (read at boot, so it works in dev and in
+// production builds alike).
 
 export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
-  ({ onStartGameWithLevel, onOpenLevelEditor, onOpenTestingLevel }) => {
+  ({ onStartGameWithLevel, onOpenLevelEditor, onOpenTestingLevel, onOpenStressLevel }) => {
     const { t } = useTranslation();
     const { menuRef, blurDimensions, setBlurDimensions } = useBlurBackdrop();
 
@@ -102,11 +105,15 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
         onClick: onOpenLevelEditor,
         className: "mt-8",
       },
-      ...(isDevBuild
+      ...(isDebugFlag
         ? [
             {
               labelKey: "menu.testingLevel" as const,
               onClick: onOpenTestingLevel,
+            },
+            {
+              labelKey: "menu.stressLevel" as const,
+              onClick: onOpenStressLevel,
             },
           ]
         : []),
@@ -115,8 +122,8 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
     const title = GAME_NAME.split(" ");
 
     const isMenu = activeView === "menu";
-    const isUpdating = useUpdateStore((state) =>
-      state.status === "checking" || state.status === "updating"
+    const isUpdating = useUpdateStore(
+      (state) => state.status === "checking" || state.status === "updating"
     );
 
     const menuPart = (
@@ -167,7 +174,10 @@ export const HUDMainMenu: FC<HUDMainMenuProps> = memo(
                 data-testid="update-in-progress"
               >
                 <Icon name="Download" size={14} className="animate-pulse" />
-                <UITypography variant="verySmall" className="tracking-widest uppercase">
+                <UITypography
+                  variant="verySmall"
+                  className="tracking-widest uppercase"
+                >
                   {t("common.updating")}
                 </UITypography>
               </div>

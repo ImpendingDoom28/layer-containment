@@ -419,6 +419,71 @@
       "color": "#22d3ee",
       "width": 0.9,
       "depth": 0.9
+    },
+    {
+      "id": 3,
+      "gridX": 7,
+      "gridZ": 7,
+      "shape": "box",
+      "color": "#38bdf8",
+      "variant": "corner-nw"
+    },
+    {
+      "id": 4,
+      "gridX": 8,
+      "gridZ": 7,
+      "shape": "box",
+      "color": "#38bdf8",
+      "variant": "half-n"
+    },
+    {
+      "id": 5,
+      "gridX": 9,
+      "gridZ": 7,
+      "shape": "box",
+      "color": "#38bdf8",
+      "variant": "corner-ne"
+    },
+    {
+      "id": 6,
+      "gridX": 7,
+      "gridZ": 8,
+      "shape": "box",
+      "color": "#38bdf8",
+      "variant": "half-w"
+    },
+    { "id": 7, "gridX": 8, "gridZ": 8, "shape": "box", "color": "#38bdf8" },
+    {
+      "id": 8,
+      "gridX": 9,
+      "gridZ": 8,
+      "shape": "box",
+      "color": "#38bdf8",
+      "variant": "half-e"
+    },
+    {
+      "id": 9,
+      "gridX": 7,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#38bdf8",
+      "variant": "corner-sw"
+    },
+    {
+      "id": 10,
+      "gridX": 8,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#38bdf8",
+      "variant": "half-s"
+    },
+    {
+      "id": 11,
+      "gridX": 9,
+      "gridZ": 9,
+      "shape": "box",
+      "color": "#38bdf8",
+      "variant": "corner-se"
     }
   ],
   "projectiles": [

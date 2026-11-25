@@ -1,6 +1,6 @@
 import { FC, memo, useEffect, useMemo } from "react";
 
-import { BoxGeometry, MeshStandardMaterial } from "three";
+import { MeshStandardMaterial } from "three";
 
 import { getCssColorValue, type ColorToken } from "../../ui/lib/cssUtils";
 import type { LevelEditorTool } from "../../../core/types/editor";
@@ -10,11 +10,11 @@ import { sampleBasinFloorY } from "../../../utils/canyonBridges";
 import { tileToWorldCoordinate } from "../../../utils/levelEditor";
 import {
   flatFieldToSphereSurface,
-  flatFieldToSphereTilePose,
   getPlanetRadius,
 } from "../../../utils/planetSurfaceMapping";
 import { createPlanetTileMaterial } from "../../../utils/planetTileMaterial";
 import { hashGrid2D } from "../../../core/tileGridHash";
+import { getSlabGeometry, getSphereTilePose } from "../../../utils/sphereTile";
 import {
   createEditorTileHoveredSelector,
   useLevelEditorStore,
@@ -56,17 +56,6 @@ const getEditorTileMaterial = (color: string, isHovered: boolean) => {
   });
   editorTileMaterialCache.set(key, material);
   return material;
-};
-
-// Fixed-arg slab geometries, shared across all tiles of a grid size
-// (never disposed — the scene's lifetime).
-const slabGeometryCache = new Map<number, BoxGeometry>();
-const getSlabGeometry = (tileSize: number): BoxGeometry => {
-  const entry = slabGeometryCache.get(tileSize);
-  if (entry) return entry;
-  const geometry = new BoxGeometry(tileSize, LEVEL_EDITOR_TILE_HEIGHT, tileSize);
-  slabGeometryCache.set(tileSize, geometry);
-  return geometry;
 };
 
 type EditorSphereTileProps = {
@@ -111,19 +100,19 @@ export const EditorSphereTile: FC<EditorSphereTileProps> = memo(
     const worldX = tileToWorldCoordinate(gridX, gridSize, tileSize);
     const worldZ = tileToWorldCoordinate(gridZ, gridSize, tileSize);
 
-    // The group always sits on the surface (so a surface-level click over the
-    // canyon still hits the tile's invisible hitbox). The visible slab then
-    // drops to the basin floor for canyon tiles — the bowl bed the carved
-    // basin reveals — or sits on the surface for land tiles.
+    // The group always sits on the surface; the visible slab then drops to
+    // the basin floor for canyon tiles — the bowl bed the carved basin
+    // reveals — or stays on the surface for land tiles (local Y offset).
     const surfacePose = useMemo(
       () =>
-        flatFieldToSphereTilePose(
-          worldX,
-          worldZ,
-          radius,
+        getSphereTilePose(
+          gridX,
+          gridZ,
+          gridSize,
+          tileSize,
           LEVEL_EDITOR_TILE_HEIGHT / 2
         ),
-      [worldX, worldZ, radius]
+      [gridX, gridZ, gridSize, tileSize]
     );
 
     const slabLocalY = useMemo(() => {
@@ -209,7 +198,7 @@ export const EditorSphereTile: FC<EditorSphereTileProps> = memo(
             basin floor for canyon tiles (the bowl bed). */}
         <mesh
           position={[0, slabLocalY, 0]}
-          geometry={getSlabGeometry(tileSize)}
+          geometry={getSlabGeometry(tileSize, LEVEL_EDITOR_TILE_HEIGHT, false)}
           material={material}
           receiveShadow
         />

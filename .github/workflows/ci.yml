@@ -20,7 +20,14 @@ jobs:
   ci:
     name: Build, unit, e2e
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The e2e suite runs on software GL (SwiftShader) on CI: the runner has
+    # no GPU and headless Chromium's default hardware WebGL context never
+    # resolves, so every canvas-gated test stalled at "Preparing graphics...".
+    # SwiftShader serializes the suite (single worker; concurrent shader
+    # compiles stall each other) and takes ~28-30 min for 37 tests on
+    # top of install/build/unit, so 30-45 min is not enough headroom and the
+    # job kept getting cancelled by the timeout.
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -126,6 +126,7 @@ export const withRecalculatedWaterCoordinates = (
     gridZ: water.gridZ,
     shape: water.shape,
     color: water.color,
+    variant: water.variant ?? "full",
     width,
     depth,
     height,
@@ -143,6 +144,7 @@ export const clampWaterToGrid = (
   gridZ: Math.max(0, Math.min(gridSize - 1, water.gridZ)),
   shape: water.shape,
   color: water.color,
+  variant: water.variant,
   ...(water.width !== undefined ? { width: water.width } : {}),
   ...(water.depth !== undefined ? { depth: water.depth } : {}),
 });

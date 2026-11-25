@@ -15,6 +15,22 @@ test.use({ viewport: MOBILE_VIEWPORT });
 
 type Box = { x: number; y: number; width: number; height: number };
 
+// The menu panel fades in and slides from -translate-x-16 to 0 over a single
+// 1s `transition-all` when the body is clicked (hasInteracted). A box read
+// right after the click can catch the panel mid-slide (e.g. x = -48). Waiting
+// for the computed opacity to reach 1 guarantees that same transition has
+// finished, since opacity and transform share it. Compositor-driven and
+// immune to the dropped frames a software-GL (SwiftShader) host can cause.
+const waitForMenuSettled = async (page: Page) => {
+  const panel = page.locator("div.transition-all.duration-1000.ease-out");
+  await expect
+    .poll(
+      () => panel.evaluate((el) => getComputedStyle(el).opacity),
+      { timeout: 15_000, message: "main menu panel did not finish fading in" }
+    )
+    .toBe("1");
+};
+
 // The main menu panel animates in over 1s, so a box read right after the
 // element becomes visible can catch it mid-flight; wait for the position to
 // stop moving first.
@@ -44,6 +60,7 @@ const openGameOnMobile = async (page: Page) => {
 
 test("main menu fits the mobile viewport", async ({ page }) => {
   await onOpenMainMenu(page);
+  await waitForMenuSettled(page);
 
   const play = page.getByRole("button", { name: "Play" });
   await expect(play).toBeVisible();

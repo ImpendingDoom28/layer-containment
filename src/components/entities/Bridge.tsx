@@ -33,7 +33,8 @@ import { getCssColorValue } from "../ui/lib/cssUtils";
 
 type BridgeProps = {
   tiles: BridgeTile[];
-  /** Deck height above the planet surface (the path `yBase` over the canyon). */
+  /** The deck height above the planet surface for the span (the path `yBase`
+      over it; both terrain kinds are flush, see `BRIDGE_ELEVATION`). */
   deckHeight: number;
   /** Extra clearance from the deck to its top face (the path `pathYOffset`). */
   pathYOffset: number;
@@ -75,7 +76,6 @@ export const Bridge: FC<BridgeProps> = memo(
       [gridSize, tileSize]
     );
 
-    const deckTop = deckHeight + pathYOffset;
     const half = tileSize / 2;
     const railOffset = pathWidth / 2 + 0.03;
 
@@ -138,48 +138,55 @@ export const Bridge: FC<BridgeProps> = memo(
           radius
         );
 
+        // The deck is flush with the path for every span (canyon and water
+        // alike), so the framing height is the same for each tile.
+        const tileDeckTop = deckHeight + pathYOffset;
+
         if (renderDeck) {
-          deck.push(bake([tileSize, 0.08, pathWidth + 0.08], new Vector3(0, deckTop - 0.04, 0), quaternion, surface));
+          deck.push(bake([tileSize, 0.08, pathWidth + 0.08], new Vector3(0, tileDeckTop - 0.04, 0), quaternion, surface));
         }
 
         // Top rail on each side.
         rail.push(
-          bake([tileSize, 0.05, 0.05], new Vector3(0, deckTop + RAIL_HEIGHT, railOffset), quaternion, surface),
-          bake([tileSize, 0.05, 0.05], new Vector3(0, deckTop + RAIL_HEIGHT, -railOffset), quaternion, surface)
+          bake([tileSize, 0.05, 0.05], new Vector3(0, tileDeckTop + RAIL_HEIGHT, railOffset), quaternion, surface),
+          bake([tileSize, 0.05, 0.05], new Vector3(0, tileDeckTop + RAIL_HEIGHT, -railOffset), quaternion, surface)
         );
 
         // Support posts connecting the deck to the top rail, on each side.
         for (const px of [-half * 0.5, half * 0.5]) {
           for (const side of [railOffset, -railOffset]) {
             post.push(
-              bake([0.04, RAIL_HEIGHT, 0.04], new Vector3(px, deckTop + RAIL_HEIGHT / 2, side), quaternion, surface)
+              bake([0.04, RAIL_HEIGHT, 0.04], new Vector3(px, tileDeckTop + RAIL_HEIGHT / 2, side), quaternion, surface)
             );
           }
         }
 
-        // Diagonal support struts at the two ends of the span, leaning from the
-        // deck inboard down and outward onto the canyon's cliff wall, like a
-        // bridge resting on the rim (on flat terrain there is no wall, so they
-        // just drop to the surface).
+        // Support struts at the two ends of the span. They brace the deck
+        // with diagonal struts leaning down and outward onto the cliff wall
+        // (like a bridge resting on the rim); where there is no basin (a water
+        // span, or flat terrain) they just drop to the surface.
         if (tile.isRunStart || tile.isRunEnd) {
-          const sign = tile.isRunStart ? -1 : 1; // toward the cliff wall
+          const sign = tile.isRunStart ? -1 : 1; // toward the land/rim side
           for (const side of [1, -1]) {
-            const topLocal = new Vector3(
-              sign * half * 0.3,
-              deckTop - 0.02,
-              side * railOffset
-            );
-            const footLocal = new Vector3(
-              sign * (half + (canyonBBox ? STRUT_LEAN : 0)),
-              0,
-              side * railOffset
-            );
             const topWorld = surface
               .clone()
-              .add(topLocal.applyQuaternion(quaternion));
+              .add(
+                new Vector3(
+                  sign * half * 0.3,
+                  tileDeckTop - 0.02,
+                  side * railOffset
+                ).applyQuaternion(quaternion)
+              );
+
             const footWorld = surface
               .clone()
-              .add(footLocal.applyQuaternion(quaternion));
+              .add(
+                new Vector3(
+                  sign * (half + (canyonBBox ? STRUT_LEAN : 0)),
+                  0,
+                  side * railOffset
+                ).applyQuaternion(quaternion)
+              );
             if (canyonBBox) {
               // Follow the basin's bowl down: the foot lands on the bank
               // (it braces the wall, not the floor).
@@ -188,6 +195,7 @@ export const Bridge: FC<BridgeProps> = memo(
                 sampleBasinFloorY(footWorld.x, footWorld.z, canyonBBox, radius)
               );
             }
+
             const vec = new Vector3().subVectors(footWorld, topWorld);
             const length = Math.max(vec.length(), 0.2);
             const quat =
@@ -218,7 +226,7 @@ export const Bridge: FC<BridgeProps> = memo(
         post: merge(post),
         strut: merge(strut),
       };
-    }, [tiles, radius, tileSize, pathWidth, deckTop, half, railOffset, renderDeck, canyonBBox]);
+    }, [tiles, radius, tileSize, pathWidth, deckHeight, pathYOffset, half, railOffset, renderDeck, canyonBBox]);
 
     useEffect(() => {
       return () => {

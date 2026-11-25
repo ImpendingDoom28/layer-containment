@@ -9,7 +9,7 @@ import { CanyonBoulders } from "../../entities/CanyonBoulders";
 import { CanyonTile } from "../../entities/CanyonTile";
 import { Path } from "../../entities/Path";
 import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
-import { Tile } from "../../entities/Tile";
+import { WaterSurface } from "../../entities/WaterSurface";
 import {
   BRIDGE_ELEVATION,
   getCanyonWorldBBox,
@@ -122,20 +122,28 @@ export const LevelEditorScene = () => {
   });
 
   // Bridge tiles per path, memoized so the same arrays (and the `Bridge`
-  // memo) are reused when the scene re-renders on draft/selection changes.
+  // memo) are reused when the scene re-renders on draft/selection changes. A
+  // path bridges over canyons (flush) and open water (raised).
   const bridgeTilesByPath = useMemo(
     () =>
-      draftLevel.canyons.length === 0
+      draftLevel.canyons.length === 0 && draftLevel.waters.length === 0
         ? []
         : draftLevel.pathWaypoints.map((path) =>
             getBridgeTiles(
               path,
               draftLevel.canyons,
+              draftLevel.waters,
               draftLevel.gridSize,
               tileSize
             )
           ),
-    [draftLevel.pathWaypoints, draftLevel.canyons, draftLevel.gridSize, tileSize]
+    [
+      draftLevel.pathWaypoints,
+      draftLevel.canyons,
+      draftLevel.waters,
+      draftLevel.gridSize,
+      tileSize,
+    ]
   );
 
   // The canyon's world bbox drives the basin (carved bowl + the cut in the
@@ -265,6 +273,7 @@ export const LevelEditorScene = () => {
       />
       <group>
         {tiles.map(({ gridX, gridZ }) => {
+          const index = gridZ * draftLevel.gridSize + gridX;
           const placementState = getTilePlacementState({
             gridX,
             gridZ,
@@ -287,14 +296,13 @@ export const LevelEditorScene = () => {
           const baseTileColor =
             draftLevel.tileColor ?? getCssColorValue("editor-default-tile");
 
-          // Canyon cells use the game's `CanyonTile` (bowl + river), every
-          // other cell the game's `Tile` (water reads as the same animated
-          // surface the game runs). The editor keeps its thin flat land
-          // `EditorSphereTile` only where neither applies, so water and
-          // canyons render exactly like the game, not a flat slab. Each tile
-          // tracks the editor's `hoveredTile` itself through a per-tile
-          // primitive selector; the scene no longer re-renders on hover, so
-          // the callbacks below stay referentially stable for its lifetime.
+          // Canyon cells use the game's `CanyonTile` (bowl + river), water
+          // cells the game's `WaterSurface` (the same animated surface the
+          // game runs), and the remaining cells the editor's thin flat land
+          // `EditorSphereTile`, so water and canyons render exactly like the
+          // game, not a flat slab. Each tile tracks the editor's `hoveredTile`
+          // itself through a per-tile primitive selector; the scene no longer
+          // re-renders on hover (the board's pick surface writes the flag).
           if (placementState.isCanyon) {
             return (
               <CanyonTile
@@ -312,13 +320,12 @@ export const LevelEditorScene = () => {
 
           if (placementState.isWater) {
             return (
-              <Tile
+              <WaterSurface
                 key={`${gridX}-${gridZ}`}
                 gridX={gridX}
                 gridZ={gridZ}
                 gridSize={draftLevel.gridSize}
-                isWater
-                isOnPath={placementState.isOnPath}
+                waterVariantCode={occupancy.waterVariant[index]}
                 canPlace={canHighlightEditorAction}
                 editorMode
               />

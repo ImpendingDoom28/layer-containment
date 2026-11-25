@@ -144,7 +144,7 @@ Notes:
 - F12 toggles the DevTools in the desktop app.
 - **Crash diagnostics**: every renderer console message, failed load, and uncaught error is appended to `game.log` in the app's user-data folder — macOS: `~/Library/Application Support/Layer Containment/game.log`, Windows: `%APPDATA%/Layer Containment/game.log`, Linux: `~/.config/Layer Containment/game.log` (the folder is named after the product; with `dev:desktop` it is `containment-layer`). Uncaught renderer errors and renderer-process crashes (usually a GPU failure) also pop up a dialog with the error and the log path. If the app ever fails to start, that log is where the cause lives.
 - The desktop app icon is `public/logo.svg` (the same SVG used as the web favicon) — electron-builder converts it into the per-platform app icons at build time: macOS `.icns` and Windows `.ico` are rasterized from the SVG, and on Linux it is placed in the freedesktop `scalable/` hierarchy. No separate icon asset to maintain.
-- CI (`.github/workflows/desktop.yml`) builds installers for Windows, macOS, and Linux on every PR and push to `master`, and runs `smoke:desktop` against the packaged app, so a broken desktop build fails CI before merge.
+- CI (`.github/workflows/desktop.yml`) builds the web app and typechecks the Electron main process on every PR; the full installer packaging for Windows, macOS, and Linux (plus `smoke:desktop` against the packaged app) runs on pushes to `master` and manual dispatches, so what ships is always verified before distribution.
 - Distributing through Steam: publish the per-platform installer/artifact builds (NSIS exe, dmg, AppImage) as a Steam app via the Steamworks SDK. No signing/notarization is configured yet — add your code-signing certificates to CI before publishing to the Mac App Store or Steam's notarized macOS builds.
 
 ### Playwright E2E
@@ -153,7 +153,9 @@ Notes:
 npm run test:e2e
 ```
 
-The Playwright config targets `http://localhost:5173`, reuses an existing local dev server when one is already running, and otherwise starts `npm run dev` automatically. Canvas interactions use a fixed `1280x720` viewport with shared coordinate fixtures from `tests/e2e/fixtures/canvasPoints.ts`.
+The Playwright config targets `http://localhost:5173`, reuses an existing local dev server when one is already running, and otherwise starts `npm run dev` automatically. In CI it instead serves the built `dist/` (produced once by the parallel `build` job and downloaded as an artifact) with `vite preview` — no dev-server transforms on the slow CI runners, and no second build for the PWA suite. CI runs a single worker with one retry: two Chromium instances on the GPU-less runner (SwiftShader) starve each other, so parallelism buys nothing there (and locally, the default 50%-worker setting is kept). Canvas interactions use a fixed `1280x720` viewport with shared coordinate fixtures from `tests/e2e/fixtures/canvasPoints.ts`.
+
+Every spec imports `test`/`expect` from `tests/e2e/test.ts`, which injects `window.__SIM_SPEED__ = 20` before page scripts run: the session then advances simulation time 20× per wall second (sub-ticked in `GameSessionSystem` so nothing tunnels), which is what keeps the wave-completion tests — bound by *simulation* time on the GPU-less SwiftShader runner — fast. The production single-tick path is untouched when the flag is absent (`SIM_SPEED = 1`). The navigation fixture (`tests/e2e/fixtures/navigation.ts`) also waits for the real "menu is ready" state (loading overlay gone, Play button visible, 30s timeouts — the same budget the old fixed 2s sleep effectively left) instead of a fixed 2-second sleep, so page loads are neither under- nor over-waited.
 
 A separate PWA suite verifies the web app manifest, icon delivery, service worker registration, and the versioned offline cache + background update flow:
 

@@ -5,10 +5,15 @@ const baseURL =
 
 // Vite's default port matches the default baseURL; when PLAYWRIGHT_BASE_URL
 // points elsewhere, start the dev server on the same port so the webServer
-// readiness check (url: baseURL) resolves.
-const serverCommand = new URL(baseURL).port
-  ? `npm run dev -- --port ${new URL(baseURL).port}`
-  : "npm run dev";
+// readiness check (url: baseURL) resolves. In CI the `build` job already
+// produced `dist/` (downloaded as an artifact), so serve it with `preview`
+// instead — the dev server's on-demand transforms are a big share of each
+// page load on the SwiftShader runner.
+const serverCommand = process.env.CI
+  ? `npm run preview -- --port ${new URL(baseURL).port} --strictPort`
+  : new URL(baseURL).port
+    ? `npm run dev -- --port ${new URL(baseURL).port}`
+    : "npm run dev";
 
 const isCi = !!process.env.CI;
 
@@ -81,7 +86,9 @@ export default defineConfig({
   webServer: {
     command: serverCommand,
     url: baseURL,
-    reuseExistingServer: true,
+    // Locally a dev server may already be running; on CI a stale one would
+    // serve a build that is not the one the `build` job verified.
+    reuseExistingServer: !process.env.CI,
     stdout: "pipe",
     stderr: "pipe",
     timeout: 120_000,

@@ -14,14 +14,26 @@ type OnOpenGameOptions = {
   skipControlsIntro?: boolean;
 };
 
+// Waits for the main menu to actually be interactive instead of a fixed
+// sleep: the loading overlay ("Preparing graphics…") is gone and the Play
+// button is present. This is the readiness signal the previous
+// `waitForTimeout(2000)` was standing in for — it resolves as soon as the menu
+// is ready (faster on a fast box) and blocks until it is (robust on the
+// GPU-less CI runner). On hosts without a GPU (SwiftShader fallback) the
+// shader-gate can take well over 2 s to resolve, so both waits get a 60s
+// timeout — the budget the explicit Play-wait upstream used.
+export const onWaitForMainMenuReady = async (page: Page) => {
+  await expect(page.getByText("Preparing graphics")).not.toBeVisible({
+    timeout: 60_000,
+  });
+  await expect(page.getByRole("button", { name: "Play" })).toBeVisible({
+    timeout: 60_000,
+  });
+};
+
 export const onOpenMainMenu = async (page: Page) => {
   await page.goto("/");
-  // The menu must be up before the click: on hosts without a GPU (SwiftShader
-  // fallback) the shader-gate can take well over 2 s to resolve, and a click
-  // on the "Preparing graphics..." screen does nothing.
-  await page
-    .getByRole("button", { name: "Play" })
-    .waitFor({ timeout: 60_000 });
+  await onWaitForMainMenuReady(page);
   await page.click("body");
 };
 

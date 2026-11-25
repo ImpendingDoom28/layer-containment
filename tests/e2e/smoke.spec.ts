@@ -1,17 +1,10 @@
-import { onOpenGame, onOpenMainMenu } from "./fixtures/navigation";
+import {
+  onOpenGame,
+  onOpenMainMenu,
+  onWaitForMainMenuReady,
+} from "./fixtures/navigation";
 import { onPlaceMultipleBasicTowers } from "./fixtures/towerPlacement";
 import { expect, test } from "./test";
-
-const onWaitForMainMenuReady = async (
-  page: import("@playwright/test").Page
-) => {
-  await expect(page.getByText("Preparing graphics")).not.toBeVisible({
-    timeout: 15_000,
-  });
-  await expect(page.getByRole("button", { name: "Play" })).toBeVisible({
-    timeout: 15_000,
-  });
-};
 
 test("returns to the main menu after editor round-trip", async ({ page }) => {
   await onOpenMainMenu(page);
@@ -40,7 +33,10 @@ test("loads the main menu and enters gameplay HUD", async ({ page }) => {
   ).toBeVisible();
 
   const favicon = page.locator('link[rel="icon"]');
-  await expect(favicon).toHaveAttribute("href", "/logo.svg");
+  // Dev serves the source index.html (href="/logo.svg"); the production build
+  // rewrites it to the relative base "./logo.svg" (see the base: "./" in the
+  // vite config, which keeps the app runnable from Electron's file://).
+  await expect(favicon).toHaveAttribute("href", /\/?logo\.svg$/);
   await expect(
     async () => (await page.request.get("/logo.svg")).status()
   ).resolves.toBe(200);

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Building, Tower } from "../core/types/game";
 import { getLevelGridOffset } from "./levelEditor";
 import { createTileBlockage, getTilePlacementState } from "./tilePlacement";
+import { waterVariantCode } from "./tileOccupancy";
 
 const GRID_SIZE = 4;
 const TILE_SIZE = 1;
@@ -74,6 +75,23 @@ describe("createTileBlockage", () => {
     expect(blockage.water[2 * GRID_SIZE + 2]).toBe(1);
     expect(blockage.canyon[3 * GRID_SIZE + 1]).toBe(1);
     expect(blockage.building[3 * GRID_SIZE + 3]).toBe(1);
+  });
+
+  it("records each water tile's footprint code (0 for a full tile)", () => {
+    expect(blockage.waterVariant[2 * GRID_SIZE + 2]).toBe(0);
+
+    const partial = createTileBlockage({
+      gridSize: GRID_SIZE,
+      gridOffset: GRID_OFFSET,
+      tileSize: TILE_SIZE,
+      pathWaypoints: [],
+      pathWidth: PATH_WIDTH,
+      buildings: [],
+      waters: [{ gridX: 0, gridZ: 0, variant: "corner-nw" }],
+      canyons: [],
+    });
+    expect(partial.water[0]).toBe(1);
+    expect(partial.waterVariant[0]).toBe(waterVariantCode("corner-nw"));
   });
 
   it("leaves unrelated tiles free", () => {

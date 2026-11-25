@@ -272,6 +272,7 @@ export const LevelEditorScene = () => {
 
       <group>
         {tiles.map(({ gridX, gridZ }) => {
+          const index = gridZ * draftLevel.gridSize + gridX;
           const placementState = getTilePlacementState({
             gridX,
             gridZ,
@@ -328,6 +329,7 @@ export const LevelEditorScene = () => {
                 gridSize={draftLevel.gridSize}
                 isWater
                 isOnPath={placementState.isOnPath}
+                waterVariantCode={occupancy.waterVariant[index]}
                 canPlace={canHighlightEditorAction}
                 onHover={() => onTileHover(gridX, gridZ)}
                 onHoverEnd={onTileHoverEnd}

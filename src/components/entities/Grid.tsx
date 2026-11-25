@@ -93,6 +93,7 @@ export const Grid: FC<GridProps> = memo(({ placeTower, occupancy, canyonBBox }) 
               gridZ={gridZ}
               isWater={occupancy.water[index] === 1}
               isOnPath={occupancy.onPath[index] === 1}
+              waterVariantCode={occupancy.waterVariant[index]}
               canPlace={canPlace}
               onClick={() => onTileClick(gridX, gridZ)}
             />

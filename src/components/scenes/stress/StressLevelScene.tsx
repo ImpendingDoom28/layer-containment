@@ -18,8 +18,9 @@
  *   - the next wave auto-starts as soon as it is ready
  *   - when the run is won it restarts, looping forever
  *
- * A DOM overlay (top-left) shows live FPS, draw calls, triangles, wave and
- * entity counts; drei's three-panel Stats sits along the bottom.
+ * A DOM overlay on the right side (vertically centred) shows live FPS, draw
+ * calls, triangles, wave and entity counts; drei's three-panel Stats sits
+ * along the bottom.
  *
  * Mounted from two places:
  *   - the main app's `/stress` route (hidden behind `?m=debug`)

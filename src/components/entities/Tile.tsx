@@ -1,7 +1,6 @@
 import {
   FC,
   memo,
-  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -22,7 +21,6 @@ import {
   createEditorTileHoveredSelector,
   useLevelEditorStore,
 } from "../../core/stores/useLevelEditorStore";
-import { hashGrid2D } from "../../core/tileGridHash";
 import { createPlanetTileMaterial } from "../../utils/planetTileMaterial";
 import { freezeSubtree } from "../../utils/freezeSubtree";
 import { getSlabGeometry, getSphereTilePose } from "../../utils/sphereTile";
@@ -64,6 +62,30 @@ const getSharedPathLandMaterial = () =>
     metalness: 0.05,
     roughness: 0.88,
   });
+
+// The land regolith is painted in world space, so every land tile on the
+// same slab height shows the identical surface: one material per slab height
+// (never disposed — the scene's lifetime) instead of one per tile.
+const landRegolithMaterialCache = new Map<number, MeshStandardMaterial>();
+const getSharedLandRegolithMaterial = (
+  pathYOffset: number
+): MeshStandardMaterial => {
+  const key = pathYOffset;
+  const entry = landRegolithMaterialCache.get(key);
+  if (entry) return entry;
+  const material = createPlanetTileMaterial({
+    baseColor: getCssColorValue("scene-gray-700"),
+    emissive: getCssColorValue("scene-black"),
+    emissiveIntensity: 0,
+    metalness: 0.05,
+    roughness: 0.88,
+    tileHalfHeight: pathYOffset / 2,
+    regolithHighlight: getCssColorValue("scene-regolith-highlight"),
+    regolithShadow: getCssColorValue("scene-regolith-shadow"),
+  });
+  landRegolithMaterialCache.set(key, material);
+  return material;
+};
 
 type TileProps = {
   gridX: number;
@@ -136,43 +158,23 @@ export const Tile: FC<TileProps> = memo(
       if (meshRef.current) freezeSubtree(meshRef.current);
     }, [planetPose]);
 
-    // The hover tints and the path-land body are shared instances (they
-    // outlive the tile, so they must not be disposed here); only the per-tile
-    // seeded regolith material is tile-owned.
-    const { material, shared } = useMemo(() => {
+    // Every material here is a shared instance (the hover tints, the path
+    // body, and the world-space land regolith all outlive the tile), so none
+    // are disposed with the tile.
+    const material = useMemo(() => {
       if (placementHoverKey === "canPlace") {
-        return { material: getLandHoverMaterial("canPlace"), shared: true };
+        return getLandHoverMaterial("canPlace");
       }
       if (placementHoverKey === "cannotPlace") {
-        return { material: getLandHoverMaterial("cannotPlace"), shared: true };
+        return getLandHoverMaterial("cannotPlace");
       }
 
       if (!isOnPath) {
-        return {
-          material: createPlanetTileMaterial({
-            baseColor: getCssColorValue("scene-gray-700"),
-            emissive: getCssColorValue("scene-black"),
-            emissiveIntensity: 0,
-            metalness: 0.05,
-            roughness: 0.88,
-            tileSeed: hashGrid2D(gridX, gridZ),
-            tileHalfHeight: pathYOffset / 2,
-            regolithHighlight: getCssColorValue("scene-regolith-highlight"),
-            regolithShadow: getCssColorValue("scene-regolith-shadow"),
-          }),
-          shared: false,
-        };
+        return getSharedLandRegolithMaterial(pathYOffset);
       }
 
-      return { material: getSharedPathLandMaterial(), shared: true };
-    }, [isOnPath, placementHoverKey, gridX, gridZ, pathYOffset]);
-
-    useEffect(
-      () => () => {
-        if (!shared) material.dispose();
-      },
-      [material, shared]
-    );
+      return getSharedPathLandMaterial();
+    }, [isOnPath, placementHoverKey, pathYOffset]);
 
     return (
       <mesh

@@ -22,7 +22,6 @@ import {
   createEditorTileHoveredSelector,
   useLevelEditorStore,
 } from "../../core/stores/useLevelEditorStore";
-import { hashGrid2D } from "../../core/tileGridHash";
 import { WATER_VARIANTS } from "../../utils/tileOccupancy";
 import { createPlanetTileMaterial } from "../../utils/planetTileMaterial";
 import {
@@ -84,15 +83,14 @@ const getLandHoverMaterial = (key: "canPlace" | "cannotPlace") => {
   });
 };
 
-// The dry half of a partial water tile is the same seeded regolith as a land
-// tile: one material per (tile, slab height), disposed with the tile.
+// The dry half of a partial water tile is the same world-space regolith as a
+// land tile: the field is sampled in world XZ, so one material serves every
+// dry shore (keyed by slab height only); it lives as long as the scene.
 const landRegolithMaterialCache = new Map<string, MeshStandardMaterial>();
 const getLandRegolithMaterial = (
-  gridX: number,
-  gridZ: number,
   pathYOffset: number
 ): MeshStandardMaterial => {
-  const key = `${gridX}-${gridZ}|${pathYOffset}`;
+  const key = `${pathYOffset}`;
   const entry = landRegolithMaterialCache.get(key);
   if (entry) return entry;
   const material = createPlanetTileMaterial({
@@ -101,7 +99,6 @@ const getLandRegolithMaterial = (
     emissiveIntensity: 0,
     metalness: 0.05,
     roughness: 0.88,
-    tileSeed: hashGrid2D(gridX, gridZ),
     tileHalfHeight: pathYOffset / 2,
     regolithHighlight: getCssColorValue("scene-regolith-highlight"),
     regolithShadow: getCssColorValue("scene-regolith-shadow"),
@@ -208,19 +205,18 @@ export const WaterSurface: FC<WaterSurfaceProps> = memo(
     );
     const isPartialWater = variantSlabs.water != null;
 
+    // The dry slab's material is always a shared instance (hover tints, or
+    // the world-space regolith), so it is never disposed with the tile.
     const landSlab = useMemo(() => {
       if (!isPartialWater) return null;
       if (placementHoverKey === "canPlace") {
-        return { material: getLandHoverMaterial("canPlace"), shared: true };
+        return getLandHoverMaterial("canPlace");
       }
       if (placementHoverKey === "cannotPlace") {
-        return { material: getLandHoverMaterial("cannotPlace"), shared: true };
+        return getLandHoverMaterial("cannotPlace");
       }
-      return {
-        material: getLandRegolithMaterial(gridX, gridZ, pathYOffset),
-        shared: false,
-      };
-    }, [isPartialWater, placementHoverKey, gridX, gridZ, pathYOffset]);
+      return getLandRegolithMaterial(pathYOffset);
+    }, [isPartialWater, placementHoverKey, pathYOffset]);
 
     const groupRef = useRef<Group>(null);
     const meshRef = useRef<Mesh>(null);
@@ -263,15 +259,6 @@ export const WaterSurface: FC<WaterSurfaceProps> = memo(
       [material, shared]
     );
 
-    // The dry half's per-tile regolith is tile-owned; the hover tints are
-    // shared and must not be disposed.
-    useEffect(
-      () => () => {
-        if (landSlab && !landSlab.shared) landSlab.material.dispose();
-      },
-      [landSlab]
-    );
-
     // A partial water tile: the recessed wet half plus the shore-level dry
     // half, grouped so one pointer handler covers the whole tile.
     if (
@@ -295,7 +282,7 @@ export const WaterSurface: FC<WaterSurfaceProps> = memo(
           />
           <mesh
             geometry={variantSlabs.land}
-            material={landSlab.material}
+            material={landSlab}
             castShadow
             receiveShadow
           />

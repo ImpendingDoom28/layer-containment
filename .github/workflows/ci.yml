@@ -204,9 +204,11 @@ jobs:
           if-no-files-found: ignore
 
   # Backstop for the local `commit-msg` hook (commitlint): checks the commit
-  # messages of every PR against Conventional Commits. It only needs the two
-  # commitlint packages — a full `npm ci` would download the whole tree
-  # (three.js, React, Electron, …) to run one CLI.
+  # messages of every PR against Conventional Commits. It runs from
+  # tools/commitlint, an isolated package containing only the two commitlint
+  # dependencies — `npm install` at the repo root would pull the whole app
+  # dependency tree (three.js, React, Electron, …) just to run one CLI. The
+  # root devDependencies keep commitlint for the local hook.
   commitlint:
     name: Commit messages
     # `github.event.pull_request.base.ref` only exists on PR events.
@@ -226,9 +228,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: tools/commitlint/package-lock.json
 
       - name: Install commitlint
-        run: npm install --no-save --no-audit --no-fund @commitlint/cli @commitlint/config-conventional
+        run: npm ci --prefix tools/commitlint --no-audit --no-fund
 
       # `--from`/`--to` lints every commit in the PR (base..head) as its own
       # message, so one bad subject cannot hide behind another. Git-generated
@@ -236,6 +239,6 @@ jobs:
       # automatically by commitlint's default ignore rules.
       - name: Lint commit messages
         run: |
-          npx commitlint \
+          tools/commitlint/node_modules/.bin/commitlint \
             --from ${{ github.event.pull_request.base.sha }} \
             --to ${{ github.event.pull_request.head.sha }}

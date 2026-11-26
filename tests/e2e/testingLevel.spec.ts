@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { onOpenMainMenu, onOpenTestingLevel } from "./fixtures/navigation";
+import { onOpenTestingLevel } from "./fixtures/navigation";
 
 test("loads the testing level route", async ({ page }) => {
   await onOpenTestingLevel(page);
@@ -16,14 +16,16 @@ test("loads the testing level route", async ({ page }) => {
   ).toBeVisible();
 });
 
-// The main-menu entry to the showcase only exists in dev builds
-// (import.meta.env.DEV), and this suite runs against the dev server — so the
-// button is asserted here, right below "Level Creator", and its click navigates
-// to the (always reachable) route.
-test("shows a dev-only Testing Level button below Level Creator in the main menu", async ({
+// The main-menu entry to the showcase is gated by the `?m=debug` URL flag
+// (read once at boot) — so the menu is opened with the flag set, and the
+// button is asserted here, right below "Level Creator"; its click navigates to
+// the (always reachable) route.
+test("shows a debug-flag Testing Level button below Level Creator in the main menu", async ({
   page,
 }) => {
-  await onOpenMainMenu(page);
+  await page.goto("/?m=debug");
+  await page.waitForTimeout(2000);
+  await page.click("body");
 
   const creator = page.getByRole("button", { name: "Level Creator" });
   await expect(creator).toBeVisible();

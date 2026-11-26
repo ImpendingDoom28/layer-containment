@@ -89,7 +89,7 @@ export const createGameSession = ({
     }
   };
 
-  const startRun = async (levelId: AnyPlayableLevelId): Promise<void> => {
+  const startRun = async (levelId: AnyPlayableLevelId): Promise<boolean> => {
     const generation = ++loadGeneration;
     const loadStarted = loadLevel(levelId);
 
@@ -106,7 +106,7 @@ export const createGameSession = ({
     try {
       levelData = await loadStarted;
     } catch (error) {
-      if (generation !== loadGeneration) return;
+      if (generation !== loadGeneration) return false;
       // The load failed after the scene was already mounted; fall back to the
       // menu instead of stranding the player in an empty game.
       isRunStarting = false;
@@ -116,7 +116,12 @@ export const createGameSession = ({
       useGameStore.getState().setGameStatus("menu");
       throw error;
     }
-    if (generation !== loadGeneration) return;
+    if (generation !== loadGeneration) {
+      // The load settled after the session was disposed or superseded; the run
+      // was not applied, so report it to skip run-specific follow-up (e.g.
+      // re-spawning the base with custom health on the now-stale world).
+      return false;
+    }
 
     const { tileSize } = useGameStore.getState();
     if (tileSize <= 0) {
@@ -142,11 +147,12 @@ export const createGameSession = ({
     ensureEnemyIdAtLeast(getMaxEntityId(levelData.enemies) + 1);
     ensureProjectileIdAtLeast(getMaxEntityId(levelData.projectiles) + 1);
     worldBaseActions(world).spawnBase(levelData.startingHealth);
+    return true;
   };
 
-  const restartRun = async (): Promise<void> => {
-    if (!currentLevelId) return;
-    await startRun(currentLevelId);
+  const restartRun = async (): Promise<boolean> => {
+    if (!currentLevelId) return false;
+    return startRun(currentLevelId);
   };
 
   const endRun = () => {

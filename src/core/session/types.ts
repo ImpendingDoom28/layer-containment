@@ -28,8 +28,17 @@ export type SimulationFrame = {
 };
 
 export type GameSession = {
-  startRun: (levelId: AnyPlayableLevelId) => Promise<void>;
-  restartRun: () => Promise<void>;
+  /**
+   * Starts a run on the given level. Resolves `true` only when the run was
+   * actually applied (level loaded, base spawned); `false` when the load was
+   * invalidated mid-flight (session disposed, or superseded by a newer start)
+   * so callers can skip run-specific follow-up such as re-spawning the base
+   * with custom health.
+   */
+  startRun: (levelId: AnyPlayableLevelId) => Promise<boolean>;
+  /** Restarts the current run. Resolves `false` when there is no run to
+   *  restart or the start was invalidated mid-flight. */
+  restartRun: () => Promise<boolean>;
   endRun: () => void;
   tick: (frame: SimulationFrame) => void;
   startWave: () => void;

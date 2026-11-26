@@ -54,7 +54,6 @@ import {
   towerTypesSelector,
   useGameStore,
 } from "../../../core/stores/useGameStore";
-import { useLevelStore } from "../../../core/stores/useLevelStore";
 import { settleModelStatuses } from "./modelSettlement";
 import { StressOverlay } from "./components/StressOverlay";
 import { StressStatsCollector } from "./components/StressStatsCollector";
@@ -126,7 +125,6 @@ const StressTestGame = () => {
   // rendered frame is a fully-populated scene with no fallback primitives.
   const [areModelsReady, setAreModelsReady] = useState(false);
   const statsRef = useRef<FrameStats>(createFrameStats());
-  const startedRef = useRef(false);
   // Mirrors areShadersReady in a ref so the frame loop (collector) can tell
   // when the heavy scene is actually rendering and start averaging.
   const readyRef = useRef(false);
@@ -185,7 +183,13 @@ const StressTestGame = () => {
     () => createGameSession({ world, ...entityIds }),
     [world, entityIds]
   );
-  useEffect(() => session.dispose, [session]);
+  // Leaving the scene (back to the menu, or the standalone entry unmounting)
+  // tears down the whole run: it clears the stress run's base and stats,
+  // resets the game/level stores, and puts `gameStatus` back to "menu" so the
+  // main app's `GamePage` renders the menu instead of the (unmounted)
+  // gameplay. `endRun` also invalidates every in-flight start, so a plain
+  // `dispose` is not needed here.
+  useEffect(() => session.endRun, [session]);
 
   const { spawnBase } = useActions(worldBaseActions);
 
@@ -201,10 +205,14 @@ const StressTestGame = () => {
   const beginRun = useCallback(() => {
     // startRun clears the run state and spawns the base with the level's own
     // starting health; bump it to the stress value afterwards so the run never
-    // ends from leaks.
+    // ends from leaks. It resolves `false` when the load was invalidated
+    // before the run applied (scene unmounted mid-load), in which case the
+    // world's base — now owned by whoever takes over the route — must not be
+    // clobbered by a stale stress base.
     void session
       .startRun(STRESS_LEVEL_ID)
-      .then(() => {
+      .then((applied) => {
+        if (!applied) return;
         spawnBase(STRESS_BASE_HEALTH);
       })
       .catch((error) => {
@@ -212,21 +220,26 @@ const StressTestGame = () => {
       });
   }, [session, spawnBase]);
 
-  // Start the unattended run once the game config is loaded.
+  // Start the unattended run once the game config is loaded. No started-once
+  // guard: the unmount cleanup ends the run and resets the config, so on a
+  // remount (e.g. React StrictMode's simulated unmount) the effect must be
+  // able to start the run again. In-flight starts are invalidated by the
+  // cleanup, so a double start cannot leak.
   useEffect(() => {
-    if (!isGameConfigLoaded || startedRef.current) return;
-    startedRef.current = true;
+    if (!isGameConfigLoaded) return;
     beginRun();
   }, [isGameConfigLoaded, beginRun]);
 
   const restart = useCallback(() => {
     void session
       .restartRun()
-      .then(() => {
-        // `restartRun` resolves without starting a run when `currentLevelId`
-        // is null (e.g. after a failed initial start); only restore the 1M HP
-        // base once a run is actually active.
-        if (!useLevelStore.getState().isLevelConfigLoaded) return;
+      .then((applied) => {
+        // `restartRun` resolves `false` when there is no run to restart
+        // (`currentLevelId` is null, e.g. after a failed initial start) or the
+        // load was invalidated before the run applied — in both cases the
+        // 1M HP base must not be re-spawned on top of whatever world the
+        // route now holds.
+        if (!applied) return;
         spawnBase(STRESS_BASE_HEALTH);
       })
       .catch((error) => {

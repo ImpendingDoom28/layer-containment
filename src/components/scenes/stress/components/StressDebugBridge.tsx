@@ -1,10 +1,10 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useActions } from "koota/react";
 import { useEffect, useRef } from "react";
-import { enemyActions } from "../../../src/core/ecs/actions/enemyActions";
-import { useGameStore } from "../../../src/core/stores/useGameStore";
-import { useLevelStore } from "../../../src/core/stores/useLevelStore";
-import { useUpgradeStore } from "../../../src/core/stores/useUpgradeStore";
+import { enemyActions } from "../../../../core/ecs/actions/enemyActions";
+import { useGameStore } from "../../../../core/stores/useGameStore";
+import { useLevelStore } from "../../../../core/stores/useLevelStore";
+import { useUpgradeStore } from "../../../../core/stores/useUpgradeStore";
 
 /**
  * Exposes the three scene and renderer on `window` so external profiling
@@ -21,12 +21,12 @@ export const StressDebugBridge = () => {
   const shadowDisabledRef = useRef(false);
   useEffect(() => {
     const w = window as unknown as Record<string, unknown>;
-    w.__stressScene = scene;
-    w.__stressGl = gl;
-    w.__stressGameStore = useGameStore;
-    w.__stressLevelStore = useLevelStore;
-    w.__stressUpgradeStore = useUpgradeStore;
-    w.__stressLivingCount = getLivingEnemyCount;
+    w["__stressScene"] = scene;
+    w["__stressGl"] = gl;
+    w["__stressGameStore"] = useGameStore;
+    w["__stressLevelStore"] = useLevelStore;
+    w["__stressUpgradeStore"] = useUpgradeStore;
+    w["__stressLivingCount"] = getLivingEnemyCount;
   }, [scene, gl, getLivingEnemyCount]);
   useFrame(() => {
     if (shadowDisabledRef.current) return;

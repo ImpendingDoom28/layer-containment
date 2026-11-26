@@ -160,7 +160,7 @@ describe("createGameSession lifecycle", () => {
   it("starts a fully initialized run through one boundary", async () => {
     const { session } = makeSession();
 
-    await session.startRun("level_1");
+    await expect(session.startRun("level_1")).resolves.toBe(true);
 
     expect(useGameStore.getState().gameStatus).toBe("playing");
     expect(useLevelStore.getState().isLevelConfigLoaded).toBe(true);
@@ -297,12 +297,21 @@ describe("createGameSession lifecycle", () => {
     const starting = session.startRun("level_1");
     session.dispose();
     resolveLevel(makeLevel());
-    await starting;
+    await expect(starting).resolves.toBe(false);
 
     // The stale load must not populate the level after disposal (e.g. the
-    // page was unmounted mid-start).
+    // page was unmounted mid-start), and the caller can tell the run was not
+    // applied so it skips run-specific follow-up (e.g. a stress base).
     expect(session.isRunStarting).toBe(false);
     expect(useLevelStore.getState().isLevelConfigLoaded).toBe(false);
+    expect(testWorld.queryFirst(isBase)).toBeUndefined();
+  });
+
+  it("reports that an unapplied restart left no base behind", async () => {
+    const { session } = makeSession();
+
+    // No run has started, so a restart cannot apply one.
+    await expect(session.restartRun()).resolves.toBe(false);
     expect(testWorld.queryFirst(isBase)).toBeUndefined();
   });
 

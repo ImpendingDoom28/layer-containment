@@ -7,4 +7,5 @@ export type MenuActions = {
   ) => void | Promise<void>;
   onOpenLevelEditor: () => void;
   onOpenTestingLevel: () => void;
+  onOpenStressLevel: () => void;
 };

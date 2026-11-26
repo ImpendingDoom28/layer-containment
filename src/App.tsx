@@ -7,6 +7,7 @@ import { HUDLoading } from "./components/hud/HUDLoading";
 import { GamePage } from "./components/pages/GamePage";
 import { EntityIdProvider } from "./core/contexts/EntityIdContext";
 import { useGameAudioSystem } from "./core/audio/useGameAudioSystem";
+import { isDebugFlag } from "./core/flags/isDebugFlag";
 import { editorWorld, world } from "./core/ecs/world";
 
 const LevelEditorPage = lazy(() =>
@@ -18,6 +19,12 @@ const LevelEditorPage = lazy(() =>
 const TestingLevelPage = lazy(() =>
   import("./components/pages/TestingLevelPage").then((mod) => ({
     default: mod.TestingLevelPage,
+  }))
+);
+
+const StressLevelPage = lazy(() =>
+  import("./components/pages/StressLevelPage").then((mod) => ({
+    default: mod.StressLevelPage,
   }))
 );
 
@@ -37,6 +44,7 @@ const AppRoutes: FC = () => {
               <GamePage
               onOpenLevelEditor={() => navigate("/editor")}
               onOpenTestingLevel={() => navigate("/testing-level")}
+              onOpenStressLevel={() => navigate("/stress")}
             />
             </EntityIdProvider>
           </WorldProvider>
@@ -78,6 +86,25 @@ const AppRoutes: FC = () => {
               </Suspense>
             </EntityIdProvider>
           </WorldProvider>
+        }
+      />
+      <Route
+        path="/stress"
+        element={
+          isDebugFlag ? (
+            <Suspense
+              fallback={
+                <HUDLoading
+                  className="fixed inset-0"
+                  message={t("common.loading")}
+                />
+              }
+            >
+              <StressLevelPage onBackToMenu={() => navigate("/")} />
+            </Suspense>
+          ) : (
+            <Navigate to="/" replace />
+          )
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />

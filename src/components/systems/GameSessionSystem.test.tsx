@@ -42,8 +42,8 @@ vi.mock("../../core/flags/simSpeed", () => ({
 const createSession = () => {
   const disconnectRuntime = vi.fn();
   const session: GameSessionController = {
-    startRun: vi.fn(async () => {}),
-    restartRun: vi.fn(async () => {}),
+    startRun: vi.fn(async () => true),
+    restartRun: vi.fn(async () => true),
     endRun: vi.fn(),
     tick: vi.fn(),
     startWave: vi.fn(),

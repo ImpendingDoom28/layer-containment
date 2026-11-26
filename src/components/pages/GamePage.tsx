@@ -66,11 +66,13 @@ import { AppCanvas } from "../scenes/shared/AppCanvas";
 type GamePageProps = {
   onOpenLevelEditor: () => void;
   onOpenTestingLevel: () => void;
+  onOpenStressLevel: () => void;
 };
 
 export const GamePage: FC<GamePageProps> = ({
   onOpenLevelEditor,
   onOpenTestingLevel,
+  onOpenStressLevel,
 }) => {
   const { t } = useTranslation();
   const [activePlayableLevel, setActivePlayableLevel] =
@@ -331,6 +333,7 @@ export const GamePage: FC<GamePageProps> = ({
           onStartGameWithLevel={onStartGameWithLevel}
           onOpenLevelEditor={onOpenLevelEditor}
           onOpenTestingLevel={onOpenTestingLevel}
+          onOpenStressLevel={onOpenStressLevel}
         />
       )}
 

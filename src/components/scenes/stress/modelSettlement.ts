@@ -1,6 +1,6 @@
 import { useGLTF } from "@react-three/drei";
 
-import { BASE_MODEL, ENEMY_MODELS } from "../../src/constants/models";
+import { BASE_MODEL, ENEMY_MODELS } from "../../../constants/models";
 
 /**
  * Classifies the load state of the given model URLs against the shared

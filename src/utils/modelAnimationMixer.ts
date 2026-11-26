@@ -64,9 +64,16 @@ export class ModelAnimationMixer {
     for (const [state, spec] of Object.entries(specs)) {
       const clip = byName.get(spec.clip);
       if (!clip) continue; // no such clip in this model: skip the state.
-      const action = this.mixer.clipAction(clip);
+      // A distinct clip instance per state: `clipAction` caches by clip
+      // identity, so two states naming the same clip would share one action
+      // and the later spec's loop/speed would overwrite the earlier one.
+      // (The track value buffers are shared — they are read-only.)
+      const action = this.mixer.clipAction(clip.clone());
       const loop = (spec.loop ?? "repeat") === "repeat";
-      action.setLoop(loop ? LoopRepeat : LoopOnce, 1);
+      // `LoopRepeat` with a finite `repetitions` plays that many iterations
+      // and then stops (the body would freeze at the rest pose); a looping
+      // state must run forever.
+      action.setLoop(loop ? LoopRepeat : LoopOnce, loop ? Infinity : 1);
       if (!loop) action.clampWhenFinished = true;
       if (spec.speed !== undefined) action.timeScale = spec.speed;
       this.actions.set(state, action);
@@ -115,16 +122,25 @@ export class ModelAnimationMixer {
           // The one-shot is still mid-playback when a loop takes over (the
           // state changed before the clip ran to completion): crossfade so the
           // body eases out of the one-shot's mid-pose instead of snapping to
-          // the rest pose. `crossFadeTo` schedules the fade and returns the
-          // new action; it must come before any `reset` on the new action
-          // (a reset calls `stopFading`, which would drop the scheduled fade).
+          // the rest pose.
+          //
+          // Both crossfades share the same preparation: the destination is
+          // reset *before* the fade is scheduled, because an action that
+          // finished a previous fade is disabled and stays disabled until a
+          // reset re-enables it — crossfading into it would leave the body
+          // unmoved. (A reset after scheduling would call `stopFading` and
+          // drop the new fade, so the order matters.) Warp is off: it would
+          // overwrite the destination's configured `timeScale` (a `speed`
+          // spec) for the fade's duration.
+          action.reset();
           previousAction
-            .crossFadeTo(action, CROSSFADE_SECONDS, true)
+            .crossFadeTo(action, CROSSFADE_SECONDS, false)
             .play();
         }
       } else if (previousAction) {
         // loop → loop: crossfade (the previous fades out as the new fades in).
-        previousAction.crossFadeTo(action, CROSSFADE_SECONDS, true).play();
+        action.reset();
+        previousAction.crossFadeTo(action, CROSSFADE_SECONDS, false).play();
       } else {
         action.reset();
         action.setEffectiveWeight(1);

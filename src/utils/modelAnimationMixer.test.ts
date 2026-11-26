@@ -68,10 +68,14 @@ describe("ModelAnimationMixer", () => {
     expect(mixer.currentState).toBe("idle");
     mixer.update(0.5);
     expect(a.position.x).toBeCloseTo(0.5, 2);
-    // Re-requesting the state on top is a no-op.
+    // Re-requesting the state on top is a no-op (the loop keeps running).
     mixer.play("idle");
     mixer.update(0.5);
-    expect(a.position.x).toBeCloseTo(0, 2); // the loop wrapped, not restarted
+    // A loop state runs forever (not one iteration): just past the first
+    // full cycle it is in its second iteration (at the duration boundary
+    // three wraps the loop, so the position restarts from 0).
+    mixer.update(0.05);
+    expect(a.position.x).toBeCloseTo(0.05, 2);
     mixer.dispose();
   });
 
@@ -90,6 +94,59 @@ describe("ModelAnimationMixer", () => {
     // own time 0.2 → x = 0.4.
     mixer.update(0.2);
     expect(a.position.x).toBeCloseTo(0.4, 2);
+    mixer.dispose();
+  });
+
+  it("re-enters a loop after a completed crossfade (a faded-out action is disabled)", () => {
+    const { root, a } = buildRig();
+    const mixer = new ModelAnimationMixer(root, [idleClip(), walkClip()], {
+      ...loopSpecs,
+    });
+
+    mixer.play("idle");
+    mixer.update(0.5);
+    mixer.play("walk");
+    mixer.update(0.5); // the fade is long over; idle is now disabled
+    expect(mixer.currentState).toBe("walk");
+    mixer.play("idle");
+    mixer.update(0.2);
+    // The destination reset re-enabled idle, so it owns the body again.
+    expect(a.position.x).toBeCloseTo(0.2, 2);
+    mixer.dispose();
+  });
+
+  it("keeps a configured speed when entering a state through a crossfade", () => {
+    const { root, a } = buildRig();
+    const mixer = new ModelAnimationMixer(root, [idleClip(), walkClip()], {
+      idle: { clip: "IDLE" },
+      walk: { clip: "WALK", speed: 2 },
+    });
+
+    mixer.play("idle");
+    mixer.update(0.5);
+    mixer.play("walk");
+    mixer.update(0.2); // fade (0.15) over; WALK runs at 2x → time 0.4
+    expect(a.position.x).toBeCloseTo(0.8, 1);
+    mixer.dispose();
+  });
+
+  it("gives independently configured states their own actions", () => {
+    const { root, a } = buildRig();
+    const mixer = new ModelAnimationMixer(root, [idleClip()], {
+      a: { clip: "IDLE" },
+      b: { clip: "IDLE", loop: "once" },
+    });
+
+    mixer.play("a");
+    mixer.update(0.5);
+    // The same clip as a one-shot: it runs to completion and holds.
+    mixer.play("b");
+    mixer.update(1.5);
+    expect(a.position.x).toBeCloseTo(1, 1);
+    // State "a" is still a loop (its spec was not clobbered by "b").
+    mixer.play("a");
+    mixer.update(0.3);
+    expect(a.position.x).toBeCloseTo(0.3, 2);
     mixer.dispose();
   });
 

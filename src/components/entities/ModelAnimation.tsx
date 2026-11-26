@@ -102,6 +102,7 @@ export const ModelAnimation: FC<ModelAnimationProps> = memo(
           rotationY={rotationY}
           spec={spec}
           getState={getState}
+          fallback={fallback}
           onModelReady={onModelReady}
         />
       </Suspense>
@@ -111,9 +112,16 @@ export const ModelAnimation: FC<ModelAnimationProps> = memo(
 
 ModelAnimation.displayName = "ModelAnimation";
 
-const ModelAnimationBody: FC<
-  Omit<ModelAnimationProps, "fallback">
-> = ({ url, node, size, rotationY, spec, getState, onModelReady }) => {
+const ModelAnimationBody: FC<ModelAnimationProps> = ({
+  url,
+  node,
+  size,
+  rotationY,
+  spec,
+  getState,
+  fallback,
+  onModelReady,
+}) => {
   const gltf = useGLTF(url);
   const { getTimeScale } = useSimulationClock();
   const reducedMotion = useReducedMotion();
@@ -121,8 +129,12 @@ const ModelAnimationBody: FC<
   const source = gltf.scene.getObjectByName(node);
   const object = useMemo(() => {
     if (!source) return null;
-    const group = prepareModelTransform(source, size * 2, rotationY);
+    // Clone first, then measure the clone: `setFromObject` uses world-space
+    // matrices, so measuring `source` would fold in the transforms of its
+    // ancestors — which the (parentless) mounted clone does not have. For an
+    // untransformed root node the two agree.
     const clone = source.clone(true);
+    const group = prepareModelTransform(clone, size * 2, rotationY);
     // Physical body: cast and receive shadows like the other enemy bodies.
     clone.traverse((child) => {
       if ((child as Partial<Mesh>).isMesh) {
@@ -187,7 +199,9 @@ const ModelAnimationBody: FC<
     mixer.update(delta * getTimeScale());
   });
 
-  if (!object) return null;
+  // A missing configured node (a typo'd `modelNode` in the level config) must
+  // not render an empty body — fall back to the stand-in mesh.
+  if (!object) return fallback;
   return <primitive object={object} />;
 };
 

@@ -234,13 +234,16 @@ export const Enemy: FC<EnemyProps> = memo(
     // only an actual change triggers a clip hand-off.
     const getAnimationState = useCallback(
       (rawNow: number): string | null => {
+        const now = getSimulationTime(rawNow);
         const swap = entity.get(PathSwap);
         if (swap) {
-          const swapState = getPathSwapAnimationState(
-            swap,
-            getSimulationTime(rawNow)
-          );
+          const swapState = getPathSwapAnimationState(swap, now);
           if (swapState) return swapState;
+          // A pending telegraph stops the enemy in its tracks (the movement
+          // system skips it while `telegraphReadyAt` is in the future), so the
+          // body idles through the wind-up even though it was walking moments
+          // before.
+          if (swap.telegraphReadyAt > now) return "idle";
         }
         const pathProgress = entity.get(EnemyMotion)?.pathProgress ?? 0;
         return pathProgress > 0.01 ? "walk" : "idle";

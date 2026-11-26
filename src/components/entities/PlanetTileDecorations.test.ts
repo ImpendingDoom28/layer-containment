@@ -24,6 +24,7 @@ const makeOccupancy = (
   const size = gridSize * gridSize;
   const onPath = new Uint8Array(size);
   const water = new Uint8Array(size);
+  const waterVariant = new Uint8Array(size);
   const canyon = new Uint8Array(size);
   for (const tile of pathTiles) {
     onPath[tile.gridZ * gridSize + tile.gridX] = 1;
@@ -31,7 +32,7 @@ const makeOccupancy = (
   for (const tile of waterTiles) {
     water[tile.gridZ * gridSize + tile.gridX] = 1;
   }
-  return { gridSize, onPath, water, canyon };
+  return { gridSize, onPath, water, waterVariant, canyon };
 };
 
 const GRID_SIZE = 20;

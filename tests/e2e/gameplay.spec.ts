@@ -1,7 +1,6 @@
-import { expect, test } from "@playwright/test";
-
 import { MONEY_AFTER_FIRST_BASIC_TOWER, onPlaceBasicTower } from "./fixtures/towerPlacement";
 import { onOpenGame } from "./fixtures/navigation";
+import { expect, test } from "./test";
 
 // Heavy WebGL flow (open game, place a tower on canvas, start a wave); under
 // parallel workers the scene render can be slow, so give it headroom like the

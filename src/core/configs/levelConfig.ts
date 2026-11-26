@@ -50,12 +50,26 @@ const pathWaypointSchema: z.ZodType<PathWaypoint> = z.object({
   z: z.number(),
 });
 
+/** Footprint of a water pool within its tile (see `WaterVariant`). */
+export const waterVariantSchema = z.enum([
+  "full",
+  "half-n",
+  "half-e",
+  "half-s",
+  "half-w",
+  "corner-nw",
+  "corner-ne",
+  "corner-se",
+  "corner-sw",
+]);
+
 const waterBodyConfigFields = z.object({
   id: z.number(),
   gridX: z.number(),
   gridZ: z.number(),
   shape: buildingShapeSchema,
   color: z.string(),
+  variant: waterVariantSchema.default("full"),
   width: z.number().optional(),
   depth: z.number().optional(),
 });
@@ -83,6 +97,7 @@ export const waterBodySchema: z.ZodType<WaterBody> = z.object({
   gridZ: z.number(),
   shape: buildingShapeSchema,
   color: z.string(),
+  variant: waterVariantSchema,
   width: z.number(),
   depth: z.number(),
   height: z.number(),

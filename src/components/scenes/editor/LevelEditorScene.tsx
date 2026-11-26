@@ -9,7 +9,7 @@ import { CanyonBoulders } from "../../entities/CanyonBoulders";
 import { CanyonTile } from "../../entities/CanyonTile";
 import { Path } from "../../entities/Path";
 import { PlanetTileDecorations } from "../../entities/PlanetTileDecorations";
-import { Tile } from "../../entities/Tile";
+import { WaterSurface } from "../../entities/WaterSurface";
 import {
   BRIDGE_ELEVATION,
   getCanyonWorldBBox,
@@ -18,6 +18,7 @@ import {
 import { Light } from "../shared/Light";
 import { Skybox } from "../shared/Skybox";
 import { Ground } from "../shared/Ground";
+import { BoardPickSurface } from "../shared/BoardPickSurface";
 import {
   pathYOffsetSelector,
   tileSizeSelector,
@@ -233,20 +234,13 @@ export const LevelEditorScene = () => {
     return tileEntries;
   }, [draftLevel.gridSize]);
 
-  const onTileHover = useCallback(
-    (gridX: number, gridZ: number) => {
-      setHoveredTile({ gridX, gridZ });
-    },
-    [setHoveredTile]
-  );
-
-  const onTileHoverEnd = useCallback(() => {
-    setHoveredTile(null);
-  }, [setHoveredTile]);
-
-  const onTileClick = useCallback(
-    (gridX: number, gridZ: number) => {
-      handleTileAction({ gridX, gridZ }, tileSize, pathWidth);
+  // The pick surface (the board's only raycast target) resolves the hovered /
+  // clicked cell analytically from the hit ray and writes the editor hover
+  // through this callback; it ref-gates writes to actual cell changes, so the
+  // tiles' per-tile hover selectors re-run once per cell crossing.
+  const onCellClick = useCallback(
+    (cell: { gridX: number; gridZ: number }) => {
+      handleTileAction(cell, tileSize, pathWidth);
     },
     [handleTileAction, pathWidth, tileSize]
   );
@@ -270,8 +264,16 @@ export const LevelEditorScene = () => {
         canyonBBox={canyonBBox}
       />
 
+      <BoardPickSurface
+        gridSize={draftLevel.gridSize}
+        tileSize={tileSize}
+        canyonBBox={canyonBBox}
+        onHoverCell={setHoveredTile}
+        onCellClick={onCellClick}
+      />
       <group>
         {tiles.map(({ gridX, gridZ }) => {
+          const index = gridZ * draftLevel.gridSize + gridX;
           const placementState = getTilePlacementState({
             gridX,
             gridZ,
@@ -294,14 +296,13 @@ export const LevelEditorScene = () => {
           const baseTileColor =
             draftLevel.tileColor ?? getCssColorValue("editor-default-tile");
 
-          // Canyon cells use the game's `CanyonTile` (bowl + river), every
-          // other cell the game's `Tile` (water reads as the same animated
-          // surface the game runs). The editor keeps its thin flat land
-          // `EditorSphereTile` only where neither applies, so water and
-          // canyons render exactly like the game, not a flat slab. Each tile
-          // tracks the editor's `hoveredTile` itself through a per-tile
-          // primitive selector; the scene no longer re-renders on hover, so
-          // the callbacks below stay referentially stable for its lifetime.
+          // Canyon cells use the game's `CanyonTile` (bowl + river), water
+          // cells the game's `WaterSurface` (the same animated surface the
+          // game runs), and the remaining cells the editor's thin flat land
+          // `EditorSphereTile`, so water and canyons render exactly like the
+          // game, not a flat slab. Each tile tracks the editor's `hoveredTile`
+          // itself through a per-tile primitive selector; the scene no longer
+          // re-renders on hover (the board's pick surface writes the flag).
           if (placementState.isCanyon) {
             return (
               <CanyonTile
@@ -312,26 +313,21 @@ export const LevelEditorScene = () => {
                 canyonBBox={canyonBBox!}
                 isWater={placementState.isWater}
                 canPlace={canHighlightEditorAction}
-                onHover={() => onTileHover(gridX, gridZ)}
-                onHoverEnd={onTileHoverEnd}
-                onClick={() => onTileClick(gridX, gridZ)}
+                editorMode
               />
             );
           }
 
           if (placementState.isWater) {
             return (
-              <Tile
+              <WaterSurface
                 key={`${gridX}-${gridZ}`}
                 gridX={gridX}
                 gridZ={gridZ}
                 gridSize={draftLevel.gridSize}
-                isWater
-                isOnPath={placementState.isOnPath}
+                waterVariantCode={occupancy.waterVariant[index]}
                 canPlace={canHighlightEditorAction}
-                onHover={() => onTileHover(gridX, gridZ)}
-                onHoverEnd={onTileHoverEnd}
-                onClick={() => onTileClick(gridX, gridZ)}
+                editorMode
               />
             );
           }
@@ -348,9 +344,6 @@ export const LevelEditorScene = () => {
               canHighlightEditorAction={canHighlightEditorAction}
               activeTool={activeTool}
               canyonBBox={canyonBBox}
-              onTileClick={() => onTileClick(gridX, gridZ)}
-              onTileHover={() => onTileHover(gridX, gridZ)}
-              onTileHoverEnd={onTileHoverEnd}
             />
           );
         })}

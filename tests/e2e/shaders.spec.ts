@@ -1,6 +1,5 @@
-import { expect, test } from "@playwright/test";
-
 import { onOpenGame } from "./fixtures/navigation";
+import { expect, test } from "./test";
 
 const THREE_SHADER_FAILURE =
   /Shader Error|Fragment shader is not compiled|VALIDATE_STATUS false/i;
@@ -8,6 +7,7 @@ const THREE_SHADER_FAILURE =
 test("does not log WebGL shader compile failures when entering gameplay", async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   const badMessages: string[] = [];
 
   page.on("console", (msg) => {

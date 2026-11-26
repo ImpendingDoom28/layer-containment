@@ -1,6 +1,5 @@
-import { expect, test } from "@playwright/test";
-
 import { onOpenMainMenu } from "./fixtures/navigation";
+import { expect, test } from "./test";
 
 const SETTINGS_STORAGE_KEY = "containment-layer-settings-v1";
 

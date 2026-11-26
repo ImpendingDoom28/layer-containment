@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { parseLevelConfigData } from "./levelConfig";
+import {
+  parseLevelConfigData,
+  waterBodyConfigSchema,
+  waterBodySchema,
+} from "./levelConfig";
 
 const makeLevel = (
   enemies: Array<Record<string, unknown>>
@@ -175,5 +179,90 @@ describe("levelConfigSchema quests", () => {
       quests: [quest({ kills: 5 }, "dup"), quest({ towersPlaced: 3 }, "dup")],
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("levelConfigSchema water variants", () => {
+  it("defaults a water body's variant to full when omitted", () => {
+    const parsed = waterBodyConfigSchema.parse({
+      id: 1,
+      gridX: 2,
+      gridZ: 3,
+      shape: "box",
+      color: "#38bdf8",
+    });
+    expect(parsed.variant).toBe("full");
+  });
+
+  it("accepts every partial water variant", () => {
+    for (const variant of [
+      "half-n",
+      "half-e",
+      "half-s",
+      "half-w",
+      "corner-nw",
+      "corner-ne",
+      "corner-se",
+      "corner-sw",
+    ]) {
+      const parsed = waterBodyConfigSchema.parse({
+        id: 1,
+        gridX: 0,
+        gridZ: 0,
+        shape: "box",
+        color: "#38bdf8",
+        variant,
+      });
+      expect(parsed.variant).toBe(variant);
+    }
+  });
+
+  it("rejects an unknown water variant", () => {
+    expect(() =>
+      waterBodyConfigSchema.parse({
+        id: 1,
+        gridX: 0,
+        gridZ: 0,
+        shape: "box",
+        color: "#38bdf8",
+        variant: "half-diagonal",
+      })
+    ).toThrow();
+  });
+
+  it("keeps a water body's variant when the full level is parsed", () => {
+    const result = parseLevelConfigData({
+      ...makeLevel([]),
+      waters: [
+        {
+          id: 1,
+          gridX: 1,
+          gridZ: 1,
+          shape: "box",
+          color: "#38bdf8",
+          variant: "corner-se",
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.waters[0].variant).toBe("corner-se");
+  });
+
+  it("accepts a runtime water body with a variant", () => {
+    const parsed = waterBodySchema.parse({
+      id: 1,
+      gridX: 0,
+      gridZ: 0,
+      shape: "box",
+      color: "#38bdf8",
+      variant: "half-s",
+      width: 0.9,
+      depth: 0.9,
+      height: 0.1,
+      x: 0,
+      z: 0,
+    });
+    expect(parsed.variant).toBe("half-s");
   });
 });

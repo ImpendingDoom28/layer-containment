@@ -1,0 +1,10 @@
+{
+  "name": "@layer-containment/commitlint",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Isolated commitlint install for the CI commit-message check — keeps the app dependency tree (three.js, React, Electron, ...) out of that job.",
+  "dependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4"
+  }
+}

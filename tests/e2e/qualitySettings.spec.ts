@@ -1,6 +1,7 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
 
 import { onOpenMainMenu } from "./fixtures/navigation";
+import { expect, test } from "./test";
 
 // Settings → Quality: the graphics-quality options (bloom and shadows) live in
 // their own section, separate from General. Both are on by default, toggling

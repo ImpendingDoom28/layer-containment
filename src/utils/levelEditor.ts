@@ -76,6 +76,29 @@ export const waypointToTile = (
   };
 };
 
+/**
+ * The grid cell under a flat-field point: the same rounding as the
+ * waypoint↔tile conversion, returning `null` for points outside the board
+ * (the board's pick surface uses it to ignore rays that fall past the field
+ * edge).
+ */
+export const flatFieldToGridCell = (
+  flatX: number,
+  flatZ: number,
+  gridSize: number,
+  tileSize: number
+): { gridX: number; gridZ: number } | null => {
+  const gridOffset = getLevelGridOffset(gridSize, tileSize);
+  // `+ 0` normalizes -0 (rounding can land on -0 for points at -10, the
+  // field's edge) so cell identity is unambiguous for object comparison.
+  const gridX = Math.round((flatX - gridOffset - tileSize / 2) / tileSize) + 0;
+  const gridZ = Math.round((flatZ - gridOffset - tileSize / 2) / tileSize) + 0;
+  if (gridX < 0 || gridX >= gridSize || gridZ < 0 || gridZ >= gridSize) {
+    return null;
+  }
+  return { gridX, gridZ };
+};
+
 // Convert building grid coordinates to world coordinates
 export const withRecalculatedBuildingCoordinates = (
   building: Building,
@@ -103,6 +126,7 @@ export const withRecalculatedWaterCoordinates = (
     gridZ: water.gridZ,
     shape: water.shape,
     color: water.color,
+    variant: water.variant ?? "full",
     width,
     depth,
     height,
@@ -120,6 +144,7 @@ export const clampWaterToGrid = (
   gridZ: Math.max(0, Math.min(gridSize - 1, water.gridZ)),
   shape: water.shape,
   color: water.color,
+  variant: water.variant,
   ...(water.width !== undefined ? { width: water.width } : {}),
   ...(water.depth !== undefined ? { depth: water.depth } : {}),
 });

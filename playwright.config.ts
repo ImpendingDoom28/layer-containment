@@ -5,10 +5,33 @@ const baseURL =
 
 // Vite's default port matches the default baseURL; when PLAYWRIGHT_BASE_URL
 // points elsewhere, start the dev server on the same port so the webServer
-// readiness check (url: baseURL) resolves.
-const serverCommand = new URL(baseURL).port
-  ? `npm run dev -- --port ${new URL(baseURL).port}`
-  : "npm run dev";
+// readiness check (url: baseURL) resolves. In CI the `build` job already
+// produced `dist/` (downloaded as an artifact), so serve it with `preview`
+// instead — the dev server's on-demand transforms are a big share of each
+// page load on the SwiftShader runner.
+const serverCommand = process.env.CI
+  ? `npm run preview -- --port ${new URL(baseURL).port} --strictPort`
+  : new URL(baseURL).port
+    ? `npm run dev -- --port ${new URL(baseURL).port}`
+    : "npm run dev";
+
+const isCi = !!process.env.CI;
+
+// Software GL (SwiftShader) for headless hosts without a GPU. On such hosts
+// the default hardware WebGL context never resolves, so the app stalls at
+// "Preparing graphics..." and every canvas-gated test fails — CI's
+// ubuntu-latest runners are one of these, so CI always renders in software.
+// Local hosts opt in with PLAYWRIGHT_SWIFTSHADER=1; real-GPU machines leave
+// it unset and keep the fast hardware path. SwiftShader serializes the suite
+// (concurrent shader compiles stall each other) and raises the time budgets,
+// since each WebGL canvas load takes ~20 s in software.
+const useSwiftShader = isCi || process.env.PLAYWRIGHT_SWIFTSHADER === "1";
+
+const SWIFTSHADER_ARGS = [
+  "--use-gl=angle",
+  "--use-angle=swiftshader",
+  "--enable-unsafe-swiftshader",
+];
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -17,16 +40,35 @@ export default defineConfig({
   // PWA suite (pwa/playwright.config.ts) needs a production build, so it is
   // excluded here as well.
   testIgnore: [/stress\.spec\.ts$/, /pwa\.spec\.ts$/],
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : "50%",
-  reporter: process.env.CI ? "html" : "list",
+  forbidOnly: isCi,
+  retries: isCi ? 2 : useSwiftShader ? 1 : 0,
+  // Software GL is serialized to avoid cross-worker shader-compile stalls;
+  // otherwise the parallelism is the env's (default 50%).
+  workers: isCi
+    ? 1
+    : useSwiftShader
+      ? 1
+      : (process.env.PLAYWRIGHT_WORKERS ?? "50%"),
+  reporter: isCi ? "html" : "list",
+  // Software GL makes each WebGL canvas load ~20 s (a test may load two), so
+  // the 30 s test / 5 s expect defaults are far too tight.
+  ...(useSwiftShader
+    ? {
+        timeout: 300_000,
+        expect: {
+          timeout: 60_000,
+        },
+      }
+    : {}),
   use: {
     baseURL,
     trace: "on-first-retry",
     viewport: {
       width: 1280,
       height: 720,
+    },
+    launchOptions: {
+      args: useSwiftShader ? SWIFTSHADER_ARGS : [],
     },
   },
   projects: [
@@ -44,7 +86,9 @@ export default defineConfig({
   webServer: {
     command: serverCommand,
     url: baseURL,
-    reuseExistingServer: true,
+    // Locally a dev server may already be running; on CI a stale one would
+    // serve a build that is not the one the `build` job verified.
+    reuseExistingServer: !process.env.CI,
     stdout: "pipe",
     stderr: "pipe",
     timeout: 120_000,

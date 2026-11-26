@@ -253,8 +253,16 @@ export const createWaveSystem = ({
     // next wave" pause-blocking is unchanged while the comet is in flight.
     // Only relevant for the very first wave; once any wave has started the
     // reveal is long done.
+    //
+    // `revealedAt` is stamped on the scene's *view* clock (the FX runs at wall
+    // time), so the gate compares against `viewTimeSeconds` — under the e2e
+    // fast-forward the simulation clock outruns the view clock, and settling
+    // on it would open wave 1 while the comet is still in flight. In
+    // production the two clocks coincide, so the fallback keeps this exact.
     const revealSettled =
-      currentWave === 0 ? isRevealSettled(frame.simulationTimeSeconds) : true;
+      currentWave === 0
+        ? isRevealSettled(frame.viewTimeSeconds ?? frame.simulationTimeSeconds)
+        : true;
     if (useWaveStore.getState().revealSettled !== revealSettled) {
       useWaveStore.getState().setRevealSettled(revealSettled);
     }

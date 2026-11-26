@@ -3,14 +3,21 @@ import { FC, memo, useCallback } from "react";
 import type { TileOccupancyMasks } from "../../utils/tileOccupancy";
 import type { CanyonWorldBBox } from "../../utils/canyonBridges";
 import { Tile } from "./Tile";
+import { WaterSurface } from "./WaterSurface";
 import { CanyonTile } from "./CanyonTile";
+import { BoardPickSurface } from "../scenes/shared/BoardPickSurface";
 import {
   gameStatusSelector,
   selectedTowerSelector,
   selectedTowerTypeToPlaceSelector,
   setSelectedTowerSelector,
+  tileSizeSelector,
   useGameStore,
 } from "../../core/stores/useGameStore";
+import {
+  setHoveredTileSelector,
+  useLevelStore,
+} from "../../core/stores/useLevelStore";
 import { TowerType } from "../../core/types/game";
 
 type GridProps = {
@@ -34,6 +41,8 @@ export const Grid: FC<GridProps> = memo(({ placeTower, occupancy, canyonBBox }) 
   const gameStatus = useGameStore(gameStatusSelector);
   const selectedTower = useGameStore(selectedTowerSelector);
   const setSelectedTower = useGameStore(setSelectedTowerSelector);
+  const tileSize = useGameStore(tileSizeSelector);
+  const setHoveredTile = useLevelStore(setHoveredTileSelector);
 
   const onTileClick = useCallback(
     (gridX: number, gridZ: number) => {
@@ -64,8 +73,24 @@ export const Grid: FC<GridProps> = memo(({ placeTower, occupancy, canyonBBox }) 
     [selectedTowerTypeToPlace]
   );
 
+  const onCellClick = useCallback(
+    (cell: { gridX: number; gridZ: number }) =>
+      onTileClick(cell.gridX, cell.gridZ),
+    [onTileClick]
+  );
+
   return (
     <group name="grid">
+      {/* The single pick surface: the board's only raycast target. Tiles no
+          longer carry pointer handlers; the surface resolves the hovered /
+          clicked cell analytically from the hit ray (see the component). */}
+      <BoardPickSurface
+        gridSize={occupancy.gridSize}
+        tileSize={tileSize}
+        canyonBBox={canyonBBox}
+        onHoverCell={setHoveredTile}
+        onCellClick={onCellClick}
+      />
       {Array.from({ length: occupancy.gridSize }, (_, gridX) =>
         Array.from({ length: occupancy.gridSize }, (_, gridZ) => {
           const index = gridZ * occupancy.gridSize + gridX;
@@ -81,7 +106,21 @@ export const Grid: FC<GridProps> = memo(({ placeTower, occupancy, canyonBBox }) 
                 gridSize={occupancy.gridSize}
                 canyonBBox={canyonBBox!}
                 isWater={occupancy.water[index] === 1}
-                onClick={() => onTileClick(gridX, gridZ)}
+              />
+            );
+          }
+
+          if (occupancy.water[index] === 1) {
+            // Water cells render the animated surface (full or a partial
+            // variant) through `WaterSurface`; everything else is land or
+            // path through `Tile`.
+            return (
+              <WaterSurface
+                key={`${gridX}-${gridZ}`}
+                gridX={gridX}
+                gridZ={gridZ}
+                waterVariantCode={occupancy.waterVariant[index]}
+                canPlace={canPlace}
               />
             );
           }
@@ -91,10 +130,8 @@ export const Grid: FC<GridProps> = memo(({ placeTower, occupancy, canyonBBox }) 
               key={`${gridX}-${gridZ}`}
               gridX={gridX}
               gridZ={gridZ}
-              isWater={occupancy.water[index] === 1}
               isOnPath={occupancy.onPath[index] === 1}
               canPlace={canPlace}
-              onClick={() => onTileClick(gridX, gridZ)}
             />
           );
         })

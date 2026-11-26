@@ -1,4 +1,5 @@
 import path from "path";
+import { createRequire } from "node:module";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vitest/config";
@@ -37,6 +38,8 @@ const blockStressEntry: Plugin = {
   },
 };
 
+const nodeRequire = createRequire(import.meta.url);
+
 // https://vitejs.dev/config/
 export default defineConfig({
   // Relative base so the built app works from file:// (Electron) and from
@@ -71,5 +74,23 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    // `three` is a dual package: under vitest the CJS R3F/test-renderer
+    // modules load `three.cjs` while tests and components load
+    // `three.module.js` — two module instances, i.e. two `Vector3` classes.
+    // R3F's `applyProps` identifies math objects by
+    // `target.constructor === value.constructor`, so a component that passes
+    // a Vector3/Quaternion (like `Tile`'s sphere pose) would skip the copy
+    // branch and hit a plain assignment, which three ≥ 0.183 rejects
+    // (`Object3D` transform props are read-only). Pin `three` to the CJS
+    // build so every import in the test graph resolves to one instance.
+    // Test-only: the dev server and build are unaffected. A RegExp find so
+    // only the bare specifier is aliased — `three/addons` and the like keep
+    // their normal subpath resolution.
+    alias: [
+      {
+        find: /^three$/,
+        replacement: nodeRequire.resolve("three"),
+      },
+    ],
   },
 });

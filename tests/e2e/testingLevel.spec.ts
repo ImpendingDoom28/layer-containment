@@ -1,6 +1,5 @@
-import { expect, test } from "@playwright/test";
-
 import { onOpenTestingLevel } from "./fixtures/navigation";
+import { expect, test } from "./test";
 
 test("loads the testing level route", async ({ page }) => {
   await onOpenTestingLevel(page);
@@ -17,9 +16,10 @@ test("loads the testing level route", async ({ page }) => {
 });
 
 // The main-menu entry to the showcase is gated by the `?m=debug` URL flag
-// (read once at boot) — so the menu is opened with the flag set, and the
-// button is asserted here, right below "Level Creator"; its click navigates to
-// the (always reachable) route.
+// (read once at boot) — not by the build type — so the menu is opened with the
+// flag set; the button then sits right below "Level Creator" in every build
+// (dev server and the production build the e2e suite serves), and its click
+// navigates to the (always reachable) route.
 test("shows a debug-flag Testing Level button below Level Creator in the main menu", async ({
   page,
 }) => {

@@ -4,7 +4,6 @@ import {
   BufferGeometry,
   Float32BufferAttribute,
   Mesh,
-  MeshStandardMaterial,
   SphereGeometry,
 } from "three";
 
@@ -26,6 +25,7 @@ import {
   getCanyonWorldBBox,
 } from "../../../utils/canyonBridges";
 import { freezeSubtree } from "../../../utils/freezeSubtree";
+import { createPlanetGroundMaterial } from "../../../utils/planetGroundMaterial";
 import { getCssColorValue } from "../../ui/lib/cssUtils";
 import type { CanyonConfig } from "../../../core/types/game";
 
@@ -307,13 +307,20 @@ export const Ground: FC<GroundProps> = memo(
     );
   }, [baseGeometry, bbox]);
 
-  const material = useMemo(() => {
-    return new MeshStandardMaterial({
-      color: getCssColorValue("scene-gray-700"),
-      metalness: 0.08,
-      roughness: 0.9,
-    });
-  }, []);
+  // The exposed ring around the board wears the same procedural regolith as
+  // the tile tops (world-space XZ, one shared field), darkened so it reads
+  // as the terrain under the slabs. One material per scene.
+  const material = useMemo(
+    () =>
+      createPlanetGroundMaterial({
+        baseColor: getCssColorValue("scene-gray-700"),
+        metalness: 0.08,
+        roughness: 0.9,
+        regolithHighlight: getCssColorValue("scene-regolith-highlight"),
+        regolithShadow: getCssColorValue("scene-regolith-shadow"),
+      }),
+    []
+  );
 
   // Stable for the component's lifetime: dispose only on unmount.
   useEffect(() => {

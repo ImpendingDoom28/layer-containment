@@ -1,4 +1,4 @@
-import { FC, memo, useEffect, useMemo } from "react";
+import { FC, memo, useMemo } from "react";
 
 import { MeshStandardMaterial } from "three";
 
@@ -13,7 +13,6 @@ import {
   getPlanetRadius,
 } from "../../../utils/planetSurfaceMapping";
 import { createPlanetTileMaterial } from "../../../utils/planetTileMaterial";
-import { hashGrid2D } from "../../../core/tileGridHash";
 import { getSlabGeometry, getSphereTilePose } from "../../../utils/sphereTile";
 import {
   createEditorTileHoveredSelector,
@@ -43,6 +42,30 @@ const getToolPreviewColor = (tool: LevelEditorTool): string =>
 // every tile that shows them: one material per (colour, hovered) pair
 // instead of one per tile (never disposed — the scene's lifetime).
 const editorTileMaterialCache = new Map<string, MeshStandardMaterial>();
+
+// The plain land slabs are identical on every land tile (the regolith is
+// painted in world space, so the per-tile seed is gone): one material per
+// land color, never disposed (the scene's lifetime).
+const editorLandMaterialCache = new Map<string, MeshStandardMaterial>();
+const getEditorLandRegolithMaterial = (landBaseColor: string) => {
+  const entry = editorLandMaterialCache.get(landBaseColor);
+  if (entry) return entry;
+  const material = createPlanetTileMaterial({
+    baseColor: landBaseColor,
+    emissive: getCssColorValue("scene-black"),
+    emissiveIntensity: 0,
+    metalness: 0.05,
+    roughness: 0.88,
+    tileHalfHeight: LEVEL_EDITOR_TILE_HEIGHT / 2,
+    regolithHighlight: getCssColorValue("scene-regolith-highlight"),
+    regolithShadow: getCssColorValue("scene-regolith-shadow"),
+    transparent: true,
+    opacity: 0.45,
+  });
+  editorLandMaterialCache.set(landBaseColor, material);
+  return material;
+};
+
 const getEditorTileMaterial = (color: string, isHovered: boolean) => {
   const key = `${isHovered ? 1 : 0}|${color}`;
   const entry = editorTileMaterialCache.get(key);
@@ -123,32 +146,16 @@ export const EditorSphereTile: FC<EditorSphereTileProps> = memo(
       return -(depth + LEVEL_EDITOR_TILE_HEIGHT / 2);
     }, [worldX, worldZ, radius, placementState.isCanyon, canyonBBox]);
 
-    // Only the plain land slab is tile-owned (per-tile seeded regolith); the
-    // non-land slabs share one material per (colour, hovered) pair and must
-    // not be disposed here.
-    const { material, shared } = useMemo(() => {
+    // All slabs are shared instances (the world-space regolith field needs no
+    // per-tile material), so none are disposed here.
+    const material = useMemo(() => {
       if (
         !placementState.isOnPath &&
         !placementState.isWater &&
         !placementState.isCanyon &&
         !isHovered
       ) {
-        return {
-          material: createPlanetTileMaterial({
-            baseColor: landBaseColor,
-            emissive: getCssColorValue("scene-black"),
-            emissiveIntensity: 0,
-            metalness: 0.05,
-            roughness: 0.88,
-            tileSeed: hashGrid2D(gridX, gridZ),
-            tileHalfHeight: LEVEL_EDITOR_TILE_HEIGHT / 2,
-            regolithHighlight: getCssColorValue("scene-regolith-highlight"),
-            regolithShadow: getCssColorValue("scene-regolith-shadow"),
-            transparent: true,
-            opacity: 0.45,
-          }),
-          shared: false,
-        };
+        return getEditorLandRegolithMaterial(landBaseColor);
       }
 
       let color: string;
@@ -166,28 +173,16 @@ export const EditorSphereTile: FC<EditorSphereTileProps> = memo(
         color = landBaseColor;
       }
 
-      return {
-        material: getEditorTileMaterial(color, isHovered),
-        shared: true,
-      };
+      return getEditorTileMaterial(color, isHovered);
     }, [
       activeTool,
       canHighlightEditorAction,
-      gridX,
-      gridZ,
       isHovered,
       landBaseColor,
       placementState.isOnPath,
       placementState.isWater,
       placementState.isCanyon,
     ]);
-
-    useEffect(
-      () => () => {
-        if (!shared) material.dispose();
-      },
-      [material, shared]
-    );
 
     return (
       <group

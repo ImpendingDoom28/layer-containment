@@ -14,15 +14,34 @@ type OnOpenGameOptions = {
   skipControlsIntro?: boolean;
 };
 
+// Waits for the main menu to actually be interactive instead of a fixed
+// sleep: the loading overlay ("Preparing graphics…") is gone and the Play
+// button is present. This is the readiness signal the previous
+// `waitForTimeout(2000)` was standing in for — it resolves as soon as the menu
+// is ready (faster on a fast box) and blocks until it is (robust on the
+// GPU-less CI runner). On hosts without a GPU (SwiftShader fallback) the
+// shader-gate can take well over 2 s to resolve, so both waits get a 60s
+// timeout — the budget the explicit Play-wait upstream used.
+export const onWaitForMainMenuReady = async (page: Page) => {
+  await expect(page.getByText("Preparing graphics")).not.toBeVisible({
+    timeout: 60_000,
+  });
+  await expect(page.getByRole("button", { name: "Play" })).toBeVisible({
+    timeout: 60_000,
+  });
+};
+
 export const onOpenMainMenu = async (page: Page) => {
   await page.goto("/");
-  // The menu must be up before the click: on hosts without a GPU (SwiftShader
-  // fallback) the shader-gate can take well over 2 s to resolve, and a click
-  // on the "Preparing graphics..." screen does nothing.
-  await page
-    .getByRole("button", { name: "Play" })
-    .waitFor({ timeout: 60_000 });
-  await page.click("body");
+  await onWaitForMainMenuReady(page);
+  // Trigger the menu's entrance state (hasInteracted) with a synthetic
+  // mousedown: the app wires it to a global mousedown/keydown/touchstart
+  // listener (see useMenuState). A real click on "body" is flaky because the
+  // click point lands mid-entrance-transition on a pointer-events-none layer,
+  // so Playwright's actionability retries until timeout.
+  await page.evaluate(() => {
+    window.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+  });
 };
 
 export const onOpenGame = async (
@@ -40,8 +59,11 @@ export const onOpenGame = async (
   await expect(page.getByRole("heading", { name: "Deploy" })).toBeVisible();
   await page.getByTestId("level-picker-level_1").click();
   if (waitForTowerShop) {
+    // The scene render is the slowest part of the flow on the GPU-less CI
+    // runner (SwiftShader); 20s was too tight for a cold render and a few
+    // tests flaked on it.
     await expect(page.getByRole("heading", { name: "Tower Shop" })).toBeVisible(
-      { timeout: 20_000 }
+      { timeout: 60_000 }
     );
   }
 };

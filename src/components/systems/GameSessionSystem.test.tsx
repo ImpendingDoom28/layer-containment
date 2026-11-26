@@ -11,6 +11,7 @@ import { testWorld } from "../../core/ecs/world";
 import type { GameSessionController } from "../../core/session/types";
 import { useGameStore } from "../../core/stores/useGameStore";
 import { useSettingsStore } from "../../core/stores/useSettingsStore";
+import { MAX_FRAME_DELTA } from "../../utils/gameDelta";
 import { GameSessionSystem } from "./GameSessionSystem";
 
 vi.mock("../../core/hooks/useInstancedProjectiles", () => ({
@@ -22,6 +23,17 @@ vi.mock("../../core/hooks/useInstancedProjectiles", () => ({
     getActiveProjectiles: vi.fn(),
     getTrailPoolStats: vi.fn(),
   }),
+}));
+
+// The e2e fast-forward factor (`SIM_SPEED`) is read at module load from
+// `window.__SIM_SPEED__`; this mock re-exposes it as a getter over a mutable
+// global so each test can switch between the production single-tick path
+// (`__SIM_SPEED_TEST__ === 1`) and the sub-ticked fast-forward path (any value
+// > 1) without reloading modules.
+vi.mock("../../core/flags/simSpeed", () => ({
+  get SIM_SPEED() {
+    return (globalThis as { __SIM_SPEED_TEST__?: number }).__SIM_SPEED_TEST__ ?? 1;
+  },
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,6 +60,9 @@ const createSession = () => {
 
 describe("GameSessionSystem", () => {
   beforeEach(() => {
+    // Default to the production single-tick path; the fast-forward test opts
+    // into the sub-ticked path explicitly.
+    (globalThis as { __SIM_SPEED_TEST__?: number }).__SIM_SPEED_TEST__ = 1;
     useGameStore.getState().setGameStatus("playing");
     useGameStore.getState().setIsPageVisible(true);
     useSettingsStore.getState().setPauseWhenTabHidden(false);
@@ -160,6 +175,53 @@ describe("GameSessionSystem", () => {
       expect(session.tick).toHaveBeenLastCalledWith({
         deltaSeconds: expect.closeTo(0.016, 3),
         simulationTimeSeconds: expect.closeTo(10, 3),
+        canResolveGameplay: true,
+      });
+    } finally {
+      await ReactThreeTestRenderer.act(async () => {
+        renderer.unmount();
+      });
+    }
+  });
+
+  it("sub-ticks the frame when the e2e fast-forward is enabled", async () => {
+    // With `SIM_SPEED` 20 a 0.1 s frame must advance simulation time by
+    // 0.1 × 20 = 2 s — split into sub-ticks no larger than `MAX_FRAME_DELTA`
+    // (so an enemy cannot skip a corner and a projectile cannot tunnel),
+    // unlike the production path where simulation time only advances ~0.1 s.
+    (globalThis as { __SIM_SPEED_TEST__?: number }).__SIM_SPEED_TEST__ = 20;
+    const { session } = createSession();
+    const renderer = await ReactThreeTestRenderer.create(
+      <WorldProvider world={testWorld}>
+        <EntityIdProvider>
+          <SimulationClockProvider>
+            <GameSessionSystem session={session}>
+              <group />
+            </GameSessionSystem>
+          </SimulationClockProvider>
+        </EntityIdProvider>
+      </WorldProvider>
+    );
+
+    try {
+      await ReactThreeTestRenderer.act(async () => {
+        await renderer.advanceFrames(1, 0.1);
+      });
+
+      // 2 s of simulation time over a 0.1 s frame: ceil(2 / 0.05) = 40
+      // sub-ticks of 0.05 s each (exactly `MAX_FRAME_DELTA`).
+      expect(session.tick).toHaveBeenCalledTimes(40);
+      for (const call of vi.mocked(session.tick).mock.calls) {
+        expect(call[0].deltaSeconds).toBeLessThanOrEqual(
+          MAX_FRAME_DELTA + 1e-9
+        );
+      }
+      // `viewTimeSeconds` is the view-clock time where the reveal gate reads
+      // `revealedAt` from; on the first frame the view clock is at 0.
+      expect(session.tick).toHaveBeenLastCalledWith({
+        deltaSeconds: expect.closeTo(0.05, 9),
+        simulationTimeSeconds: expect.closeTo(2, 6),
+        viewTimeSeconds: expect.closeTo(0, 6),
         canResolveGameplay: true,
       });
     } finally {

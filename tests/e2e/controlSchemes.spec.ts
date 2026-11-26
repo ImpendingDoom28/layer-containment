@@ -1,6 +1,7 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
 
 import { onOpenGame, onOpenMainMenu } from "./fixtures/navigation";
+import { expect, test } from "./test";
 
 // These tests share the onOpenMainMenu fixture with the rest of the suite,
 // which is tight under parallel-worker load (see .agents/smoke-test-handoff.md).

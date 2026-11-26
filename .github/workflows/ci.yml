@@ -3,8 +3,14 @@ name: CI
 # Verifies the app on every pull request and push to master: builds the web
 # app, runs the RTTR unit tests, runs the default Playwright e2e suite
 # (menu → game flows; the stress scene is excluded and has its own local
-# tooling, see stress/README.md), and lints PR commit messages with
-# commitlint (Conventional Commits). The repo is public, so these runs are free.
+# tooling, see stress/README.md), the PWA suite, and lints PR commit
+# messages with commitlint (Conventional Commits). The repo is public, so
+# these runs are free.
+#
+# The jobs run in parallel. `build` produces `dist/` once and publishes it
+# as an artifact; `e2e` and `pwa` download it and serve it with
+# `vite preview` — no dev-server transforms, no second build, and the
+# Playwright browser install is cached.
 
 on:
   pull_request:
@@ -12,22 +18,15 @@ on:
     branches: [master]
   workflow_dispatch:
 
-# The job only reads the repository and runs tests; no write access needed.
+# The jobs only read the repository and run tests; no write access needed.
 permissions:
   contents: read
 
 jobs:
-  ci:
-    name: Build, unit, e2e
+  build:
+    name: Build
     runs-on: ubuntu-latest
-    # The e2e suite runs on software GL (SwiftShader) on CI: the runner has
-    # no GPU and headless Chromium's default hardware WebGL context never
-    # resolves, so every canvas-gated test stalled at "Preparing graphics...".
-    # SwiftShader serializes the suite (single worker; concurrent shader
-    # compiles stall each other) and takes ~28-30 min for 37 tests on
-    # top of install/build/unit, so 30-45 min is not enough headroom and the
-    # job kept getting cancelled by the timeout.
-    timeout-minutes: 60
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,27 +40,101 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
-
       - name: Build
         run: npm run build
+
+      # `e2e` and `pwa` serve this `dist/` with `vite preview` instead of
+      # the dev server (whose on-demand transforms are a big share of each
+      # page load on the SwiftShader runner) — and the PWA suite no longer
+      # needs a second build. Note: `upload-artifact` stores the *contents*
+      # of `dist/` at the artifact root, so the consumers extract into
+      # `dist/` (download-artifact `path: dist`) — without that the build
+      # output lands at the workspace root and `vite preview` serves a
+      # missing `dist/`, which fails only as a `config.webServer` timeout.
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
 
       - name: Unit tests
         run: npm run test:unit
 
-      # The Playwright config starts the dev server itself (webServer) and
-      # uses CI-appropriate settings (single worker, retries) when the CI
-      # env var is set, which GitHub Actions provides automatically.
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    # The GPU-less runner renders with SwiftShader (see playwright.config.ts),
+    # so the WebGL scene is slow per test, and the previous serial job's
+    # 30-minute budget was not enough (the last few master runs were
+    # cancelled by the timeout). The suite itself is faster now (preview
+    # build, sim fast-forward) but 45 minutes still leaves headroom.
+    timeout-minutes: 45
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          # The artifact stores the *contents* of dist/ (see the build job),
+          # so extract into dist/ — otherwise they land at the workspace root
+          # and `vite preview` serves a missing directory (a webServer timeout).
+          path: dist
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          # The lockfile pins the Playwright (and hence browser) version.
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Fails fast with a clear message if the artifact layout is ever wrong
+      # (a nested `dist/dist/` would otherwise surface only as a
+      # `config.webServer` timeout after 120s).
+      - name: Verify dist
+        run: |
+          test -f dist/index.html || { ls -R dist; echo "dist/index.html missing — artifact layout changed?"; exit 1; }
+
+      # The Playwright config, when the CI env var is set (GitHub Actions
+      # provides it automatically), serves the downloaded `dist/` with
+      # `vite preview` on the baseURL port — no dev server — and runs a
+      # single worker with retries (concurrent SwiftShader workers starve
+      # each other; see playwright.config.ts).
       - name: E2E tests
         run: npm run test:e2e
-
-      # The PWA suite builds first, then serves the built app through
-      # `vite preview` (the config handles both) so the service worker
-      # registration guard (production + secure origin) holds — unlike the
-      # dev-server suite, which excludes pwa.spec.ts.
-      - name: PWA E2E tests
-        run: npm run test:e2e:pwa
 
       - name: Upload Playwright report
         if: failure()
@@ -71,14 +144,77 @@ jobs:
           path: playwright-report/
           if-no-files-found: ignore
 
+  pwa:
+    name: PWA E2E (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          # The artifact stores the *contents* of dist/ (see the build job),
+          # so extract into dist/ — otherwise they land at the workspace root
+          # and `vite preview` serves a missing directory (a webServer timeout).
+          path: dist
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Fails fast with a clear message if the artifact layout is ever wrong
+      # (a nested `dist/dist/` would otherwise surface only as a
+      # `config.webServer` timeout after 180s).
+      - name: Verify dist
+        run: |
+          test -f dist/index.html || { ls -R dist; echo "dist/index.html missing — artifact layout changed?"; exit 1; }
+
+      # On CI the PWA config runs only `vite preview` (the `build` job
+      # already produced `dist/`) so the service worker registration guard
+      # (production + secure origin) holds.
+      - name: PWA E2E tests
+        run: npm run test:e2e:pwa
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-pwa
+          path: playwright-report/
+          if-no-files-found: ignore
+
   # Backstop for the local `commit-msg` hook (commitlint): checks the commit
-  # messages of every PR against Conventional Commits.
+  # messages of every PR against Conventional Commits. It runs from
+  # tools/commitlint, an isolated package containing only the two commitlint
+  # dependencies — `npm install` at the repo root would pull the whole app
+  # dependency tree (three.js, React, Electron, …) just to run one CLI. The
+  # root devDependencies keep commitlint for the local hook.
   commitlint:
     name: Commit messages
     # `github.event.pull_request.base.ref` only exists on PR events.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       # fetch-depth 0: the full history is needed to diff the PR's commits
       # against the base branch.
@@ -92,16 +228,22 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: tools/commitlint/package-lock.json
 
-      - name: Install dependencies
-        run: npm ci --no-audit --no-fund
+      - name: Install commitlint
+        run: npm ci --prefix tools/commitlint --no-audit --no-fund
 
       # `--from`/`--to` lints every commit in the PR (base..head) as its own
       # message, so one bad subject cannot hide behind another. Git-generated
       # messages (merge commits, reverts, squash messages) are ignored
-      # automatically by commitlint's default ignore rules.
+      # automatically by commitlint's default ignore rules. NODE_PATH points
+      # at the isolated install because the preset is resolved from the config
+      # file's directory (the repo root, where no node_modules exists here),
+      # and CommonJS resolution falls back to NODE_PATH.
       - name: Lint commit messages
+        env:
+          NODE_PATH: ${{ github.workspace }}/tools/commitlint/node_modules
         run: |
-          npx commitlint \
+          tools/commitlint/node_modules/.bin/commitlint \
             --from ${{ github.event.pull_request.base.sha }} \
             --to ${{ github.event.pull_request.head.sha }}

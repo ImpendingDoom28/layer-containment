@@ -34,7 +34,14 @@ export const onWaitForMainMenuReady = async (page: Page) => {
 export const onOpenMainMenu = async (page: Page) => {
   await page.goto("/");
   await onWaitForMainMenuReady(page);
-  await page.click("body");
+  // Trigger the menu's entrance state (hasInteracted) with a synthetic
+  // mousedown: the app wires it to a global mousedown/keydown/touchstart
+  // listener (see useMenuState). A real click on "body" is flaky because the
+  // click point lands mid-entrance-transition on a pointer-events-none layer,
+  // so Playwright's actionability retries until timeout.
+  await page.evaluate(() => {
+    window.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+  });
 };
 
 export const onOpenGame = async (
@@ -52,8 +59,11 @@ export const onOpenGame = async (
   await expect(page.getByRole("heading", { name: "Deploy" })).toBeVisible();
   await page.getByTestId("level-picker-level_1").click();
   if (waitForTowerShop) {
+    // The scene render is the slowest part of the flow on the GPU-less CI
+    // runner (SwiftShader); 20s was too tight for a cold render and a few
+    // tests flaked on it.
     await expect(page.getByRole("heading", { name: "Tower Shop" })).toBeVisible(
-      { timeout: 20_000 }
+      { timeout: 60_000 }
     );
   }
 };

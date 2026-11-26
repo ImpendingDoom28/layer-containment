@@ -43,6 +43,7 @@ test("loads the main menu and enters gameplay HUD", async ({ page }) => {
 });
 
 test("shows the in-game HUD after starting a run", async ({ page }) => {
+  test.setTimeout(90_000);
   await onOpenGame(page, { waitForTowerShop: true });
 
   await expect(
@@ -220,6 +221,7 @@ test("rebinds a control in the Settings Controls section and remembers it", asyn
 test("opens the game menu from gameplay with Escape and resumes", async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   await onOpenGame(page, { waitForTowerShop: true });
 
   await page.keyboard.press("Escape");

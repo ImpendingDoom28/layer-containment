@@ -16,6 +16,7 @@ const expectIntroVisible = (page: import("@playwright/test").Page) =>
 test("shows the controls intro modal on the first run and remembers it", async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   await onOpenGameOnFirstRun(page);
 
   await expectIntroVisible(page);
@@ -44,6 +45,7 @@ test("shows the controls intro modal on the first run and remembers it", async (
 test("keeps the controls intro open until the player explicitly closes it", async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   await onOpenGameOnFirstRun(page);
 
   await expectIntroVisible(page);
@@ -60,6 +62,7 @@ test("keeps the controls intro open until the player explicitly closes it", asyn
 test("does not show the controls intro to a returning player", async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   // onOpenGame marks the intro as already seen (the default), simulating a
   // player who saw it in an earlier session.
   await onOpenGame(page, { waitForTowerShop: true });

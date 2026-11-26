@@ -55,6 +55,9 @@ import { SlowEffect } from "./effects/SlowEffect";
 import { UpgradeEffect } from "./effects/UpgradeEffect";
 import { EnemyLocomotion } from "./EnemyLocomotion";
 import { EnemyModel } from "./EnemyModel";
+import { ModelAnimation } from "./ModelAnimation";
+import { ENEMY_MODEL_ROTATION_Y } from "../../constants/models";
+import { getPathSwapAnimationState } from "../../core/ecs/traits/pathSwap";
 
 type EnemyProps = {
   entity: Entity;
@@ -221,6 +224,29 @@ export const Enemy: FC<EnemyProps> = memo(
     useEffect(() => () => flashMaterial.dispose(), [flashMaterial]);
 
     const size = snapshot?.size ?? 0;
+
+    // The logical animation state of a model that carries its own clips (the
+    // boss's `modelUrl`): walk while moving, the model's own teleport clips
+    // while a path-swap cross is in flight (the beam-up in the last stretch of
+    // the telegraph, the materialize after the cross), and idle otherwise
+    // (including the early telegraph, where the body stands still and blinks
+    // like before). Called per frame from `ModelAnimation` with the raw clock;
+    // only an actual change triggers a clip hand-off.
+    const getAnimationState = useCallback(
+      (rawNow: number): string | null => {
+        const swap = entity.get(PathSwap);
+        if (swap) {
+          const swapState = getPathSwapAnimationState(
+            swap,
+            getSimulationTime(rawNow)
+          );
+          if (swapState) return swapState;
+        }
+        const pathProgress = entity.get(EnemyMotion)?.pathProgress ?? 0;
+        return pathProgress > 0.01 ? "walk" : "idle";
+      },
+      [entity, getSimulationTime]
+    );
 
     useEffect(() => {
       if (!snapshot) return;
@@ -470,20 +496,41 @@ export const Enemy: FC<EnemyProps> = memo(
               markerRef={hitMarkerRef}
               flashMaterial={flashMaterial}
               body={
-                <EnemyModel
-                  type={snapshot.type}
-                  size={size}
-                  onModelReady={onEnemyModelReady}
-                  fallback={
-                    <mesh
-                      castShadow
-                      receiveShadow
-                      scale={[size, size, size]}
-                      geometry={sharedUnitSphere}
-                      material={getEnemyBodyMaterial(snapshot.color)}
-                    />
-                  }
-                />
+                snapshot.modelUrl ? (
+                  <ModelAnimation
+                    url={snapshot.modelUrl}
+                    node={snapshot.modelNode ?? ""}
+                    size={size}
+                    rotationY={ENEMY_MODEL_ROTATION_Y}
+                    spec={snapshot.modelAnimations ?? {}}
+                    getState={getAnimationState}
+                    onModelReady={onEnemyModelReady}
+                    fallback={
+                      <mesh
+                        castShadow
+                        receiveShadow
+                        scale={[size, size, size]}
+                        geometry={sharedUnitSphere}
+                        material={getEnemyBodyMaterial(snapshot.color)}
+                      />
+                    }
+                  />
+                ) : (
+                  <EnemyModel
+                    type={snapshot.type}
+                    size={size}
+                    onModelReady={onEnemyModelReady}
+                    fallback={
+                      <mesh
+                        castShadow
+                        receiveShadow
+                        scale={[size, size, size]}
+                        geometry={sharedUnitSphere}
+                        material={getEnemyBodyMaterial(snapshot.color)}
+                      />
+                    }
+                  />
+                )
               }
             />
           </EnemyLocomotion>

@@ -238,6 +238,33 @@ export type Tower = Omit<TowerConfig, "id"> & {
   placedBetweenWaves?: boolean;
 };
 
+// In-model animation (a model that ships its own baked-in clips)
+/**
+ * One clip as it should play in the game. `clip` is the clip's *name in the
+ * model's GLB* — the animation data lives inside the model file, the config
+ * only names which clip serves which logical state. That is what makes "every
+ * model carries its own animations" a config change rather than a code change:
+ * a new model ships its clips in the GLB and names them here.
+ */
+export type ModelAnimationClipSpec = {
+  /** Clip name inside the GLB (e.g. "WALK"). */
+  clip: string;
+  /**
+   * `repeat` (default) loops forever; `once` plays to completion and then
+   * holds its final pose (a teleport-out ends on the "beamed up" scale, a
+   * teleport-in on the rest scale).
+   */
+  loop?: "repeat" | "once";
+  /** Playback speed multiplier on top of the simulation clock (default 1). */
+  speed?: number;
+};
+
+/**
+ * Logical animation state → clip, e.g. `{ walk: { clip: "WALK" },
+ * "teleport-out": { clip: "TELEPORT_OUT", loop: "once" } }`.
+ */
+export type ModelAnimationSpec = Record<string, ModelAnimationClipSpec>;
+
 // Enemy configuration
 export type EnemyConfig = {
   id: EnemyType;
@@ -252,6 +279,21 @@ export type EnemyConfig = {
   healPulse?: HealPulseConfig;
   /** Present on the Splitter: on death, spawns 2-4 weaker zero-reward children. */
   split?: SplitConfig;
+  /**
+   * A model that carries its own baked-in animation clips (the GLB's
+   * `animations`): the boss body renders this GLB instead of the type's
+   * static model and plays its clips from the logical states in
+   * `animations` (see `ModelAnimationSpec`). Absent = the type's usual model.
+   */
+  modelUrl?: string;
+  /** Name of the model root node inside the GLB (with `modelUrl`). */
+  modelNode?: string;
+  /**
+   * Logical animation state → clip name in the GLB (with `modelUrl`): which
+   * of the model's own clips plays for each state the resolver requests (e.g.
+   * `"walk"`, `"teleport-out"`, `"teleport-in"`).
+   */
+  modelAnimations?: ModelAnimationSpec;
 };
 
 // Enemy instance
@@ -361,9 +403,16 @@ export type BossConfig = {
     reward: number;
   };
   hpGrowthPerAppearance?: number;
+  /**
+   * The GLB the boss body renders instead of the tankee model. `animations`
+   * names which of the model's own baked-in clips play for each logical state
+   * (`"walk"`, `"teleport-out"`, `"teleport-in"`, ...) — the animation data
+   * lives in the model file, the config only maps states to clip names.
+   */
   model?: {
     url: string;
     node: string;
+    animations?: ModelAnimationSpec;
   };
   /**
    * Optional path-swap ability for the boss (the "Ferryman" mechanic): a list

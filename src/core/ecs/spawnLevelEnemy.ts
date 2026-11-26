@@ -15,6 +15,7 @@ import type {
   EnemyConfig,
   EnemyType,
   EnemyUpgradeId,
+  ModelAnimationSpec,
 } from "../types/game";
 import { enemyActions } from "./actions/enemyActions";
 import { IsBoss } from "./traits/enemy";
@@ -42,6 +43,15 @@ export type SpawnLevelEnemyOverrides = Partial<
   pathSwap?: {
     swaps: { atProgress: number; targetPathIndex: number }[];
   };
+  /**
+   * A model that carries its own baked-in animation clips: the enemy body
+   * renders this GLB (node `modelNode`) instead of the type's static model
+   * and plays its clips from the logical states in `modelAnimations` (see
+   * `ModelAnimationSpec`). Absent = the type's usual model.
+   */
+  modelUrl?: string;
+  modelNode?: string;
+  modelAnimations?: ModelAnimationSpec;
 };
 
 export const spawnLevelEnemy = (
@@ -135,6 +145,9 @@ export const spawnLevelEnemy = (
     regeneration,
     slowResistance,
     dodgeChance,
+    modelUrl: overrides?.modelUrl ?? enemyConfig.modelUrl,
+    modelNode: overrides?.modelNode ?? enemyConfig.modelNode,
+    modelAnimations: overrides?.modelAnimations ?? enemyConfig.modelAnimations,
   };
 
   const entity = enemyActions(world).spawnEnemy(enemy);

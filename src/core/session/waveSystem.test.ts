@@ -14,6 +14,7 @@ import type {
   EnemyUpgradeConfig,
   EnemyUpgradeId,
   Tower,
+  ModelAnimationSpec,
 } from "../types/game";
 import { getTowerSellPrice } from "../utils/towerSellPrice";
 import { createWaveSystem } from "./waveSystem";
@@ -646,6 +647,69 @@ describe("createWaveSystem", () => {
       expect(getBossState()?.health).toBe(1000); // 1.5^0
       reachWave(waves, 8, 5);
       expect(getBossState()?.health).toBe(1500); // 1.5^1
+    });
+
+    it("spawns a boss model with its baked-in animations onto the boss", () => {
+      let nextId = 1;
+      const waves = createWaveSystem({
+        world: testWorld,
+        getNextEnemyId: () => nextId++,
+        winGame: vi.fn(),
+      });
+      const ferrymanModelAnimations: ModelAnimationSpec = {
+        idle: { clip: "IDLE" },
+        walk: { clip: "WALK" },
+        "teleport-out": { clip: "TELEPORT_OUT", loop: "once" },
+        "teleport-in": { clip: "TELEPORT_IN", loop: "once" },
+        slam: { clip: "SLAM", loop: "once" },
+      };
+      const ferrymanBoss = {
+        ...colossusBoss,
+        model: {
+          url: "assets/models/boss_level_2.glb?v=1",
+          node: "LC_OMEGA7",
+          animations: ferrymanModelAnimations,
+        },
+      };
+      useLevelStore.setState({
+        totalWaves: 8,
+        waveConfigs: Array.from({ length: 8 }, () => ({
+          totalEnemies: 1,
+          enemies: [{ type: "basic", count: 1, spawnInterval: 0.5 }],
+        })),
+        boss: ferrymanBoss,
+      });
+
+      reachWave(waves, 4, 1);
+      const boss = getBossState();
+      expect(boss).not.toBe(null);
+      expect(boss!.modelUrl).toBe("assets/models/boss_level_2.glb?v=1");
+      expect(boss!.modelNode).toBe("LC_OMEGA7");
+      expect(boss!.modelAnimations).toEqual(ferrymanModelAnimations);
+    });
+
+    it("leaves the model fields unset for a boss without a model", () => {
+      let nextId = 1;
+      const waves = createWaveSystem({
+        world: testWorld,
+        getNextEnemyId: () => nextId++,
+        winGame: vi.fn(),
+      });
+      useLevelStore.setState({
+        totalWaves: 8,
+        waveConfigs: Array.from({ length: 8 }, () => ({
+          totalEnemies: 1,
+          enemies: [{ type: "basic", count: 1, spawnInterval: 0.5 }],
+        })),
+        boss: colossusBoss,
+      });
+
+      reachWave(waves, 4, 1);
+      const boss = getBossState();
+      expect(boss).not.toBe(null);
+      expect(boss!.modelUrl).toBeUndefined();
+      expect(boss!.modelNode).toBeUndefined();
+      expect(boss!.modelAnimations).toBeUndefined();
     });
 
     it("applies the player's upgrade stack to the boss like a regular enemy", () => {

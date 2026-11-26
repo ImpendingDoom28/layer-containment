@@ -14,7 +14,7 @@ import { useLevelStore } from "../stores/useLevelStore";
 import { useUpgradeStore } from "../stores/useUpgradeStore";
 import { useWaveStore } from "../stores/useWaveStore";
 import { GameEvent } from "../types/enums/events";
-import type { EnemyType, EnemyUpgradeId } from "../types/game";
+import type { EnemyType, EnemyUpgradeId, ModelAnimationSpec } from "../types/game";
 import { isRevealSettled } from "../utils/revealSettle";
 import type { SimulationFrame } from "./types";
 
@@ -40,6 +40,14 @@ type BossSpawnStats = {
    * portal approaches.
    */
   pathSwap?: { atProgress: number; targetPathIndex: number }[];
+  /**
+   * A model that carries its own baked-in animation clips (absent = the
+   * tankee model): the boss body renders this GLB and plays its clips from
+   * the logical states in `animations`.
+   */
+  modelUrl?: string;
+  modelNode?: string;
+  modelAnimations?: ModelAnimationSpec;
 };
 
 type SpawnQueueItem = {
@@ -131,7 +139,7 @@ export const createWaveSystem = ({
     // is stronger: its base HP is scaled by `hpGrowthPerAppearance` per
     // appearance, so the boss keeps scaling without a new mechanic.
     if (boss && isBossWave(boss, currentWave)) {
-      const { baseStats, name, pathSwap } = boss;
+      const { baseStats, name, pathSwap, model } = boss;
       // A rule is active only from its `minAppearance`-th boss appearance
       // (1-based), so later appearances gain extra crosses without affecting
       // the earlier, simpler ones.
@@ -160,6 +168,13 @@ export const createWaveSystem = ({
           reward: baseStats.reward,
           ...(activePathSwap && activePathSwap.length > 0
             ? { pathSwap: activePathSwap }
+            : {}),
+          ...(model
+            ? {
+                modelUrl: model.url,
+                modelNode: model.node,
+                ...(model.animations ? { modelAnimations: model.animations } : {}),
+              }
             : {}),
         },
       });
@@ -336,6 +351,13 @@ export const createWaveSystem = ({
               isBoss: true,
               ...(nextSpawn.boss.pathSwap
                 ? { pathSwap: { swaps: nextSpawn.boss.pathSwap } }
+                : {}),
+              ...(nextSpawn.boss.modelUrl
+                ? {
+                    modelUrl: nextSpawn.boss.modelUrl,
+                    modelNode: nextSpawn.boss.modelNode,
+                    modelAnimations: nextSpawn.boss.modelAnimations,
+                  }
                 : {}),
             }
           : undefined

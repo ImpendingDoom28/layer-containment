@@ -113,9 +113,22 @@ const waveEnemyGroupSchema = z.object({
   pathIndex: z.number().int().min(0).optional(),
 });
 
+const modelAnimationClipSchema = z.object({
+  /** Clip name inside the GLB (the animation data lives in the model file). */
+  clip: z.string().min(1),
+  loop: z.enum(["repeat", "once"]).optional(),
+  speed: z.number().positive().optional(),
+});
+
 const bossModelSchema = z.object({
   url: z.string(),
   node: z.string(),
+  /**
+   * Logical animation state → clip name in the GLB (e.g.
+   * `{ walk: { clip: "WALK" } }`). The model must ship those clips; a state
+   * whose clip is missing from the file is simply skipped at runtime.
+   */
+  animations: z.record(modelAnimationClipSchema).optional(),
 });
 
 // `everyNthWave` has `.default(4)`, so it is optional on the schema's input

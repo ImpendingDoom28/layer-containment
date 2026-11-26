@@ -80,11 +80,11 @@ jobs:
   e2e:
     name: E2E (Playwright)
     runs-on: ubuntu-latest
-    # The GPU-less runner's WebGL scene takes minutes per test, and the
-    # previous serial job's 30-minute budget was not enough (the last few
-    # master runs were cancelled at the timeout). The suite itself now
-    # finishes much faster (preview build, sim fast-forward, 2 workers),
-    # but 45 minutes still leaves headroom for a slow runner.
+    # The GPU-less runner renders with SwiftShader (see playwright.config.ts),
+    # so the WebGL scene is slow per test, and the previous serial job's
+    # 30-minute budget was not enough (the last few master runs were
+    # cancelled by the timeout). The suite itself is faster now (preview
+    # build, sim fast-forward) but 45 minutes still leaves headroom.
     timeout-minutes: 45
     needs: build
     steps:
@@ -131,8 +131,8 @@ jobs:
       # The Playwright config, when the CI env var is set (GitHub Actions
       # provides it automatically), serves the downloaded `dist/` with
       # `vite preview` on the baseURL port — no dev server — and runs a
-      # single worker with a single retry (2 workers starve on the
-      # GPU-less runner; see playwright.config.ts).
+      # single worker with retries (concurrent SwiftShader workers starve
+      # each other; see playwright.config.ts).
       - name: E2E tests
         run: npm run test:e2e
 
@@ -236,8 +236,13 @@ jobs:
       # `--from`/`--to` lints every commit in the PR (base..head) as its own
       # message, so one bad subject cannot hide behind another. Git-generated
       # messages (merge commits, reverts, squash messages) are ignored
-      # automatically by commitlint's default ignore rules.
+      # automatically by commitlint's default ignore rules. NODE_PATH points
+      # at the isolated install because the preset is resolved from the config
+      # file's directory (the repo root, where no node_modules exists here),
+      # and CommonJS resolution falls back to NODE_PATH.
       - name: Lint commit messages
+        env:
+          NODE_PATH: ${{ github.workspace }}/tools/commitlint/node_modules
         run: |
           tools/commitlint/node_modules/.bin/commitlint \
             --from ${{ github.event.pull_request.base.sha }} \

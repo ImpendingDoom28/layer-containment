@@ -72,7 +72,7 @@ describe("WaterSurface", () => {
   it("renders one full-tile box slab recessed into the water basin", async () => {
     setupStores();
     const renderer = await ReactThreeTestRenderer.create(
-      <WaterSurface gridX={gridX} gridZ={gridZ} canPlace={false} onClick={() => {}} />
+      <WaterSurface gridX={gridX} gridZ={gridZ} canPlace={false} />
     );
 
     try {
@@ -102,7 +102,6 @@ describe("WaterSurface", () => {
         gridZ={gridZ}
         waterVariantCode={partialVariantCode}
         canPlace={false}
-        onClick={() => {}}
       />
     );
 
@@ -137,7 +136,6 @@ describe("WaterSurface", () => {
         gridZ={gridZ}
         canPlace
         isHovered
-        onClick={() => {}}
       />
     );
 
@@ -156,7 +154,6 @@ describe("WaterSurface", () => {
           gridZ={gridZ}
           canPlace
           isHovered
-          onClick={() => {}}
         />
       );
       try {
@@ -178,7 +175,6 @@ describe("WaterSurface", () => {
         waterVariantCode={partialVariantCode}
         canPlace
         isHovered
-        onClick={() => {}}
       />
     );
 
@@ -205,8 +201,7 @@ describe("WaterSurface", () => {
         gridX={gridX}
         gridZ={gridZ}
         canPlace
-        onHover={() => {}}
-        onClick={() => {}}
+        editorMode
       />
     );
     const rendererOther = await ReactThreeTestRenderer.create(
@@ -214,8 +209,7 @@ describe("WaterSurface", () => {
         gridX={gridX + 1}
         gridZ={gridZ}
         canPlace
-        onHover={() => {}}
-        onClick={() => {}}
+        editorMode
       />
     );
 
@@ -237,14 +231,13 @@ describe("WaterSurface", () => {
   it("keeps the idle water material tile-owned", async () => {
     setupStores();
     const renderer = await ReactThreeTestRenderer.create(
-      <WaterSurface gridX={gridX} gridZ={gridZ} canPlace={false} onClick={() => {}} />
+      <WaterSurface gridX={gridX} gridZ={gridZ} canPlace={false} />
     );
     const renderer2 = await ReactThreeTestRenderer.create(
       <WaterSurface
         gridX={gridX + 1}
         gridZ={gridZ}
         canPlace={false}
-        onClick={() => {}}
       />
     );
 

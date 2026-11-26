@@ -1,14 +1,12 @@
 import {
   FC,
   memo,
-  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
 } from "react";
 
-import type { ThreeEvent } from "@react-three/fiber";
 import { MeshStandardMaterial, Vector3, type Group } from "three";
 
 import {
@@ -25,7 +23,6 @@ import {
 } from "../../core/stores/useGameStore";
 import {
   createTileHoveredSelector,
-  setHoveredTileSelector,
   useLevelStore,
 } from "../../core/stores/useLevelStore";
 import {
@@ -52,14 +49,15 @@ type CanyonTileProps = {
   /** True when this canyon cell also holds a water body (a river in the
       gorge); the basin floor then shows the animated water surface. */
   isWater: boolean;
-  onClick: () => void;
-  /** The editor drives hover from its own store; pass this (with the hover
-       callbacks) to override the game-store hover. Omitted in the game. */
+  /** The board's pointer input now arrives through the shared pick surface
+      (see `BoardPickSurface`). In the editor (this is true) the tile
+      resolves hover from the editor store; in the game it tracks the game
+      store's hover. */
+  editorMode?: boolean;
+  /** Optional manual hover override. */
   isHovered?: boolean;
-  onHover?: () => void;
-  onHoverEnd?: () => void;
   /** The editor's placement tint; true = the hovered action is allowed here
-       (primary tint), false/omitted = destructive "cannot place" tint. */
+      (primary tint), false/omitted = destructive "cannot place" tint. */
   canPlace?: boolean;
   /** Both scenes bake this tile's boulders into the scene-level
         `CanyonBoulders`, so the tile skips them by default; pass true to
@@ -86,29 +84,24 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
     gridSize,
     canyonBBox,
     isWater,
-    onClick,
     isHovered: isHoveredProp,
-    onHover,
-    onHoverEnd,
+    editorMode = false,
     canPlace = false,
     showBoulders = false,
   }) => {
     const tileSize = useGameStore(tileSizeSelector);
     const selectedTowerToPlace = useGameStore(selectedTowerTypeToPlaceSelector);
 
-    // The editor passes `onHover` (and the game omits it), so the tile can
-    // tell which store to read: in the game it tracks the game store's hover,
-    // in the editor the editor store's — each through a per-tile primitive
-    // flag, so only the hovered tile re-renders on pointer moves.
+    // The tile tracks its hover through a per-tile primitive flag — the
+    // editor store's in the editor, the game store's in the game — so only
+    // the hovered tile re-renders on pointer moves.
     const isGameTileHovered = useLevelStore(
       createTileHoveredSelector(gridX, gridZ)
     );
     const isEditorTileHovered = useLevelEditorStore(
       createEditorTileHoveredSelector(gridX, gridZ)
     );
-    const setHoveredTile = useLevelStore(setHoveredTileSelector);
-    const isEditorMode = onHover != null;
-    const isTileHovered = isEditorMode ? isEditorTileHovered : isGameTileHovered;
+    const isTileHovered = editorMode ? isEditorTileHovered : isGameTileHovered;
 
     const waterClock = useWaterClock();
     const radius = getPlanetRadius(gridSize, tileSize);
@@ -122,7 +115,7 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
     // selected for placement.
     const isHovered =
       isHoveredProp ??
-      (isEditorMode
+      (editorMode
         ? isTileHovered && canPlace
         : isTileHovered && selectedTowerToPlace !== null);
 
@@ -146,8 +139,7 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
     // The basin floor is one shared carved bowl (CanyonBasin), so the tile
     // renders no floor of its own. The river (when the cell is water) is the
     // only persistent per-tile feature; on hover it — or, for a dry cell, a
-    // thin tint slab above the bowl — marks the tile. The invisible hitbox
-    // (three raycasts it regardless of visibility) carries the pointer events.
+    // thin tint slab above the bowl — marks the tile.
     const isAnimatedRiver = isWater && !isHovered;
     const riverMaterial = useMemo(() => {
       if (!isAnimatedRiver) return null;
@@ -207,36 +199,6 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
       if (groupRef.current) freezeSubtree(groupRef.current);
     }, [pose, isWater, isHovered]);
 
-    const onPointerOver = useCallback(
-      (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        if (onHover) {
-          onHover();
-          return;
-        }
-        setHoveredTile({ gridX, gridZ });
-      },
-      [onHover, setHoveredTile, gridX, gridZ]
-    );
-    const onPointerOut = useCallback(
-      (e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        if (onHoverEnd) {
-          onHoverEnd();
-          return;
-        }
-        setHoveredTile(null);
-      },
-      [onHoverEnd, setHoveredTile]
-    );
-    const onInnerClick = useCallback(
-      (e: ThreeEvent<MouseEvent>) => {
-        e.stopPropagation();
-        onClick?.();
-      },
-      [onClick]
-    );
-
     return (
       <group ref={groupRef} position={pose.position} quaternion={pose.quaternion}>
         {/* River in the gorge (animated water), seated in the basin floor. On
@@ -293,19 +255,6 @@ export const CanyonTile: FC<CanyonTileProps> = memo(
             <boxGeometry args={[tileSize, 0.012, tileSize]} />
           </mesh>
         )}
-
-        {/* Invisible hitbox: three raycasts it regardless of visibility and
-            R3F dispatches to handler-bearing meshes only, so it receives the
-            pointer events even with the basin bowl in front of it. */}
-        <mesh
-          position={[0, 0.025, 0]}
-          visible={false}
-          onClick={onInnerClick}
-          onPointerOver={onPointerOver}
-          onPointerOut={onPointerOut}
-        >
-          <boxGeometry args={[tileSize, 0.1, tileSize]} />
-        </mesh>
       </group>
     );
   }

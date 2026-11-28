@@ -129,7 +129,7 @@ describe("levelConfigSchema", () => {
       const result = parseLevelConfigData({
         ...makeLevel([]),
         boss: makeModelBoss({
-          url: "assets/models/boss_level_2.glb?v=1",
+          url: "assets/models/boss_level_2.glb?v=2",
           node: "LC_OMEGA7",
           animations: {
             idle: { clip: "IDLE" },
@@ -143,7 +143,7 @@ describe("levelConfigSchema", () => {
       expect(result.success).toBe(true);
       if (!result.success) return;
       expect(result.data.boss?.model).toEqual({
-        url: "assets/models/boss_level_2.glb?v=1",
+        url: "assets/models/boss_level_2.glb?v=2",
         node: "LC_OMEGA7",
         animations: {
           idle: { clip: "IDLE" },

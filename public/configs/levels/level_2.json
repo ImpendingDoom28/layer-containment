@@ -643,7 +643,7 @@
     },
     "hpGrowthPerAppearance": 1.5,
     "model": {
-      "url": "assets/models/boss_level_2.glb?v=1",
+      "url": "assets/models/boss_level_2.glb?v=2",
       "node": "LC_OMEGA7",
       "animations": {
         "idle": { "clip": "IDLE" },

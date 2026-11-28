@@ -666,7 +666,7 @@ describe("createWaveSystem", () => {
       const ferrymanBoss = {
         ...colossusBoss,
         model: {
-          url: "assets/models/boss_level_2.glb?v=1",
+          url: "assets/models/boss_level_2.glb?v=2",
           node: "LC_OMEGA7",
           animations: ferrymanModelAnimations,
         },
@@ -683,7 +683,7 @@ describe("createWaveSystem", () => {
       reachWave(waves, 4, 1);
       const boss = getBossState();
       expect(boss).not.toBe(null);
-      expect(boss!.modelUrl).toBe("assets/models/boss_level_2.glb?v=1");
+      expect(boss!.modelUrl).toBe("assets/models/boss_level_2.glb?v=2");
       expect(boss!.modelNode).toBe("LC_OMEGA7");
       expect(boss!.modelAnimations).toEqual(ferrymanModelAnimations);
     });

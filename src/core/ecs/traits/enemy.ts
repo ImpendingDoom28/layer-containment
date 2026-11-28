@@ -6,6 +6,7 @@ import type {
   EnemyUpgradeId,
   EnemyUpgradeStack,
   HealPulseConfig,
+  ModelAnimationSpec,
   SplitConfig,
 } from "../../types/game";
 import type { PositionData } from "./position";
@@ -57,6 +58,15 @@ export type EnemyStateData = {
   healPulse?: HealPulseConfig;
   /** Present on the Splitter: death spawns 2-4 weaker zero-reward children. */
   split?: SplitConfig;
+  /**
+   * A model that carries its own baked-in animation clips: the body renders
+   * this GLB (node `modelNode`) instead of the type's static model and plays
+   * its clips from the logical states in `modelAnimations` (absent = the
+   * type's usual model). Set at spawn, never mutated.
+   */
+  modelUrl?: string;
+  modelNode?: string;
+  modelAnimations?: ModelAnimationSpec;
 };
 
 export const createDefaultEnemyState = (): EnemyStateData => ({

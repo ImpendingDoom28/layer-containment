@@ -77,6 +77,9 @@ const enemyToState = (enemyData: Enemy): EnemyStateData => ({
   nextHealPulseAt: enemyData.nextHealPulseAt,
   healPulse: enemyData.healPulse,
   split: enemyData.split,
+  modelUrl: enemyData.modelUrl,
+  modelNode: enemyData.modelNode,
+  modelAnimations: enemyData.modelAnimations,
 });
 
 const enemyToMotion = (enemyData: Enemy): EnemyMotionData => ({

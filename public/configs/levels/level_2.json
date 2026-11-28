@@ -642,6 +642,17 @@
       "reward": 300
     },
     "hpGrowthPerAppearance": 1.5,
+    "model": {
+      "url": "assets/models/boss_level_2.glb?v=2",
+      "node": "LC_OMEGA7",
+      "animations": {
+        "idle": { "clip": "IDLE" },
+        "walk": { "clip": "WALK" },
+        "teleport-out": { "clip": "TELEPORT_OUT", "loop": "once" },
+        "teleport-in": { "clip": "TELEPORT_IN", "loop": "once" },
+        "slam": { "clip": "SLAM", "loop": "once" }
+      }
+    },
     "pathSwap": [
       { "atProgress": 0.3636, "targetPathIndex": 1 },
       { "atProgress": 0.6, "targetPathIndex": 0, "minAppearance": 2 }

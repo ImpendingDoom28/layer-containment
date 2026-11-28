@@ -111,6 +111,94 @@ describe("levelConfigSchema", () => {
       expect(result.success).toBe(false);
     }
   });
+
+  describe("boss model", () => {
+    const makeModelBoss = (model: unknown) => ({
+      name: "The Ferryman",
+      baseStats: {
+        health: 100,
+        speed: 1,
+        size: 1.5,
+        healthLoss: 3,
+        reward: 100,
+      },
+      model,
+    });
+
+    it("parses a boss model with a state → clip animation map", () => {
+      const result = parseLevelConfigData({
+        ...makeLevel([]),
+        boss: makeModelBoss({
+          url: "assets/models/boss_level_2.glb?v=2",
+          node: "LC_OMEGA7",
+          animations: {
+            idle: { clip: "IDLE" },
+            walk: { clip: "WALK" },
+            "teleport-out": { clip: "TELEPORT_OUT", loop: "once" },
+            "teleport-in": { clip: "TELEPORT_IN", loop: "once" },
+            slam: { clip: "SLAM", loop: "once", speed: 1.5 },
+          },
+        }),
+      });
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.data.boss?.model).toEqual({
+        url: "assets/models/boss_level_2.glb?v=2",
+        node: "LC_OMEGA7",
+        animations: {
+          idle: { clip: "IDLE" },
+          walk: { clip: "WALK" },
+          "teleport-out": { clip: "TELEPORT_OUT", loop: "once" },
+          "teleport-in": { clip: "TELEPORT_IN", loop: "once" },
+          slam: { clip: "SLAM", loop: "once", speed: 1.5 },
+        },
+      });
+    });
+
+    it("parses a boss model without animations (the loop states default to repeat)", () => {
+      const result = parseLevelConfigData({
+        ...makeLevel([]),
+        boss: makeModelBoss({
+          url: "assets/models/boss.glb",
+          node: "Boss",
+        }),
+      });
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.data.boss?.model).toEqual({
+        url: "assets/models/boss.glb",
+        node: "Boss",
+      });
+    });
+
+    it("rejects a boss model without a url or node", () => {
+      for (const model of [{ node: "Boss" }, { url: "assets/models/boss.glb" }]) {
+        const result = parseLevelConfigData({
+          ...makeLevel([]),
+          boss: makeModelBoss(model),
+        });
+        expect(result.success).toBe(false);
+      }
+    });
+
+    it("rejects an animation entry with an empty clip or an unknown loop mode", () => {
+      for (const animations of [
+        { idle: { clip: "" } },
+        { idle: { clip: "IDLE", loop: "sometimes" } },
+        { idle: { clip: "IDLE", speed: 0 } },
+      ]) {
+        const result = parseLevelConfigData({
+          ...makeLevel([]),
+          boss: makeModelBoss({
+            url: "assets/models/boss.glb",
+            node: "Boss",
+            animations,
+          }),
+        });
+        expect(result.success).toBe(false);
+      }
+    });
+  });
 });
 
 describe("levelConfigSchema quests", () => {

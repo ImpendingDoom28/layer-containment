@@ -11,9 +11,53 @@ export const PATH_SWAP_TELEGRAPH_SECONDS = 1;
 /**
  * How long (simulation seconds) the arrival burst plays after a cross. The
  * trait is kept this long after the final cross so the landing visual can play
- * even though the ability is one-shot.
+ * even though the ability is one-shot. The "materialize" animation window (see
+ * `getPathSwapAnimationState`) matches it: the body holds its final pose for
+ * the remainder of the trait's lifetime, so both end together.
  */
 export const PATH_SWAP_ARRIVAL_SECONDS = 0.45;
+
+/**
+ * How long (simulation seconds) before the cross the "beam up" animation plays
+ * (the last stretch of the telegraph: the body shrinks into a thin beam at its
+ * old position, and the cross then moves it). Shorter than the telegraph, so
+ * most of the wind-up still shows the body charging up (blinking).
+ */
+export const PATH_SWAP_BEAM_UP_SECONDS = 0.38;
+
+/**
+ * The logical animation state of an enemy mid path-swap (for a model whose
+ * own clips carry a `teleport-out` / `teleport-in` pair — see
+ * `ModelAnimation`). The cross is instantaneous (the enemy is re-placed the
+ * moment `telegraphReadyAt` is reached), so the two clips bookend it:
+ *
+ * - `teleport-out`: during the last `PATH_SWAP_BEAM_UP_SECONDS` of the
+ *   telegraph, while the body is still at its old position.
+ * - `teleport-in`: for `PATH_SWAP_ARRIVAL_SECONDS` after the cross, at the new
+ *   position (the body materializes from the beam pose the out-clip ended on).
+ * - `null` otherwise: the caller falls back to its ordinary state (walk while
+ *   moving, idle while standing) — during the early telegraph the body stands
+ *   still and blinks like before.
+ *
+ * Pure and allocation-free: it reads only the trait's timestamps, so it can be
+ * called from a per-frame `getState` resolver.
+ */
+export const getPathSwapAnimationState = (
+  swap: Pick<PathSwapData, "telegraphReadyAt" | "lastCrossAt">,
+  now: number
+): "teleport-out" | "teleport-in" | null => {
+  if (swap.telegraphReadyAt > 0 && swap.telegraphReadyAt > now) {
+    const remaining = swap.telegraphReadyAt - now;
+    return remaining <= PATH_SWAP_BEAM_UP_SECONDS ? "teleport-out" : null;
+  }
+  if (
+    swap.lastCrossAt > 0 &&
+    now - swap.lastCrossAt < PATH_SWAP_ARRIVAL_SECONDS
+  ) {
+    return "teleport-in";
+  }
+  return null;
+};
 
 /**
  * One path-swap rule: when the enemy's `pathProgress` first crosses

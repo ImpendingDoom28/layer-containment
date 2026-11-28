@@ -44,7 +44,7 @@ const STATIC_ASSETS = [
   "assets/models/splitter.glb?v=2",
   "assets/models/tankee.glb?v=2",
   // Level 2 boss (in-model animations; URL in configs/levels/level_2.json).
-  "assets/models/boss_level_2.glb?v=1",
+  "assets/models/boss_level_2.glb?v=2",
   // Terrain rubble props.
   "assets/models/rubble_1.glb",
   "assets/models/rubble_2.glb",
